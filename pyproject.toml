@@ -2,7 +2,7 @@
 name = "panoptica"
 version = "0.1.0"
 description = "Panoptic Quality (PQ) computation for binary masks."
-authors = ["florian.kofler@tum.de"]
+authors = ["Florian Kofler <florian.kofler@tum.de>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
