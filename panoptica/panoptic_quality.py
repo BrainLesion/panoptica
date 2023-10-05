@@ -46,7 +46,7 @@ def label_instances(mask: np.ndarray) -> Tuple[np.ndarray, int]:
     return labeled, num_instances
 
 
-def compute_panoptic_quality_instances(
+def panoptic_quality_for_binary_masks(
     ref_masks: np.ndarray,
     pred_masks: np.ndarray,
     iou_threshold: float = 0.5,
