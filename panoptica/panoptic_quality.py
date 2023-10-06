@@ -73,41 +73,54 @@ def count_unique_without_zeros(arr: np.ndarray) -> int:
 def panoptic_quality(
     ref_mask: np.ndarray,
     pred_mask: np.ndarray,
-    cc: bool = False,
+    mode: str,
     iou_threshold: float = 0.5,
 ) -> Tuple[float, float, float, int, int, int]:
     """
-    Compute Panoptic Quality (PQ), Segmentation Quality (SQ), and Recognition Quality (RQ) for binary masks.
+    Compute Panoptic Quality (PQ), Segmentation Quality (SQ), and Recognition Quality (RQ) metrics for binary masks.
 
     Args:
-        ref_mask (np.ndarray): Reference mask (2D or 3D array).
-        pred_mask (np.ndarray): Predicted mask (2D or 3D array).
-        cc (bool, optional): Whether to conduct connected component analysis on masks. Defaults to False.
+        ref_mask (np.ndarray): Reference mask (2D or 3D binary array).
+        pred_mask (np.ndarray): Predicted mask (2D or 3D binary array).
+        mode (str): Processing mode:
+            - "im" for direct comparison of instance masks
+            - "cc" for connected component analysis on masks
         iou_threshold (float, optional): IoU threshold for considering a match. Defaults to 0.5.
 
     Returns:
         Tuple[float, float, float, int, int, int]:
-            - Panoptic Quality (PQ)
-            - Segmentation Quality (SQ)
-            - Recognition Quality (RQ)
-            - True Positives (tp)
-            - False Positives (fp)
-            - False Negatives (fn)
+            - Panoptic Quality (PQ): A metric that balances segmentation and recognition quality.
+            - Segmentation Quality (SQ): The accuracy of instance segmentation.
+            - Recognition Quality (RQ): The accuracy of instance recognition.
+            - True Positives (tp): Number of correctly matched instances.
+            - False Positives (fp): Number of extra predicted instances.
+            - False Negatives (fn): Number of missing reference instances.
+
+    Notes:
+        - In "cc" mode, connected component analysis is performed on masks to identify instances.
+        - In "im" mode, instance masks are directly compared without connected component analysis.
+
+    Example:
+        ref_mask = np.array([[0, 1, 1], [0, 2, 2], [0, 0, 3]])
+        pred_mask = np.array([[0, 0, 1], [2, 2, 2], [0, 0, 0]])
+        pq, sq, rq, tp, fp, fn = panoptic_quality(ref_mask, pred_mask, mode="im")
+        print(f"PQ: {pq}, SQ: {sq}, RQ: {rq}, TP: {tp}, FP: {fp}, FN: {fn}")
     """
 
-    if cc == True:
-        # Perform connected component analysis on masks
-        ref_labels, num_ref_instances = _label_instances(ref_mask)
-        pred_labels, num_pred_instances = _label_instances(pred_mask)
-    else:
-        # Use masks directly without connected component analysis
+    if mode == "im":
+        # Use instance masks directly without connected component analysis
         ref_labels = ref_mask
         num_ref_instances = count_unique_without_zeros(ref_mask)
 
         pred_labels = pred_mask
         num_pred_instances = count_unique_without_zeros(ref_mask)
 
-    # Handle edge cases
+    elif mode == "cc":
+        # Perform connected component analysis on masks
+        ref_labels, num_ref_instances = _label_instances(ref_mask)
+        pred_labels, num_pred_instances = _label_instances(pred_mask)
+
+    # Handle edge cses
     if num_ref_instances == 0 and num_pred_instances == 0:
         return 1.0, 1.0, 1.0, 0, 0, 0
     elif num_ref_instances == 0:
