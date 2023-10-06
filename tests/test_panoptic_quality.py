@@ -68,7 +68,11 @@ def generate_test_data_3d():
 def test_compute_panoptic_quality_instances_2d_no_overlap(generate_test_data_2d):
     # Test cases for 2D data with no overlap
     ref_masks, pred_masks, _, _ = generate_test_data_2d(0, 0, shape=(100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert pq == 1.0
     assert sq == 1.0
     assert rq == 1.0
@@ -77,7 +81,11 @@ def test_compute_panoptic_quality_instances_2d_no_overlap(generate_test_data_2d)
     assert fn == 0
 
     ref_masks, pred_masks, _, _ = generate_test_data_2d(0, 5, shape=(100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert pq == 0.0
     assert sq == 0.0
     assert rq == 0.0
@@ -86,7 +94,11 @@ def test_compute_panoptic_quality_instances_2d_no_overlap(generate_test_data_2d)
     assert fn == 0
 
     ref_masks, pred_masks, _, _ = generate_test_data_2d(5, 0, shape=(100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert pq == 0.0
     assert sq == 0.0
     assert rq == 0.0
@@ -98,7 +110,11 @@ def test_compute_panoptic_quality_instances_2d_no_overlap(generate_test_data_2d)
 def test_compute_panoptic_quality_instances_2d_overlap(generate_test_data_2d):
     # Test case for 2D data with overlap (more meaningful test required)
     ref_masks, pred_masks, _, _ = generate_test_data_2d(5, 5, shape=(100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert 0.0 <= pq <= 1.0
     assert 0.0 <= sq <= 1.0
     assert 0.0 <= rq <= 1.0
@@ -107,7 +123,11 @@ def test_compute_panoptic_quality_instances_2d_overlap(generate_test_data_2d):
 def test_compute_panoptic_quality_instances_3d_no_overlap(generate_test_data_3d):
     # Test cases for 3D data with no overlap
     ref_masks, pred_masks, _, _ = generate_test_data_3d(0, 0, shape=(100, 100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert pq == 1.0
     assert sq == 1.0
     assert rq == 1.0
@@ -116,7 +136,11 @@ def test_compute_panoptic_quality_instances_3d_no_overlap(generate_test_data_3d)
     assert fn == 0
 
     ref_masks, pred_masks, _, _ = generate_test_data_3d(0, 5, shape=(100, 100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert pq == 0.0
     assert sq == 0.0
     assert rq == 0.0
@@ -125,7 +149,11 @@ def test_compute_panoptic_quality_instances_3d_no_overlap(generate_test_data_3d)
     assert fn == 0
 
     ref_masks, pred_masks, _, _ = generate_test_data_3d(5, 0, shape=(100, 100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert pq == 0.0
     assert sq == 0.0
     assert rq == 0.0
@@ -137,7 +165,11 @@ def test_compute_panoptic_quality_instances_3d_no_overlap(generate_test_data_3d)
 def test_compute_panoptic_quality_instances_3d_overlap(generate_test_data_3d):
     # Test case for 3D data with overlap (more meaningful test required)
     ref_masks, pred_masks, _, _ = generate_test_data_3d(5, 5, shape=(100, 100, 100))
-    pq, sq, rq, tp, fp, fn = panoptic_quality(ref_masks, pred_masks)
+    pq, sq, rq, tp, fp, fn = panoptic_quality(
+        ref_mask=ref_masks,
+        pred_mask=pred_masks,
+        modus="cc",
+    )
     assert 0.0 <= pq <= 1.0
     assert 0.0 <= sq <= 1.0
     assert 0.0 <= rq <= 1.0

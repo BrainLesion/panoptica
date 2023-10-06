@@ -73,7 +73,7 @@ def count_unique_without_zeros(arr: np.ndarray) -> int:
 def panoptic_quality(
     ref_mask: np.ndarray,
     pred_mask: np.ndarray,
-    mode: str,
+    modus: str,
     iou_threshold: float = 0.5,
 ) -> Tuple[float, float, float, int, int, int]:
     """
@@ -82,7 +82,7 @@ def panoptic_quality(
     Args:
         ref_mask (np.ndarray): Reference mask (2D or 3D binary array).
         pred_mask (np.ndarray): Predicted mask (2D or 3D binary array).
-        mode (str): Processing mode:
+        modus (str): Processing mode:
             - "im" for direct comparison of instance masks
             - "cc" for connected component analysis on masks
         iou_threshold (float, optional): IoU threshold for considering a match. Defaults to 0.5.
@@ -107,7 +107,7 @@ def panoptic_quality(
         print(f"PQ: {pq}, SQ: {sq}, RQ: {rq}, TP: {tp}, FP: {fp}, FN: {fn}")
     """
 
-    if mode == "im":
+    if modus == "im":
         # Use instance masks directly without connected component analysis
         ref_labels = ref_mask
         num_ref_instances = count_unique_without_zeros(ref_mask)
@@ -115,7 +115,7 @@ def panoptic_quality(
         pred_labels = pred_mask
         num_pred_instances = count_unique_without_zeros(ref_mask)
 
-    elif mode == "cc":
+    elif modus == "cc":
         # Perform connected component analysis on masks
         ref_labels, num_ref_instances = _label_instances(ref_mask)
         pred_labels, num_pred_instances = _label_instances(pred_mask)
