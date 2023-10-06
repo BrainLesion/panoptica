@@ -1,10 +1,14 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from scipy import ndimage
+from multiprocessing import Pool
+import warnings
+
 from typing import Tuple
 
+import cc3d
 
-def compute_instance_iou(
+
+def _compute_instance_iou(
     ref_labels: np.ndarray,
     pred_labels: np.ndarray,
     ref_instance_idx: int,
@@ -30,33 +34,55 @@ def compute_instance_iou(
     return iou
 
 
-def label_instances(mask: np.ndarray) -> Tuple[np.ndarray, int]:
+def _label_instances(mask: np.ndarray) -> Tuple[np.ndarray, int]:
     """
-    Label connected components in a binary mask.
+    Label connected components in a segmentation mask.
 
     Args:
-        mask (np.ndarray): Binary mask (2D or 3D array).
+        mask (np.ndarray): segmentation mask (2D or 3D array).
 
     Returns:
         Tuple[np.ndarray, int]:
             - Labeled mask with instances
             - Number of instances found
     """
-    labeled, num_instances = ndimage.label(mask)
+    labeled, num_instances = cc3d.connected_components(mask, return_N=True)
     return labeled, num_instances
 
 
-def panoptic_quality_for_binary_masks(
-    ref_masks: np.ndarray,
-    pred_masks: np.ndarray,
+def count_unique_without_zeros(arr: np.ndarray) -> int:
+    """
+    Count the number of unique elements in the input NumPy array, excluding zeros.
+
+    Args:
+        arr (np.ndarray): Input array.
+
+    Returns:
+        int: Number of unique elements excluding zeros.
+    """
+    if np.any(arr < 0):
+        warnings.warn("Negative values are present in the input array.")
+
+    unique_elements = np.unique(arr)
+    if 0 in unique_elements:
+        return len(unique_elements) - 1
+    else:
+        return len(unique_elements)
+
+
+def panoptic_quality(
+    ref_mask: np.ndarray,
+    pred_mask: np.ndarray,
+    cc: bool = False,
     iou_threshold: float = 0.5,
 ) -> Tuple[float, float, float, int, int, int]:
     """
     Compute Panoptic Quality (PQ), Segmentation Quality (SQ), and Recognition Quality (RQ) for binary masks.
 
     Args:
-        ref_masks (np.ndarray): Reference binary masks (2D or 3D array).
-        pred_masks (np.ndarray): Predicted binary masks (2D or 3D array).
+        ref_mask (np.ndarray): Reference mask (2D or 3D array).
+        pred_mask (np.ndarray): Predicted mask (2D or 3D array).
+        cc (bool, optional): Whether to conduct connected component analysis on masks. Defaults to False.
         iou_threshold (float, optional): IoU threshold for considering a match. Defaults to 0.5.
 
     Returns:
@@ -69,8 +95,17 @@ def panoptic_quality_for_binary_masks(
             - False Negatives (fn)
     """
 
-    ref_labels, num_ref_instances = label_instances(ref_masks)
-    pred_labels, num_pred_instances = label_instances(pred_masks)
+    if cc == True:
+        # Perform connected component analysis on masks
+        ref_labels, num_ref_instances = _label_instances(ref_mask)
+        pred_labels, num_pred_instances = _label_instances(pred_mask)
+    else:
+        # Use masks directly without connected component analysis
+        ref_labels = ref_mask
+        num_ref_instances = count_unique_without_zeros(ref_mask)
+
+        pred_labels = pred_mask
+        num_pred_instances = count_unique_without_zeros(ref_mask)
 
     # Handle edge cases
     if num_ref_instances == 0 and num_pred_instances == 0:
@@ -80,15 +115,26 @@ def panoptic_quality_for_binary_masks(
     elif num_pred_instances == 0:
         return 0.0, 0.0, 0.0, 0, 0, num_ref_instances
 
-    # Calculate IoU for all instance pairs
-    iou_matrix = np.zeros((num_ref_instances, num_pred_instances))
+    # Create a pool of worker processes
+    pool = Pool()
+
+    # Create a list of tuples containing pairs of instance indices to compute IoU for
+    instance_pairs = []
     for ref_instance_idx in range(1, num_ref_instances + 1):
         for pred_instance_idx in range(1, num_pred_instances + 1):
-            iou_matrix[ref_instance_idx - 1][
-                pred_instance_idx - 1
-            ] = compute_instance_iou(
-                ref_labels, pred_labels, ref_instance_idx, pred_instance_idx
+            instance_pairs.append(
+                (ref_labels, pred_labels, ref_instance_idx, pred_instance_idx)
             )
+
+    # Calculate IoU for all instance pairs in parallel using starmap
+    iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
+
+    # Close the pool of worker processes
+    pool.close()
+    pool.join()
+
+    # Reshape the resulting IoU values into a matrix
+    iou_matrix = np.array(iou_values).reshape((num_ref_instances, num_pred_instances))
 
     # Use the Hungarian algorithm for optimal instance matching
     ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
