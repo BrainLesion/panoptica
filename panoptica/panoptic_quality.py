@@ -166,8 +166,13 @@ def panoptic_quality(
 
     fn = num_ref_instances - tp
 
-    pq = tp / (tp + 0.5 * fp + 0.5 * fn)
-    sq = tp / num_ref_instances
-    rq = tp / (0.5 * num_ref_instances + 0.5 * num_pred_instances)
+    # Compute Segmentation Quality (SQ) as the average IoU of matched segments
+    sq = np.sum(np.max(iou_matrix, axis=0)) / tp  # Average IoU
+
+    # Calculate Recognition Quality (RQ)
+    rq = tp / (tp + 0.5 * fp + 0.5 * fn)
+
+    # Compute Panoptic Quality (PQ) as the product of SQ and RQ
+    pq = sq * rq
 
     return pq, sq, rq, tp, fp, fn
