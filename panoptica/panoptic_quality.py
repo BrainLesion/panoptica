@@ -167,7 +167,11 @@ def panoptic_quality(
     fn = num_ref_instances - tp
 
     # Compute Segmentation Quality (SQ) as the average IoU of matched segments
-    sq = np.sum(np.max(iou_matrix, axis=0)) / tp  # Average IoU
+    if tp == 0:
+        sq = 0.0  # Set SQ to 0 when there are no true positives
+    else:
+        sq = np.sum(np.max(iou_matrix, axis=0)) / tp  # Calculate SQ as usual
+
 
     # Calculate Recognition Quality (RQ)
     rq = tp / (tp + 0.5 * fp + 0.5 * fn)
