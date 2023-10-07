@@ -171,11 +171,13 @@ def panoptic_quality(
     tp = 0  # True positives (correctly matched instances)
     fp = 0  # False positives (extra predicted instances)
     fn = 0  # False negatives (missing reference instances)
+    iou_list = []  # init iou list for tp instances
 
     for ref_idx, pred_idx in zip(ref_indices, pred_indices):
         iou = iou_matrix[ref_idx][pred_idx]
         if iou >= iou_threshold:
             tp += 1
+            iou_list.append(iou)
         else:
             fp += 1
 
@@ -185,7 +187,7 @@ def panoptic_quality(
     if tp == 0:
         sq = 0.0  # Set SQ to 0 when there are no true positives
     else:
-        sq = np.sum(np.max(iou_matrix, axis=0)) / tp  # Calculate SQ as usual
+        sq = np.sum(iou_list) / tp  # Average IoU for TPs
 
     # Calculate Recognition Quality (RQ)
     rq = tp / (tp + 0.5 * fp + 0.5 * fn)
