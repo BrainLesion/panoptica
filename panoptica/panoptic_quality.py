@@ -172,7 +172,6 @@ def panoptic_quality(
     else:
         sq = np.sum(np.max(iou_matrix, axis=0)) / tp  # Calculate SQ as usual
 
-
     # Calculate Recognition Quality (RQ)
     rq = tp / (tp + 0.5 * fp + 0.5 * fn)
 
