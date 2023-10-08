@@ -31,7 +31,13 @@ def _compute_instance_iou(
     pred_instance_mask = pred_labels == pred_instance_idx
     intersection = np.logical_and(ref_instance_mask, pred_instance_mask)
     union = np.logical_or(ref_instance_mask, pred_instance_mask)
-    iou = np.sum(intersection) / np.sum(union)
+
+    union_sum = np.sum(union)
+    # Handle division by zero
+    if union_sum == 0:
+        return 0.0
+
+    iou = np.sum(intersection) / union_sum
     return iou
 
 
