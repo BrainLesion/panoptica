@@ -9,7 +9,7 @@ from scipy import ndimage
 import numpy as np
 
 
-def _compute_instance_dice(
+def _compute_instance_volumetric_dice(
     ref_labels: np.ndarray,
     pred_labels: np.ndarray,
     ref_instance_idx: int,

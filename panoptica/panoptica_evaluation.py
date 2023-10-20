@@ -8,7 +8,7 @@ from .utils import (
     _count_unique_without_zeros,
     _label_instances,
     _compute_instance_iou,
-    _compute_instance_dice,
+    _compute_instance_volumetric_dice,
 )
 from .result import PanopticaResult
 
@@ -59,32 +59,32 @@ def panoptica_evaluation(
     if num_ref_instances == 0 and num_pred_instances == 0:
         # Both references and predictions are empty, perfect match
         return PanopticaResult(
+            num_ref_instances=0,
+            num_pred_instances=0,
             tp=0,
             fp=0,
             dice_list=[],
             iou_list=[],
-            num_ref_instances=0,
-            num_pred_instances=0,
         )
     elif num_ref_instances == 0:
         # All references are missing, only false positives
         return PanopticaResult(
+            num_ref_instances=0,
+            num_pred_instances=num_pred_instances,
             tp=0,
             fp=num_pred_instances,
             dice_list=[],
             iou_list=[],
-            num_ref_instances=0,
-            num_pred_instances=num_pred_instances,
         )
     elif num_pred_instances == 0:
         # All predictions are missing, only false negatives
         return PanopticaResult(
+            num_ref_instances=num_ref_instances,
+            num_pred_instances=0,
             tp=0,
             fp=0,
             dice_list=[],
             iou_list=[],
-            num_ref_instances=num_ref_instances,
-            num_pred_instances=0,
         )
 
     # Create a pool of worker processes to parallelize the computation
@@ -117,7 +117,7 @@ def panoptica_evaluation(
             iou_list.append(iou)
 
             # Compute Dice for matched instances
-            dice = _compute_instance_dice(
+            dice = _compute_instance_volumetric_dice(
                 ref_labels=ref_labels,
                 pred_labels=pred_labels,
                 ref_instance_idx=ref_idx + 1,
@@ -130,10 +130,10 @@ def panoptica_evaluation(
 
     # Create and return the PanopticaResult object with computed metrics
     return PanopticaResult(
+        num_ref_instances=num_ref_instances,
+        num_pred_instances=num_pred_instances,
         tp=tp,
         fp=fp,
         dice_list=dice_list,
         iou_list=iou_list,
-        num_ref_instances=num_ref_instances,
-        num_pred_instances=num_pred_instances,
     )

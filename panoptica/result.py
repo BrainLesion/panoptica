@@ -8,31 +8,31 @@ class PanopticaResult:
     Represents the result of the Panoptic Quality (PQ) computation.
 
     Attributes:
-        tp (int): Number of correctly matched instances (True Positives).
-        fp (int): Number of extra predicted instances (False Positives).
         num_ref_instances (int): Number of reference instances.
         num_pred_instances (int): Number of predicted instances.
+        tp (int): Number of correctly matched instances (True Positives).
+        fp (int): Number of extra predicted instances (False Positives).
     """
 
     def __init__(
         self,
+        num_ref_instances: int,
+        num_pred_instances: int,
         tp: int,
         fp: int,
         dice_list: List[float],
         iou_list: List[float],
-        num_ref_instances: int,
-        num_pred_instances: int,
     ):
         """
         Initialize a PanopticaResult object.
 
         Args:
+            num_ref_instances (int): Number of reference instances.
+            num_pred_instances (int): Number of predicted instances.
             tp (int): Number of correctly matched instances (True Positives).
             fp (int): Number of extra predicted instances (False Positives).
             dice_list (List[float]): List of Dice coefficients for matched instances.
             iou_list (List[float]): List of IoU values for matched instances.
-            num_ref_instances (int): Number of reference instances.
-            num_pred_instances (int): Number of predicted instances.
         """
         self._tp = tp
         self._fp = fp
@@ -40,26 +40,6 @@ class PanopticaResult:
         self._iou_list = iou_list
         self._num_ref_instances = num_ref_instances
         self._num_pred_instances = num_pred_instances
-
-    @property
-    def tp(self) -> int:
-        """
-        Calculate the number of True Positives (TP).
-
-        Returns:
-            int: Number of True Positives.
-        """
-        return self._tp
-
-    @property
-    def fp(self) -> int:
-        """
-        Calculate the number of False Positives (FP).
-
-        Returns:
-            int: Number of False Positives.
-        """
-        return self._fp
 
     @property
     def num_ref_instances(self) -> int:
@@ -82,6 +62,48 @@ class PanopticaResult:
         return self._num_pred_instances
 
     @property
+    def tp(self) -> int:
+        """
+        Calculate the number of True Positives (TP).
+
+        Returns:
+            int: Number of True Positives.
+        """
+        return self._tp
+
+    @property
+    def fp(self) -> int:
+        """
+        Calculate the number of False Positives (FP).
+
+        Returns:
+            int: Number of False Positives.
+        """
+        return self._fp
+
+    @property
+    def fn(self) -> int:
+        """
+        Calculate the number of False Negatives (FN).
+
+        Returns:
+            int: Number of False Negatives.
+        """
+        return self.num_ref_instances - self.tp
+
+    @property
+    def rq(self) -> float:
+        """
+        Calculate the Recognition Quality (RQ) based on TP, FP, and FN.
+
+        Returns:
+            float: Recognition Quality (RQ).
+        """
+        if self.tp == 0:
+            return 0.0
+        return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
+
+    @property
     def sq(self) -> float:
         """
         Calculate the Segmentation Quality (SQ) based on IoU values.
@@ -94,28 +116,6 @@ class PanopticaResult:
         return np.sum(self._iou_list) / self.tp
 
     @property
-    def i_dice(self) -> float:
-        """
-        Calculate the average Dice coefficient for matched instances.
-
-        Returns:
-            float: Average Dice coefficient.
-        """
-        return np.mean(self._dice_list)
-
-    @property
-    def rq(self) -> float:
-        """
-        Calculate the Recognition Quality (RQ) based on TP, FP, and FN.
-        
-        Returns:
-            float: Recognition Quality (RQ).
-        """
-        if self.tp == 0:
-            return 0.0
-        return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
-
-    @property
     def pq(self) -> float:
         """
         Calculate the Panoptic Quality (PQ) based on SQ and RQ.
@@ -126,11 +126,11 @@ class PanopticaResult:
         return self.sq * self.rq
 
     @property
-    def fn(self) -> int:
+    def instance_dice(self) -> float:
         """
-        Calculate the number of False Negatives (FN).
+        Calculate the average Dice coefficient for matched instances.
 
         Returns:
-            int: Number of False Negatives.
+            float: Average Dice coefficient.
         """
-        return self.num_ref_instances - self.tp
+        return np.mean(self._dice_list)
