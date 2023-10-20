@@ -107,10 +107,12 @@ class PanopticaResult:
     def rq(self) -> float:
         """
         Calculate the Recognition Quality (RQ) based on TP, FP, and FN.
-
+        
         Returns:
             float: Recognition Quality (RQ).
         """
+        if self.tp == 0:
+            return 0.0
         return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
 
     @property
