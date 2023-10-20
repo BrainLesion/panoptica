@@ -1,7 +1,8 @@
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica.panoptic_quality import panoptic_quality
+from panoptica.legacy_panoptic_quality import panoptic_quality
+from panoptica.panoptica_evaluation import panoptica_evaluation
 
 
 pred_masks = read_nifti(
@@ -22,9 +23,29 @@ pq, sq, rq, tp, fp, fn = panoptic_quality(
     modus="cc",
 )
 
+
 print("Panoptic Quality (PQ):", pq)
 print("Segmentation Quality (SQ):", sq)
 print("Recognition Quality (RQ):", rq)
 print("True Positives (tp):", tp)
 print("False Positives (fp):", fp)
 print("False Negatives (fn):", fn)
+
+
+# Call panoptica_quality to obtain the result
+result = panoptica_evaluation(
+    ref_mask=ref_masks,
+    pred_mask=pred_masks,
+    iou_threshold=0.5,
+    modus="cc",
+)
+
+
+# Print the metrics
+print("Panoptic Quality (PQ):", result.pq)
+print("Segmentation Quality (SQ):", result.sq)
+print("Recognition Quality (RQ):", result.rq)
+print("True Positives (tp):", result.tp)
+print("False Positives (fp):", result.fp)
+print("False Negatives (fn):", result.fn)
+print("instance_dice", result.i_dice)
