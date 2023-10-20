@@ -1,7 +1,6 @@
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica.legacy_panoptic_quality import panoptic_quality
 from panoptica.panoptica_evaluation import panoptica_evaluation
 
 
@@ -15,22 +14,6 @@ ref_masks = read_nifti(
         "/home/florian/flow/cfos_analysis/data/reference/patchvolume_695_2/patchvolume_695_2_binary.nii.gz",
     )
 )
-
-pq, sq, rq, tp, fp, fn = panoptic_quality(
-    ref_mask=ref_masks,
-    pred_mask=pred_masks,
-    iou_threshold=0.5,
-    modus="cc",
-)
-
-
-print("Panoptic Quality (PQ):", pq)
-print("Segmentation Quality (SQ):", sq)
-print("Recognition Quality (RQ):", rq)
-print("True Positives (tp):", tp)
-print("False Positives (fp):", fp)
-print("False Negatives (fn):", fn)
-
 
 # Call panoptica_quality to obtain the result
 result = panoptica_evaluation(
