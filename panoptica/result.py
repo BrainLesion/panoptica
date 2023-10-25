@@ -19,7 +19,6 @@ class PanopticaResult:
         num_ref_instances: int,
         num_pred_instances: int,
         tp: int,
-        fp: int,
         dice_list: List[float],
         iou_list: List[float],
     ):
@@ -30,12 +29,10 @@ class PanopticaResult:
             num_ref_instances (int): Number of reference instances.
             num_pred_instances (int): Number of predicted instances.
             tp (int): Number of correctly matched instances (True Positives).
-            fp (int): Number of extra predicted instances (False Positives).
             dice_list (List[float]): List of Dice coefficients for matched instances.
             iou_list (List[float]): List of IoU values for matched instances.
         """
         self._tp = tp
-        self._fp = fp
         self._dice_list = dice_list
         self._iou_list = iou_list
         self._num_ref_instances = num_ref_instances
@@ -79,7 +76,7 @@ class PanopticaResult:
         Returns:
             int: Number of False Positives.
         """
-        return self._fp
+        return self.num_pred_instances - self.tp
 
     @property
     def fn(self) -> int:
