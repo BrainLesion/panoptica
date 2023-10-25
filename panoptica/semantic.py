@@ -9,13 +9,27 @@ from scipy import ndimage
 from scipy.optimize import linear_sum_assignment
 
 from .timing import measure_time
-
-
 from .evaluator import Evaluator
 from .result import PanopticaResult
 
 
 class SemanticSegmentationEvaluator(Evaluator):
+    """
+    Evaluator for semantic segmentation results.
+
+    This class extends the Evaluator class and provides methods for evaluating semantic segmentation masks
+    using metrics such as Intersection over Union (IoU) and Dice coefficient.
+
+    Args:
+        cca_backend (str): The backend for connected components labeling. Should be "cc3d" or "scipy".
+
+    Methods:
+        evaluate(reference_mask, prediction_mask, iou_threshold): Evaluate the segmentation masks.
+        _label_instances(mask): Label connected components in a segmentation mask.
+        _compute_instance_iou(ref_labels, pred_labels, ref_instance_idx, pred_instance_idx): Compute IoU for instances.
+        _compute_instance_dice_coefficient(ref_labels, pred_labels, ref_instance_idx, pred_instance_idx): Compute Dice coefficient for instances.
+    """
+
     def __init__(self, cca_backend: str):
         self.cca_backend = cca_backend
 
@@ -25,7 +39,18 @@ class SemanticSegmentationEvaluator(Evaluator):
         reference_mask: np.ndarray,
         prediction_mask: np.ndarray,
         iou_threshold: float,
-    ):
+    ) -> PanopticaResult:
+        """
+        Evaluate the intersection over union (IoU) and Dice coefficient for semantic segmentation masks.
+
+        Args:
+            reference_mask (np.ndarray): The reference segmentation mask.
+            prediction_mask (np.ndarray): The predicted segmentation mask.
+            iou_threshold (float): The IoU threshold for considering a match.
+
+        Returns:
+            PanopticaResult: A named tuple containing evaluation results.
+        """
         ref_labels, num_ref_instances = self._label_instances(
             mask=reference_mask,
         )
@@ -40,7 +65,6 @@ class SemanticSegmentationEvaluator(Evaluator):
         )
 
         # Create a pool of worker processes to parallelize the computation
-
         with Pool() as pool:
             # Generate all possible pairs of instance indices for IoU computation
             instance_pairs = [
@@ -72,7 +96,7 @@ class SemanticSegmentationEvaluator(Evaluator):
                 iou_list.append(iou)
 
                 # Compute Dice for matched instances
-                dice = self._compute_instance_volumetric_dice(
+                dice = self._compute_instance_dice_coefficient(
                     ref_labels=ref_labels,
                     pred_labels=pred_labels,
                     ref_instance_idx=ref_idx + 1,
@@ -97,8 +121,7 @@ class SemanticSegmentationEvaluator(Evaluator):
         Label connected components in a segmentation mask.
 
         Args:
-            mask (np.ndarray): segmentation mask (2D or 3D array).
-            cca_backend (str): Backend for connected components labeling. Should be "cc3d" or "scipy".
+            mask (np.ndarray): Segmentation mask (2D or 3D array).
 
         Returns:
             Tuple[np.ndarray, int]:
@@ -110,7 +133,7 @@ class SemanticSegmentationEvaluator(Evaluator):
         elif self.cca_backend == "scipy":
             labeled, num_instances = ndimage.label(mask)
         else:
-            raise NotImplementedError(f"Unsupported cca_backend: {self.cca_backend}")
+            raise ValueError(f"Unsupported cca_backend: {self.cca_backend}")
         return labeled, num_instances
 
     def _compute_instance_iou(
