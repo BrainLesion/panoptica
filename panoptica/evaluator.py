@@ -118,39 +118,3 @@ class Evaluator(ABC):
         dice = 2 * np.sum(intersection) / (reference_mask + prediction_mask)
 
         return dice
-
-    def _compute_instance_volumetric_dice(
-        self,
-        ref_labels: np.ndarray,
-        pred_labels: np.ndarray,
-        ref_instance_idx: int,
-        pred_instance_idx: int,
-    ) -> float:
-        """
-        Compute the Dice coefficient between a specific pair of instances.
-
-        The Dice coefficient measures the similarity or overlap between two binary masks representing instances.
-        It is defined as:
-
-        Dice = (2 * intersection) / (ref_area + pred_area)
-
-        Args:
-            ref_labels (np.ndarray): Reference instance labels.
-            pred_labels (np.ndarray): Prediction instance labels.
-            ref_instance_idx (int): Index of the reference instance.
-            pred_instance_idx (int): Index of the prediction instance.
-
-        Returns:
-            float: Dice coefficient between the specified instances. A value between 0 and 1, where higher values
-            indicate better overlap and similarity between instances.
-        """
-        ref_instance_mask = ref_labels == ref_instance_idx
-        pred_instance_mask = pred_labels == pred_instance_idx
-        intersection = np.logical_and(ref_instance_mask, pred_instance_mask)
-        ref_area = np.sum(ref_instance_mask)
-        pred_area = np.sum(pred_instance_mask)
-
-        # Calculate Dice coefficient
-        dice = 2 * np.sum(intersection) / (ref_area + pred_area)
-
-        return dice
