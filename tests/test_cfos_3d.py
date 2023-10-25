@@ -1,6 +1,8 @@
 from auxiliary.nifti.io import read_nifti
 from panoptica.panoptica_evaluation import panoptica_evaluation
 
+from panoptica.semantic import SemanticSegmentationEvaluator
+
 
 pred_masks = read_nifti(
     input_nifti_path="/home/florian/flow/cfos_analysis/data/ablation/2021-11-25_23-50-56_2021-10-25_19-38-31_tr_dice_bce_11/patchvolume_695_2.nii.gz"
@@ -27,3 +29,13 @@ print("False Negatives (fn):", result.fn)
 print("instance_dice", result.instance_dice)
 print("number of instances in prediction:", result.num_pred_instances)
 print("number of instances in reference:", result.num_ref_instances)
+
+
+eva = SemanticSegmentationEvaluator(cca_backend="cc3d")
+res = eva.evaluate(
+    reference_mask=ref_masks,
+    prediction_mask=pred_masks,
+    iou_threshold=0.5,
+)
+
+print(res)
