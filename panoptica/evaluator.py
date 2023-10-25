@@ -37,7 +37,6 @@ class Evaluator(ABC):
                 num_ref_instances=0,
                 num_pred_instances=0,
                 tp=0,
-                fp=0,
                 dice_list=[],
                 iou_list=[],
             )
@@ -47,7 +46,6 @@ class Evaluator(ABC):
                 num_ref_instances=0,
                 num_pred_instances=num_pred_instances,
                 tp=0,
-                fp=num_pred_instances,
                 dice_list=[],
                 iou_list=[],
             )
@@ -57,7 +55,6 @@ class Evaluator(ABC):
                 num_ref_instances=num_ref_instances,
                 num_pred_instances=0,
                 tp=0,
-                fp=0,
                 dice_list=[],
                 iou_list=[],
             )
