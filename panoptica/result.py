@@ -38,6 +38,19 @@ class PanopticaResult:
         self._num_ref_instances = num_ref_instances
         self._num_pred_instances = num_pred_instances
 
+    def __str__(self):
+        return (
+            f"Panoptic Quality (PQ): {self.pq}\n"
+            f"Segmentation Quality (SQ): {self.sq}\n"
+            f"Recognition Quality (RQ): {self.rq}\n"
+            f"True Positives (tp): {self.tp}\n"
+            f"False Positives (fp): {self.fp}\n"
+            f"False Negatives (fn): {self.fn}\n"
+            f"instance_dice: {self.instance_dice}\n"
+            f"Number of instances in prediction: {self.num_pred_instances}\n"
+            f"Number of instances in reference: {self.num_ref_instances}"
+        )
+
     @property
     def num_ref_instances(self) -> int:
         """
