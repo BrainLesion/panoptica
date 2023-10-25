@@ -32,6 +32,7 @@ class SemanticSegmentationEvaluator(Evaluator):
 
     def __init__(self, cca_backend: str):
         self.cca_backend = cca_backend
+        # TODO consider initializing evaluator with metrics it should compute
 
     @measure_time
     def evaluate(

@@ -24,6 +24,7 @@ class InstanceSegmentationEvaluator(Evaluator):
     """
 
     def __init__(self):
+        # TODO consider initializing evaluator with metrics it should compute
         pass
 
     @measure_time
@@ -76,6 +77,8 @@ class InstanceSegmentationEvaluator(Evaluator):
                     prediction=pred_labels == ref_idx,
                 )
                 dice_list.append(dice)
+
+            # TODO note we could compute other metrics here and potentially also do this for lower ious
 
         # Create and return the PanopticaResult object with computed metrics
         return PanopticaResult(
