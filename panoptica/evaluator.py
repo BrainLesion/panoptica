@@ -62,29 +62,23 @@ class Evaluator(ABC):
                 iou_list=[],
             )
 
-    def _compute_instance_iou(
+    def _compute_iou(
         self,
-        ref_labels: np.ndarray,
-        pred_labels: np.ndarray,
-        ref_instance_idx: int,
-        pred_instance_idx: int,
+        reference: np.ndarray,
+        prediction: np.ndarray,
     ) -> float:
         """
-        Compute Intersection over Union (IoU) between a specific pair of reference and prediction instances.
+        Compute Intersection over Union (IoU) between two masks.
 
         Args:
-            ref_labels (np.ndarray): Reference instance labels.
-            pred_labels (np.ndarray): Prediction instance labels.
-            ref_instance_idx (int): Index of the reference instance.
-            pred_instance_idx (int): Index of the prediction instance.
+            reference (np.ndarray): Reference mask.
+            prediction (np.ndarray): Prediction mask.
 
         Returns:
-            float: IoU between the specified instances.
+            float: IoU between the two masks.
         """
-        ref_instance_mask = ref_labels == ref_instance_idx
-        pred_instance_mask = pred_labels == pred_instance_idx
-        intersection = np.logical_and(ref_instance_mask, pred_instance_mask)
-        union = np.logical_or(ref_instance_mask, pred_instance_mask)
+        intersection = np.logical_and(reference, prediction)
+        union = np.logical_or(reference, prediction)
 
         union_sum = np.sum(union)
         # Handle division by zero
@@ -93,6 +87,40 @@ class Evaluator(ABC):
 
         iou = np.sum(intersection) / union_sum
         return iou
+
+    def _compute_dice_coefficient(
+        self,
+        reference: np.ndarray,
+        prediction: np.ndarray,
+    ) -> float:
+        """
+        Compute the Dice coefficient between two binary masks.
+
+        The Dice coefficient measures the similarity or overlap between two binary masks.
+        It is defined as:
+
+        Dice = (2 * intersection) / (area_mask1 + area_mask2)
+
+        Args:
+            reference (np.ndarray): Reference binary mask.
+            prediction (np.ndarray): Prediction binary mask.
+
+        Returns:
+            float: Dice coefficient between the two binary masks. A value between 0 and 1, where higher values
+            indicate better overlap and similarity between masks.
+        """
+        intersection = np.logical_and(reference, prediction)
+        reference_mask = np.sum(reference)
+        prediction_mask = np.sum(prediction)
+
+        # Handle division by zero
+        if reference_mask == 0 and prediction_mask == 0:
+            return 0.0
+
+        # Calculate Dice coefficient
+        dice = 2 * np.sum(intersection) / (reference_mask + prediction_mask)
+
+        return dice
 
     def _compute_instance_volumetric_dice(
         self,

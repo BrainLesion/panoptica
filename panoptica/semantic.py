@@ -116,3 +116,63 @@ class SemanticSegmentationEvaluator(Evaluator):
         else:
             raise NotImplementedError(f"Unsupported cca_backend: {self.cca_backend}")
         return labeled, num_instances
+
+    def _compute_instance_iou(
+        self,
+        ref_labels: np.ndarray,
+        pred_labels: np.ndarray,
+        ref_instance_idx: int,
+        pred_instance_idx: int,
+    ) -> float:
+        """
+        Compute Intersection over Union (IoU) between a specific pair of reference and prediction instances.
+
+        Args:
+            ref_labels (np.ndarray): Reference instance labels.
+            pred_labels (np.ndarray): Prediction instance labels.
+            ref_instance_idx (int): Index of the reference instance.
+            pred_instance_idx (int): Index of the prediction instance.
+
+        Returns:
+            float: IoU between the specified instances.
+        """
+        ref_instance_mask = ref_labels == ref_instance_idx
+        pred_instance_mask = pred_labels == pred_instance_idx
+
+        return self._compute_iou(
+            reference=ref_instance_mask,
+            prediction=pred_instance_mask,
+        )
+
+    def _compute_instance_dice_coefficient(
+        self,
+        ref_labels: np.ndarray,
+        pred_labels: np.ndarray,
+        ref_instance_idx: int,
+        pred_instance_idx: int,
+    ) -> float:
+        """
+        Compute the Dice coefficient between a specific pair of instances.
+
+        The Dice coefficient measures the similarity or overlap between two binary masks representing instances.
+        It is defined as:
+
+        Dice = (2 * intersection) / (ref_area + pred_area)
+
+        Args:
+            ref_labels (np.ndarray): Reference instance labels.
+            pred_labels (np.ndarray): Prediction instance labels.
+            ref_instance_idx (int): Index of the reference instance.
+            pred_instance_idx (int): Index of the prediction instance.
+
+        Returns:
+            float: Dice coefficient between the specified instances. A value between 0 and 1, where higher values
+            indicate better overlap and similarity between instances.
+        """
+        ref_instance_mask = ref_labels == ref_instance_idx
+        pred_instance_mask = pred_labels == pred_instance_idx
+
+        return self._compute_dice_coefficient(
+            reference=ref_instance_mask,
+            prediction=pred_instance_mask,
+        )
