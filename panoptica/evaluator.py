@@ -62,6 +62,38 @@ class Evaluator(ABC):
                 iou_list=[],
             )
 
+    def _compute_instance_iou(
+        self,
+        ref_labels: np.ndarray,
+        pred_labels: np.ndarray,
+        ref_instance_idx: int,
+        pred_instance_idx: int,
+    ) -> float:
+        """
+        Compute Intersection over Union (IoU) between a specific pair of reference and prediction instances.
+
+        Args:
+            ref_labels (np.ndarray): Reference instance labels.
+            pred_labels (np.ndarray): Prediction instance labels.
+            ref_instance_idx (int): Index of the reference instance.
+            pred_instance_idx (int): Index of the prediction instance.
+
+        Returns:
+            float: IoU between the specified instances.
+        """
+        ref_instance_mask = ref_labels == ref_instance_idx
+        pred_instance_mask = pred_labels == pred_instance_idx
+        intersection = np.logical_and(ref_instance_mask, pred_instance_mask)
+        union = np.logical_or(ref_instance_mask, pred_instance_mask)
+
+        union_sum = np.sum(union)
+        # Handle division by zero
+        if union_sum == 0:
+            return 0.0
+
+        iou = np.sum(intersection) / union_sum
+        return iou
+
     def _compute_instance_volumetric_dice(
         self,
         ref_labels: np.ndarray,

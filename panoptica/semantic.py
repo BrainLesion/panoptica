@@ -1,17 +1,25 @@
+from __future__ import annotations
 from typing import Tuple
+from multiprocessing import Pool
 
 import numpy as np
 
 import cc3d
 from scipy import ndimage
+from scipy.optimize import linear_sum_assignment
+
+from .timing import measure_time
+
 
 from .evaluator import Evaluator
+from .result import PanopticaResult
 
 
 class SemanticSegmentationEvaluator(Evaluator):
     def __init__(self, cca_backend: str):
         self.cca_backend = cca_backend
 
+    @measure_time
     def evaluate(
         self,
         reference_mask: np.ndarray,
@@ -31,7 +39,59 @@ class SemanticSegmentationEvaluator(Evaluator):
             num_pred_instances=num_pred_instances,
         )
 
-        
+        # Create a pool of worker processes to parallelize the computation
+
+        with Pool() as pool:
+            # Generate all possible pairs of instance indices for IoU computation
+            instance_pairs = [
+                (ref_labels, pred_labels, ref_idx, pred_idx)
+                for ref_idx in range(1, num_ref_instances + 1)
+                for pred_idx in range(1, num_pred_instances + 1)
+            ]
+
+            # Calculate IoU for all instance pairs in parallel using starmap
+            iou_values = pool.starmap(self._compute_instance_iou, instance_pairs)
+
+        # Reshape the resulting IoU values into a matrix
+        iou_matrix = np.array(iou_values).reshape(
+            (num_ref_instances, num_pred_instances)
+        )
+
+        # Use linear_sum_assignment to find the best matches
+        ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
+
+        # Initialize variables for True Positives (tp) and False Positives (fp)
+        tp, fp, dice_list, iou_list = 0, 0, [], []
+
+        # Loop through matched instances to compute PQ components
+        for ref_idx, pred_idx in zip(ref_indices, pred_indices):
+            iou = iou_matrix[ref_idx][pred_idx]
+            if iou >= iou_threshold:
+                # Match found, increment true positive count and collect IoU and Dice values
+                tp += 1
+                iou_list.append(iou)
+
+                # Compute Dice for matched instances
+                dice = self._compute_instance_volumetric_dice(
+                    ref_labels=ref_labels,
+                    pred_labels=pred_labels,
+                    ref_instance_idx=ref_idx + 1,
+                    pred_instance_idx=pred_idx + 1,
+                )
+                dice_list.append(dice)
+            else:
+                # No match found, increment false positive count
+                fp += 1
+
+        # Create and return the PanopticaResult object with computed metrics
+        return PanopticaResult(
+            num_ref_instances=num_ref_instances,
+            num_pred_instances=num_pred_instances,
+            tp=tp,
+            fp=fp,
+            dice_list=dice_list,
+            iou_list=iou_list,
+        )
 
     def _label_instances(
         self,
