@@ -6,13 +6,23 @@ import warnings
 import numpy as np
 
 from .timing import measure_time
-
-
 from .evaluator import Evaluator
 from .result import PanopticaResult
 
 
 class InstanceSegmentationEvaluator(Evaluator):
+    """
+    Evaluator for instance segmentation results.
+
+    This class extends the Evaluator class and provides methods for evaluating instance segmentation masks
+    using metrics such as Intersection over Union (IoU) and Dice coefficient.
+
+    Methods:
+        evaluate(reference_mask, prediction_mask, iou_threshold): Evaluate the instance segmentation masks.
+        _unique_without_zeros(arr): Get unique non-zero values from a NumPy array.
+
+    """
+
     def __init__(self):
         pass
 
@@ -22,7 +32,18 @@ class InstanceSegmentationEvaluator(Evaluator):
         reference_mask: np.ndarray,
         prediction_mask: np.ndarray,
         iou_threshold: float,
-    ):
+    ) -> PanopticaResult:
+        """
+        Evaluate the intersection over union (IoU) and Dice coefficient for instance segmentation masks.
+
+        Args:
+            reference_mask (np.ndarray): The reference instance segmentation mask.
+            prediction_mask (np.ndarray): The predicted instance segmentation mask.
+            iou_threshold (float): The IoU threshold for considering a match.
+
+        Returns:
+            PanopticaResult: A named tuple containing evaluation results.
+        """
         ref_labels = reference_mask
         ref_nonzero_unique_labels = self._unique_without_zeros(arr=ref_labels)
         num_ref_instances = len(ref_nonzero_unique_labels)
@@ -40,7 +61,7 @@ class InstanceSegmentationEvaluator(Evaluator):
         tp, dice_list, iou_list = 0, [], []
 
         # TODO parallelize this loop
-        # loop through all reference labels and compute iou
+        # loop through all reference labels and compute IoU
         for ref_idx in ref_nonzero_unique_labels:
             iou = self._compute_iou(
                 reference=ref_labels == ref_idx,
