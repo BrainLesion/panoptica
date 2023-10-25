@@ -42,32 +42,19 @@ class InstanceSegmentationEvaluator(Evaluator):
         # Initialize variables for True Positives (tp) and False Positives (fp)
         tp, fp, dice_list, iou_list = 0, 0, [], []
 
-        # begin iou computation
+        # loop through all reference labels and compute iou
         for ref_idx in ref_nonzero_unique_labels:
-            pass
-        # Create a pool of worker processes to parallelize the computation
+            iou = self._compute_iou(
+                reference=ref_labels == ref_idx,
+                prediction=pred_labels == ref_idx,
+            )
+            if iou > iou_threshold:
+                iou_list.append(iou)
+                tp += 1
 
-        with Pool() as pool:
-            # Generate all possible pairs of instance indices for IoU computation
-            instance_pairs = [
-                (ref_labels, pred_labels, ref_idx, pred_idx)
-                for ref_idx in range(1, num_ref_instances + 1)
-                for pred_idx in range(1, num_pred_instances + 1)
-            ]
+                
 
-            # Calculate IoU for all instance pairs in parallel using starmap
-            iou_values = pool.starmap(self._compute_instance_iou, instance_pairs)
-
-        # Reshape the resulting IoU values into a matrix
-        iou_matrix = np.array(iou_values).reshape(
-            (num_ref_instances, num_pred_instances)
-        )
-
-        # Use linear_sum_assignment to find the best matches
-        ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
-
-        # Initialize variables for True Positives (tp) and False Positives (fp)
-        tp, fp, dice_list, iou_list = 0, 0, [], []
+            # compute other instance metrics
 
         # Loop through matched instances to compute PQ components
         for ref_idx, pred_idx in zip(ref_indices, pred_indices):
