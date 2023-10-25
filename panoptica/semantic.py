@@ -61,7 +61,7 @@ class SemanticSegmentationEvaluator(Evaluator):
         ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
-        tp, fp, dice_list, iou_list = 0, 0, [], []
+        tp, dice_list, iou_list = 0, [], []
 
         # Loop through matched instances to compute PQ components
         for ref_idx, pred_idx in zip(ref_indices, pred_indices):
@@ -79,16 +79,12 @@ class SemanticSegmentationEvaluator(Evaluator):
                     pred_instance_idx=pred_idx + 1,
                 )
                 dice_list.append(dice)
-            else:
-                # No match found, increment false positive count
-                fp += 1
 
         # Create and return the PanopticaResult object with computed metrics
         return PanopticaResult(
             num_ref_instances=num_ref_instances,
             num_pred_instances=num_pred_instances,
             tp=tp,
-            fp=fp,
             dice_list=dice_list,
             iou_list=iou_list,
         )
