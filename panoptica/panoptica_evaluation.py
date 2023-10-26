@@ -5,7 +5,6 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 from .utils import (
-    _count_unique_without_zeros,
     _label_instances,
     _compute_instance_iou,
     _compute_instance_volumetric_dice,
@@ -43,10 +42,9 @@ def panoptica_evaluation(
 
     # Handle different processing modes
     if modus == "im":
-        ref_labels = ref_mask
-        num_ref_instances = _count_unique_without_zeros(ref_mask)
-        pred_labels = pred_mask
-        num_pred_instances = _count_unique_without_zeros(pred_mask)
+        print("please use the object oriented interface for the moment:")
+        print("from panoptica.instance import InstanceSegmentationEvaluator")
+
     elif modus == "cc":
         ref_labels, num_ref_instances = _label_instances(
             mask=ref_mask, cca_backend=cca_backend
