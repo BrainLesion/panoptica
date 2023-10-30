@@ -1,8 +1,7 @@
 from auxiliary.nifti.io import read_nifti
+
 from panoptica.panoptica_evaluation import panoptica_evaluation
-
 from panoptica.semantic import SemanticSegmentationEvaluator
-
 
 pred_masks = read_nifti(
     input_nifti_path="/home/florian/flow/cfos_analysis/data/ablation/2021-11-25_23-50-56_2021-10-25_19-38-31_tr_dice_bce_11/patchvolume_695_2.nii.gz"
