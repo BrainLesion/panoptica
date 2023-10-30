@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "panoptica"
-version = "0.3.2"
+version = "0.3.3"
 description = "Panoptic Quality (PQ) computation for binary masks."
 authors = ["Florian Kofler <florian.kofler@tum.de>"]
+
+# Add the exclude field directly under [tool.poetry]
+exclude = ["examples", "benchmark"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
