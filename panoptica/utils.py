@@ -1,12 +1,9 @@
 import warnings
-import numpy as np
 from typing import Tuple
 
-
 import cc3d
-from scipy import ndimage
-
 import numpy as np
+from scipy import ndimage
 
 
 def _compute_instance_volumetric_dice(

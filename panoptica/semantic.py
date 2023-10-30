@@ -1,16 +1,16 @@
 from __future__ import annotations
-from typing import Tuple
-from multiprocessing import Pool
 
-import numpy as np
+from multiprocessing import Pool
+from typing import Tuple
 
 import cc3d
+import numpy as np
 from scipy import ndimage
 from scipy.optimize import linear_sum_assignment
 
-from .timing import measure_time
 from .evaluator import Evaluator
 from .result import PanopticaResult
+from .timing import measure_time
 
 
 class SemanticSegmentationEvaluator(Evaluator):

@@ -1,17 +1,17 @@
 from __future__ import annotations
+
 from multiprocessing import Pool
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 
+from .result import PanopticaResult
+from .timing import measure_time
 from .utils import (
-    _label_instances,
     _compute_instance_iou,
     _compute_instance_volumetric_dice,
+    _label_instances,
 )
-from .result import PanopticaResult
-
-from .timing import measure_time
 
 
 @measure_time
