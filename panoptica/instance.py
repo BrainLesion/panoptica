@@ -1,13 +1,14 @@
 from __future__ import annotations
-from typing import Tuple
-from multiprocessing import Pool
+
 import warnings
+from multiprocessing import Pool
+from typing import Tuple
 
 import numpy as np
 
-from .timing import measure_time
 from .evaluator import Evaluator
 from .result import PanopticaResult
+from .timing import measure_time
 
 
 class InstanceSegmentationEvaluator(Evaluator):
