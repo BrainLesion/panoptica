@@ -8,9 +8,11 @@ import numpy as np
 from scipy import ndimage
 from scipy.optimize import linear_sum_assignment
 
-from .evaluator import Evaluator
-from .result import PanopticaResult
-from .timing import measure_time
+from panoptica.evaluator import Evaluator
+from panoptica.result import PanopticaResult
+
+# from panoptica.semantic.connected_component_backends import CCABackend
+from panoptica.timing import measure_time
 
 
 class SemanticSegmentationEvaluator(Evaluator):

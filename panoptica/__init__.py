@@ -1,0 +1,1 @@
+from panoptica.semantic.connected_component_backends import CCABackend
