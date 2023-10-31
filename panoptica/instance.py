@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import concurrent.futures
 import warnings
-from multiprocessing import Pool
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 
@@ -51,7 +51,7 @@ class InstanceSegmentationEvaluator(Evaluator):
         num_ref_instances = len(ref_nonzero_unique_labels)
 
         pred_labels = prediction_mask
-        pred_nonzero_unique_labels = self._unique_without_zeros(arr=ref_labels)
+        pred_nonzero_unique_labels = self._unique_without_zeros(arr=pred_labels)
         num_pred_instances = len(pred_nonzero_unique_labels)
 
         self._handle_edge_cases(
@@ -62,24 +62,26 @@ class InstanceSegmentationEvaluator(Evaluator):
         # Initialize variables for True Positives (tp)
         tp, dice_list, iou_list = 0, [], []
 
-        # TODO parallelize this loop
-        # loop through all reference labels and compute IoU
-        for ref_idx in ref_nonzero_unique_labels:
-            iou = self._compute_iou(
-                reference=ref_labels == ref_idx,
-                prediction=pred_labels == ref_idx,
-            )
-            if iou > iou_threshold:
-                iou_list.append(iou)
-                tp += 1
-
-                dice = self._compute_dice_coefficient(
-                    reference=ref_labels == ref_idx,
-                    prediction=pred_labels == ref_idx,
+        # Use concurrent.futures.ThreadPoolExecutor for parallelization
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(
+                    self._evaluate_instance,
+                    ref_labels,
+                    pred_labels,
+                    ref_idx,
+                    iou_threshold,
                 )
-                dice_list.append(dice)
+                for ref_idx in ref_nonzero_unique_labels
+            ]
 
-            # TODO note we could compute other metrics here and potentially also do this for lower ious
+            for future in concurrent.futures.as_completed(futures):
+                tp_i, dice_i, iou_i = future.result()
+                tp += tp_i
+                if dice_i is not None:
+                    dice_list.append(dice_i)
+                if iou_i is not None:
+                    iou_list.append(iou_i)
 
         # Create and return the PanopticaResult object with computed metrics
         return PanopticaResult(
@@ -89,6 +91,41 @@ class InstanceSegmentationEvaluator(Evaluator):
             dice_list=dice_list,
             iou_list=iou_list,
         )
+
+    def _evaluate_instance(
+        self,
+        ref_labels: np.ndarray,
+        pred_labels: np.ndarray,
+        ref_idx: int,
+        iou_threshold: float,
+    ) -> Tuple[int, float, float]:
+        """
+        Evaluate a single instance.
+
+        Args:
+            ref_labels (np.ndarray): Reference instance segmentation mask.
+            pred_labels (np.ndarray): Predicted instance segmentation mask.
+            ref_idx (int): The label of the current instance.
+            iou_threshold (float): The IoU threshold for considering a match.
+
+        Returns:
+            Tuple[int, float, float]: Tuple containing True Positives (int), Dice coefficient (float), and IoU (float).
+        """
+        iou = self._compute_iou(
+            reference=ref_labels == ref_idx,
+            prediction=pred_labels == ref_idx,
+        )
+        if iou > iou_threshold:
+            tp = 1
+            dice = self._compute_dice_coefficient(
+                reference=ref_labels == ref_idx,
+                prediction=pred_labels == ref_idx,
+            )
+        else:
+            tp = 0
+            dice = None
+
+        return tp, dice, iou
 
     def _unique_without_zeros(self, arr: np.ndarray) -> np.ndarray:
         """
