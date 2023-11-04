@@ -43,14 +43,14 @@ class PanopticaResult:
     def __str__(self):
         return (
             f"Number of instances in prediction: {self.num_pred_instances}\n"
-            f"Number of instances in reference: {self.num_ref_instances}"
+            f"Number of instances in reference: {self.num_ref_instances}\n"
             f"True Positives (tp): {self.tp}\n"
             f"False Positives (fp): {self.fp}\n"
             f"False Negatives (fn): {self.fn}\n"
             f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
-            f"Segmentation Quality (SQ): {self.sq}\n"
+            f"Segmentation Quality (SQ): {self.sq}±{self.sq_sd}\n"
             f"Panoptic Quality (PQ): {self.pq}\n"
-            f"volumetric instance-wise DICE: {self.instance_dice}\n"
+            f"volumetric instance-wise DICE: {self.instance_dice}±{self.instance_dice_sd}"
         )
 
     @property
@@ -135,7 +135,7 @@ class PanopticaResult:
         Returns:
             float: Standard deviation of Segmentation Quality (SQ).
         """
-        return np.sd(self._iou_list)
+        return np.std(self._iou_list)
 
     @property
     def pq(self) -> float:
@@ -165,4 +165,4 @@ class PanopticaResult:
         Returns:
             float: Standard deviation of Average Dice coefficient.
         """
-        return np.sd(self._dice_list)
+        return np.std(self._dice_list)
