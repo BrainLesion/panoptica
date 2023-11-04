@@ -1,6 +1,6 @@
 from auxiliary.nifti.io import read_nifti
 
-from panoptica.instance import InstanceSegmentationEvaluator
+from panoptica import InstanceSegmentationEvaluator
 
 ref_masks = read_nifti(
     "examples/spine_seg/instance/sub-0007_mod-T2w_seg-vert_msk.nii.gz"

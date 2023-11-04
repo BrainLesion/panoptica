@@ -8,9 +8,12 @@ import numpy as np
 from scipy import ndimage
 from scipy.optimize import linear_sum_assignment
 
-from .evaluator import Evaluator
-from .result import PanopticaResult
-from .timing import measure_time
+from panoptica.evaluator import Evaluator
+from panoptica.result import PanopticaResult
+from panoptica.semantic.connected_component_backends import CCABackend
+
+# from panoptica.semantic.connected_component_backends import CCABackend
+from panoptica.timing import measure_time
 
 
 class SemanticSegmentationEvaluator(Evaluator):
@@ -21,7 +24,7 @@ class SemanticSegmentationEvaluator(Evaluator):
     using metrics such as Intersection over Union (IoU) and Dice coefficient.
 
     Args:
-        cca_backend (str): The backend for connected components labeling. Should be "cc3d" or "scipy".
+        cca_backend (CCABackend): The backend for connected components labeling (Enum: CCABackend.cc3d or CCABackend.scipy).
 
     Methods:
         evaluate(reference_mask, prediction_mask, iou_threshold): Evaluate the segmentation masks.
@@ -30,7 +33,7 @@ class SemanticSegmentationEvaluator(Evaluator):
         _compute_instance_dice_coefficient(ref_labels, pred_labels, ref_instance_idx, pred_instance_idx): Compute Dice coefficient for instances.
     """
 
-    def __init__(self, cca_backend: str):
+    def __init__(self, cca_backend: CCABackend):
         self.cca_backend = cca_backend
         # TODO consider initializing evaluator with metrics it should compute
 
@@ -129,12 +132,11 @@ class SemanticSegmentationEvaluator(Evaluator):
                 - Labeled mask with instances
                 - Number of instances found
         """
-        if self.cca_backend == "cc3d":
+        if self.cca_backend == CCABackend.cc3d:
             labeled, num_instances = cc3d.connected_components(mask, return_N=True)
-        elif self.cca_backend == "scipy":
+        elif self.cca_backend == CCABackend.scipy:
             labeled, num_instances = ndimage.label(mask)
-        else:
-            raise ValueError(f"Unsupported cca_backend: {self.cca_backend}")
+
         return labeled, num_instances
 
     def _compute_instance_iou(
