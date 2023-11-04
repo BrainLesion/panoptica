@@ -128,6 +128,16 @@ class PanopticaResult:
         return np.sum(self._iou_list) / self.tp
 
     @property
+    def sq_sd(self) -> float:
+        """
+        Calculate the standard deviation of Segmentation Quality (SQ) based on IoU values.
+
+        Returns:
+            float: Standard deviation of Segmentation Quality (SQ).
+        """
+        return np.sd(self._iou_list)
+
+    @property
     def pq(self) -> float:
         """
         Calculate the Panoptic Quality (PQ) based on SQ and RQ.
@@ -145,4 +155,14 @@ class PanopticaResult:
         Returns:
             float: Average Dice coefficient.
         """
-        return np.mean(self._dice_list)
+        return np.sum(self._dice_list) / self.tp
+
+    @property
+    def instance_dice_sd(self) -> float:
+        """
+        Calculate the standard deviation of average Dice coefficient for matched instances.
+
+        Returns:
+            float: Standard deviation of Average Dice coefficient.
+        """
+        return np.sd(self._dice_list)
