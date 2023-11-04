@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import List
+
 import numpy as np
 
 
@@ -40,15 +42,15 @@ class PanopticaResult:
 
     def __str__(self):
         return (
-            f"Panoptic Quality (PQ): {self.pq}\n"
-            f"Segmentation Quality (SQ): {self.sq}\n"
-            f"Recognition Quality (RQ): {self.rq}\n"
+            f"Number of instances in prediction: {self.num_pred_instances}\n"
+            f"Number of instances in reference: {self.num_ref_instances}\n"
             f"True Positives (tp): {self.tp}\n"
             f"False Positives (fp): {self.fp}\n"
             f"False Negatives (fn): {self.fn}\n"
-            f"instance_dice: {self.instance_dice}\n"
-            f"Number of instances in prediction: {self.num_pred_instances}\n"
-            f"Number of instances in reference: {self.num_ref_instances}"
+            f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
+            f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
+            f"Panoptic Quality (PQ): {self.pq}\n"
+            f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
         )
 
     @property
@@ -126,6 +128,16 @@ class PanopticaResult:
         return np.sum(self._iou_list) / self.tp
 
     @property
+    def sq_sd(self) -> float:
+        """
+        Calculate the standard deviation of Segmentation Quality (SQ) based on IoU values.
+
+        Returns:
+            float: Standard deviation of Segmentation Quality (SQ).
+        """
+        return np.std(self._iou_list)
+
+    @property
     def pq(self) -> float:
         """
         Calculate the Panoptic Quality (PQ) based on SQ and RQ.
@@ -143,4 +155,14 @@ class PanopticaResult:
         Returns:
             float: Average Dice coefficient.
         """
-        return np.mean(self._dice_list)
+        return np.sum(self._dice_list) / self.tp
+
+    @property
+    def instance_dice_sd(self) -> float:
+        """
+        Calculate the standard deviation of average Dice coefficient for matched instances.
+
+        Returns:
+            float: Standard deviation of Average Dice coefficient.
+        """
+        return np.std(self._dice_list)
