@@ -48,9 +48,9 @@ class PanopticaResult:
             f"False Positives (fp): {self.fp}\n"
             f"False Negatives (fn): {self.fn}\n"
             f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
-            f"Segmentation Quality (SQ): {self.sq}±{self.sq_sd}\n"
+            f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
             f"Panoptic Quality (PQ): {self.pq}\n"
-            f"volumetric instance-wise DICE: {self.instance_dice}±{self.instance_dice_sd}"
+            f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
         )
 
     @property
