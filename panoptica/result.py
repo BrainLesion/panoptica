@@ -53,6 +53,19 @@ class PanopticaResult:
             f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
         )
 
+    def to_dict(self):
+        return (
+            f"Number of instances in prediction: {self.num_pred_instances}\n"
+            f"Number of instances in reference: {self.num_ref_instances}\n"
+            f"True Positives (tp): {self.tp}\n"
+            f"False Positives (fp): {self.fp}\n"
+            f"False Negatives (fn): {self.fn}\n"
+            f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
+            f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
+            f"Panoptic Quality (PQ): {self.pq}\n"
+            f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
+        )
+
     @property
     def num_ref_instances(self) -> int:
         """
