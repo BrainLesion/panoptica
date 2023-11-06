@@ -54,17 +54,23 @@ class PanopticaResult:
         )
 
     def to_dict(self):
-        return (
-            f"Number of instances in prediction: {self.num_pred_instances}\n"
-            f"Number of instances in reference: {self.num_ref_instances}\n"
-            f"True Positives (tp): {self.tp}\n"
-            f"False Positives (fp): {self.fp}\n"
-            f"False Negatives (fn): {self.fn}\n"
-            f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
-            f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
-            f"Panoptic Quality (PQ): {self.pq}\n"
-            f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
+        return ({
+            "Number of instances in prediction": self.num_pred_instances,
+            "Number of instances in reference": self.num_ref_instances,
+            "True Positives (tp)": self.tp,
+            "False Positives (fp)": self.fp,
+            "False Negatives (fn)": self.fn,
+            "Recognition Quality / F1 Score (RQ)": self.rq,
+            "Segmentation Quality (SQ)": self.sq,
+            "Segmentation Quality SD": self.sq_sd,
+            "Panoptic Quality (PQ)": self.pq,
+            "volumetric instance-wise DICE": self.instance_dice,
+            "volumetric instance-wise DICE SD": self.instance_dice_sd
+            }
         )
+    
+    def to_dict2(self):
+        return("123")
 
     @property
     def num_ref_instances(self) -> int:
