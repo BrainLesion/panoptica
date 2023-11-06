@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from .result import PanopticaResult
+from panoptica.result import PanopticaResult
 
 
 class Evaluator(ABC):
@@ -21,7 +21,7 @@ class Evaluator(ABC):
         reference_mask: np.ndarray,
         prediction_mask: np.ndarray,
         iou_threshold: float,
-    )-> PanopticaResult:
+    ) -> PanopticaResult:
         """
         Evaluate the instance segmentation results based on the reference and prediction masks.
 

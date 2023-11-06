@@ -10,9 +10,7 @@ from scipy.optimize import linear_sum_assignment
 
 from panoptica.evaluator import Evaluator
 from panoptica.result import PanopticaResult
-from panoptica.semantic.connected_component_backends import CCABackend
-
-# from panoptica.semantic.connected_component_backends import CCABackend
+from panoptica.semantic_evaluation.connected_component_backends import CCABackend
 from panoptica.timing import measure_time
 
 
