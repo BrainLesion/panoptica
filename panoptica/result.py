@@ -68,9 +68,6 @@ class PanopticaResult:
             "volumetric instance-wise DICE SD": self.instance_dice_sd
             }
         )
-    
-    def to_dict2(self):
-        return("123")
 
     @property
     def num_ref_instances(self) -> int:
