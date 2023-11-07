@@ -55,17 +55,17 @@ class PanopticaResult:
 
     def to_dict(self):
         return ({
-            "Number of instances in prediction": self.num_pred_instances,
-            "Number of instances in reference": self.num_ref_instances,
-            "True Positives (tp)": self.tp,
-            "False Positives (fp)": self.fp,
-            "False Negatives (fn)": self.fn,
-            "Recognition Quality / F1 Score (RQ)": self.rq,
-            "Segmentation Quality (SQ)": self.sq,
-            "Segmentation Quality SD": self.sq_sd,
-            "Panoptic Quality (PQ)": self.pq,
-            "volumetric instance-wise DICE": self.instance_dice,
-            "volumetric instance-wise DICE SD": self.instance_dice_sd
+            "num_pred_instances": self.num_pred_instances,
+            "num_ref_instances": self.num_ref_instances,
+            "tp": self.tp,
+            "fp": self.fp,
+            "fn": self.fn,
+            "rq": self.rq,
+            "sq": self.sq,
+            "sq_sd": self.sq_sd,
+            "pq": self.pq,
+            "instance_dice": self.instance_dice,
+            "instance_dice_sd": self.instance_dice_sd
             }
         )
 
