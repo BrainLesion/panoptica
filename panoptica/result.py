@@ -53,6 +53,22 @@ class PanopticaResult:
             f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
         )
 
+    def to_dict(self):
+        return ({
+            "num_pred_instances": self.num_pred_instances,
+            "num_ref_instances": self.num_ref_instances,
+            "tp": self.tp,
+            "fp": self.fp,
+            "fn": self.fn,
+            "rq": self.rq,
+            "sq": self.sq,
+            "sq_sd": self.sq_sd,
+            "pq": self.pq,
+            "instance_dice": self.instance_dice,
+            "instance_dice_sd": self.instance_dice_sd
+            }
+        )
+
     @property
     def num_ref_instances(self) -> int:
         """
