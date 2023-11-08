@@ -172,7 +172,7 @@ class PanopticaResult:
             float: Average Dice coefficient.
         """
         if self.tp == 0: return 0.0
-        else: return np.sum(self._dice_list) / (self.tp + self.fn)
+        else: return np.sum(self._dice_list) / self.tp
 
     @property
     def instance_dice_sd(self) -> float:
