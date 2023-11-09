@@ -3,10 +3,10 @@ from auxiliary.nifti.io import read_nifti
 from panoptica import CCABackend, SemanticSegmentationEvaluator
 
 ref_masks = read_nifti(
-    "examples/spine_seg/semantic/sub-0007_mod-T2w_seg-spine_msk.nii.gz"
+    "examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk.nii.gz"
 )
 pred_masks = read_nifti(
-    "examples/spine_seg/semantic/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz"
+    "examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz"
 )
 
 
