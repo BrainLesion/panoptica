@@ -3,10 +3,10 @@ from auxiliary.nifti.io import read_nifti
 from panoptica import InstanceSegmentationEvaluator
 
 ref_masks = read_nifti(
-    "examples/spine_seg/instance/sub-0007_mod-T2w_seg-vert_msk.nii.gz"
+    "examples/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk.nii.gz"
 )
 pred_masks = read_nifti(
-    "examples/spine_seg/instance/sub-0007_mod-T2w_seg-vert_msk_new.nii.gz"
+    "examples/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk_new.nii.gz"
 )
 
 
