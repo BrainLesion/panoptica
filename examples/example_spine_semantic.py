@@ -2,8 +2,8 @@ from auxiliary.nifti.io import read_nifti
 
 from panoptica import SemanticPair, Panoptic_Evaluator, ConnectedComponentsInstanceApproximator, CCABackend, NaiveOneToOneMatching
 
-ref_masks = read_nifti("examples/spine_seg/semantic/sub-0007_mod-T2w_seg-spine_msk.nii.gz")
-pred_masks = read_nifti("examples/spine_seg/semantic/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz")
+ref_masks = read_nifti("examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk.nii.gz")
+pred_masks = read_nifti("examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz")
 
 
 sample = SemanticPair(pred_masks, ref_masks)
