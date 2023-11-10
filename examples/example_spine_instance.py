@@ -1,12 +1,18 @@
 from auxiliary.nifti.io import read_nifti
 
-from panoptica import *
+from panoptica import (
+    UnmatchedInstancePair,
+    Panoptic_Evaluator,
+    ConnectedComponentsInstanceApproximator,
+    CCABackend,
+    NaiveOneToOneMatching,
+)
 
 ref_masks = read_nifti("examples/spine_seg/instance/sub-0007_mod-T2w_seg-vert_msk.nii.gz")
 pred_masks = read_nifti("examples/spine_seg/instance/sub-0007_mod-T2w_seg-vert_msk_new.nii.gz")
 
 
-sample = SemanticPair(pred_masks, ref_masks)
+sample = UnmatchedInstancePair(pred_masks, ref_masks)
 
 evaluator = Panoptic_Evaluator(
     expected_input=UnmatchedInstancePair,

@@ -1,9 +1,5 @@
 import warnings
-from typing import Tuple
-
-import cc3d
 import numpy as np
-from scipy import ndimage
 
 
 def _unique_without_zeros(arr: np.ndarray) -> np.ndarray:

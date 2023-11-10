@@ -1,8 +1,8 @@
 import concurrent.futures
-from utils.datatypes import MatchedInstancePair
-from result import PanopticaResult
+from panoptica.utils.datatypes import MatchedInstancePair
+from panoptica.result import PanopticaResult
 import numpy as np
-from utils.metrics import _compute_iou, _compute_dice_coefficient
+from panoptica.utils.metrics import _compute_iou, _compute_dice_coefficient
 
 
 def evaluate_matched_instance(semantic_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:

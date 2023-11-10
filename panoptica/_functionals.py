@@ -1,7 +1,7 @@
 import numpy as np
 from multiprocessing import Pool
-from utils.metrics import _compute_instance_iou
-from utils.constants import CCABackend
+from panoptica.utils.metrics import _compute_instance_iou
+from panoptica.utils.constants import CCABackend
 
 
 def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels, pred_labels):

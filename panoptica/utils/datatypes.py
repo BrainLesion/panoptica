@@ -3,7 +3,7 @@ import numpy as np
 from numpy import dtype
 from abc import ABC
 import warnings
-from utils import _count_unique_without_zeros, _unique_without_zeros
+from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 
 uint_type: type = np.unsignedinteger
 int_type: type = np.integer

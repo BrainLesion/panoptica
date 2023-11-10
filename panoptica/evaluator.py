@@ -2,12 +2,12 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from result import PanopticaResult
-from utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair, _ProcessingPair, _ProcessingPairInstanced
-from instance_approximator import InstanceApproximator
-from instance_matcher import InstanceMatchingAlgorithm
-from instance_evaluator import evaluate_matched_instance
-from timing import measure_time
+from panoptica.result import PanopticaResult
+from panoptica.utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair, _ProcessingPair
+from panoptica.instance_approximator import InstanceApproximator
+from panoptica.instance_matcher import InstanceMatchingAlgorithm
+from panoptica.instance_evaluator import evaluate_matched_instance
+from panoptica.timing import measure_time
 
 
 class Panoptic_Evaluator:

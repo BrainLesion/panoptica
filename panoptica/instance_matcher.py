@@ -1,9 +1,7 @@
 from abc import abstractmethod, ABC
-from utils.datatypes import UnmatchedInstancePair, MatchedInstancePair, Instance_Label_Map, uint_type
-from multiprocessing import Pool
+from panoptica.utils.datatypes import UnmatchedInstancePair, MatchedInstancePair, Instance_Label_Map
 import numpy as np
-from utils import _unique_without_zeros, _compute_instance_iou
-from _functionals import _map_labels, _calc_iou_matrix
+from panoptica._functionals import _map_labels, _calc_iou_matrix
 from scipy.optimize import linear_sum_assignment
 
 
