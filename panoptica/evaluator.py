@@ -13,9 +13,9 @@ from panoptica.timing import measure_time
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: type(SemanticPair) | type(UnmatchedInstancePair) | type(MatchedInstancePair),
-        instance_approximator: InstanceApproximator | None,
-        instance_matcher: InstanceMatchingAlgorithm | None,
+        expected_input: type(SemanticPair) | type(UnmatchedInstancePair) | type(MatchedInstancePair) = type(MatchedInstancePair),
+        instance_approximator: InstanceApproximator | None = None,
+        instance_matcher: InstanceMatchingAlgorithm | None = None,
         iou_threshold: float = 0.5,
     ) -> None:
         self.__expected_input = expected_input
@@ -36,10 +36,9 @@ class Panoptic_Evaluator:
 
 def panoptic_evaluate(
     processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
-    instance_approximator: InstanceApproximator | None,
-    instance_matcher: InstanceMatchingAlgorithm | None,
-    iou_threshold: float,
-    verbose: bool = False,
+    instance_approximator: InstanceApproximator | None = None,
+    instance_matcher: InstanceMatchingAlgorithm | None = None,
+    iou_threshold: float = 0.5,
     **kwargs,
 ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
     debug_data: dict[str, _ProcessingPair] = {}

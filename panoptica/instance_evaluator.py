@@ -28,9 +28,8 @@ def evaluate_matched_instance(semantic_pair: MatchedInstancePair, iou_threshold:
         for future in concurrent.futures.as_completed(futures):
             tp_i, dice_i, iou_i = future.result()
             tp += tp_i
-            if dice_i is not None:
+            if dice_i is not None and iou_i is not None:
                 dice_list.append(dice_i)
-            if iou_i is not None:
                 iou_list.append(iou_i)
     # Create and return the PanopticaResult object with computed metrics
     return PanopticaResult(
@@ -43,11 +42,11 @@ def evaluate_matched_instance(semantic_pair: MatchedInstancePair, iou_threshold:
 
 
 def _evaluate_instance(
-    ref_labels: np.ndarray,
-    pred_labels: np.ndarray,
+    reference_arr: np.ndarray,
+    prediction_arr: np.ndarray,
     ref_idx: int,
     iou_threshold: float,
-) -> tuple[int, float, float]:
+) -> tuple[int, float | None, float | None]:
     """
     Evaluate a single instance.
 
@@ -60,18 +59,19 @@ def _evaluate_instance(
     Returns:
         Tuple[int, float, float]: Tuple containing True Positives (int), Dice coefficient (float), and IoU (float).
     """
-    iou = _compute_iou(
-        reference=ref_labels == ref_idx,
-        prediction=pred_labels == ref_idx,
+    iou: float | None = _compute_iou(
+        reference=reference_arr == ref_idx,
+        prediction=prediction_arr == ref_idx,
     )
     if iou > iou_threshold:
         tp = 1
         dice = _compute_dice_coefficient(
-            reference=ref_labels == ref_idx,
-            prediction=pred_labels == ref_idx,
+            reference=reference_arr == ref_idx,
+            prediction=prediction_arr == ref_idx,
         )
     else:
         tp = 0
         dice = None
+        iou = None
 
     return tp, dice, iou

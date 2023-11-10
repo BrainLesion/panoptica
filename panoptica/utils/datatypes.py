@@ -20,8 +20,8 @@ class _ProcessingPair(ABC):
         _check_array_integrity(prediction_arr, reference_arr, dtype=dtype)
         self.prediction_arr = prediction_arr
         self.reference_arr = reference_arr
-        self.ref_labels = tuple(_unique_without_zeros(reference_arr))
-        self.pred_labels = tuple(_unique_without_zeros(prediction_arr))
+        self.ref_labels: tuple[int] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
+        self.pred_labels: tuple[int] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
 
     # Make all variables read-only!
     def __setattr__(self, attr, value):
@@ -121,16 +121,24 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         self,
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
-        missed_reference_labels: list[int],
-        missed_prediction_labels: list[int],
-        n_matched_instances: int,
+        missed_reference_labels: list[int] | None = None,
+        missed_prediction_labels: list[int] | None = None,
+        n_matched_instances: int | None = None,
         n_prediction_instance: int | None = None,
         n_reference_instance: int | None = None,
     ) -> None:
-        self.missed_reference_labels = missed_reference_labels
-        self.missed_prediction_labels = missed_prediction_labels
-        self.n_matched_instances = n_matched_instances
         super().__init__(prediction_arr, reference_arr, uint_type, n_prediction_instance, n_reference_instance)  # type:ignore
+        if n_matched_instances is None:
+            n_matched_instances = len([i for i in self.pred_labels if i in self.ref_labels])
+        self.n_matched_instances = n_matched_instances
+
+        if missed_reference_labels is None:
+            missed_reference_labels = list([i for i in self.ref_labels if i not in self.pred_labels])
+        self.missed_reference_labels = missed_reference_labels
+
+        if missed_prediction_labels is None:
+            missed_prediction_labels = list([i for i in self.pred_labels if i not in self.ref_labels])
+        self.missed_prediction_labels = missed_prediction_labels
 
     def copy(self):
         return type(self)(

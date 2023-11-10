@@ -35,16 +35,14 @@ class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
         ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
-        tp, iou_list = 0, []
         labelmap: Instance_Label_Map = []
 
         # Loop through matched instances to compute PQ components
         for ref_idx, pred_idx in zip(ref_indices, pred_indices):
+            # TODO skip indices that have been matched already
             iou = iou_matrix[ref_idx][pred_idx]
             if iou >= self.iou_threshold:
                 # Match found, increment true positive count and collect IoU and Dice values
-                tp += 1
-                iou_list.append(iou)
                 labelmap.append(([ref_labels[ref_idx]], [pred_labels[pred_idx]]))
                 # map label ref_idx to pred_idx
         return labelmap
@@ -62,6 +60,8 @@ def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instan
     pred_labelmap = {}
     ref_labelmap = {}
     label_counter = 1
+    # TODO map only predictions onto reference, but vice versa (leave reference untouched, unmatched predictions get next best labels)
+
     # Go over instance labelmap and assign the matched instance sequentially
     for refs, preds in labelmap:
         for r, p in zip(refs, preds):

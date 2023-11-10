@@ -4,18 +4,14 @@ from panoptica.utils.metrics import _compute_instance_iou
 from panoptica.utils.constants import CCABackend
 
 
-def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels, pred_labels):
+def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: list[int], pred_labels: list[int]):
     num_ref_instances = len(ref_labels)
     num_pred_instances = len(pred_labels)
 
     # Create a pool of worker processes to parallelize the computation
     with Pool() as pool:
         # Generate all possible pairs of instance indices for IoU computation
-        instance_pairs = [
-            (reference_arr, prediction_arr, ref_idx, pred_idx)
-            for ref_idx in range(1, num_ref_instances + 1)
-            for pred_idx in range(1, num_pred_instances + 1)
-        ]
+        instance_pairs = [(reference_arr, prediction_arr, ref_idx, pred_idx) for ref_idx in ref_labels for pred_idx in pred_labels]
 
         # Calculate IoU for all instance pairs in parallel using starmap
         iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
