@@ -5,6 +5,24 @@ from panoptica.utils.constants import CCABackend
 
 
 def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: list[int], pred_labels: list[int]):
+    """
+    Calculate the Intersection over Union (IoU) matrix between reference and prediction arrays.
+
+    Args:
+        prediction_arr (np.ndarray): Numpy array containing the prediction labels.
+        reference_arr (np.ndarray): Numpy array containing the reference labels.
+        ref_labels (list[int]): List of unique reference labels.
+        pred_labels (list[int]): List of unique prediction labels.
+
+    Returns:
+        np.ndarray: IoU matrix where each element represents the IoU between a reference and prediction instance.
+
+    Example:
+    >>> _calc_iou_matrix(np.array([1, 2, 3]), np.array([4, 5, 6]), [1, 2, 3], [4, 5, 6])
+    array([[0. , 0. , 0. ],
+           [0. , 0. , 0. ],
+           [0. , 0. , 0. ]])
+    """
     num_ref_instances = len(ref_labels)
     num_pred_instances = len(pred_labels)
 
@@ -22,7 +40,9 @@ def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_
 
 
 def _map_labels(arr: np.ndarray, label_map: dict[np.integer, np.integer]) -> np.ndarray:
-    """Maps labels in the given array according to the label_map dictionary.
+    """
+    Maps labels in the given array according to the label_map dictionary.
+
     Args:
         label_map (dict): A dictionary that maps the original label values (str or int) to the new label values (int).
 
@@ -40,6 +60,23 @@ def _connected_components(
     array: np.ndarray,
     cca_backend: CCABackend,
 ) -> tuple[np.ndarray, int]:
+    """
+    Label connected components in a binary array using a specified connected components algorithm.
+
+    Args:
+        array (np.ndarray): Binary array containing connected components.
+        cca_backend (CCABackend): Enum indicating the connected components algorithm backend (CCABackend.cc3d or CCABackend.scipy).
+
+    Returns:
+        tuple[np.ndarray, int]: A tuple containing the labeled array and the number of connected components.
+
+    Raises:
+        NotImplementedError: If the specified connected components algorithm backend is not implemented.
+
+    Example:
+    >>> _connected_components(np.array([[1, 0, 1], [0, 1, 1], [1, 0, 0]]), CCABackend.scipy)
+    (array([[1, 0, 2], [0, 3, 3], [4, 0, 0]]), 4)
+    """
     if cca_backend == CCABackend.cc3d:
         import cc3d
 

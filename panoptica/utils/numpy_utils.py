@@ -37,6 +37,19 @@ def _count_unique_without_zeros(arr: np.ndarray) -> int:
 
 
 def _get_smallest_fitting_uint(max_value: int) -> type:
+    """
+    Determine the smallest unsigned integer type that can accommodate the given maximum value.
+
+    Args:
+        max_value (int): The maximum value to be accommodated.
+
+    Returns:
+        type: The NumPy data type (e.g., np.uint8, np.uint16, np.uint32, np.uint64).
+
+    Example:
+    >>> _get_smallest_fitting_uint(255)
+    <class 'numpy.uint8'>
+    """
     if max_value < 256:
         dtype = np.uint8
     elif max_value < 65536:

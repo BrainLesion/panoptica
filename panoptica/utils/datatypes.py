@@ -10,6 +10,11 @@ int_type: type = np.integer
 
 
 class _ProcessingPair(ABC):
+    """
+    Represents a general processing pair consisting of a reference array and a prediction array. Type of array can be arbitrary (integer recommended)
+    Every member is read-only!
+    """
+
     prediction_arr: np.ndarray
     reference_arr: np.ndarray
     # unique labels without zero
@@ -17,6 +22,13 @@ class _ProcessingPair(ABC):
     pred_labels: tuple[int]
 
     def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None) -> None:
+        """Initializes a general Processing Pair
+
+        Args:
+            prediction_arr (np.ndarray): Numpy array containig the prediction labels
+            reference_arr (np.ndarray): Numpy array containig the reference labels
+            dtype (type | None): Datatype that is asserted. None for no assertion
+        """
         _check_array_integrity(prediction_arr, reference_arr, dtype=dtype)
         self.prediction_arr = prediction_arr
         self.reference_arr = reference_arr
@@ -32,6 +44,10 @@ class _ProcessingPair(ABC):
 
 
 class _ProcessingPairInstanced(_ProcessingPair):
+    """
+    A ProcessingPair that contains instances, additionally has number of instances available
+    """
+
     n_prediction_instance: int
     n_reference_instance: int
 
@@ -56,6 +72,9 @@ class _ProcessingPairInstanced(_ProcessingPair):
             self.n_reference_instance = n_reference_instance
 
     def copy(self):
+        """
+        Creates an exact copy of this object
+        """
         return type(self)(
             prediction_arr=self.prediction_arr,
             reference_arr=self.reference_arr,
@@ -65,6 +84,24 @@ class _ProcessingPairInstanced(_ProcessingPair):
 
 
 def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None):
+    """
+    Check the integrity of two numpy arrays.
+
+    Parameters:
+    - prediction_arr (np.ndarray): The array to be checked.
+    - reference_arr (np.ndarray): The reference array for comparison.
+    - dtype (type | None): The expected data type for both arrays. Defaults to None.
+
+    Raises:
+    - AssertionError: If prediction_arr or reference_arr are not numpy arrays.
+    - AssertionError: If the shapes of prediction_arr and reference_arr do not match.
+    - AssertionError: If the data types of prediction_arr and reference_arr do not match.
+    - AssertionError: If dtype is provided and the data types of prediction_arr and/or reference_arr
+                     do not match the specified dtype.
+
+    Example:
+    >>> _check_array_integrity(np.array([1, 2, 3]), np.array([4, 5, 6]), dtype=int)
+    """
     assert isinstance(prediction_arr, np.ndarray) and isinstance(
         reference_arr, np.ndarray
     ), "prediction and/or reference are not numpy arrays"
@@ -79,21 +116,16 @@ def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray
 
 
 class SemanticPair(_ProcessingPair):
-    """A Processing pair of any dtype
-
-    Args:
-        ProcessingPair (_type_): _description_
-    """
+    """A Processing pair that contains Semantic Labels"""
 
     def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray) -> None:
         super().__init__(prediction_arr, reference_arr, dtype=int_type)
 
 
 class UnmatchedInstancePair(_ProcessingPairInstanced):
-    """A Processing pair of any unsigned (but matching) integer type
-
-    Args:
-        ProcessingPairInstanced (_type_): _description_
+    """
+    A Processing pair that contain Unmatched Instance Maps
+    Can be of any unsigned (but matching) integer type
     """
 
     def __init__(
@@ -107,10 +139,9 @@ class UnmatchedInstancePair(_ProcessingPairInstanced):
 
 
 class MatchedInstancePair(_ProcessingPairInstanced):
-    """A Processing pair of any unsigned (but matching) integer type consisting of only matched instance labels, as well as a list of missed labels from both
-
-    Args:
-        ProcessingPairInstanced (_type_): _description_
+    """
+    A Processing pair that contain Matched Instance Maps, i.e. each equal label in both maps are a match
+    Can be of any unsigned (but matching) integer type
     """
 
     missed_reference_labels: list[int]
@@ -127,6 +158,19 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         n_prediction_instance: int | None = None,
         n_reference_instance: int | None = None,
     ) -> None:
+        """Initializes a MatchedInstancePair
+
+        Args:
+            prediction_arr (np.ndarray): Numpy array containing the prediction matched instance labels
+            reference_arr (np.ndarray): Numpy array containing the reference matched instance labels
+            missed_reference_labels (list[int] | None, optional): List of unmatched reference labels. Defaults to None.
+            missed_prediction_labels (list[int] | None, optional): List of unmatched prediction labels. Defaults to None.
+            n_matched_instances (int | None, optional): Number of total matched instances, i.e. unique matched labels in both maps. Defaults to None.
+            n_prediction_instance (int | None, optional): Number of prediction instances. Defaults to None.
+            n_reference_instance (int | None, optional): Number of reference instances. Defaults to None.
+
+            For each argument: If none, will calculate on initialization.
+        """
         super().__init__(prediction_arr, reference_arr, uint_type, n_prediction_instance, n_reference_instance)  # type:ignore
         if n_matched_instances is None:
             n_matched_instances = len([i for i in self.pred_labels if i in self.ref_labels])
@@ -141,6 +185,9 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         self.missed_prediction_labels = missed_prediction_labels
 
     def copy(self):
+        """
+        Creates an exact copy of this object
+        """
         return type(self)(
             prediction_arr=self.prediction_arr,
             reference_arr=self.reference_arr,

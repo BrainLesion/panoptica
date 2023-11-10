@@ -18,6 +18,14 @@ class Panoptic_Evaluator:
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         iou_threshold: float = 0.5,
     ) -> None:
+        """Creates a Panoptic_Evaluator, that saves some parameters to be used for all subsequent evaluations
+
+        Args:
+            expected_input (type, optional): Expected DataPair Input. Defaults to type(MatchedInstancePair).
+            instance_approximator (InstanceApproximator | None, optional): Determines which instance approximator is used if necessary. Defaults to None.
+            instance_matcher (InstanceMatchingAlgorithm | None, optional): Determines which instance matching algorithm is used if necessary. Defaults to None.
+            iou_threshold (float, optional): Iou Threshold for evaluation. Defaults to 0.5.
+        """
         self.__expected_input = expected_input
         self.__instance_approximator = instance_approximator
         self.__instance_matcher = instance_matcher
@@ -41,6 +49,33 @@ def panoptic_evaluate(
     iou_threshold: float = 0.5,
     **kwargs,
 ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
+    """
+    Perform panoptic evaluation on the given processing pair.
+
+    Args:
+        processing_pair (SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult):
+            The processing pair to be evaluated.
+        instance_approximator (InstanceApproximator | None, optional):
+            The instance approximator used for approximating instances in the SemanticPair.
+        instance_matcher (InstanceMatchingAlgorithm | None, optional):
+            The instance matcher used for matching instances in the UnmatchedInstancePair.
+        iou_threshold (float, optional):
+            The IoU threshold for evaluating matched instances. Defaults to 0.5.
+        **kwargs:
+            Additional keyword arguments.
+
+    Returns:
+        tuple[PanopticaResult, dict[str, _ProcessingPair]]:
+            A tuple containing the panoptic result and a dictionary of debug data.
+
+    Raises:
+        AssertionError: If the input processing pair does not match the expected types.
+        RuntimeError: If the end of the panoptic pipeline is reached without producing results.
+
+    Example:
+    >>> panoptic_evaluate(SemanticPair(...), instance_approximator=InstanceApproximator(), iou_threshold=0.6)
+    (PanopticaResult(...), {'UnmatchedInstanceMap': _ProcessingPair(...), 'MatchedInstanceMap': _ProcessingPair(...)})
+    """
     debug_data: dict[str, _ProcessingPair] = {}
     # First Phase: Instance Approximation
     if isinstance(processing_pair, PanopticaResult):

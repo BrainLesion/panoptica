@@ -6,6 +6,21 @@ from panoptica.utils.metrics import _compute_iou, _compute_dice_coefficient
 
 
 def evaluate_matched_instance(semantic_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:
+    """
+    Map instance labels based on the provided labelmap and create a MatchedInstancePair.
+
+    Args:
+        processing_pair (UnmatchedInstancePair): The unmatched instance pair containing original labels.
+        labelmap (Instance_Label_Map): The instance label map obtained from instance matching.
+
+    Returns:
+        MatchedInstancePair: The result of mapping instance labels.
+
+    Example:
+    >>> unmatched_instance_pair = UnmatchedInstancePair(...)
+    >>> labelmap = [([1, 2], [3, 4]), ([5], [6])]
+    >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
+    """
     # Initialize variables for True Positives (tp)
     tp, dice_list, iou_list = 0, [], []
 
