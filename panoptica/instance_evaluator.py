@@ -1,8 +1,6 @@
-from abc import abstractmethod, ABC
 import concurrent.futures
 from utils.datatypes import MatchedInstancePair
 from result import PanopticaResult
-from timing import measure_time
 import numpy as np
 from utils.metrics import _compute_iou, _compute_dice_coefficient
 

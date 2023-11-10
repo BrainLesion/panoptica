@@ -9,7 +9,7 @@ uint_type: type = np.unsignedinteger
 int_type: type = np.integer
 
 
-class ProcessingPair(ABC):
+class _ProcessingPair(ABC):
     prediction_arr: np.ndarray
     reference_arr: np.ndarray
     # unique labels without zero
@@ -31,7 +31,7 @@ class ProcessingPair(ABC):
         self.__dict__[attr] = value
 
 
-class ProcessingPairInstanced(ProcessingPair):
+class _ProcessingPairInstanced(_ProcessingPair):
     n_prediction_instance: int
     n_reference_instance: int
 
@@ -78,7 +78,7 @@ def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray
         ), f"prediction and/or reference are not dtype {dtype}, got {prediction_arr.dtype} and {reference_arr.dtype}"
 
 
-class SemanticPair(ProcessingPair):
+class SemanticPair(_ProcessingPair):
     """A Processing pair of any dtype
 
     Args:
@@ -89,7 +89,7 @@ class SemanticPair(ProcessingPair):
         super().__init__(prediction_arr, reference_arr, dtype=int_type)
 
 
-class UnmatchedInstancePair(ProcessingPairInstanced):
+class UnmatchedInstancePair(_ProcessingPairInstanced):
     """A Processing pair of any unsigned (but matching) integer type
 
     Args:
@@ -106,7 +106,7 @@ class UnmatchedInstancePair(ProcessingPairInstanced):
         super().__init__(prediction_arr, reference_arr, uint_type, n_prediction_instance, n_reference_instance)  # type:ignore
 
 
-class MatchedInstancePair(ProcessingPairInstanced):
+class MatchedInstancePair(_ProcessingPairInstanced):
     """A Processing pair of any unsigned (but matching) integer type consisting of only matched instance labels, as well as a list of missed labels from both
 
     Args:

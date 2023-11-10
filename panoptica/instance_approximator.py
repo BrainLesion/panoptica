@@ -1,6 +1,7 @@
 from abc import abstractmethod, ABC
 from utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair
-from utils.connected_component_backends import CCABackend
+from _functionals import _connected_components, CCABackend
+from utils.numpy import _get_smallest_fitting_uint
 import numpy as np
 
 
@@ -10,9 +11,17 @@ class InstanceApproximator(ABC):
         pass
 
     def approximate_instances(self, semantic_pair: SemanticPair, **kwargs) -> UnmatchedInstancePair | MatchedInstancePair:
-        # TODO call _approx
-        max_value = max(np.max(prediction_arr), np.max(reference_arr))
-        # reduce to smallest uint
+        # Call algorithm
+        instance_pair = self._approximate_instances(semantic_pair, **kwargs)
+        # Check validity
+        min_value = min(np.min(instance_pair.pred_labels), np.min(instance_pair.ref_labels))
+        assert min_value >= 0, "There are negative values in the semantic maps. This is not allowed!"
+        # Set dtype to smalles fitting uint
+        max_value = max(np.max(instance_pair.pred_labels), np.max(instance_pair.ref_labels))
+        dtype = _get_smallest_fitting_uint(max_value)
+        instance_pair.prediction_arr.astype(dtype)
+        instance_pair.reference_arr.astype(dtype)
+        return instance_pair
 
 
 class ConnectedComponentsInstanceApproximator(InstanceApproximator):
@@ -28,21 +37,3 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             n_prediction_instance=n_prediction_instance,
             n_reference_instance=n_reference_instance,
         )
-
-
-def _connected_components(
-    array: np.ndarray,
-    cca_backend: CCABackend,
-) -> tuple[np.ndarray, int]:
-    if cca_backend == CCABackend.cc3d:
-        import cc3d
-
-        cc_arr, n_instances = cc3d.connected_components(array, return_N=True)
-    elif cca_backend == CCABackend.scipy:
-        from scipy.ndimage import label
-
-        cc_arr, n_instances = label(array)
-    else:
-        raise NotImplementedError(cca_backend)
-
-    return cc_arr, n_instances

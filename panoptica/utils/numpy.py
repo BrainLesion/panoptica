@@ -38,3 +38,15 @@ def _count_unique_without_zeros(arr: np.ndarray) -> int:
         warnings.warn("Negative values are present in the input array.")
 
     return len(_unique_without_zeros(arr))
+
+
+def _get_smallest_fitting_uint(max_value: int) -> type:
+    if max_value < 256:
+        dtype = np.uint8
+    elif max_value < 65536:
+        dtype = np.uint16
+    elif max_value < 4294967295:
+        dtype = np.uint32
+    else:
+        dtype = np.uint64
+    return dtype

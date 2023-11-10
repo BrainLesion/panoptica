@@ -1,8 +1,7 @@
 from enum import Enum, auto
-from typing_extensions import Self
 
 
-class Enum_Compare(Enum):
+class _Enum_Compare(Enum):
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Enum):
             return self.name == __value.name and self.value == __value.value
@@ -21,11 +20,25 @@ class Enum_Compare(Enum):
         return self.value
 
 
-# class Datatype_Status(Enum_Compare):
-#    Semantic_Map = auto()
-#    Unmatched_Instance_Map = auto()
-#    Matched_Instance_Map = auto()
+from enum import Enum, auto
+
+
+class CCABackend(_Enum_Compare):
+    """
+    Enumeration representing different connected component analysis (CCA) backends.
+
+    This enumeration defines options for CCA backends, which are used for labeling connected components in segmentation masks.
+
+    Members:
+        - cc3d: Represents the Connected Components in 3D (CC3D) backend for CCA.
+          [CC3D Website](https://github.com/seung-lab/connected-components-3d)
+        - scipy: Represents the SciPy backend for CCA.
+          [SciPy Website](https://www.scipy.org/)
+    """
+
+    cc3d = auto()
+    scipy = auto()
 
 
 if __name__ == "__main__":
-    #print(Datatype_Status.Semantic_Map)
+    print(CCABackend.cc3d)

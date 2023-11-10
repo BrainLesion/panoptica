@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from result import PanopticaResult
-from utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair, ProcessingPair, ProcessingPairInstanced
+from utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair, _ProcessingPair, _ProcessingPairInstanced
 from instance_approximator import InstanceApproximator
 from instance_matcher import InstanceMatchingAlgorithm
 from instance_evaluator import evaluate_matched_instance
@@ -24,7 +24,7 @@ class Panoptic_Evaluator:
         self.__iou_threshold = iou_threshold
 
     @measure_time
-    def evaluate(self, processing_pair: ProcessingPair) -> tuple[PanopticaResult, dict[str, ProcessingPair]]:
+    def evaluate(self, processing_pair: _ProcessingPair) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
         assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
         return panoptic_evaluate(
             processing_pair=processing_pair,
@@ -41,8 +41,8 @@ def panoptic_evaluate(
     iou_threshold: float,
     verbose: bool = False,
     **kwargs,
-) -> tuple[PanopticaResult, dict[str, ProcessingPair]]:
-    debug_data: dict[str, ProcessingPair] = {}
+) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
+    debug_data: dict[str, _ProcessingPair] = {}
     # First Phase: Instance Approximation
     if isinstance(processing_pair, PanopticaResult):
         return processing_pair, debug_data
