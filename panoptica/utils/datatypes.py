@@ -1,8 +1,8 @@
-from typing import Any, Self
+from abc import ABC
+
 import numpy as np
 from numpy import dtype
-from abc import ABC
-import warnings
+
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 
 uint_type: type = np.unsignedinteger
@@ -21,7 +21,9 @@ class _ProcessingPair(ABC):
     ref_labels: tuple[int]
     pred_labels: tuple[int]
 
-    def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None) -> None:
+    def __init__(
+        self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None
+    ) -> None:
         """Initializes a general Processing Pair
 
         Args:
@@ -32,8 +34,12 @@ class _ProcessingPair(ABC):
         _check_array_integrity(prediction_arr, reference_arr, dtype=dtype)
         self.prediction_arr = prediction_arr
         self.reference_arr = reference_arr
-        self.ref_labels: tuple[int] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
-        self.pred_labels: tuple[int] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self.ref_labels: tuple[int] = tuple(
+            _unique_without_zeros(reference_arr)
+        )  # type:ignore
+        self.pred_labels: tuple[int] = tuple(
+            _unique_without_zeros(prediction_arr)
+        )  # type:ignore
 
     # Make all variables read-only!
     def __setattr__(self, attr, value):
@@ -83,7 +89,9 @@ class _ProcessingPairInstanced(_ProcessingPair):
         )
 
 
-def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None):
+def _check_array_integrity(
+    prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None
+):
     """
     Check the integrity of two numpy arrays.
 
@@ -105,8 +113,12 @@ def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray
     assert isinstance(prediction_arr, np.ndarray) and isinstance(
         reference_arr, np.ndarray
     ), "prediction and/or reference are not numpy arrays"
-    assert prediction_arr.shape == reference_arr.shape, f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
-    assert prediction_arr.dtype == reference_arr.dtype, f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
+    assert (
+        prediction_arr.shape == reference_arr.shape
+    ), f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
+    assert (
+        prediction_arr.dtype == reference_arr.dtype
+    ), f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
     if dtype is not None:
         assert (
             np.issubdtype(prediction_arr.dtype, dtype)
@@ -135,7 +147,13 @@ class UnmatchedInstancePair(_ProcessingPairInstanced):
         n_prediction_instance: int | None = None,
         n_reference_instance: int | None = None,
     ) -> None:
-        super().__init__(prediction_arr, reference_arr, uint_type, n_prediction_instance, n_reference_instance)  # type:ignore
+        super().__init__(
+            prediction_arr,
+            reference_arr,
+            uint_type,
+            n_prediction_instance,
+            n_reference_instance,
+        )  # type:ignore
 
 
 class MatchedInstancePair(_ProcessingPairInstanced):
@@ -171,17 +189,29 @@ class MatchedInstancePair(_ProcessingPairInstanced):
 
             For each argument: If none, will calculate on initialization.
         """
-        super().__init__(prediction_arr, reference_arr, uint_type, n_prediction_instance, n_reference_instance)  # type:ignore
+        super().__init__(
+            prediction_arr,
+            reference_arr,
+            uint_type,
+            n_prediction_instance,
+            n_reference_instance,
+        )  # type:ignore
         if n_matched_instances is None:
-            n_matched_instances = len([i for i in self.pred_labels if i in self.ref_labels])
+            n_matched_instances = len(
+                [i for i in self.pred_labels if i in self.ref_labels]
+            )
         self.n_matched_instances = n_matched_instances
 
         if missed_reference_labels is None:
-            missed_reference_labels = list([i for i in self.ref_labels if i not in self.pred_labels])
+            missed_reference_labels = list(
+                [i for i in self.ref_labels if i not in self.pred_labels]
+            )
         self.missed_reference_labels = missed_reference_labels
 
         if missed_prediction_labels is None:
-            missed_prediction_labels = list([i for i in self.pred_labels if i not in self.ref_labels])
+            missed_prediction_labels = list(
+                [i for i in self.pred_labels if i not in self.ref_labels]
+            )
         self.missed_prediction_labels = missed_prediction_labels
 
     def copy(self):

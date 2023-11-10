@@ -1,8 +1,14 @@
-from abc import abstractmethod, ABC
-from panoptica.utils.datatypes import UnmatchedInstancePair, MatchedInstancePair, Instance_Label_Map
+from abc import ABC, abstractmethod
+
 import numpy as np
-from panoptica._functionals import _map_labels, _calc_iou_matrix
 from scipy.optimize import linear_sum_assignment
+
+from panoptica._functionals import _calc_iou_matrix, _map_labels
+from panoptica.utils.datatypes import (
+    Instance_Label_Map,
+    MatchedInstancePair,
+    UnmatchedInstancePair,
+)
 
 
 class InstanceMatchingAlgorithm(ABC):
@@ -31,7 +37,9 @@ class InstanceMatchingAlgorithm(ABC):
     """
 
     @abstractmethod
-    def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
+    def _match_instances(
+        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+    ) -> Instance_Label_Map:
         """
         Abstract method to be implemented by subclasses for instance matching.
 
@@ -44,7 +52,9 @@ class InstanceMatchingAlgorithm(ABC):
         """
         pass
 
-    def match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> MatchedInstancePair:
+    def match_instances(
+        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+    ) -> MatchedInstancePair:
         """
         Perform instance matching on the given UnmatchedInstancePair.
 
@@ -56,7 +66,7 @@ class InstanceMatchingAlgorithm(ABC):
             MatchedInstancePair: The result of the instance matching.
         """
         instance_labelmap = self._match_instances(unmatched_instance_pair, **kwargs)
-        print("instance_labelmap", instance_labelmap)
+        # print("instance_labelmap:", instance_labelmap)
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
 
@@ -92,11 +102,17 @@ class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
         Raises:
             AssertionError: If the specified IoU threshold is not within the valid range.
         """
-        assert iou_threshold >= 0.5, "NaiveOneToOneMatching: iou_threshold lower than 0.5 doesnt work!"
-        assert iou_threshold < 1.0, "NaiveOneToOneMatching: iou_threshold greater than or equal to 1.0 doesnt work!"
+        assert (
+            iou_threshold >= 0.5
+        ), "NaiveOneToOneMatching: iou_threshold lower than 0.5 doesnt work!"
+        assert (
+            iou_threshold < 1.0
+        ), "NaiveOneToOneMatching: iou_threshold greater than or equal to 1.0 doesnt work!"
         self.iou_threshold = iou_threshold
 
-    def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
+    def _match_instances(
+        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+    ) -> Instance_Label_Map:
         """
         Perform one-to-one instance matching based on IoU values.
 
@@ -132,7 +148,9 @@ class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
         return labelmap
 
 
-def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instance_Label_Map) -> MatchedInstancePair:
+def map_instance_labels(
+    processing_pair: UnmatchedInstancePair, labelmap: Instance_Label_Map
+) -> MatchedInstancePair:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
@@ -148,7 +166,10 @@ def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instan
     >>> labelmap = [([1, 2], [3, 4]), ([5], [6])]
     >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
     """
-    prediction_arr, reference_arr = processing_pair.prediction_arr, processing_pair.reference_arr
+    prediction_arr, reference_arr = (
+        processing_pair.prediction_arr,
+        processing_pair.reference_arr,
+    )
 
     ref_labels = processing_pair.ref_labels
     pred_labels = processing_pair.pred_labels
