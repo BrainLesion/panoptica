@@ -54,7 +54,7 @@ class PanopticaResult:
         )
 
     def to_dict(self):
-        return ({
+        return {
             "num_pred_instances": self.num_pred_instances,
             "num_ref_instances": self.num_ref_instances,
             "tp": self.tp,
@@ -65,9 +65,8 @@ class PanopticaResult:
             "sq_sd": self.sq_sd,
             "pq": self.pq,
             "instance_dice": self.instance_dice,
-            "instance_dice_sd": self.instance_dice_sd
-            }
-        )
+            "instance_dice_sd": self.instance_dice_sd,
+        }
 
     @property
     def num_ref_instances(self) -> int:
@@ -171,7 +170,7 @@ class PanopticaResult:
         Returns:
             float: Average Dice coefficient.
         """
-        if self.tp == 0: 
+        if self.tp == 0:
             return 0.0
         return np.sum(self._dice_list) / self.tp
 
