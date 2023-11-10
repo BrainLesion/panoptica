@@ -79,9 +79,7 @@ class SemanticSegmentationEvaluator(Evaluator):
             iou_values = pool.starmap(self._compute_instance_iou, instance_pairs)
 
         # Reshape the resulting IoU values into a matrix
-        iou_matrix = np.array(iou_values).reshape(
-            (num_ref_instances, num_pred_instances)
-        )
+        iou_matrix = np.array(iou_values).reshape((num_ref_instances, num_pred_instances))
 
         # Use linear_sum_assignment to find the best matches
         ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
@@ -101,8 +99,8 @@ class SemanticSegmentationEvaluator(Evaluator):
                 dice = self._compute_instance_dice_coefficient(
                     ref_labels=ref_labels,
                     pred_labels=pred_labels,
-                    ref_instance_idx=ref_idx + 1,
-                    pred_instance_idx=pred_idx + 1,
+                    ref_instance_label=ref_idx + 1,
+                    pred_instance_label=pred_idx + 1,
                 )
                 dice_list.append(dice)
 
@@ -168,8 +166,8 @@ class SemanticSegmentationEvaluator(Evaluator):
         self,
         ref_labels: np.ndarray,
         pred_labels: np.ndarray,
-        ref_instance_idx: int,
-        pred_instance_idx: int,
+        ref_instance_label: int,
+        pred_instance_label: int,
     ) -> float:
         """
         Compute the Dice coefficient between a specific pair of instances.
@@ -182,15 +180,15 @@ class SemanticSegmentationEvaluator(Evaluator):
         Args:
             ref_labels (np.ndarray): Reference instance labels.
             pred_labels (np.ndarray): Prediction instance labels.
-            ref_instance_idx (int): Index of the reference instance.
-            pred_instance_idx (int): Index of the prediction instance.
+            ref_instance_label (int): Label of the reference instance.
+            pred_instance_label (int): Label of the prediction instance.
 
         Returns:
             float: Dice coefficient between the specified instances. A value between 0 and 1, where higher values
             indicate better overlap and similarity between instances.
         """
-        ref_instance_mask = ref_labels == ref_instance_idx
-        pred_instance_mask = pred_labels == pred_instance_idx
+        ref_instance_mask = ref_labels == ref_instance_label
+        pred_instance_mask = pred_labels == pred_instance_label
 
         return self._compute_dice_coefficient(
             reference=ref_instance_mask,

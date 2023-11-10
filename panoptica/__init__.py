@@ -5,3 +5,4 @@ from panoptica.semantic_evaluation.connected_component_backends import CCABacken
 from panoptica.semantic_evaluation.semantic_evaluator import (
     SemanticSegmentationEvaluator,
 )
+from repo.panoptica.utils.assd import my_assd

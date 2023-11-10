@@ -2,134 +2,141 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from panoptica.result import PanopticaResult
+from result import PanopticaResult
+from utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair, ProcessingPair, ProcessingPairInstanced
+from instance_approximator import InstanceApproximator
+from instance_matcher import InstanceMatchingAlgorithm
+from instance_evaluator import evaluate_matched_instance
+from timing import measure_time
 
 
-class Evaluator(ABC):
-    """
-    Abstract base class for evaluating instance segmentation results.
-
-    Subclasses of this Evaluator should implement the abstract methods 'evaluate' and 'count_number_of_instances'.
-    """
-
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def evaluate(
+class Panoptic_Evaluator:
+    def __init__(
         self,
-        reference_mask: np.ndarray,
-        prediction_mask: np.ndarray,
-        iou_threshold: float,
-    ) -> PanopticaResult:
-        """
-        Evaluate the instance segmentation results based on the reference and prediction masks.
+        expected_input: type(SemanticPair) | type(UnmatchedInstancePair) | type(MatchedInstancePair),
+        instance_approximator: InstanceApproximator | None,
+        instance_matcher: InstanceMatchingAlgorithm | None,
+        iou_threshold: float = 0.5,
+    ) -> None:
+        self.__expected_input = expected_input
+        self.__instance_approximator = instance_approximator
+        self.__instance_matcher = instance_matcher
+        self.__iou_threshold = iou_threshold
 
-        Args:
-            reference_mask (np.ndarray): Binary mask representing reference instances.
-            prediction_mask (np.ndarray): Binary mask representing prediction instances.
-            iou_threshold (float): IoU threshold for considering a prediction as a true positive.
+    @measure_time
+    def evaluate(self, processing_pair: ProcessingPair) -> tuple[PanopticaResult, dict[str, ProcessingPair]]:
+        assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
+        return panoptic_evaluate(
+            processing_pair=processing_pair,
+            instance_approximator=self.__instance_approximator,
+            instance_matcher=self.__instance_matcher,
+            iou_threshold=self.__iou_threshold,
+        )
 
-        Returns:
-            PanopticaResult: Result object with evaluation metrics.
-        """
-        pass
 
-    def _handle_edge_cases(
-        self, num_ref_instances: int, num_pred_instances: int
-    ) -> PanopticaResult:
-        """
-        Handle edge cases when comparing reference and prediction masks.
+def panoptic_evaluate(
+    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
+    instance_approximator: InstanceApproximator | None,
+    instance_matcher: InstanceMatchingAlgorithm | None,
+    iou_threshold: float,
+    verbose: bool = False,
+    **kwargs,
+) -> tuple[PanopticaResult, dict[str, ProcessingPair]]:
+    debug_data: dict[str, ProcessingPair] = {}
+    # First Phase: Instance Approximation
+    if isinstance(processing_pair, PanopticaResult):
+        return processing_pair, debug_data
 
-        Args:
-            num_ref_instances (int): Number of instances in the reference mask.
-            num_pred_instances (int): Number of instances in the prediction mask.
+    if isinstance(processing_pair, SemanticPair):
+        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
+        processing_pair = instance_approximator.approximate_instances(processing_pair)
+        debug_data["UnmatchedInstanceMap"] = processing_pair.copy()
 
-        Returns:
-            PanopticaResult: Result object with evaluation metrics.
-        """
-        # Handle cases where either the reference or the prediction is empty
-        if num_ref_instances == 0 and num_pred_instances == 0:
-            # Both references and predictions are empty, perfect match
-            return PanopticaResult(
-                num_ref_instances=0,
-                num_pred_instances=0,
-                tp=0,
-                dice_list=[],
-                iou_list=[],
-            )
-        if num_ref_instances == 0:
-            # All references are missing, only false positives
-            return PanopticaResult(
-                num_ref_instances=0,
-                num_pred_instances=num_pred_instances,
-                tp=0,
-                dice_list=[],
-                iou_list=[],
-            )
-        if num_pred_instances == 0:
-            # All predictions are missing, only false negatives
-            return PanopticaResult(
-                num_ref_instances=num_ref_instances,
-                num_pred_instances=0,
-                tp=0,
-                dice_list=[],
-                iou_list=[],
-            )
+    # Second Phase: Instance Matching
+    if isinstance(processing_pair, UnmatchedInstancePair):
+        processing_pair = _handle_zero_instances_cases(processing_pair)
 
-    def _compute_iou(self, reference: np.ndarray, prediction: np.ndarray) -> float:
-        """
-        Compute Intersection over Union (IoU) between two masks.
+    if isinstance(processing_pair, UnmatchedInstancePair):
+        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        processing_pair = instance_matcher.match_instances(processing_pair)
+        debug_data["MatchedInstanceMap"] = processing_pair.copy()
 
-        Args:
-            reference (np.ndarray): Reference mask.
-            prediction (np.ndarray): Prediction mask.
+    # Third Phase: Instance Evaluation
+    if isinstance(processing_pair, MatchedInstancePair):
+        processing_pair = _handle_zero_instances_cases(processing_pair)
 
-        Returns:
-            float: IoU between the two masks. A value between 0 and 1, where higher values
-            indicate better overlap and similarity between masks.
-        """
-        intersection = np.logical_and(reference, prediction)
-        union = np.logical_or(reference, prediction)
+    if isinstance(processing_pair, MatchedInstancePair):
+        processing_pair = evaluate_matched_instance(processing_pair, iou_threshold=iou_threshold)
 
-        union_sum = np.sum(union)
+    if isinstance(processing_pair, PanopticaResult):
+        return processing_pair, debug_data
 
-        # Handle division by zero
-        if union_sum == 0:
-            return 0.0
+    raise RuntimeError("End of panoptic pipeline reached without results")
 
-        iou = np.sum(intersection) / union_sum
-        return iou
 
-    def _compute_dice_coefficient(
-        self,
-        reference: np.ndarray,
-        prediction: np.ndarray,
-    ) -> float:
-        """
-        Compute the Dice coefficient between two binary masks.
+def _handle_zero_instances_cases(
+    processing_pair: UnmatchedInstancePair | MatchedInstancePair,
+) -> UnmatchedInstancePair | MatchedInstancePair | PanopticaResult:
+    """
+    Handle edge cases when comparing reference and prediction masks.
 
-        The Dice coefficient measures the similarity or overlap between two binary masks.
-        It is defined as:
+    Args:
+        num_ref_instances (int): Number of instances in the reference mask.
+        num_pred_instances (int): Number of instances in the prediction mask.
 
-        Dice = (2 * intersection) / (area_mask1 + area_mask2)
+    Returns:
+        PanopticaResult: Result object with evaluation metrics.
+    """
+    n_reference_instance = processing_pair.n_reference_instance
+    n_prediction_instance = processing_pair.n_prediction_instance
+    # Handle cases where either the reference or the prediction is empty
+    if n_prediction_instance == 0 or n_reference_instance == 0:
+        # Both references and predictions are empty, perfect match
+        return PanopticaResult(
+            num_ref_instances=0,
+            num_pred_instances=0,
+            tp=0,
+            dice_list=[],
+            iou_list=[],
+        )
+    if n_reference_instance == 0:
+        # All references are missing, only false positives
+        return PanopticaResult(
+            num_ref_instances=0,
+            num_pred_instances=n_prediction_instance,
+            tp=0,
+            dice_list=[],
+            iou_list=[],
+        )
+    if n_prediction_instance == 0:
+        # All predictions are missing, only false negatives
+        return PanopticaResult(
+            num_ref_instances=n_reference_instance,
+            num_pred_instances=0,
+            tp=0,
+            dice_list=[],
+            iou_list=[],
+        )
+    return processing_pair
 
-        Args:
-            reference (np.ndarray): Reference binary mask.
-            prediction (np.ndarray): Prediction binary mask.
 
-        Returns:
-            float: Dice coefficient between the two binary masks. A value between 0 and 1, where higher values
-            indicate better overlap and similarity between masks.
-        """
-        intersection = np.logical_and(reference, prediction)
-        reference_mask = np.sum(reference)
-        prediction_mask = np.sum(prediction)
+if __name__ == "__main__":
+    from instance_approximator import ConnectedComponentsInstanceApproximator, CCABackend
+    from instance_matcher import NaiveOneToOneMatching
+    from instance_evaluator import evaluate_matched_instance
 
-        # Handle division by zero
-        if reference_mask == 0 and prediction_mask == 0:
-            return 0.0
+    a = np.zeros([50, 50], dtype=int)
+    b = a.copy()
+    a[20:40, 10:20] = 1
+    b[20:35, 10:20] = 2
 
-        # Calculate Dice coefficient
-        dice = 2 * np.sum(intersection) / (reference_mask + prediction_mask)
-        return dice
+    sample = SemanticPair(b, a)
+
+    evaluator = Panoptic_Evaluator(
+        expected_input=SemanticPair,
+        instance_approximator=ConnectedComponentsInstanceApproximator(cca_backend=CCABackend.cc3d),
+        instance_matcher=NaiveOneToOneMatching(),
+    )
+
+    result, debug_data = evaluator.evaluate(sample)
+    print(result)
