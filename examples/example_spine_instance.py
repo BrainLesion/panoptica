@@ -1,12 +1,17 @@
 from auxiliary.nifti.io import read_nifti
+from auxiliary.turbopath import turbopath
 
 from panoptica import MatchedInstancePair, NaiveOneToOneMatching, Panoptic_Evaluator
 
+
+directory = turbopath(__file__).parent
+
 ref_masks = read_nifti(
-    "examples/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk.nii.gz"
+    directory + "/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk.nii.gz"
 )
+
 pred_masks = read_nifti(
-    "examples/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk_new.nii.gz"
+    directory + "/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk_new.nii.gz"
 )
 
 sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
