@@ -38,8 +38,8 @@ def _compute_instance_volumetric_dice(
 
 
 def _compute_instance_iou(
-    ref_labels: np.ndarray,
-    pred_labels: np.ndarray,
+    reference_arr: np.ndarray,
+    prediction_arr: np.ndarray,
     ref_instance_idx: int,
     pred_instance_idx: int,
 ) -> float:
@@ -55,8 +55,8 @@ def _compute_instance_iou(
     Returns:
         float: IoU between the specified instances.
     """
-    ref_instance_mask = ref_labels == ref_instance_idx
-    pred_instance_mask = pred_labels == pred_instance_idx
+    ref_instance_mask = reference_arr == ref_instance_idx
+    pred_instance_mask = prediction_arr == pred_instance_idx
     intersection = np.logical_and(ref_instance_mask, pred_instance_mask)
     union = np.logical_or(ref_instance_mask, pred_instance_mask)
 

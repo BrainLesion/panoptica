@@ -199,8 +199,49 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         )
 
 
-# Mapping ((prediction_label, ...), (reference_label, ...))
-Instance_Label_Map = list[tuple[list[uint_type], list[uint_type]]]
+# Many-to-One Mapping
+class InstanceLabelMap:
+    # Mapping ((prediction_label, ...), (reference_label, ...))
+    labelmap: dict[int, int]
+
+    def __init__(self) -> None:
+        self.labelmap = {}
+
+    def add_labelmap_entry(self, pred_labels: list[int] | int, ref_label: int):
+        if not isinstance(pred_labels, list):
+            pred_labels = [pred_labels]
+        for p in pred_labels:
+            if p in self.labelmap and self.labelmap[p] != ref_label:
+                raise Exception(
+                    f"You are mapping a prediction label to a reference label that was already assigned differently, got {self.__str__} and you tried {pred_labels}, {ref_label}"
+                )
+            self.labelmap[p] = ref_label
+
+    def get_one_to_one_dictionary(self):
+        return self.labelmap
+
+    def __str__(self) -> str:
+        return str(
+            list(
+                [
+                    str(tuple(k for k in self.labelmap.keys() if self.labelmap[k] == v)) + " -> " + str(v)
+                    for v in set(self.labelmap.values())
+                ]
+            )
+        )
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    # Make all variables read-only!
+    def __setattr__(self, attr, value):
+        if hasattr(self, attr):
+            raise Exception("Attempting to alter read-only value")
+
+        self.__dict__[attr] = value
+
+
+Instance_Label_Map = list[tuple[list[int], int]]
 
 
 if __name__ == "__main__":
@@ -208,3 +249,7 @@ if __name__ == "__main__":
     a = SemanticPair(n, n)
     print(a)
     # print(a.prediction_arr)
+
+    map = InstanceLabelMap()
+    map.labelmap = {2: 3, 3: 3, 4: 6}
+    print(map)

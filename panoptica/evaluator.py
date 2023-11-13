@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Type
 
 import numpy as np
 
@@ -13,7 +14,7 @@ from panoptica.timing import measure_time
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: type(SemanticPair) | type(UnmatchedInstancePair) | type(MatchedInstancePair) = type(MatchedInstancePair),
+        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         iou_threshold: float = 0.5,
@@ -83,6 +84,8 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, SemanticPair):
         assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
+
+        print("Approximate Instances")
         processing_pair = instance_approximator.approximate_instances(processing_pair)
         debug_data["UnmatchedInstanceMap"] = processing_pair.copy()
 
@@ -92,7 +95,10 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+
+        print("Match Instances")
         processing_pair = instance_matcher.match_instances(processing_pair)
+
         debug_data["MatchedInstanceMap"] = processing_pair.copy()
 
     # Third Phase: Instance Evaluation
@@ -100,6 +106,7 @@ def panoptic_evaluate(
         processing_pair = _handle_zero_instances_cases(processing_pair)
 
     if isinstance(processing_pair, MatchedInstancePair):
+        print("Evaluate Matched Instances")
         processing_pair = evaluate_matched_instance(processing_pair, iou_threshold=iou_threshold)
 
     if isinstance(processing_pair, PanopticaResult):

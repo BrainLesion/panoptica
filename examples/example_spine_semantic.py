@@ -1,9 +1,18 @@
 from auxiliary.nifti.io import read_nifti
+import cProfile
 
-from panoptica import SemanticPair, Panoptic_Evaluator, ConnectedComponentsInstanceApproximator, CCABackend, NaiveOneToOneMatching
 
-ref_masks = read_nifti("examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk.nii.gz")
-pred_masks = read_nifti("examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz")
+from panoptica import (
+    SemanticPair,
+    MatchedInstancePair,
+    Panoptic_Evaluator,
+    ConnectedComponentsInstanceApproximator,
+    CCABackend,
+    NaiveOneToOneMatching,
+)
+
+ref_masks = read_nifti("repo/examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk.nii.gz")
+pred_masks = read_nifti("repo/examples/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz")
 
 
 sample = SemanticPair(pred_masks, ref_masks)
@@ -15,5 +24,10 @@ evaluator = Panoptic_Evaluator(
     iou_threshold=0.5,
 )
 
-result, debug_data = evaluator.evaluate(sample)
-print(result)
+from BIDS.logger.log_file import get_time, format_time_short
+
+timestamp = format_time_short(get_time())
+with cProfile.Profile() as pr:
+    result, debug_data = evaluator.evaluate(sample)
+    print(result)
+pr.dump_stats(f"repo/examples/cprofile_{timestamp}_log.log")

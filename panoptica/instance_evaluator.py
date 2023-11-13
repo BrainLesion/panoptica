@@ -5,7 +5,7 @@ import numpy as np
 from panoptica.utils.metrics import _compute_iou, _compute_dice_coefficient
 
 
-def evaluate_matched_instance(semantic_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:
+def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
@@ -24,8 +24,8 @@ def evaluate_matched_instance(semantic_pair: MatchedInstancePair, iou_threshold:
     # Initialize variables for True Positives (tp)
     tp, dice_list, iou_list = 0, [], []
 
-    reference_arr, prediction_arr = semantic_pair.reference_arr, semantic_pair.prediction_arr
-    ref_labels = semantic_pair.ref_labels
+    reference_arr, prediction_arr = matched_instance_pair.reference_arr, matched_instance_pair.prediction_arr
+    ref_labels = matched_instance_pair.ref_labels
 
     # Use concurrent.futures.ThreadPoolExecutor for parallelization
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -43,13 +43,13 @@ def evaluate_matched_instance(semantic_pair: MatchedInstancePair, iou_threshold:
         for future in concurrent.futures.as_completed(futures):
             tp_i, dice_i, iou_i = future.result()
             tp += tp_i
-            if dice_i is not None and iou_i is not None:
+            if dice_i is not None or iou_i is not None:
                 dice_list.append(dice_i)
                 iou_list.append(iou_i)
     # Create and return the PanopticaResult object with computed metrics
     return PanopticaResult(
-        num_ref_instances=semantic_pair.n_reference_instance,
-        num_pred_instances=semantic_pair.n_prediction_instance,
+        num_ref_instances=matched_instance_pair.n_reference_instance,
+        num_pred_instances=matched_instance_pair.n_prediction_instance,
         tp=tp,
         dice_list=dice_list,
         iou_list=iou_list,
