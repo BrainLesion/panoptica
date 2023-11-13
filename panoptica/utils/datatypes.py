@@ -254,9 +254,6 @@ class InstanceLabelMap:
         self.__dict__[attr] = value
 
 
-Instance_Label_Map = list[tuple[list[int], int]]
-
-
 if __name__ == "__main__":
     n = np.zeros([50, 50], dtype=np.int32)
     a = SemanticPair(n, n)
