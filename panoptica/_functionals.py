@@ -1,7 +1,7 @@
 import numpy as np
 from panoptica.utils.metrics import _compute_instance_iou
 from panoptica.utils.constants import CCABackend
-from joblib import Parallel, delayed
+from multiprocessing import Pool
 
 
 def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: tuple[int, ...], pred_labels: tuple[int, ...]):
@@ -26,13 +26,13 @@ def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_
     num_ref_instances = len(ref_labels)
     num_pred_instances = len(pred_labels)
 
-    iou_values = Parallel(n_jobs=4, backend="threading")(
-        delayed(_compute_instance_iou)(
-            reference_arr=reference_arr, prediction_arr=prediction_arr, ref_instance_idx=ref_idx, pred_instance_idx=pred_idx
-        )
-        for ref_idx in ref_labels
-        for pred_idx in pred_labels
-    )
+    # Create a pool of worker processes to parallelize the computation
+    with Pool() as pool:
+        #    # Generate all possible pairs of instance indices for IoU computation
+        instance_pairs = [(reference_arr, prediction_arr, ref_idx, pred_idx) for ref_idx in ref_labels for pred_idx in pred_labels]
+
+        # Calculate IoU for all instance pairs in parallel using starmap
+        iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
 
     # Reshape the resulting IoU values into a matrix
     iou_matrix = np.array(iou_values).reshape((num_ref_instances, num_pred_instances))
