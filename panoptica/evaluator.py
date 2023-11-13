@@ -3,12 +3,17 @@ from typing import Type
 
 import numpy as np
 
-from panoptica.result import PanopticaResult
-from panoptica.utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair, _ProcessingPair
 from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.instance_evaluator import evaluate_matched_instance
+from panoptica.instance_matcher import InstanceMatchingAlgorithm
+from panoptica.result import PanopticaResult
 from panoptica.timing import measure_time
+from panoptica.utils.datatypes import (
+    MatchedInstancePair,
+    SemanticPair,
+    UnmatchedInstancePair,
+    _ProcessingPair,
+)
 
 
 class Panoptic_Evaluator:
@@ -84,8 +89,6 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, SemanticPair):
         assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
-
-        print("Approximate Instances")
         processing_pair = instance_approximator.approximate_instances(processing_pair)
         debug_data["UnmatchedInstanceMap"] = processing_pair.copy()
 
@@ -95,8 +98,6 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
-
-        print("Match Instances")
         processing_pair = instance_matcher.match_instances(processing_pair)
 
         debug_data["MatchedInstanceMap"] = processing_pair.copy()
@@ -106,7 +107,6 @@ def panoptic_evaluate(
         processing_pair = _handle_zero_instances_cases(processing_pair)
 
     if isinstance(processing_pair, MatchedInstancePair):
-        print("Evaluate Matched Instances")
         processing_pair = evaluate_matched_instance(processing_pair, iou_threshold=iou_threshold)
 
     if isinstance(processing_pair, PanopticaResult):
@@ -159,25 +159,3 @@ def _handle_zero_instances_cases(
             iou_list=[],
         )
     return processing_pair
-
-
-if __name__ == "__main__":
-    from instance_approximator import ConnectedComponentsInstanceApproximator, CCABackend
-    from instance_matcher import NaiveOneToOneMatching
-    from instance_evaluator import evaluate_matched_instance
-
-    a = np.zeros([50, 50], dtype=int)
-    b = a.copy()
-    a[20:40, 10:20] = 1
-    b[20:35, 10:20] = 2
-
-    sample = SemanticPair(b, a)
-
-    evaluator = Panoptic_Evaluator(
-        expected_input=SemanticPair,
-        instance_approximator=ConnectedComponentsInstanceApproximator(cca_backend=CCABackend.cc3d),
-        instance_matcher=NaiveOneToOneMatching(),
-    )
-
-    result, debug_data = evaluator.evaluate(sample)
-    print(result)

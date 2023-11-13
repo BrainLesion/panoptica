@@ -1,8 +1,8 @@
-from typing import Any, Self
+from abc import ABC
+
 import numpy as np
 from numpy import dtype
-from abc import ABC
-import warnings
+
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 
 uint_type: type = np.unsignedinteger
@@ -32,6 +32,7 @@ class _ProcessingPair(ABC):
         _check_array_integrity(prediction_arr, reference_arr, dtype=dtype)
         self.prediction_arr = prediction_arr
         self.reference_arr = reference_arr
+        self.dtype = dtype
         self.ref_labels: tuple[int] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
         self.pred_labels: tuple[int] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
 
@@ -80,7 +81,7 @@ class _ProcessingPairInstanced(_ProcessingPair):
             reference_arr=self.reference_arr,
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
-        )
+        )  # type:ignore
 
 
 def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None):
@@ -135,7 +136,13 @@ class UnmatchedInstancePair(_ProcessingPairInstanced):
         n_prediction_instance: int | None = None,
         n_reference_instance: int | None = None,
     ) -> None:
-        super().__init__(prediction_arr, reference_arr, uint_type, n_prediction_instance, n_reference_instance)  # type:ignore
+        super().__init__(
+            prediction_arr,
+            reference_arr,
+            uint_type,
+            n_prediction_instance,
+            n_reference_instance,
+        )  # type:ignore
 
 
 class MatchedInstancePair(_ProcessingPairInstanced):
@@ -171,7 +178,13 @@ class MatchedInstancePair(_ProcessingPairInstanced):
 
             For each argument: If none, will calculate on initialization.
         """
-        super().__init__(prediction_arr, reference_arr, uint_type, n_prediction_instance, n_reference_instance)  # type:ignore
+        super().__init__(
+            prediction_arr,
+            reference_arr,
+            uint_type,
+            n_prediction_instance,
+            n_reference_instance,
+        )  # type:ignore
         if n_matched_instances is None:
             n_matched_instances = len([i for i in self.pred_labels if i in self.ref_labels])
         self.n_matched_instances = n_matched_instances

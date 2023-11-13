@@ -1,8 +1,13 @@
-from abc import abstractmethod, ABC
-from panoptica.utils.datatypes import UnmatchedInstancePair, MatchedInstancePair, InstanceLabelMap
+from abc import ABC, abstractmethod
+
 import numpy as np
-from panoptica._functionals import _map_labels, _calc_iou_matrix
-from scipy.optimize import linear_sum_assignment
+
+from panoptica._functionals import _calc_iou_matrix, _map_labels
+from panoptica.utils.datatypes import (
+    InstanceLabelMap,
+    MatchedInstancePair,
+    UnmatchedInstancePair,
+)
 
 
 class InstanceMatchingAlgorithm(ABC):
@@ -56,8 +61,8 @@ class InstanceMatchingAlgorithm(ABC):
             MatchedInstancePair: The result of the instance matching.
         """
         instance_labelmap = self._match_instances(unmatched_instance_pair, **kwargs)
-        # print("instance_labelmap", instance_labelmap)
-        return _map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
+        # print("instance_labelmap:", instance_labelmap)
+        return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
 
 class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
@@ -133,7 +138,7 @@ class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
         return labelmap
 
 
-def _map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap) -> MatchedInstancePair:
+def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap) -> MatchedInstancePair:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
