@@ -3,7 +3,7 @@ import cProfile
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica import MatchedInstancePair, NaiveOneToOneMatching, Panoptic_Evaluator
+from panoptica import MatchedInstancePair, Panoptic_Evaluator
 
 directory = turbopath(__file__).parent
 
@@ -21,7 +21,7 @@ sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
 evaluator = Panoptic_Evaluator(
     expected_input=MatchedInstancePair,
     instance_approximator=None,
-    instance_matcher=NaiveOneToOneMatching(),
+    instance_matcher=None,
     iou_threshold=0.5,
 )
 with cProfile.Profile() as pr:
