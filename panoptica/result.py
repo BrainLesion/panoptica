@@ -23,7 +23,7 @@ class PanopticaResult:
         tp: int,
         dice_list: List[float],
         iou_list: List[float],
-        assd: float,
+        assd_list: List[float],
     ):
         """
         Initialize a PanopticaResult object.
@@ -40,7 +40,7 @@ class PanopticaResult:
         self._iou_list = iou_list
         self._num_ref_instances = num_ref_instances
         self._num_pred_instances = num_pred_instances
-        self._assd = assd
+        self._assd_list = assd_list
 
     def __str__(self):
         return (
@@ -52,7 +52,7 @@ class PanopticaResult:
             f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
             f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
             f"Panoptic Quality (PQ): {self.pq}\n"
-            f"Average symmetric surface distance (ASSD): {self.assd}\n"
+            f"Average symmetric surface distance (ASSD): {self.instance_assd}\n"
             f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
         )
 
@@ -67,7 +67,8 @@ class PanopticaResult:
             "sq": self.sq,
             "sq_sd": self.sq_sd,
             "pq": self.pq,
-            "assd": self.assd,
+            "assd": self.instance_assd,
+            "assd_sd": self.instance_assd_sd,
             "instance_dice": self.instance_dice,
             "instance_dice_sd": self.instance_dice_sd,
         }
@@ -189,11 +190,23 @@ class PanopticaResult:
         return np.std(self._dice_list)
 
     @property
-    def assd(self) -> float:
+    def instance_assd(self) -> float:
         """
-        Get the average symmetric surface distance
+        Get the average symmetric surface distance averaged over instances
 
         Returns:
             float: average symmetric surface distance.
         """
-        return self._assd
+        if self.tp == 0:
+            return 0.0
+        return np.sum(self._assd_list) / self.tp
+
+    @property
+    def instance_assd_sd(self) -> float:
+        """
+        Get the standard deviation of all assd calculations
+
+        Returns:
+            float: std of average symmetric surface distance.
+        """
+        return np.std(self._assd_list)

@@ -22,12 +22,10 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
     >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
     """
     # Initialize variables for True Positives (tp)
-    tp, dice_list, iou_list = 0, [], []
+    tp, dice_list, iou_list, assd_list = 0, [], [], []
 
     reference_arr, prediction_arr = matched_instance_pair.reference_arr, matched_instance_pair.prediction_arr
     ref_labels = matched_instance_pair.ref_labels
-
-    assd = _average_symmetric_surface_distance(prediction_arr, reference_arr)
 
     # Use concurrent.futures.ThreadPoolExecutor for parallelization
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -43,11 +41,12 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
         ]
 
         for future in concurrent.futures.as_completed(futures):
-            tp_i, dice_i, iou_i = future.result()
+            tp_i, dice_i, iou_i, assd_i = future.result()
             tp += tp_i
-            if dice_i is not None or iou_i is not None:
+            if dice_i is not None and iou_i is not None and assd_i is not None:
                 dice_list.append(dice_i)
                 iou_list.append(iou_i)
+                assd_list.append(assd_i)
     # Create and return the PanopticaResult object with computed metrics
     return PanopticaResult(
         num_ref_instances=matched_instance_pair.n_reference_instance,
@@ -55,7 +54,7 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
         tp=tp,
         dice_list=dice_list,
         iou_list=iou_list,
-        assd=assd,
+        assd_list=assd_list,
     )
 
 
@@ -64,7 +63,7 @@ def _evaluate_instance(
     prediction_arr: np.ndarray,
     ref_idx: int,
     iou_threshold: float,
-) -> tuple[int, float | None, float | None]:
+) -> tuple[int, float | None, float | None, float | None]:
     """
     Evaluate a single instance.
 
@@ -77,19 +76,23 @@ def _evaluate_instance(
     Returns:
         Tuple[int, float, float]: Tuple containing True Positives (int), Dice coefficient (float), and IoU (float).
     """
+    ref_arr = reference_arr == ref_idx
+    pred_arr = prediction_arr == ref_idx
     iou: float | None = _compute_iou(
-        reference=reference_arr == ref_idx,
-        prediction=prediction_arr == ref_idx,
+        reference=ref_arr,
+        prediction=pred_arr,
     )
     if iou > iou_threshold:
         tp = 1
         dice = _compute_dice_coefficient(
-            reference=reference_arr == ref_idx,
-            prediction=prediction_arr == ref_idx,
+            reference=ref_arr,
+            prediction=pred_arr,
         )
+        assd = _average_symmetric_surface_distance(pred_arr, ref_arr)
     else:
         tp = 0
         dice = None
         iou = None
+        assd = None
 
-    return tp, dice, iou
+    return tp, dice, iou, assd
