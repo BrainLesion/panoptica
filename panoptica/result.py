@@ -52,8 +52,9 @@ class PanopticaResult:
             f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
             f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
             f"Panoptic Quality (PQ): {self.pq}\n"
+            f"DSC-based Segmentation Quality (DQ_DSC): {self.sq_dsc} ± {self.sq_dsc_sd}"
+            f"DSC-based Panoptic Quality (PQ_DSC): {self.pq_dsc}"
             f"Average symmetric surface distance (ASSD): {self.assd}\n"
-            f"volumetric instance-wise DICE: {self.instance_dice} ± {self.instance_dice_sd}"
         )
 
     def to_dict(self):
@@ -67,9 +68,10 @@ class PanopticaResult:
             "sq": self.sq,
             "sq_sd": self.sq_sd,
             "pq": self.pq,
+            "sq_dsc": self.sq_dsc,
+            "sq_dsc_sd": self.sq_dsc_sd,
+            "pq_dsc": self.pq_dsc,
             "assd": self.assd,
-            "instance_dice": self.instance_dice,
-            "instance_dice_sd": self.instance_dice_sd,
         }
 
     @property
@@ -167,9 +169,9 @@ class PanopticaResult:
         return self.sq * self.rq
 
     @property
-    def instance_dice(self) -> float:
+    def sq_dsc(self) -> float:
         """
-        Calculate the average Dice coefficient for matched instances.
+        Calculate the average Dice coefficient for matched instances. Analogue to segmentation quality but based on DSC.
 
         Returns:
             float: Average Dice coefficient.
@@ -179,14 +181,24 @@ class PanopticaResult:
         return np.sum(self._dice_list) / self.tp
 
     @property
-    def instance_dice_sd(self) -> float:
+    def sq_dsc_sd(self) -> float:
         """
-        Calculate the standard deviation of average Dice coefficient for matched instances.
+        Calculate the standard deviation of average Dice coefficient for matched instances. Analogue to segmentation quality but based on DSC.
 
         Returns:
             float: Standard deviation of Average Dice coefficient.
         """
         return np.std(self._dice_list)
+
+    @property
+    def pq_dsc(self) -> float:
+        """
+        Calculate the Panoptic Quality (PQ) based on DSC-based SQ and RQ.
+
+        Returns:
+            float: Panoptic Quality (PQ).
+        """
+        return self.sq_dsc * self.rq
 
     @property
     def assd(self) -> float:
