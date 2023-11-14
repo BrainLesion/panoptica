@@ -52,8 +52,8 @@ class PanopticaResult:
             f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
             f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
             f"Panoptic Quality (PQ): {self.pq}\n"
-            f"DSC-based Segmentation Quality (DQ_DSC): {self.sq_dsc} ± {self.sq_dsc_sd}"
-            f"DSC-based Panoptic Quality (PQ_DSC): {self.pq_dsc}"
+            f"DSC-based Segmentation Quality (DQ_DSC): {self.sq_dsc} ± {self.sq_dsc_sd}\n"
+            f"DSC-based Panoptic Quality (PQ_DSC): {self.pq_dsc}\n"
             f"Average symmetric surface distance (ASSD): {self.assd}\n"
         )
 
