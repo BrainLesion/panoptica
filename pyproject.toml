@@ -12,7 +12,7 @@ enable = true
 exclude = ["examples", "benchmark"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 numpy = "^1.20.0"
 connected-components-3d = "^3.12.3"
 scipy = "^1.7.0"
