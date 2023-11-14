@@ -1,15 +1,20 @@
 import numpy as np
 from scipy.ndimage import _ni_support
-from scipy.ndimage.morphology import distance_transform_edt, generate_binary_structure, binary_erosion
+from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 from scipy.ndimage._nd_image import euclidean_feature_transform
 
 
-def my_assd(result, reference, voxelspacing=None, connectivity=1):
-    assd = np.mean((asd(result, reference, voxelspacing, connectivity), asd(reference, result, voxelspacing, connectivity)))
-    return assd
+def _average_symmetric_surface_distance(result, reference, voxelspacing=None, connectivity=1) -> float:
+    assd = np.mean(
+        (
+            _average_surface_distance(result, reference, voxelspacing, connectivity),
+            _average_surface_distance(reference, result, voxelspacing, connectivity),
+        )
+    )
+    return float(assd)
 
 
-def asd(result, reference, voxelspacing=None, connectivity=1):
+def _average_surface_distance(result, reference, voxelspacing=None, connectivity=1):
     sds = __surface_distances(result, reference, voxelspacing, connectivity)
     asd = sds.mean()
     return asd
@@ -87,16 +92,3 @@ def _distance_transform_edt(input: np.ndarray, sampling=None, return_distances=T
         return result[0]
     else:
         return None
-
-
-def _distance_tranform_arg_check(distances_out, indices_out, return_distances, return_indices):
-    """Raise a RuntimeError if the arguments are invalid"""
-    error_msgs = []
-    if (not return_distances) and (not return_indices):
-        error_msgs.append("at least one of return_distances/return_indices must be True")
-    if distances_out and not return_distances:
-        error_msgs.append("return_distances must be True if distances is supplied")
-    if indices_out and not return_indices:
-        error_msgs.append("return_indices must be True if indices is supplied")
-    if error_msgs:
-        raise RuntimeError(", ".join(error_msgs))

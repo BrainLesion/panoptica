@@ -215,7 +215,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
 
 
 # Many-to-One Mapping
-class InstanceLabelMap:
+class InstanceLabelMap(object):
     # Mapping ((prediction_label, ...), (reference_label, ...))
     labelmap: dict[int, int]
 
@@ -231,6 +231,16 @@ class InstanceLabelMap:
                     f"You are mapping a prediction label to a reference label that was already assigned differently, got {self.__str__} and you tried {pred_labels}, {ref_label}"
                 )
             self.labelmap[p] = ref_label
+
+    def contains_and(self, pred_label: int | None = None, ref_label: int | None = None) -> bool:
+        pred_in = True if pred_label is None else pred_label in self.labelmap
+        ref_in = True if ref_label is None else ref_label in self.labelmap.values()
+        return pred_in and ref_in
+
+    def contains_or(self, pred_label: int | None = None, ref_label: int | None = None) -> bool:
+        pred_in = True if pred_label is None else pred_label in self.labelmap
+        ref_in = True if ref_label is None else ref_label in self.labelmap.values()
+        return pred_in or ref_in
 
     def get_one_to_one_dictionary(self):
         return self.labelmap
