@@ -5,7 +5,7 @@ from auxiliary.turbopath import turbopath
 
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
-    NaiveOneToOneMatching,
+    NaiveThresholdMatching,
     Panoptic_Evaluator,
     SemanticPair,
 )
@@ -22,7 +22,7 @@ sample = SemanticPair(pred_masks, ref_masks)
 evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
-    instance_matcher=NaiveOneToOneMatching(),
+    instance_matcher=NaiveThresholdMatching(),
     iou_threshold=0.5,
 )
 with cProfile.Profile() as pr:

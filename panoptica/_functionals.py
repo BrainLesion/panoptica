@@ -1,5 +1,5 @@
 import numpy as np
-from panoptica.utils.metrics import _compute_instance_iou
+from panoptica.metrics import _compute_instance_iou
 from panoptica.utils.constants import CCABackend
 from multiprocessing import Pool
 

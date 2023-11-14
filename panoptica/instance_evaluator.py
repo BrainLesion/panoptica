@@ -1,8 +1,8 @@
 import concurrent.futures
 from panoptica.utils.datatypes import MatchedInstancePair
 from panoptica.result import PanopticaResult
+from panoptica.metrics import _compute_iou, _compute_dice_coefficient, _average_symmetric_surface_distance
 import numpy as np
-from panoptica.utils.metrics import _compute_iou, _compute_dice_coefficient
 
 
 def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:
@@ -26,6 +26,8 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
 
     reference_arr, prediction_arr = matched_instance_pair.reference_arr, matched_instance_pair.prediction_arr
     ref_labels = matched_instance_pair.ref_labels
+
+    assd = _average_symmetric_surface_distance(prediction_arr, reference_arr)
 
     # Use concurrent.futures.ThreadPoolExecutor for parallelization
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -53,6 +55,7 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
         tp=tp,
         dice_list=dice_list,
         iou_list=iou_list,
+        assd=assd,
     )
 
 

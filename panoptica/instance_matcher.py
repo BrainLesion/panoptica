@@ -8,6 +8,7 @@ from panoptica.utils.datatypes import (
     MatchedInstancePair,
     UnmatchedInstancePair,
 )
+from scipy.optimize import linear_sum_assignment
 
 
 class InstanceMatchingAlgorithm(ABC):
@@ -65,7 +66,7 @@ class InstanceMatchingAlgorithm(ABC):
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
 
-class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
+class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     """
     Instance matching algorithm that performs one-to-one matching based on IoU values.
 
@@ -87,7 +88,7 @@ class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
     >>> result = matcher.match_instances(unmatched_instance_pair)
     """
 
-    def __init__(self, iou_threshold: float = 0.5) -> None:
+    def __init__(self, iou_threshold: float = 0.5, allow_many_to_one: bool = False) -> None:
         """
         Initialize the NaiveOneToOneMatching instance.
 
@@ -97,9 +98,8 @@ class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
         Raises:
             AssertionError: If the specified IoU threshold is not within the valid range.
         """
-        assert iou_threshold >= 0.5, "NaiveOneToOneMatching: iou_threshold lower than 0.5 doesnt work!"
-        assert iou_threshold < 1.0, "NaiveOneToOneMatching: iou_threshold greater than or equal to 1.0 doesnt work!"
         self.iou_threshold = iou_threshold
+        self.allow_many_to_one = allow_many_to_one
 
     def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> InstanceLabelMap:
         """
@@ -121,15 +121,15 @@ class NaiveOneToOneMatching(InstanceMatchingAlgorithm):
             pred_labels,
         )
         # Use linear_sum_assignment to find the best matches
-        # ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
+        ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
-        pairs = [(r, p) for r in range(len(ref_labels)) for p in range(len(pred_labels))]
-
         # Loop through matched instances to compute PQ components
-        for ref_idx, pred_idx in pairs:
+        for ref_idx, pred_idx in zip(ref_indices, pred_indices):
+            if labelmap.contains_or(pred_labels[pred_idx], ref_labels[ref_idx]) and not self.allow_many_to_one:
+                continue  # -> doesnt make speed difference
             iou = iou_matrix[ref_idx][pred_idx]
             if iou >= self.iou_threshold:
                 # Match found, increment true positive count and collect IoU and Dice values
