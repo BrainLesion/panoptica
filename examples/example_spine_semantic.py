@@ -12,8 +12,10 @@ from panoptica import (
 
 directory = turbopath(__file__).parent
 
-ref_masks = read_nifti(directory + "/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk.nii.gz")
-pred_masks = read_nifti(directory + "/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz")
+ref_masks = read_nifti(
+    directory + "/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk.nii.gz")
+pred_masks = read_nifti(
+    directory + "/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz")
 
 
 sample = SemanticPair(pred_masks, ref_masks)
@@ -26,7 +28,8 @@ evaluator = Panoptic_Evaluator(
     iou_threshold=0.5,
 )
 with cProfile.Profile() as pr:
-    result, debug_data = evaluator.evaluate(sample)
-    print(result)
+    if __name__ == "__main__":
+        result, debug_data = evaluator.evaluate(sample)
+        print(result)
 
 pr.dump_stats(directory + "/semantic_example.log")

@@ -15,7 +15,8 @@ pred_masks = read_nifti(
     directory + "/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk_new.nii.gz"
 )
 
-sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
+sample = MatchedInstancePair(
+    prediction_arr=pred_masks, reference_arr=ref_masks)
 
 
 evaluator = Panoptic_Evaluator(
@@ -25,7 +26,8 @@ evaluator = Panoptic_Evaluator(
     iou_threshold=0.5,
 )
 with cProfile.Profile() as pr:
-    result, debug_data = evaluator.evaluate(sample)
-    print(result)
+    if __name__ == "__main__":
+        result, debug_data = evaluator.evaluate(sample)
+        print(result)
 
 pr.dump_stats(directory + "/instance_example.log")
