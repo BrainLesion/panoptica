@@ -93,12 +93,12 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
     >>> result = cca_approximator.approximate_instances(semantic_pair)
     """
 
-    def __init__(self, cca_backend: CCABackend) -> None:
+    def __init__(self, cca_backend: CCABackend | None = None) -> None:
         """
         Initialize the ConnectedComponentsInstanceApproximator.
 
         Args:
-            cca_backend (CCABackend): The connected components algorithm backend.
+            cca_backend (CCABackend): The connected components algorithm backend. If None, will use cc3d for 3D and scipy for 1D and 2D inputs.
         """
         self.cca_backend = cca_backend
 
@@ -113,8 +113,12 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         Returns:
             UnmatchedInstancePair: The result of the instance approximation.
         """
-        prediction_arr, n_prediction_instance = _connected_components(semantic_pair.prediction_arr, self.cca_backend)
-        reference_arr, n_reference_instance = _connected_components(semantic_pair.reference_arr, self.cca_backend)
+        cca_backend = self.cca_backend
+        if self.cca_backend is None:
+            cca_backend = CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+        assert cca_backend is not None
+        prediction_arr, n_prediction_instance = _connected_components(semantic_pair.prediction_arr, cca_backend)
+        reference_arr, n_reference_instance = _connected_components(semantic_pair.reference_arr, cca_backend)
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr,
             reference_arr=reference_arr,

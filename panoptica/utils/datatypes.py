@@ -20,6 +20,7 @@ class _ProcessingPair(ABC):
     # unique labels without zero
     ref_labels: tuple[int]
     pred_labels: tuple[int]
+    n_dim: int
 
     def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None) -> None:
         """Initializes a general Processing Pair
@@ -33,6 +34,7 @@ class _ProcessingPair(ABC):
         self.prediction_arr = prediction_arr
         self.reference_arr = reference_arr
         self.dtype = dtype
+        self.n_dim = reference_arr.ndim
         self.ref_labels: tuple[int] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
         self.pred_labels: tuple[int] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
 
