@@ -7,11 +7,12 @@ from panoptica import MatchedInstancePair, Panoptic_Evaluator
 
 directory = turbopath(__file__).parent
 
-ref_masks = read_nifti(directory + "/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk.nii.gz")
+ref_masks = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
 
-pred_masks = read_nifti(directory + "/spine_seg/instance_example/sub-0007_mod-T2w_seg-vert_msk_new.nii.gz")
+pred_masks = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
-sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
+sample = MatchedInstancePair(
+    prediction_arr=pred_masks, reference_arr=ref_masks)
 
 
 evaluator = Panoptic_Evaluator(

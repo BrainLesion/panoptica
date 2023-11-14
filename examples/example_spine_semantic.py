@@ -13,10 +13,10 @@ from panoptica import (
 directory = turbopath(__file__).parent
 
 ref_masks = read_nifti(
-    directory + "/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk.nii.gz"
+    directory + "/spine_seg/semantic/ref.nii.gz"
 )
 pred_masks = read_nifti(
-    directory + "/spine_seg/semantic_example/sub-0007_mod-T2w_seg-spine_msk_new.nii.gz"
+    directory + "/spine_seg/semantic/pred.nii.gz"
 )
 
 sample = SemanticPair(pred_masks, ref_masks)
