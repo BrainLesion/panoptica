@@ -18,14 +18,14 @@ if __name__ == "__main__":
 
     sample = SemanticPair(pred_masks, ref_masks)
 
-evaluator = Panoptic_Evaluator(
-    expected_input=SemanticPair,
-    instance_approximator=ConnectedComponentsInstanceApproximator(),
-    instance_matcher=NaiveThresholdMatching(),
-    iou_threshold=0.5,
-)
-with cProfile.Profile() as pr:
-    result, debug_data = evaluator.evaluate(sample)
-    print(result)
+    evaluator = Panoptic_Evaluator(
+        expected_input=SemanticPair,
+        instance_approximator=ConnectedComponentsInstanceApproximator(),
+        instance_matcher=NaiveThresholdMatching(),
+        iou_threshold=0.5,
+    )
+    with cProfile.Profile() as pr:
+        result, debug_data = evaluator.evaluate(sample)
+        print(result)
 
-    pr.dump_stats(directory + "/semantic_example.log")
+        pr.dump_stats(directory + "/semantic_example.log")

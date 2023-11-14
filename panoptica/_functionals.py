@@ -52,7 +52,9 @@ def _map_labels(arr: np.ndarray, label_map: dict[np.integer, np.integer]) -> np.
     k = np.array(list(label_map.keys()))
     v = np.array(list(label_map.values()))
 
-    mapping_ar = np.arange(arr.max() + 1, dtype=arr.dtype)
+    max_value = max(arr.max(), max(k), max(v)) + 1
+
+    mapping_ar = np.arange(max_value, dtype=arr.dtype)
     mapping_ar[k] = v
     return mapping_ar[arr]
 
