@@ -157,7 +157,7 @@ class PanopticaResult:
         Returns:
             float: Standard deviation of Segmentation Quality (SQ).
         """
-        return np.std(self._iou_list)
+        return np.std(self._iou_list) if len(self._iou_list) > 0 else np.nan
 
     @property
     def pq(self) -> float:
@@ -189,7 +189,7 @@ class PanopticaResult:
         Returns:
             float: Standard deviation of Average Dice coefficient.
         """
-        return np.std(self._dice_list)
+        return np.std(self._dice_list) if len(self._dice_list) > 0 else np.nan
 
     @property
     def pq_dsc(self) -> float:
@@ -221,4 +221,4 @@ class PanopticaResult:
         Returns:
             float: std of average symmetric surface distance.
         """
-        return np.std(self._assd_list)
+        return np.std(self._assd_list) if len(self._assd_list) > 0 else np.nan

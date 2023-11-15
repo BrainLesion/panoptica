@@ -80,21 +80,27 @@ def _evaluate_instance(
     """
     ref_arr = reference_arr == ref_idx
     pred_arr = prediction_arr == ref_idx
-    iou: float | None = _compute_iou(
-        reference=ref_arr,
-        prediction=pred_arr,
-    )
-    if iou > iou_threshold:
-        tp = 1
-        dice = _compute_dice_coefficient(
-            reference=ref_arr,
-            prediction=pred_arr,
-        )
-        assd = _average_symmetric_surface_distance(pred_arr, ref_arr)
-    else:
+    if ref_arr.sum() == 0 or pred_arr.sum() == 0:
         tp = 0
         dice = None
         iou = None
         assd = None
+    else:
+        iou: float | None = _compute_iou(
+            reference=ref_arr,
+            prediction=pred_arr,
+        )
+        if iou > iou_threshold:
+            tp = 1
+            dice = _compute_dice_coefficient(
+                reference=ref_arr,
+                prediction=pred_arr,
+            )
+            assd = _average_symmetric_surface_distance(pred_arr, ref_arr)
+        else:
+            tp = 0
+            dice = None
+            iou = None
+            assd = None
 
     return tp, dice, iou, assd
