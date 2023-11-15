@@ -154,6 +154,7 @@ def _handle_zero_instances_cases(
             tp=0,
             dice_list=[],
             iou_list=[],
+            assd_list=[],
         )
     if n_reference_instance == 0:
         # All references are missing, only false positives
@@ -163,6 +164,7 @@ def _handle_zero_instances_cases(
             tp=0,
             dice_list=[],
             iou_list=[],
+            assd_list=[],
         )
     if n_prediction_instance == 0:
         # All predictions are missing, only false negatives
@@ -172,5 +174,6 @@ def _handle_zero_instances_cases(
             tp=0,
             dice_list=[],
             iou_list=[],
+            assd_list=[],
         )
     return processing_pair
