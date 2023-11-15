@@ -47,7 +47,10 @@ class _ProcessingPair(ABC):
             return
         if self.crop is None:
             self.uncropped_shape = self._prediction_arr.shape
-            self.crop = _get_paired_crop(self._prediction_arr, self._reference_arr)
+            self.crop = _get_paired_crop(
+                self._prediction_arr,
+                self._reference_arr,
+            )
 
         self._prediction_arr = self._prediction_arr[self.crop]
         self._reference_arr = self._reference_arr[self.crop]

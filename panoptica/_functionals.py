@@ -154,7 +154,8 @@ def _connected_components(
 
 def _get_paired_crop(prediction_arr: np.ndarray, reference_arr: np.ndarray, px_pad: int = 2):
     assert prediction_arr.shape == reference_arr.shape
-    bbox1 = _get_bbox_nd(prediction_arr, px_dist=px_pad)
-    bbox2 = _get_bbox_nd(reference_arr, px_dist=px_pad)
 
-    return tuple(slice(min(bbox1[idx].start, bbox2[idx].start), max(bbox1[idx].stop, bbox2[idx].stop)) for idx in range(len(bbox1)))
+    combined = prediction_arr + reference_arr
+    if combined.sum() == 0:
+        combined += 1
+    return _get_bbox_nd(combined, px_dist=px_pad)
