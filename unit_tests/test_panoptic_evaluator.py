@@ -4,13 +4,12 @@
 # coverage html
 import unittest
 
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator, CCABackend
-from panoptica.instance_matcher import NaiveThresholdMatching
-from panoptica.instance_evaluator import evaluate_matched_instance
 import numpy as np
-from panoptica.result import PanopticaResult
-from panoptica.utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair, _ProcessingPair
+
 from panoptica.evaluator import Panoptic_Evaluator
+from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.utils.datatypes import SemanticPair
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
@@ -56,7 +55,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertEqual(result.fn, 1)
         self.assertEqual(result.sq, 0.0)
         self.assertEqual(result.pq, 0.0)
-        self.assertEqual(result.instance_assd, np.inf)
+        self.assertEqual(result.sq_assd, np.inf)
 
     def test_ref_empty(self):
         a = np.zeros([50, 50], np.uint16)
@@ -79,7 +78,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertEqual(result.fn, 0)
         self.assertEqual(result.sq, 0.0)
         self.assertEqual(result.pq, 0.0)
-        self.assertEqual(result.instance_assd, np.inf)
+        self.assertEqual(result.sq_assd, np.inf)
 
     def test_both_empty(self):
         a = np.zeros([50, 50], np.uint16)
@@ -102,4 +101,4 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertEqual(result.fn, 0)
         self.assertTrue(np.isnan(result.sq))
         self.assertTrue(np.isnan(result.pq))
-        self.assertTrue(np.isnan(result.instance_assd))
+        self.assertTrue(np.isnan(result.sq_assd))

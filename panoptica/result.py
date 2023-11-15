@@ -54,7 +54,7 @@ class PanopticaResult:
             f"Panoptic Quality (PQ): {self.pq}\n"
             f"DSC-based Segmentation Quality (DQ_DSC): {self.sq_dsc} ± {self.sq_dsc_sd}\n"
             f"DSC-based Panoptic Quality (PQ_DSC): {self.pq_dsc}\n"
-            f"Average symmetric surface distance (ASSD): {self.instance_assd} ± {self.instance_assd_sd}"
+            f"Average symmetric surface distance (ASSD): {self.sq_assd} ± {self.sq_assd_sd}"
         )
 
     def to_dict(self):
@@ -71,8 +71,8 @@ class PanopticaResult:
             "sq_dsc": self.sq_dsc,
             "sq_dsc_sd": self.sq_dsc_sd,
             "pq_dsc": self.pq_dsc,
-            "assd": self.instance_assd,
-            "assd_sd": self.instance_assd_sd,
+            "sq_assd": self.sq_assd,
+            "sq_assd_sd": self.sq_assd_sd,
         }
 
     @property
@@ -134,7 +134,9 @@ class PanopticaResult:
             float: Recognition Quality (RQ).
         """
         if self.tp == 0:
-            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            return (
+                0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            )
         return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
 
     @property
@@ -146,7 +148,9 @@ class PanopticaResult:
             float: Segmentation Quality (SQ).
         """
         if self.tp == 0:
-            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            return (
+                0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            )
         return np.sum(self._iou_list) / self.tp
 
     @property
@@ -178,7 +182,9 @@ class PanopticaResult:
             float: Average Dice coefficient.
         """
         if self.tp == 0:
-            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            return (
+                0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            )
         return np.sum(self._dice_list) / self.tp
 
     @property
@@ -202,23 +208,36 @@ class PanopticaResult:
         return self.sq_dsc * self.rq
 
     @property
-    def instance_assd(self) -> float:
+    def sq_assd(self) -> float:
         """
-        Get the average symmetric surface distance averaged over instances
+        Calculate the average average symmetric surface distance (ASSD) for matched instances. Analogue to segmentation quality but based on ASSD.
 
         Returns:
-            float: average symmetric surface distance.
+            float: average symmetric surface distance. (ASSD)
         """
         if self.tp == 0:
-            return np.nan if self.num_pred_instances + self.num_ref_instances == 0 else np.inf
+            return (
+                np.nan
+                if self.num_pred_instances + self.num_ref_instances == 0
+                else np.inf
+            )
         return np.sum(self._assd_list) / self.tp
 
     @property
-    def instance_assd_sd(self) -> float:
+    def sq_assd_sd(self) -> float:
         """
-        Get the standard deviation of all assd calculations
-
+        Calculate the standard deviation of average symmetric surface distance (ASSD) for matched instances. Analogue to segmentation quality but based on ASSD.
         Returns:
-            float: std of average symmetric surface distance.
+            float: Standard deviation of average symmetric surface distance (ASSD).
         """
         return np.std(self._assd_list) if len(self._assd_list) > 0 else np.nan
+
+    @property
+    def pq_assd(self) -> float:
+        """
+        Calculate the Panoptic Quality (PQ) based on ASSD-based SQ and RQ.
+
+        Returns:
+            float: Panoptic Quality (PQ).
+        """
+        return self.sq_assd * self.rq
