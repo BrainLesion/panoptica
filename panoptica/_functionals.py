@@ -4,6 +4,38 @@ from panoptica.utils.constants import CCABackend
 from multiprocessing import Pool
 
 
+def _calc_iou_overlapping_labels(
+    prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: tuple[int, ...], pred_labels: tuple[int, ...]
+) -> list[tuple[float, tuple[int, int]]]:
+    """Calculates the IOU for all overlapping labels (fast!)
+
+    Args:
+        prediction_arr (np.ndarray): Numpy array containing the prediction labels.
+        reference_arr (np.ndarray): Numpy array containing the reference labels.
+        ref_labels (list[int]): List of unique reference labels.
+        pred_labels (list[int]): List of unique prediction labels.
+
+    Returns:
+        list[tuple[float, tuple[int, int]]]: List of pairs in style: (iou, (ref_label, pred_label))
+    """
+    overlap_arr = prediction_arr.astype(np.uint32)
+    max_ref = max(ref_labels) + 1
+    overlap_arr = (overlap_arr * max_ref) + reference_arr
+    overlap_arr[reference_arr == 0] = 0
+    overlap_labels = [i for i in np.unique(overlap_arr) if i > max_ref]
+    # (ref, pred)
+    overlapping_indices = [(i % (max_ref), i // (max_ref)) for i in overlap_labels]
+    # print("overlapping_indices", overlapping_indices)
+    instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
+    with Pool() as pool:
+        iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
+
+    iou_pairs = [(i, overlapping_indices[idx]) for idx, i in enumerate(iou_values)]
+    iou_pairs = sorted(iou_pairs, key=lambda x: x[0], reverse=True)
+
+    return iou_pairs
+
+
 def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: tuple[int, ...], pred_labels: tuple[int, ...]):
     """
     Calculate the Intersection over Union (IoU) matrix between reference and prediction arrays.

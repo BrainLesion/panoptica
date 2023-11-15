@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from panoptica._functionals import _calc_iou_matrix, _map_labels
+from panoptica._functionals import _calc_iou_matrix, _map_labels, _calc_iou_overlapping_labels
 from panoptica.utils.datatypes import (
     InstanceLabelMap,
     MatchedInstancePair,
@@ -68,6 +68,9 @@ class InstanceMatchingAlgorithm(ABC):
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
 
+from multiprocessing import Pool
+
+
 class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     """
     Instance matching algorithm that performs one-to-one matching based on IoU values.
@@ -117,26 +120,38 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         ref_labels = unmatched_instance_pair.ref_labels
         pred_labels = unmatched_instance_pair.pred_labels
         # TODO bounding boxes first, then only calc iou over bboxes collisions
-        iou_matrix = _calc_iou_matrix(
-            unmatched_instance_pair.prediction_arr.flatten(),
-            unmatched_instance_pair.reference_arr.flatten(),
-            ref_labels,
-            pred_labels,
-        )
+        # iou_matrix = _calc_iou_matrix(
+        #    unmatched_instance_pair.prediction_arr.flatten(),
+        #    unmatched_instance_pair.reference_arr.flatten(),
+        #    ref_labels,
+        #    pred_labels,
+        # )
         # Use linear_sum_assignment to find the best matches
-        ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
+        # ref_indices, pred_indices = linear_sum_assignment(-iou_matrix)
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
         # Loop through matched instances to compute PQ components
-        for ref_idx, pred_idx in zip(ref_indices, pred_indices):
-            if labelmap.contains_or(pred_labels[pred_idx], ref_labels[ref_idx]) and not self.allow_many_to_one:
+        # for ref_idx, pred_idx in zip(ref_indices, pred_indices):
+        #    if labelmap.contains_or(pred_labels[pred_idx], ref_labels[ref_idx]) and not self.allow_many_to_one:
+        #        continue  # -> doesnt make speed difference
+        #    iou = iou_matrix[ref_idx][pred_idx]
+        #    if iou >= self.iou_threshold:
+        #        # Match found, increment true positive count and collect IoU and Dice values
+        #        labelmap.add_labelmap_entry(pred_labels[pred_idx], ref_labels[ref_idx])
+        # map label ref_idx to pred_idx
+
+        pred_arr, ref_arr = unmatched_instance_pair.prediction_arr, unmatched_instance_pair.reference_arr
+        iou_pairs = _calc_iou_overlapping_labels(pred_arr, ref_arr, ref_labels, pred_labels)
+
+        # Loop through matched instances to compute PQ components
+        for iou, (ref_label, pred_label) in iou_pairs:
+            if labelmap.contains_or(pred_label, ref_label) and not False:
                 continue  # -> doesnt make speed difference
-            iou = iou_matrix[ref_idx][pred_idx]
-            if iou >= self.iou_threshold:
+            if iou >= 0.5:
                 # Match found, increment true positive count and collect IoU and Dice values
-                labelmap.add_labelmap_entry(pred_labels[pred_idx], ref_labels[ref_idx])
+                labelmap.add_labelmap_entry(pred_label, ref_label)
                 # map label ref_idx to pred_idx
         return labelmap
 
