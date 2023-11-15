@@ -8,6 +8,7 @@ from panoptica.utils.datatypes import (
     MatchedInstancePair,
     UnmatchedInstancePair,
 )
+from panoptica.timing import measure_time
 from scipy.optimize import linear_sum_assignment
 
 
@@ -50,6 +51,7 @@ class InstanceMatchingAlgorithm(ABC):
         """
         pass
 
+    @measure_time
     def match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> MatchedInstancePair:
         """
         Perform instance matching on the given UnmatchedInstancePair.
@@ -114,6 +116,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         """
         ref_labels = unmatched_instance_pair.ref_labels
         pred_labels = unmatched_instance_pair.pred_labels
+        # TODO bounding boxes first, then only calc iou over bboxes collisions
         iou_matrix = _calc_iou_matrix(
             unmatched_instance_pair.prediction_arr.flatten(),
             unmatched_instance_pair.reference_arr.flatten(),

@@ -11,8 +11,7 @@ ref_masks = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
 
 pred_masks = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
-sample = MatchedInstancePair(
-    prediction_arr=pred_masks, reference_arr=ref_masks)
+sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
 
 
 evaluator = Panoptic_Evaluator(
