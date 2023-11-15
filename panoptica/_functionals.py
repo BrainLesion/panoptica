@@ -22,15 +22,14 @@ def _calc_iou_overlapping_labels(
     max_ref = max(ref_labels) + 1
     overlap_arr = (overlap_arr * max_ref) + reference_arr
     overlap_arr[reference_arr == 0] = 0
-    overlap_labels = [i for i in np.unique(overlap_arr) if i > max_ref]
     # (ref, pred)
-    overlapping_indices = [(i % (max_ref), i // (max_ref)) for i in overlap_labels]
-    # print("overlapping_indices", overlapping_indices)
-    instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
+    # overlapping_indices = [(i % (max_ref), i // (max_ref)) for i in np.unique(overlap_arr) if i > max_ref]
+    # instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
+    instance_pairs = [(reference_arr, prediction_arr, i % (max_ref), i // (max_ref)) for i in np.unique(overlap_arr) if i > max_ref]
     with Pool() as pool:
         iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
 
-    iou_pairs = [(i, overlapping_indices[idx]) for idx, i in enumerate(iou_values)]
+    iou_pairs = [(i, (instance_pairs[idx][2], instance_pairs[idx][3])) for idx, i in enumerate(iou_values)]
     iou_pairs = sorted(iou_pairs, key=lambda x: x[0], reverse=True)
 
     return iou_pairs
