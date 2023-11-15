@@ -4,6 +4,8 @@ from panoptica.result import PanopticaResult
 from panoptica.metrics import _compute_iou, _compute_dice_coefficient, _average_symmetric_surface_distance
 from panoptica.timing import measure_time
 import numpy as np
+import gc
+from multiprocessing import Pool
 
 
 @measure_time
@@ -26,29 +28,49 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
     # Initialize variables for True Positives (tp)
     tp, dice_list, iou_list, assd_list = 0, [], [], []
 
-    reference_arr, prediction_arr = matched_instance_pair.reference_arr, matched_instance_pair.prediction_arr
-    ref_labels = matched_instance_pair.ref_labels
+    reference_arr, prediction_arr = matched_instance_pair._reference_arr, matched_instance_pair._prediction_arr
+    ref_labels = matched_instance_pair._ref_labels
+
+    # instance_pairs = _calc_overlapping_labels(
+    #    prediction_arr=prediction_arr,
+    #    reference_arr=reference_arr,
+    #    ref_labels=ref_labels,
+    # )
+    # instance_pairs = [(ra, pa, rl, iou_threshold) for (ra, pa, rl, pl) in instance_pairs]
+
+    instance_pairs = [(reference_arr, prediction_arr, ref_idx, iou_threshold) for ref_idx in ref_labels]
+    with Pool() as pool:
+        metric_values = pool.starmap(_evaluate_instance, instance_pairs)
+
+    for tp_i, dice_i, iou_i, assd_i in metric_values:
+        tp += tp_i
+        if dice_i is not None and iou_i is not None and assd_i is not None:
+            dice_list.append(dice_i)
+            iou_list.append(iou_i)
+            assd_list.append(assd_i)
 
     # Use concurrent.futures.ThreadPoolExecutor for parallelization
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = [
-            executor.submit(
-                _evaluate_instance,
-                reference_arr,
-                prediction_arr,
-                ref_idx,
-                iou_threshold,
-            )
-            for ref_idx in ref_labels
-        ]
-
-        for future in concurrent.futures.as_completed(futures):
-            tp_i, dice_i, iou_i, assd_i = future.result()
-            tp += tp_i
-            if dice_i is not None and iou_i is not None and assd_i is not None:
-                dice_list.append(dice_i)
-                iou_list.append(iou_i)
-                assd_list.append(assd_i)
+    # with concurrent.futures.ThreadPoolExecutor() as executor:
+    #    futures = [
+    #        executor.submit(
+    #            _evaluate_instance,
+    #            reference_arr,
+    #            prediction_arr,
+    #            ref_idx,
+    #            iou_threshold,
+    #        )
+    #        for ref_idx in ref_labels
+    #    ]
+    #
+    #        for future in concurrent.futures.as_completed(futures):
+    #            tp_i, dice_i, iou_i, assd_i = future.result()
+    #            tp += tp_i
+    #            if dice_i is not None and iou_i is not None and assd_i is not None:
+    #                dice_list.append(dice_i)
+    #                iou_list.append(iou_i)
+    #                assd_list.append(assd_i)
+    #            del future
+    #            gc.collect()
     # Create and return the PanopticaResult object with computed metrics
     return PanopticaResult(
         num_ref_instances=matched_instance_pair.n_reference_instance,

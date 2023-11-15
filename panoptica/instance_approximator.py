@@ -66,7 +66,7 @@ class InstanceApproximator(ABC):
         # Call algorithm
         instance_pair = self._approximate_instances(semantic_pair, **kwargs)
         # Check validity
-        pred_labels, ref_labels = instance_pair.pred_labels, instance_pair.ref_labels
+        pred_labels, ref_labels = instance_pair._pred_labels, instance_pair._ref_labels
         pred_label_range = (np.min(pred_labels), np.max(pred_labels)) if len(pred_labels) > 0 else (0, 0)
         ref_label_range = (np.min(ref_labels), np.max(ref_labels)) if len(ref_labels) > 0 else (0, 0)
         #
@@ -75,8 +75,8 @@ class InstanceApproximator(ABC):
         # Set dtype to smalles fitting uint
         max_value = max(np.max(pred_label_range[1]), np.max(ref_label_range[1]))
         dtype = _get_smallest_fitting_uint(max_value)
-        instance_pair.prediction_arr.astype(dtype)
-        instance_pair.reference_arr.astype(dtype)
+        instance_pair._prediction_arr.astype(dtype)
+        instance_pair._reference_arr.astype(dtype)
         return instance_pair
 
 
@@ -124,13 +124,15 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             cca_backend = CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
         assert cca_backend is not None
 
-        empty_prediction = len(semantic_pair.pred_labels) == 0
-        empty_reference = len(semantic_pair.ref_labels) == 0
+        empty_prediction = len(semantic_pair._pred_labels) == 0
+        empty_reference = len(semantic_pair._ref_labels) == 0
         prediction_arr, n_prediction_instance = (
-            _connected_components(semantic_pair.prediction_arr, cca_backend) if not empty_prediction else (semantic_pair.prediction_arr, 0)
+            _connected_components(semantic_pair._prediction_arr, cca_backend)
+            if not empty_prediction
+            else (semantic_pair._prediction_arr, 0)
         )
         reference_arr, n_reference_instance = (
-            _connected_components(semantic_pair.reference_arr, cca_backend) if not empty_reference else (semantic_pair.reference_arr, 0)
+            _connected_components(semantic_pair._reference_arr, cca_backend) if not empty_reference else (semantic_pair._reference_arr, 0)
         )
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr,
