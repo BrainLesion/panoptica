@@ -2,9 +2,11 @@ import concurrent.futures
 from panoptica.utils.datatypes import MatchedInstancePair
 from panoptica.result import PanopticaResult
 from panoptica.metrics import _compute_iou, _compute_dice_coefficient, _average_symmetric_surface_distance
+from panoptica.timing import measure_time
 import numpy as np
 
 
+@measure_time
 def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.

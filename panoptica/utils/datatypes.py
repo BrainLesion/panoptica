@@ -18,8 +18,8 @@ class _ProcessingPair(ABC):
     prediction_arr: np.ndarray
     reference_arr: np.ndarray
     # unique labels without zero
-    ref_labels: tuple[int]
-    pred_labels: tuple[int]
+    ref_labels: tuple[int, ...]
+    pred_labels: tuple[int, ...]
     n_dim: int
 
     def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None) -> None:
@@ -35,8 +35,8 @@ class _ProcessingPair(ABC):
         self.reference_arr = reference_arr
         self.dtype = dtype
         self.n_dim = reference_arr.ndim
-        self.ref_labels: tuple[int] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
-        self.pred_labels: tuple[int] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self.ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
+        self.pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
 
     # Make all variables read-only!
     def __setattr__(self, attr, value):

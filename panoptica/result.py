@@ -134,7 +134,7 @@ class PanopticaResult:
             float: Recognition Quality (RQ).
         """
         if self.tp == 0:
-            return 0.0
+            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
         return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
 
     @property
@@ -146,7 +146,7 @@ class PanopticaResult:
             float: Segmentation Quality (SQ).
         """
         if self.tp == 0:
-            return 0.0
+            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
         return np.sum(self._iou_list) / self.tp
 
     @property
@@ -178,7 +178,7 @@ class PanopticaResult:
             float: Average Dice coefficient.
         """
         if self.tp == 0:
-            return 0.0
+            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
         return np.sum(self._dice_list) / self.tp
 
     @property
@@ -210,7 +210,7 @@ class PanopticaResult:
             float: average symmetric surface distance.
         """
         if self.tp == 0:
-            return 0.0
+            return np.nan if self.num_pred_instances + self.num_ref_instances == 0 else np.inf
         return np.sum(self._assd_list) / self.tp
 
     @property
