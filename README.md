@@ -28,7 +28,7 @@ All use cases have tutorials showcasing the usage that can be found at [BrainLes
 
 ### Semantic Segmentation Input
 
-<img src="./examples/spine_seg/semantic/fig_dark.png" alt="semantic_figure" height="300"/>
+<img src="https://github.com/BrainLesion/panoptica/blob/main/examples/spine_seg/semantic/fig_dark.png?raw=true" alt="semantic_figure" height="300"/>
 
 Although for many biomedical segmentation problems, an instance-wise evaluation is highly relevant and desirable, they are still addressed as semantic segmentation problems due to lack of appropriate instance labels.
 
@@ -38,7 +38,7 @@ Modules [1-3] can be used to obtain panoptic metrics of matched instances based 
 
 ### Unmatched Instances Input
 
-<img src="./examples/spine_seg/unmatched_instance/fig_dark.png" alt="unmatched_instance_figure" height="300"/>
+<img src="https://github.com/BrainLesion/panoptica/blob/main/examples/spine_seg/unmatched_instance/fig_dark.png?raw=true" alt="unmatched_instance_figure" height="300"/>
 
 It is a common issue that instance segementation outputs have good segmentations with mismatched labels.
 
@@ -48,7 +48,7 @@ For this case modules [2-3] can be utilized to match the instances and report pa
 
 ### Matched Instances Input
 
-<img src="./examples/spine_seg/matched_instance/fig_dark.png" alt="matched_instance_figure" height="300"/>
+<img src="https://github.com/BrainLesion/panoptica/blob/main/examples/spine_seg/matched_instance/fig_dark.png?raw=true" alt="matched_instance_figure" height="300"/>
 
 Ideally the input data already provides matched instances.
 
