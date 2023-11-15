@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from panoptica._functionals import _calc_iou_matrix, _map_labels, _calc_iou_overlapping_labels
+from panoptica._functionals import _calc_iou_matrix, _map_labels, _calc_iou_of_overlapping_labels
 from panoptica.utils.datatypes import (
     InstanceLabelMap,
     MatchedInstancePair,
@@ -117,8 +117,8 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         Returns:
             Instance_Label_Map: The result of the instance matching.
         """
-        ref_labels = unmatched_instance_pair.ref_labels
-        pred_labels = unmatched_instance_pair.pred_labels
+        ref_labels = unmatched_instance_pair._ref_labels
+        pred_labels = unmatched_instance_pair._pred_labels
         # TODO bounding boxes first, then only calc iou over bboxes collisions
         # iou_matrix = _calc_iou_matrix(
         #    unmatched_instance_pair.prediction_arr.flatten(),
@@ -142,8 +142,8 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         #        labelmap.add_labelmap_entry(pred_labels[pred_idx], ref_labels[ref_idx])
         # map label ref_idx to pred_idx
 
-        pred_arr, ref_arr = unmatched_instance_pair.prediction_arr, unmatched_instance_pair.reference_arr
-        iou_pairs = _calc_iou_overlapping_labels(pred_arr, ref_arr, ref_labels, pred_labels)
+        pred_arr, ref_arr = unmatched_instance_pair._prediction_arr, unmatched_instance_pair._reference_arr
+        iou_pairs = _calc_iou_of_overlapping_labels(pred_arr, ref_arr, ref_labels, pred_labels)
 
         # Loop through matched instances to compute PQ components
         for iou, (ref_label, pred_label) in iou_pairs:
@@ -172,10 +172,10 @@ def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instan
     >>> labelmap = [([1, 2], [3, 4]), ([5], [6])]
     >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
     """
-    prediction_arr = processing_pair.prediction_arr
+    prediction_arr = processing_pair._prediction_arr
 
-    ref_labels = processing_pair.ref_labels
-    pred_labels = processing_pair.pred_labels
+    ref_labels = processing_pair._ref_labels
+    pred_labels = processing_pair._pred_labels
 
     ref_matched_labels = []
     label_counter = max(ref_labels) + 1
@@ -200,7 +200,7 @@ def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instan
     # Build a MatchedInstancePair out of the newly derived data
     matched_instance_pair = MatchedInstancePair(
         prediction_arr=prediction_arr_relabeled,
-        reference_arr=processing_pair.reference_arr,
+        reference_arr=processing_pair._reference_arr,
         missed_reference_labels=missed_ref_labels,
         missed_prediction_labels=missed_pred_labels,
         n_prediction_instance=processing_pair.n_prediction_instance,

@@ -4,6 +4,7 @@ import numpy as np
 from numpy import dtype
 
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
+from panoptica._functionals import _get_paired_crop
 
 uint_type: type = np.unsignedinteger
 int_type: type = np.integer
@@ -15,11 +16,11 @@ class _ProcessingPair(ABC):
     Every member is read-only!
     """
 
-    prediction_arr: np.ndarray
-    reference_arr: np.ndarray
+    _prediction_arr: np.ndarray
+    _reference_arr: np.ndarray
     # unique labels without zero
-    ref_labels: tuple[int, ...]
-    pred_labels: tuple[int, ...]
+    _ref_labels: tuple[int, ...]
+    _pred_labels: tuple[int, ...]
     n_dim: int
 
     def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None) -> None:
@@ -31,19 +32,66 @@ class _ProcessingPair(ABC):
             dtype (type | None): Datatype that is asserted. None for no assertion
         """
         _check_array_integrity(prediction_arr, reference_arr, dtype=dtype)
-        self.prediction_arr = prediction_arr
-        self.reference_arr = reference_arr
+        self._prediction_arr = prediction_arr
+        self._reference_arr = reference_arr
         self.dtype = dtype
         self.n_dim = reference_arr.ndim
-        self.ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
-        self.pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self._ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
+        self._pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self.crop: tuple[slice, ...] = None
+        self.is_cropped: bool = False
+        self.uncropped_shape: tuple[int, ...] = reference_arr.shape
+
+    def crop_data(self):
+        if self.is_cropped:
+            return
+        if self.crop is None:
+            self.uncropped_shape = self._prediction_arr.shape
+            self.crop = _get_paired_crop(self._prediction_arr, self._reference_arr)
+
+        self._prediction_arr = self._prediction_arr[self.crop]
+        self._reference_arr = self._reference_arr[self.crop]
+        print(f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}")
+        self.is_cropped = True
+
+    def uncrop_data(self):
+        if self.is_cropped == False:
+            return
+        assert self.uncropped_shape is not None, "Calling uncrop_data() without having cropped first"
+        prediction_arr = np.zeros(self.uncropped_shape)
+        prediction_arr[self.crop] = self._prediction_arr
+        self._prediction_arr = prediction_arr
+
+        reference_arr = np.zeros(self.uncropped_shape)
+        reference_arr[self.crop] = self._reference_arr
+        print(f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}")
+        self._reference_arr = reference_arr
+        self.is_cropped = False
+
+    @property
+    def prediction_arr(self):
+        return self._prediction_arr
+
+    @property
+    def reference_arr(self):
+        return self._reference_arr
+
+    @property
+    def pred_labels(self):
+        return self._pred_labels
+
+    @property
+    def ref_labels(self):
+        return self._ref_labels
 
     # Make all variables read-only!
-    def __setattr__(self, attr, value):
-        if hasattr(self, attr):
-            raise Exception("Attempting to alter read-only value")
+    # def __setattr__(self, attr, value):
+    #    if hasattr(self, attr):
+    #        raise Exception("Attempting to alter read-only value")
 
-        self.__dict__[attr] = value
+
+#
+#        self.__dict__[attr] = value
 
 
 class _ProcessingPairInstanced(_ProcessingPair):
@@ -79,8 +127,8 @@ class _ProcessingPairInstanced(_ProcessingPair):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self.prediction_arr,
-            reference_arr=self.reference_arr,
+            prediction_arr=self._prediction_arr,
+            reference_arr=self._reference_arr,
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
         )  # type:ignore
@@ -188,15 +236,15 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             n_reference_instance,
         )  # type:ignore
         if n_matched_instances is None:
-            n_matched_instances = len([i for i in self.pred_labels if i in self.ref_labels])
+            n_matched_instances = len([i for i in self._pred_labels if i in self._ref_labels])
         self.n_matched_instances = n_matched_instances
 
         if missed_reference_labels is None:
-            missed_reference_labels = list([i for i in self.ref_labels if i not in self.pred_labels])
+            missed_reference_labels = list([i for i in self._ref_labels if i not in self._pred_labels])
         self.missed_reference_labels = missed_reference_labels
 
         if missed_prediction_labels is None:
-            missed_prediction_labels = list([i for i in self.pred_labels if i not in self.ref_labels])
+            missed_prediction_labels = list([i for i in self._pred_labels if i not in self._ref_labels])
         self.missed_prediction_labels = missed_prediction_labels
 
     def copy(self):
@@ -204,8 +252,8 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self.prediction_arr,
-            reference_arr=self.reference_arr,
+            prediction_arr=self._prediction_arr,
+            reference_arr=self._reference_arr,
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
             missed_reference_labels=self.missed_reference_labels,

@@ -1,10 +1,37 @@
 import numpy as np
 from panoptica.metrics import _compute_instance_iou
 from panoptica.utils.constants import CCABackend
+from panoptica.utils.numpy_utils import _get_bbox_nd
 from multiprocessing import Pool
 
 
-def _calc_iou_overlapping_labels(
+def _calc_overlapping_labels(
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    ref_labels: tuple[int, ...],
+) -> list[tuple[int, int]]:
+    """Calculates the pairs of labels that are overlapping in at least one voxel (fast)
+
+    Args:
+        prediction_arr (np.ndarray): Numpy array containing the prediction labels.
+        reference_arr (np.ndarray): Numpy array containing the reference labels.
+        ref_labels (list[int]): List of unique reference labels.
+
+    Returns:
+        _type_: _description_
+    """
+    overlap_arr = prediction_arr.astype(np.uint32)
+    max_ref = max(ref_labels) + 1
+    overlap_arr = (overlap_arr * max_ref) + reference_arr
+    overlap_arr[reference_arr == 0] = 0
+    # overlapping_indices = [(i % (max_ref), i // (max_ref)) for i in np.unique(overlap_arr) if i > max_ref]
+    # instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
+
+    # (ref, pred)
+    return [(i % (max_ref), i // (max_ref)) for i in np.unique(overlap_arr) if i > max_ref]
+
+
+def _calc_iou_of_overlapping_labels(
     prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: tuple[int, ...], pred_labels: tuple[int, ...]
 ) -> list[tuple[float, tuple[int, int]]]:
     """Calculates the IOU for all overlapping labels (fast!)
@@ -18,14 +45,14 @@ def _calc_iou_overlapping_labels(
     Returns:
         list[tuple[float, tuple[int, int]]]: List of pairs in style: (iou, (ref_label, pred_label))
     """
-    overlap_arr = prediction_arr.astype(np.uint32)
-    max_ref = max(ref_labels) + 1
-    overlap_arr = (overlap_arr * max_ref) + reference_arr
-    overlap_arr[reference_arr == 0] = 0
-    # (ref, pred)
-    # overlapping_indices = [(i % (max_ref), i // (max_ref)) for i in np.unique(overlap_arr) if i > max_ref]
-    # instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
-    instance_pairs = [(reference_arr, prediction_arr, i % (max_ref), i // (max_ref)) for i in np.unique(overlap_arr) if i > max_ref]
+    instance_pairs = [
+        (reference_arr, prediction_arr, i[0], i[1])
+        for i in _calc_overlapping_labels(
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
+            ref_labels=ref_labels,
+        )
+    ]
     with Pool() as pool:
         iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
 
@@ -123,3 +150,11 @@ def _connected_components(
         raise NotImplementedError(cca_backend)
 
     return cc_arr.astype(array.dtype), n_instances
+
+
+def _get_paired_crop(prediction_arr: np.ndarray, reference_arr: np.ndarray, px_pad: int = 2):
+    assert prediction_arr.shape == reference_arr.shape
+    bbox1 = _get_bbox_nd(prediction_arr, px_dist=px_pad)
+    bbox2 = _get_bbox_nd(reference_arr, px_dist=px_pad)
+
+    return tuple(slice(min(bbox1[idx].start, bbox2[idx].start), max(bbox1[idx].stop, bbox2[idx].stop)) for idx in range(len(bbox1)))

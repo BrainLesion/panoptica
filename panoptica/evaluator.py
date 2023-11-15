@@ -99,6 +99,9 @@ def panoptic_evaluate(
         print("-- Input was Panoptic Result, will just return")
         return processing_pair, debug_data
 
+    # Crops away unecessary space of zeroes
+    processing_pair.crop_data()
+
     if isinstance(processing_pair, SemanticPair):
         assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
         print("-- Got SemanticPair, will approximate instances")
