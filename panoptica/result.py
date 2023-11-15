@@ -55,6 +55,7 @@ class PanopticaResult:
             f"DSC-based Segmentation Quality (DQ_DSC): {self.sq_dsc} ± {self.sq_dsc_sd}\n"
             f"DSC-based Panoptic Quality (PQ_DSC): {self.pq_dsc}\n"
             f"Average symmetric surface distance (ASSD): {self.sq_assd} ± {self.sq_assd_sd}"
+            f"ASSD-based Panoptic Quality (PQ_ASSD): {self.pq_assd}\n"
         )
 
     def to_dict(self):
@@ -73,6 +74,7 @@ class PanopticaResult:
             "pq_dsc": self.pq_dsc,
             "sq_assd": self.sq_assd,
             "sq_assd_sd": self.sq_assd_sd,
+            "pq_assd": self.pq_assd,
         }
 
     @property
