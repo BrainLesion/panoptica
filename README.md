@@ -8,15 +8,15 @@ Computing instance-wise segmentation quality metrics for 2D and 3D semantic- and
 
 The package provides 3 core modules:
 
-1. Instance Approximator
-1. Instance Matcher
-1. Panoptic Evaluator
+1. Instance Approximator: instance approximation algorithms in panoptic segmentation evaluation. Available now: connected components algorithm.
+1. Instance Matcher: instance matching algorithm in panoptic segmentation evaluation, to align and compare predicted instances with reference instances.
+1. Panoptic Evaluator: Evaluation of panoptic segmentation performance by evaluating matched instance pairs and calculating various metrics like true positives, Dice score, IoU, and ASSD for each instance.
 
 <!-- ?TODO: add module figure? -->
 
 ## Installation
 
-To install the current release, you can simply run:
+The current release requires python 3.10. To install it, you can simply run:
 
 ```sh
 pip install panoptica
