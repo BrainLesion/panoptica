@@ -21,7 +21,8 @@ evaluator = Panoptic_Evaluator(
     iou_threshold=0.5,
 )
 with cProfile.Profile() as pr:
-    result, debug_data = evaluator.evaluate(sample)
-    print(result)
+    if __name__ == "__main__":
+        result, debug_data = evaluator.evaluate(sample)
+        print(result)
 
-pr.dump_stats(directory + "/instance_example.log")
+    pr.dump_stats(directory + "/instance_example.log")
