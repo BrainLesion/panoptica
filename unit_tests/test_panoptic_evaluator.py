@@ -102,3 +102,30 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertTrue(np.isnan(result.sq))
         self.assertTrue(np.isnan(result.pq))
         self.assertTrue(np.isnan(result.sq_assd))
+
+    def test_dtype_evaluation(self):
+        ddtypes = [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]
+        dtype_combinations = [(a, b) for a in ddtypes for b in ddtypes]
+        for da, db in dtype_combinations:
+            a = np.zeros([50, 50], dtype=da)
+            b = a.copy().astype(db)
+            a[20:40, 10:20] = 1
+            b[20:35, 10:20] = 2
+
+            if da != db:
+                self.assertRaises(AssertionError, SemanticPair, b, a)
+            else:
+                sample = SemanticPair(b, a)
+
+                evaluator = Panoptic_Evaluator(
+                    expected_input=SemanticPair,
+                    instance_approximator=ConnectedComponentsInstanceApproximator(),
+                    instance_matcher=NaiveThresholdMatching(),
+                )
+
+                result, debug_data = evaluator.evaluate(sample)
+                print(result)
+                self.assertEqual(result.tp, 1)
+                self.assertEqual(result.fp, 0)
+                self.assertEqual(result.sq, 0.75)
+                self.assertEqual(result.pq, 0.75)

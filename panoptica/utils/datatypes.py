@@ -71,6 +71,11 @@ class _ProcessingPair(ABC):
         self._reference_arr = reference_arr
         self.is_cropped = False
 
+    def set_dtype(self, type):
+        assert np.issubdtype(type, int_type), "set_dtype: tried to set dtype to something other than integers"
+        self._prediction_arr = self._prediction_arr.astype(type)
+        self._reference_arr = self._reference_arr.astype(type)
+
     @property
     def prediction_arr(self):
         return self._prediction_arr
@@ -276,6 +281,8 @@ class InstanceLabelMap(object):
     def add_labelmap_entry(self, pred_labels: list[int] | int, ref_label: int):
         if not isinstance(pred_labels, list):
             pred_labels = [pred_labels]
+        assert isinstance(ref_label, int), "add_labelmap_entry: got no int as ref_label"
+        assert np.all([isinstance(r, int) for r in pred_labels]), "add_labelmap_entry: got no int as pred_label"
         for p in pred_labels:
             if p in self.labelmap and self.labelmap[p] != ref_label:
                 raise Exception(
