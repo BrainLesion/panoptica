@@ -56,10 +56,6 @@ In this case module 3 can be used to directly report panoptic metrics without re
 
 [Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb)
 
-## Tutorials
-
-Juypter notebook Tutorials are avalable for all use cases in our [tutorials repo](https://github.com/BrainLesion/tutorials/tree/main/panoptica).
-
 ## Citation
 
 If you have used panoptica in your research, please cite us!
