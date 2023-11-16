@@ -159,7 +159,7 @@ def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instan
     pred_labels = processing_pair._pred_labels
 
     ref_matched_labels = []
-    label_counter = max(ref_labels) + 1
+    label_counter = int(max(ref_labels) + 1)
 
     pred_labelmap = labelmap.get_one_to_one_dictionary()
     ref_matched_labels = list([r for r in ref_labels if r in pred_labelmap.values()])

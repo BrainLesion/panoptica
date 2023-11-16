@@ -63,10 +63,8 @@ class InstanceApproximator(ABC):
         Raises:
             AssertionError: If there are negative values in the semantic maps, which is not allowed.
         """
-        # Call algorithm
-        instance_pair = self._approximate_instances(semantic_pair, **kwargs)
         # Check validity
-        pred_labels, ref_labels = instance_pair._pred_labels, instance_pair._ref_labels
+        pred_labels, ref_labels = semantic_pair._pred_labels, semantic_pair._ref_labels
         pred_label_range = (np.min(pred_labels), np.max(pred_labels)) if len(pred_labels) > 0 else (0, 0)
         ref_label_range = (np.min(ref_labels), np.max(ref_labels)) if len(ref_labels) > 0 else (0, 0)
         #
@@ -75,8 +73,11 @@ class InstanceApproximator(ABC):
         # Set dtype to smalles fitting uint
         max_value = max(np.max(pred_label_range[1]), np.max(ref_label_range[1]))
         dtype = _get_smallest_fitting_uint(max_value)
-        instance_pair._prediction_arr.astype(dtype)
-        instance_pair._reference_arr.astype(dtype)
+        semantic_pair.set_dtype(dtype)
+        print(f"-- Set dtype to {dtype}")
+
+        # Call algorithm
+        instance_pair = self._approximate_instances(semantic_pair, **kwargs)
         return instance_pair
 
 

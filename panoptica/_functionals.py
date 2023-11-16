@@ -28,7 +28,7 @@ def _calc_overlapping_labels(
     # instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
 
     # (ref, pred)
-    return [(i % (max_ref), i // (max_ref)) for i in np.unique(overlap_arr) if i > max_ref]
+    return [(int(i % (max_ref)), int(i // (max_ref))) for i in np.unique(overlap_arr) if i > max_ref]
 
 
 def _calc_iou_of_overlapping_labels(
@@ -107,8 +107,8 @@ def _map_labels(arr: np.ndarray, label_map: dict[np.integer, np.integer]) -> np.
     Returns:
         np.ndarray: Returns a copy of the remapped array
     """
-    k = np.array(list(label_map.keys()))
-    v = np.array(list(label_map.values()))
+    k = np.array(list(label_map.keys()), dtype=arr.dtype)
+    v = np.array(list(label_map.values()), dtype=arr.dtype)
 
     max_value = max(arr.max(), max(k), max(v)) + 1
 
