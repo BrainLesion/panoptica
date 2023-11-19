@@ -12,7 +12,7 @@ The package provides 3 core modules:
 1. Instance Matcher: instance matching algorithm in panoptic segmentation evaluation, to align and compare predicted instances with reference instances.
 1. Instance Evaluator: Evaluation of panoptic segmentation performance by evaluating matched instance pairs and calculating various metrics like true positives, Dice score, IoU, and ASSD for each instance.
 
-![workflow_figure](https://github.com/BrainLesion/panoptica/blob/main/examples/figures/workflow.png)
+![workflow_figure](https://github.com/BrainLesion/panoptica/blob/main/examples/figures/workflow.png?raw=true)
 
 ## Installation
 
