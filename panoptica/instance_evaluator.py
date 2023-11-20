@@ -8,7 +8,6 @@ import gc
 from multiprocessing import Pool
 
 
-@measure_time
 def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
