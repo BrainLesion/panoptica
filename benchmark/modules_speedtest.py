@@ -1,12 +1,13 @@
-import cProfile
-
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
+import os
+import cpuinfo
+import json
+
 
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
-    Panoptic_Evaluator,
     SemanticPair,
 )
 from panoptica.instance_evaluator import evaluate_matched_instance
@@ -15,12 +16,16 @@ import numpy as np
 from tqdm import tqdm
 import csv
 
+import pandas as pd
+
 directory = turbopath(__file__).parent.parent
 
 ref_masks = read_nifti(directory + "/examples/spine_seg/semantic/ref.nii.gz")
 pred_masks = read_nifti(directory + "/examples/spine_seg/semantic/pred.nii.gz")
 
-csv_out = directory + "/examples/performance_"
+platform_name = "TODO"
+
+csv_out = directory + "/benchmark/" + platform_name + "/performance_"
 
 
 def evaluate_nparray(array, return_as_dict=False, verbose=False):
@@ -54,7 +59,14 @@ def evaluate_nparray(array, return_as_dict=False, verbose=False):
         99: percentile_99,
     }
 
-    dict = {"min": min_val, "max": max_val, "avg": avg, "var": var, "std": std, "percentiles": percentiles}
+    dict = {
+        "min": min_val,
+        "max": max_val,
+        "avg": avg,
+        "var": var,
+        "std": std,
+        "percentiles": percentiles,
+    }
     if verbose:
         print(dict)
     if return_as_dict:
@@ -76,7 +88,9 @@ def test_input(processing_pair: SemanticPair):
     time2 = perf_counter() - start2
     #
     start3 = perf_counter()
-    processing_pair = evaluate_matched_instance(processing_pair, iou_threshold=iou_threshold)
+    processing_pair = evaluate_matched_instance(
+        processing_pair, iou_threshold=iou_threshold
+    )
     time3 = perf_counter() - start3
     return time1, time2, time3
 
@@ -85,7 +99,7 @@ instance_approximator = ConnectedComponentsInstanceApproximator()
 instance_matcher = NaiveThresholdMatching()
 iou_threshold = 0.5
 
-n_iterations = 10
+n_iterations = 42
 time_phase: tuple[list[float], ...] = ([], [], [])
 
 processing_pair_3D_mri_spine = SemanticPair(pred_masks, ref_masks)
@@ -129,6 +143,18 @@ timings = {k: {1: [], 2: [], 3: []} for k in test_samples.keys()}
 
 
 if __name__ == "__main__":
+    # CPU information
+    cpu_dict = cpuinfo.get_cpu_info()
+
+    cpu_json_path = directory + "/benchmark/" + platform_name + "/platform.json"
+    os.makedirs(cpu_json_path.parent, exist_ok=True)
+
+    with open(cpu_json_path, "w") as fp:
+        json.dump(cpu_dict, fp, indent=4)
+
+    report_df_list = []
+
+    # start
     for i in range(n_iterations):
         print(f"Iteration {i}")
         # do each test, write csv accordingly
@@ -145,15 +171,55 @@ if __name__ == "__main__":
         print(sample_name)
         csv_name = csv_out + sample_name + ".csv"
         with open(csv_name, "w", newline="") as csvfile:
-            spamwriter = csv.writer(csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL)
+            spamwriter = csv.writer(
+                csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL
+            )
             spamwriter.writerow(timing_dict[1])
             spamwriter.writerow(timing_dict[2])
             spamwriter.writerow(timing_dict[3])
+
+        # to pandas
+        data_dict = {
+            "phase1": timing_dict[1],
+            "phase2": timing_dict[2],
+            "phase3": timing_dict[3],
+            "condition": sample_name,
+            "platform": platform_name,
+        }
+
+        df = pd.DataFrame.from_dict(data_dict)
+
+        report_df_list.append(df)
 
         first_phase = evaluate_nparray(timing_dict[1], return_as_dict=True)
         second_phase = evaluate_nparray(timing_dict[2], return_as_dict=True)
         third_phase = evaluate_nparray(timing_dict[3], return_as_dict=True)
 
-        print("1st phase:", round(first_phase["avg"], ndigits=4), "+-", round(first_phase["std"], ndigits=4))
-        print("2nd phase:", round(second_phase["avg"], ndigits=4), "+-", round(second_phase["std"], ndigits=4))
-        print("3rd phase:", round(third_phase["avg"], ndigits=4), "+-", round(third_phase["std"], ndigits=4))
+        print(
+            "1st phase:",
+            round(first_phase["avg"], ndigits=4),
+            "+-",
+            round(first_phase["std"], ndigits=4),
+        )
+        print(
+            "2nd phase:",
+            round(second_phase["avg"], ndigits=4),
+            "+-",
+            round(second_phase["std"], ndigits=4),
+        )
+        print(
+            "3rd phase:",
+            round(third_phase["avg"], ndigits=4),
+            "+-",
+            round(third_phase["std"], ndigits=4),
+        )
+
+    # Concatenate the list of DataFrames into a single DataFrame
+    agg_df = pd.concat(report_df_list, ignore_index=True)
+
+    # Display the result
+    print(agg_df)
+
+    csv_path = directory + "/benchmark/" + platform_name + "/dataframe.csv"
+    os.makedirs(csv_path.parent, exist_ok=True)
+    agg_df.to_csv(csv_path)
