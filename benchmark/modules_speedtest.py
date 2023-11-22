@@ -180,9 +180,9 @@ if __name__ == "__main__":
 
         # to pandas
         data_dict = {
-            "phase1": timing_dict[1],
-            "phase2": timing_dict[2],
-            "phase3": timing_dict[3],
+            "approximation": timing_dict[1],
+            "matching": timing_dict[2],
+            "evaluation": timing_dict[3],
             "condition": sample_name,
             "platform": platform_name,
         }
