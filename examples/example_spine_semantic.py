@@ -3,6 +3,7 @@ import cProfile
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
+
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
