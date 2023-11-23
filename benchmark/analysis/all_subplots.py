@@ -40,6 +40,7 @@ for i, condition in enumerate(unique_conditions):
         notch=False,
         ax=axes[i, 0],
         palette=dict(zip(unique_platforms, colors)),
+        linewidth=2,  # Increase the linewidth
     )
     axes[i, 0].set_title(
         f"Approximation Time Comparison - {condition}", fontsize=title_font_size
@@ -56,6 +57,7 @@ for i, condition in enumerate(unique_conditions):
         notch=False,
         ax=axes[i, 1],
         palette=dict(zip(unique_platforms, colors)),
+        linewidth=2,  # Increase the linewidth
     )
     axes[i, 1].set_title(
         f"Matching Time Comparison - {condition}", fontsize=title_font_size
@@ -72,6 +74,7 @@ for i, condition in enumerate(unique_conditions):
         notch=False,
         ax=axes[i, 2],
         palette=dict(zip(unique_platforms, colors)),
+        linewidth=2,  # Increase the linewidth
     )
     axes[i, 2].set_title(
         f"Evaluation Time Comparison - {condition}", fontsize=title_font_size
@@ -82,9 +85,10 @@ for i, condition in enumerate(unique_conditions):
 
 # Save the entire figure after all subplots have been created
 plt.tight_layout()
-file_name = turbopath(__file__).parent + "/all_subplots.png"
+file_name = turbopath(__file__).parent + "/boxplot_times.eps"
 
-plt.savefig(file_name, bbox_inches="tight")
+# Save with separate SVG formatter to include colors
+fig.savefig(file_name, format="eps", bbox_inches="tight")
 plt.close()
 
-print("Plots saved successfully.")
+print("Plots saved successfully as EPS.")
