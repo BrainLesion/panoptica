@@ -1,6 +1,7 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from auxiliary.turbopath import turbopath
 
 # List of CSV files
 csv_list = [
@@ -83,7 +84,9 @@ for i, condition in enumerate(unique_conditions):
     axes[2].tick_params(axis="both", which="major", labelsize=tick_font_size)
 
     # Save each subplot individually
+
     file_name = f"{condition.replace(' ', '_').lower()}_comparison.png"
+    file_name = turbopath(__file__).parent + "/" + file_name
     plt.savefig(file_name, bbox_inches="tight")
     plt.close()  # Close the current figure to release resources
 
