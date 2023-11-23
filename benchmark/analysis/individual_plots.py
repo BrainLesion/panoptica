@@ -13,7 +13,7 @@ csv_list = [
 concatenated_df = pd.concat([pd.read_csv(csv) for csv in csv_list], ignore_index=True)
 
 # Set custom colors
-colors = ["#1AFF1A", "#4B0092"]
+colors = ["#1AFF1A", "#941AFF"]
 
 title_font_size = 16
 label_font_size = 14
