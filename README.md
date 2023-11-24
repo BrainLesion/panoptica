@@ -27,26 +27,35 @@ pip install panoptica
 For tutorials featuring various use cases, cf. [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica).
 
 ### Semantic Segmentation Input
+
+<img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/semantic.png?raw=true" alt="semantic_figure" height="300"/>
+
+[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb)
+
+
 Although an instance-wise evaluation is highly relevant and desirable for many biomedical segmentation problems, they are still addressed as semantic segmentation problems due to the lack of appropriate instance labels.
 
-[Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb)
 
-This tutorial leverages all three modules.
+(This tutorial leverages all three modules of panoptica)
 
 ### Unmatched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/unmatched_instance.png?raw=true" alt="unmatched_instance_figure" height="300"/>
 
+[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb)
+
 It is a common issue that instance segmentation outputs feature good outlines but mismatched instance labels.
 For this case, modules 2 and 3 can be utilized to match the instances and report metrics.
 
-[Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb)
+
 
 ### Matched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/matched_instance.png?raw=true" alt="matched_instance_figure" height="300"/>
 
-If your predicted instances already match the reference instances, you can directly compute metrics with the third module, see [Jupyter Notebook](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb)
+[Jupyter Notebook](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
+
+If your predicted instances already match the reference instances, you can directly compute metrics using the third module.
 
 ## Citation
 
