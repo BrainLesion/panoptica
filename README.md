@@ -16,7 +16,7 @@ The package provides three core modules:
 
 ## Installation
 
-With a Python 3.10+ environment, you can install panoptica from [pypi.org](https://pypi.org/project/panoptica/):
+With a Python 3.10+ environment, you can install panoptica from [pypi.org](https://pypi.org/project/panoptica/)
 
 ```sh
 pip install panoptica
@@ -24,29 +24,36 @@ pip install panoptica
 
 ## Use cases and tutorials
 
-For tutorials featuring various use cases, cf. [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica).
+For tutorials featuring various use cases, see: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
 
 ### Semantic Segmentation Input
+
+<img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/semantic.png?raw=true" alt="semantic_figure" height="300"/>
+
+[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb)
+
+
 Although an instance-wise evaluation is highly relevant and desirable for many biomedical segmentation problems, they are still addressed as semantic segmentation problems due to the lack of appropriate instance labels.
 
-[Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb)
-
-This tutorial leverages all three modules.
+This tutorial leverages all three modules of panoptica: instance approximation, -matching and -evaluation.
 
 ### Unmatched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/unmatched_instance.png?raw=true" alt="unmatched_instance_figure" height="300"/>
 
-It is a common issue that instance segmentation outputs feature good outlines but mismatched instance labels.
-For this case, modules 2 and 3 can be utilized to match the instances and report metrics.
+[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb)
 
-[Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb)
+It is a common issue that instance segmentation outputs feature good outlines but mismatched instance labels.
+For this case, the matcher module can be utilized to match instances and the evaluator to report metrics.
+
 
 ### Matched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/matched_instance.png?raw=true" alt="matched_instance_figure" height="300"/>
 
-If your predicted instances already match the reference instances, you can directly compute metrics with the third module, see [Jupyter Notebook](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb)
+[Jupyter Notebook](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
+
+If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
 
 ## Citation
 
