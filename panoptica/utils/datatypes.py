@@ -42,7 +42,7 @@ class _ProcessingPair(ABC):
         self.is_cropped: bool = False
         self.uncropped_shape: tuple[int, ...] = reference_arr.shape
 
-    def crop_data(self):
+    def crop_data(self, verbose: bool = False):
         if self.is_cropped:
             return
         if self.crop is None:
@@ -54,10 +54,10 @@ class _ProcessingPair(ABC):
 
         self._prediction_arr = self._prediction_arr[self.crop]
         self._reference_arr = self._reference_arr[self.crop]
-        print(f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}")
+        print(f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}") if verbose else None
         self.is_cropped = True
 
-    def uncrop_data(self):
+    def uncrop_data(self, verbose: bool = False):
         if self.is_cropped == False:
             return
         assert self.uncropped_shape is not None, "Calling uncrop_data() without having cropped first"
@@ -67,7 +67,7 @@ class _ProcessingPair(ABC):
 
         reference_arr = np.zeros(self.uncropped_shape)
         reference_arr[self.crop] = self._reference_arr
-        print(f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}")
+        print(f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}") if verbose else None
         self._reference_arr = reference_arr
         self.is_cropped = False
 
@@ -91,6 +91,15 @@ class _ProcessingPair(ABC):
     @property
     def ref_labels(self):
         return self._ref_labels
+
+    def copy(self):
+        """
+        Creates an exact copy of this object
+        """
+        return type(self)(
+            prediction_arr=self._prediction_arr,
+            reference_arr=self._reference_arr,
+        )  # type:ignore
 
     # Make all variables read-only!
     # def __setattr__(self, attr, value):

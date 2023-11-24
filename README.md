@@ -1,48 +1,44 @@
 [![PyPI version panoptica](https://badge.fury.io/py/panoptica.svg)](https://pypi.python.org/pypi/panoptica/)
 
-# Panoptica
+# panoptica
 
 Computing instance-wise segmentation quality metrics for 2D and 3D semantic- and instance segmentation maps.
 
 ## Features
 
-The package provides 3 core modules:
+The package provides three core modules:
 
-1. Instance Approximator: instance approximation algorithms in panoptic segmentation evaluation. Available now: connected components algorithm.
-1. Instance Matcher: instance matching algorithm in panoptic segmentation evaluation, to align and compare predicted instances with reference instances.
-1. Instance Evaluator: Evaluation of panoptic segmentation performance by evaluating matched instance pairs and calculating various metrics like true positives, Dice score, IoU, and ASSD for each instance.
+1. Instance Approximator: instance approximation algorithms to extract instances from semantic segmentation maps/model outputs.
+2. Instance Matcher: matches predicted instances with reference instances.
+3. Instance Evaluator: computes segmentation and detection quality metrics for pairs of predicted - and reference segmentation maps.
 
 ![workflow_figure](https://github.com/BrainLesion/panoptica/blob/main/examples/figures/workflow.png?raw=true)
 
 ## Installation
 
-The current release requires python 3.10. To install it, you can simply run:
+With a Python 3.10+ environment, you can install panoptica from [pypi.org](https://pypi.org/project/panoptica/):
 
 ```sh
 pip install panoptica
 ```
 
-## Use Cases
+## Use cases and tutorials
 
-All use cases have tutorials showcasing the usage that can be found at [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica).
+For tutorials featuring various use cases, cf. [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica).
 
 ### Semantic Segmentation Input
-
-<img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/semantic.png?raw=true" alt="semantic_figure" height="300"/>
-
-Although for many biomedical segmentation problems, an instance-wise evaluation is highly relevant and desirable, they are still addressed as semantic segmentation problems due to lack of appropriate instance labels.
-
-Modules [1-3] can be used to obtain panoptic metrics of matched instances based on a semantic segmentation input.
+Although an instance-wise evaluation is highly relevant and desirable for many biomedical segmentation problems, they are still addressed as semantic segmentation problems due to the lack of appropriate instance labels.
 
 [Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb)
+
+This tutorial leverages all three modules.
 
 ### Unmatched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/unmatched_instance.png?raw=true" alt="unmatched_instance_figure" height="300"/>
 
-It is a common issue that instance segementation outputs have good segmentations with mismatched labels.
-
-For this case modules [2-3] can be utilized to match the instances and report panoptic metrics.
+It is a common issue that instance segmentation outputs feature good outlines but mismatched instance labels.
+For this case, modules 2 and 3 can be utilized to match the instances and report metrics.
 
 [Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb)
 
@@ -50,14 +46,14 @@ For this case modules [2-3] can be utilized to match the instances and report pa
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/matched_instance.png?raw=true" alt="matched_instance_figure" height="300"/>
 
-Ideally the input data already provides matched instances.
-
-In this case module 3 can be used to directly report panoptic metrics without requiring any internal preprocessing.
-
-[Jupyter Notebook Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb)
+If your predicted instances already match the reference instances, you can directly compute metrics with the third module, see [Jupyter Notebook](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) Example](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb)
 
 ## Citation
 
-If you have used panoptica in your research, please cite us!
+If you use panoptica in your research, please cite it to support the development!
 
-The citation can be exported from: _TODO_
+TBA
+
+```
+upcoming citation
+```

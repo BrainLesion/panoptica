@@ -48,8 +48,9 @@ class InstanceApproximator(ABC):
         """
         pass
 
-    @measure_time
-    def approximate_instances(self, semantic_pair: SemanticPair, **kwargs) -> UnmatchedInstancePair | MatchedInstancePair:
+    def approximate_instances(
+        self, semantic_pair: SemanticPair, verbose: bool = False, **kwargs
+    ) -> UnmatchedInstancePair | MatchedInstancePair:
         """
         Perform instance approximation on the given SemanticPair.
 
@@ -74,7 +75,7 @@ class InstanceApproximator(ABC):
         max_value = max(np.max(pred_label_range[1]), np.max(ref_label_range[1]))
         dtype = _get_smallest_fitting_uint(max_value)
         semantic_pair.set_dtype(dtype)
-        print(f"-- Set dtype to {dtype}")
+        print(f"-- Set dtype to {dtype}") if verbose else None
 
         # Call algorithm
         instance_pair = self._approximate_instances(semantic_pair, **kwargs)
