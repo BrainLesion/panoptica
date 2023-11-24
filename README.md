@@ -51,7 +51,7 @@ For this case, the matcher module can be utilized to match instances and the eva
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/matched_instance.png?raw=true" alt="matched_instance_figure" height="300"/>
 
-[Jupyter Notebook](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
+[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
 
 If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
 
