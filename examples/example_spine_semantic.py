@@ -10,6 +10,8 @@ from panoptica import (
     Panoptic_Evaluator,
     SemanticPair,
 )
+from panoptica.metrics import MatchingMetrics
+from panoptica.utils import EdgeCaseHandler, EdgeCaseZeroTP, EdgeCaseResult
 
 directory = turbopath(__file__).parent
 
@@ -22,7 +24,8 @@ evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
-    match_threshold=0.5,
+    matching_metric=MatchingMetrics.IOU,
+    matching_threshold=0.5,
 )
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
