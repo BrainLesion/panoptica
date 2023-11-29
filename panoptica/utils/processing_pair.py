@@ -220,7 +220,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
 
     missed_reference_labels: list[int]
     missed_prediction_labels: list[int]
-    n_matched_instances: int
+    matched_instances: list[int]
 
     def __init__(
         self,
@@ -228,7 +228,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         reference_arr: np.ndarray,
         missed_reference_labels: list[int] | None = None,
         missed_prediction_labels: list[int] | None = None,
-        n_matched_instances: int | None = None,
+        matched_instances: list[int] | None = None,
         n_prediction_instance: int | None = None,
         n_reference_instance: int | None = None,
     ) -> None:
@@ -239,7 +239,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             reference_arr (np.ndarray): Numpy array containing the reference matched instance labels
             missed_reference_labels (list[int] | None, optional): List of unmatched reference labels. Defaults to None.
             missed_prediction_labels (list[int] | None, optional): List of unmatched prediction labels. Defaults to None.
-            n_matched_instances (int | None, optional): Number of total matched instances, i.e. unique matched labels in both maps. Defaults to None.
+            matched_instances (int | None, optional): matched instances labels, i.e. unique matched labels in both maps. Defaults to None.
             n_prediction_instance (int | None, optional): Number of prediction instances. Defaults to None.
             n_reference_instance (int | None, optional): Number of reference instances. Defaults to None.
 
@@ -252,9 +252,9 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             n_prediction_instance,
             n_reference_instance,
         )  # type:ignore
-        if n_matched_instances is None:
-            n_matched_instances = len([i for i in self._pred_labels if i in self._ref_labels])
-        self.n_matched_instances = n_matched_instances
+        if matched_instances is None:
+            matched_instances = [i for i in self._pred_labels if i in self._ref_labels]
+        self.matched_instances = matched_instances
 
         if missed_reference_labels is None:
             missed_reference_labels = list([i for i in self._ref_labels if i not in self._pred_labels])
@@ -263,6 +263,10 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         if missed_prediction_labels is None:
             missed_prediction_labels = list([i for i in self._pred_labels if i not in self._ref_labels])
         self.missed_prediction_labels = missed_prediction_labels
+
+    @property
+    def n_matched_instances(self):
+        return len(self.matched_instances)
 
     def copy(self):
         """
@@ -275,7 +279,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             n_reference_instance=self.n_reference_instance,
             missed_reference_labels=self.missed_reference_labels,
             missed_prediction_labels=self.missed_prediction_labels,
-            n_matched_instances=self.n_matched_instances,
+            matched_instances=self.matched_instances,
         )
 
 

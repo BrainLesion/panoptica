@@ -18,7 +18,7 @@ evaluator = Panoptic_Evaluator(
     expected_input=MatchedInstancePair,
     instance_approximator=None,
     instance_matcher=None,
-    iou_threshold=0.5,
+    match_threshold=0.5,
 )
 with cProfile.Profile() as pr:
     if __name__ == "__main__":

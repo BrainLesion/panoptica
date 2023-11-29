@@ -88,9 +88,7 @@ def test_input(processing_pair: SemanticPair):
     time2 = perf_counter() - start2
     #
     start3 = perf_counter()
-    processing_pair = evaluate_matched_instance(
-        processing_pair, iou_threshold=iou_threshold
-    )
+    processing_pair = evaluate_matched_instance(processing_pair, matching_threshold=iou_threshold)
     time3 = perf_counter() - start3
     return time1, time2, time3
 
@@ -171,9 +169,7 @@ if __name__ == "__main__":
         print(sample_name)
         csv_name = csv_out + sample_name + ".csv"
         with open(csv_name, "w", newline="") as csvfile:
-            spamwriter = csv.writer(
-                csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL
-            )
+            spamwriter = csv.writer(csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL)
             spamwriter.writerow(timing_dict[1])
             spamwriter.writerow(timing_dict[2])
             spamwriter.writerow(timing_dict[3])

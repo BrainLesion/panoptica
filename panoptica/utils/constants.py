@@ -16,12 +16,6 @@ class _Enum_Compare(Enum):
     def __repr__(self) -> str:
         return str(self)
 
-    def __hash__(self) -> int:
-        return self.value
-
-
-from enum import Enum, auto
-
 
 class CCABackend(_Enum_Compare):
     """
@@ -41,4 +35,5 @@ class CCABackend(_Enum_Compare):
 
 
 if __name__ == "__main__":
-    print(CCABackend.cc3d)
+    print(CCABackend.cc3d == "cc3d")
+    print("cc3d" == CCABackend.cc3d)
