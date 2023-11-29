@@ -9,8 +9,10 @@ import numpy as np
 from panoptica.evaluator import Panoptic_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
-from panoptica.utils.processing_pair import SemanticPair
+
+# TODO why do we have both
 from panoptica.metrics import MatchingMetric, MatchingMetrics
+from panoptica.utils.processing_pair import SemanticPair
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
@@ -71,6 +73,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
             matching_metric=MatchingMetrics.DSC,
+            # TODO why do we hand a matching metric to the evaluator if we don't match here?
             eval_metrics=[MatchingMetrics.DSC],
         )
 
@@ -198,7 +201,16 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertTrue(np.isnan(result.sq_assd))
 
     def test_dtype_evaluation(self):
-        ddtypes = [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]
+        ddtypes = [
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+        ]
         dtype_combinations = [(a, b) for a in ddtypes for b in ddtypes]
         for da, db in dtype_combinations:
             a = np.zeros([50, 50], dtype=da)

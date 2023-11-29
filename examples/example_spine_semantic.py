@@ -3,7 +3,6 @@ import cProfile
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
@@ -11,7 +10,9 @@ from panoptica import (
     SemanticPair,
 )
 from panoptica.metrics import MatchingMetrics
-from panoptica.utils import EdgeCaseHandler, EdgeCaseZeroTP, EdgeCaseResult
+
+# TODO I commented non-used stuff, should be removed I guess
+# from panoptica.utils import EdgeCaseHandler, EdgeCaseZeroTP, EdgeCaseResult
 
 directory = turbopath(__file__).parent
 
@@ -20,6 +21,8 @@ pred_masks = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
 
 sample = SemanticPair(pred_masks, ref_masks)
 
+
+# TODO probably this should also show the evaluation metrics, once we converged to the new API we should also update the jupyters
 evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),

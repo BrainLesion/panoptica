@@ -18,6 +18,7 @@ evaluator = Panoptic_Evaluator(
     expected_input=MatchedInstancePair,
     instance_approximator=None,
     instance_matcher=None,
+    # TODO unexpected keyword?
     match_threshold=0.5,
 )
 with cProfile.Profile() as pr:
