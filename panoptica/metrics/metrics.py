@@ -21,13 +21,15 @@ class MatchingMetric:
         reference_arr: np.ndarray,
         prediction_arr: np.ndarray,
         ref_instance_idx: int | None = None,
-        pred_instance_idx: int | None = None,
+        pred_instance_idx: int | list[int] | None = None,
         *args,
         **kwargs,
     ):
         if ref_instance_idx is not None and pred_instance_idx is not None:
             reference_arr = reference_arr.copy() == ref_instance_idx
-            prediction_arr = prediction_arr.copy() == pred_instance_idx
+            if isinstance(pred_instance_idx, int):
+                pred_instance_idx = [pred_instance_idx]
+            prediction_arr = np.isin(prediction_arr.copy(), pred_instance_idx)
         return self.metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:

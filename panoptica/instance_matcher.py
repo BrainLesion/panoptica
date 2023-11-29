@@ -110,8 +110,6 @@ def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instan
     pred_labelmap = labelmap.get_one_to_one_dictionary()
     ref_matched_labels = list([r for r in ref_labels if r in pred_labelmap.values()])
 
-    n_matched_instances = len(ref_matched_labels)
-
     # assign missed instances to next unused labels sequentially
     missed_ref_labels = list([r for r in ref_labels if r not in ref_matched_labels])
     missed_pred_labels = list([p for p in pred_labels if p not in pred_labelmap])
@@ -128,11 +126,6 @@ def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: Instan
     matched_instance_pair = MatchedInstancePair(
         prediction_arr=prediction_arr_relabeled,
         reference_arr=processing_pair._reference_arr,
-        missed_reference_labels=missed_ref_labels,
-        missed_prediction_labels=missed_pred_labels,
-        n_prediction_instance=processing_pair.n_prediction_instance,
-        n_reference_instance=processing_pair.n_reference_instance,
-        matched_instances=ref_matched_labels,
     )
     return matched_instance_pair
 
@@ -221,7 +214,67 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         AssertionError: If the specified IoU threshold is not within the valid range.
     """
 
-    pass
+    def _match_instances(
+        self,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        matching_metric: MatchingMetric,
+        matching_threshold: float,
+        **kwargs,
+    ) -> InstanceLabelMap:
+        """
+        Perform one-to-one instance matching based on IoU values.
+
+        Args:
+            unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            Instance_Label_Map: The result of the instance matching.
+        """
+        ref_labels = unmatched_instance_pair._ref_labels
+        # pred_labels = unmatched_instance_pair._pred_labels
+
+        # Initialize variables for True Positives (tp) and False Positives (fp)
+        labelmap = InstanceLabelMap()
+        score_ref: dict[int, float] = {}
+
+        pred_arr, ref_arr = unmatched_instance_pair._prediction_arr, unmatched_instance_pair._reference_arr
+        mm_pairs = _calc_matching_metric_of_overlapping_labels(pred_arr, ref_arr, ref_labels, matching_metric=matching_metric)
+
+        # Loop through matched instances to compute PQ components
+        for matching_score, (ref_label, pred_label) in mm_pairs:
+            if labelmap.contains_and(pred_label=pred_label, ref_label=None):
+                # skip if prediction label is already matched
+                continue
+            if labelmap.contains_and(None, ref_label):
+                pred_labels_ = labelmap.get_pred_labels_matched_to_ref(ref_label)
+                new_score = self.new_combination_score(pred_labels_, pred_label, ref_label, unmatched_instance_pair, matching_metric)
+                if new_score > score_ref[ref_label]:
+                    labelmap.add_labelmap_entry(pred_label, ref_label)
+                    score_ref[ref_label] = new_score
+            elif matching_metric.score_beats_threshold(matching_score, matching_threshold):
+                # Match found, increment true positive count and collect IoU and Dice values
+                labelmap.add_labelmap_entry(pred_label, ref_label)
+                score_ref[ref_label] = matching_score
+                # map label ref_idx to pred_idx
+        return labelmap
+
+    def new_combination_score(
+        self,
+        pred_labels: list[int],
+        new_pred_label: int,
+        ref_label: int,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        matching_metric: MatchingMetric,
+    ):
+        pred_labels.append(new_pred_label)
+        score = matching_metric(
+            unmatched_instance_pair.reference_arr,
+            prediction_arr=unmatched_instance_pair.prediction_arr,
+            ref_instance_idx=ref_label,
+            pred_instance_idx=pred_labels,
+        )
+        return score
 
 
 class MatchUntilConvergenceMatching(InstanceMatchingAlgorithm):

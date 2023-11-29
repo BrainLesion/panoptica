@@ -49,8 +49,9 @@ def evaluate_matched_instance(
         metric_dicts = pool.starmap(_evaluate_instance, instance_pairs)
 
     for metric_dict in metric_dicts:
-        assert decision_threshold is not None
-        if decision_metric is None or decision_metric.score_beats_threshold(metric_dict[decision_metric.name], decision_threshold):
+        if decision_metric is None or (
+            decision_threshold is not None and decision_metric.score_beats_threshold(metric_dict[decision_metric.name], decision_threshold)
+        ):
             for k, v in metric_dict.items():
                 score_dict[k].append(v)
 
