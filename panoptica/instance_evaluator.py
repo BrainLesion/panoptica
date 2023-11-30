@@ -90,7 +90,7 @@ def _evaluate_instance(
         return result
     else:
         for metric in eval_metrics:
-            value = metric.metric_function(ref_arr, pred_arr)
+            value = metric._metric_function(ref_arr, pred_arr)
             result[metric.name] = value
 
     return result

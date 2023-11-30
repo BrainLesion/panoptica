@@ -4,8 +4,6 @@ from panoptica.metrics import _compute_iou, _compute_dice_coefficient, _average_
 
 from typing import Callable
 
-# Callable[[]]
-from functools import partial
 import numpy as np
 from dataclasses import dataclass
 
@@ -14,7 +12,7 @@ from dataclasses import dataclass
 class MatchingMetric:
     name: str
     decreasing: bool
-    metric_function: Callable
+    _metric_function: Callable
 
     def __call__(
         self,
@@ -28,7 +26,7 @@ class MatchingMetric:
         if ref_instance_idx is not None and pred_instance_idx is not None:
             reference_arr = reference_arr.copy() == ref_instance_idx
             prediction_arr = prediction_arr.copy() == pred_instance_idx
-        return self.metric_function(reference_arr, prediction_arr, *args, **kwargs)
+        return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, MatchingMetric):
@@ -52,16 +50,17 @@ class MatchingMetric:
         return (self.increasing and matching_score >= matching_threshold) or (self.decreasing and matching_score <= matching_threshold)
 
 
-class _EnumMeta(EnumMeta):
-    def __getattribute__(cls, name) -> MatchingMetric:
-        value = super().__getattribute__(name)
-        if isinstance(value, cls):
-            value = value.value
-        return value
+# class _EnumMeta(EnumMeta):
+#    def __getattribute__(cls, name) -> MatchingMetric:
+#        value = super().__getattribute__(name)
+#        if isinstance(value, cls):
+#            value = value.value
+#        return value
 
 
 # Important metrics that must be calculated in the evaluator, can be set for thresholding in matching and evaluation
 class MatchingMetrics:
+    # TODO make this with meta above, and then it can function without the double name, right?
     DSC = MatchingMetric("DSC", False, _compute_dice_coefficient)
     IOU = MatchingMetric("IOU", False, _compute_iou)
     ASSD = MatchingMetric("ASSD", True, _average_symmetric_surface_distance)
@@ -79,14 +78,14 @@ class ListMetric(_Enum_Compare):
 
 # Metrics that are derived from list metrics and can be calculated later
 class EvalMetric(_Enum_Compare):
-    TP = "TP"
-    FP = "FP"
-    FN = "FN"
-    RQ = "RQ"
-    DQ_DSC = "DQ_DSC"
-    PQ_DSC = "PQ_DSC"
-    ASSD = "ASSD"
-    PQ_ASSD = "PQ_ASSD"
+    TP = auto()
+    FP = auto()
+    FN = auto()
+    RQ = auto()
+    DQ_DSC = auto()
+    PQ_DSC = auto()
+    ASSD = auto()
+    PQ_ASSD = auto()
 
 
 MetricDict = dict[ListMetric | EvalMetric, float | list[float]]

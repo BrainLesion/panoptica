@@ -57,7 +57,7 @@ def _calc_matching_metric_of_overlapping_labels(
         )
     ]
     with Pool() as pool:
-        mm_values = pool.starmap(matching_metric.metric_function, instance_pairs)
+        mm_values = pool.starmap(matching_metric._metric_function, instance_pairs)
 
     mm_pairs = [(i, (instance_pairs[idx][2], instance_pairs[idx][3])) for idx, i in enumerate(mm_values)]
     mm_pairs = sorted(mm_pairs, key=lambda x: x[0], reverse=matching_metric.decreasing)

@@ -32,8 +32,8 @@ class PanopticaResult:
             num_ref_instances (int): Number of reference instances.
             num_pred_instances (int): Number of predicted instances.
             tp (int): Number of correctly matched instances (True Positives).
-            dice_list (List[float]): List of Dice coefficients for matched instances.
-            iou_list (List[float]): List of IoU values for matched instances.
+            list_metrics: dict[MatchingMetric | str, list[float]]: TBD
+            edge_case_handler: EdgeCaseHandler: TBD
         """
         self._tp = tp
         self.edge_case_handler = edge_case_handler

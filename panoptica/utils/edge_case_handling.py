@@ -62,28 +62,23 @@ class MetricZeroTPEdgeCaseHandling(object):
         return txt
 
 
-default_dsc = MetricZeroTPEdgeCaseHandling(
-    no_instances_result=EdgeCaseResult.NAN,
-    default_result=EdgeCaseResult.ZERO,
-)
-default_iou = MetricZeroTPEdgeCaseHandling(
-    no_instances_result=EdgeCaseResult.NAN,
-    empty_prediction_result=EdgeCaseResult.ZERO,
-    default_result=EdgeCaseResult.ZERO,
-)
-default_assd = MetricZeroTPEdgeCaseHandling(
-    no_instances_result=EdgeCaseResult.NAN,
-    default_result=EdgeCaseResult.INF,
-)
-
-
 class EdgeCaseHandler:
     def __init__(
         self,
         listmetric_zeroTP_handling: dict[ListMetric, MetricZeroTPEdgeCaseHandling] = {
-            ListMetric.DSC: default_dsc,
-            ListMetric.IOU: default_iou,
-            ListMetric.ASSD: default_assd,
+            ListMetric.DSC: MetricZeroTPEdgeCaseHandling(
+                no_instances_result=EdgeCaseResult.NAN,
+                default_result=EdgeCaseResult.ZERO,
+            ),
+            ListMetric.IOU: MetricZeroTPEdgeCaseHandling(
+                no_instances_result=EdgeCaseResult.NAN,
+                empty_prediction_result=EdgeCaseResult.ZERO,
+                default_result=EdgeCaseResult.ZERO,
+            ),
+            ListMetric.ASSD: MetricZeroTPEdgeCaseHandling(
+                no_instances_result=EdgeCaseResult.NAN,
+                default_result=EdgeCaseResult.INF,
+            ),
         },
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,
     ) -> None:
@@ -122,13 +117,10 @@ if __name__ == "__main__":
         default_result=EdgeCaseResult.ZERO,
     )
     # print(iou_test)
-
     t = iou_test(tp=0, num_pred_instances=1, num_ref_instances=1)
     print(t)
 
-    iou_test = default_iou
-
-    print(iou_test)
-
-    t = iou_test(tp=0, num_pred_instances=1, num_ref_instances=1)
-    print(t)
+    # iou_test = default_iou
+    # print(iou_test)
+    # t = iou_test(tp=0, num_pred_instances=1, num_ref_instances=1)
+    # print(t)

@@ -8,7 +8,7 @@ from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     UnmatchedInstancePair,
 )
-from panoptica.metrics import MatchingMetric
+from panoptica.metrics import MatchingMetric, MatchingMetrics
 
 
 class InstanceMatchingAlgorithm(ABC):
@@ -40,8 +40,6 @@ class InstanceMatchingAlgorithm(ABC):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        matching_metric: MatchingMetric,
-        matching_threshold: float,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -59,8 +57,6 @@ class InstanceMatchingAlgorithm(ABC):
     def match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        matching_metric: MatchingMetric,
-        matching_threshold: float,
         **kwargs,
     ) -> MatchedInstancePair:
         """
@@ -75,8 +71,6 @@ class InstanceMatchingAlgorithm(ABC):
         """
         instance_labelmap = self._match_instances(
             unmatched_instance_pair,
-            matching_metric,
-            matching_threshold,
             **kwargs,
         )
         # print("instance_labelmap:", instance_labelmap)
@@ -159,7 +153,9 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     >>> result = matcher.match_instances(unmatched_instance_pair)
     """
 
-    def __init__(self, allow_many_to_one: bool = False) -> None:
+    def __init__(
+        self, matching_metric: MatchingMetric = MatchingMetrics.IOU, matching_threshold: float = 0.5, allow_many_to_one: bool = False
+    ) -> None:
         """
         Initialize the NaiveOneToOneMatching instance.
 
@@ -170,12 +166,12 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             AssertionError: If the specified IoU threshold is not within the valid range.
         """
         self.allow_many_to_one = allow_many_to_one
+        self.matching_metric = matching_metric
+        self.matching_threshold = matching_threshold
 
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        matching_metric: MatchingMetric,
-        matching_threshold: float,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -189,19 +185,18 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             Instance_Label_Map: The result of the instance matching.
         """
         ref_labels = unmatched_instance_pair._ref_labels
-        # pred_labels = unmatched_instance_pair._pred_labels
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
         pred_arr, ref_arr = unmatched_instance_pair._prediction_arr, unmatched_instance_pair._reference_arr
-        mm_pairs = _calc_matching_metric_of_overlapping_labels(pred_arr, ref_arr, ref_labels, matching_metric=matching_metric)
+        mm_pairs = _calc_matching_metric_of_overlapping_labels(pred_arr, ref_arr, ref_labels, matching_metric=self.matching_metric)
 
         # Loop through matched instances to compute PQ components
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if labelmap.contains_or(pred_label, ref_label) and not self.allow_many_to_one:
                 continue  # -> doesnt make speed difference
-            if matching_metric.score_beats_threshold(matching_score, matching_threshold):
+            if self.matching_metric.score_beats_threshold(matching_score, self.matching_threshold):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 # map label ref_idx to pred_idx

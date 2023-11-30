@@ -28,7 +28,6 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.IOU,
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -50,7 +49,6 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.DSC,
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -71,9 +69,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.DSC,
-            # TODO why do we hand a matching metric to the evaluator if we don't match here?
+            instance_matcher=NaiveThresholdMatching(matching_metric=MatchingMetrics.DSC),
             eval_metrics=[MatchingMetrics.DSC],
         )
 
@@ -81,8 +77,8 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
-        self.assertEqual(result.sq, None)
-        self.assertEqual(result.pq, None)
+        self.assertEqual(result.sq, 0.0)
+        self.assertEqual(result.pq, 0.0)
 
     def test_simple_evaluation_ASSD(self):
         a = np.zeros([50, 50], dtype=np.uint16)
@@ -95,9 +91,10 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.ASSD,
-            matching_threshold=1.0,
+            instance_matcher=NaiveThresholdMatching(
+                matching_metric=MatchingMetrics.ASSD,
+                matching_threshold=1.0,
+            ),
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -118,9 +115,10 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.ASSD,
-            matching_threshold=0.5,
+            instance_matcher=NaiveThresholdMatching(
+                matching_metric=MatchingMetrics.ASSD,
+                matching_threshold=0.5,
+            ),
         )
 
         result, debug_data = evaluator.evaluate(sample)

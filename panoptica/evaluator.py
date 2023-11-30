@@ -25,8 +25,6 @@ class Panoptic_Evaluator:
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
-        matching_metric: MatchingMetric = MatchingMetrics.IOU,
-        matching_threshold: float = 0.5,
         eval_metrics: list[MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
         decision_metric: MatchingMetric | None = None,
         decision_threshold: float | None = None,
@@ -45,8 +43,6 @@ class Panoptic_Evaluator:
         #
         self.__instance_approximator = instance_approximator
         self.__instance_matcher = instance_matcher
-        self.__matching_metric = matching_metric
-        self.__matching_threshold = matching_threshold
         self.__eval_metrics = eval_metrics
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
@@ -69,8 +65,6 @@ class Panoptic_Evaluator:
             instance_approximator=self.__instance_approximator,
             instance_matcher=self.__instance_matcher,
             eval_metrics=self.__eval_metrics,
-            matching_metric=self.__matching_metric,
-            matching_threshold=self.__matching_threshold,
             log_times=self.__log_times,
             verbose=self.__verbose,
         )
@@ -80,8 +74,6 @@ def panoptic_evaluate(
     processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    matching_metric: MatchingMetric = MatchingMetrics.IOU,
-    matching_threshold: float = 0.5,
     eval_metrics: list[MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
     decision_metric: MatchingMetric | None = None,
     decision_threshold: float | None = None,
@@ -145,8 +137,6 @@ def panoptic_evaluate(
         assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         processing_pair = instance_matcher.match_instances(
             processing_pair,
-            matching_metric,
-            matching_threshold,
         )
 
         debug_data["MatchedInstanceMap"] = processing_pair.copy()
