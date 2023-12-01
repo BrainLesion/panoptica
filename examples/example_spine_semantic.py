@@ -23,9 +23,8 @@ evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
-    matching_metric=MatchingMetrics.IOU,
-    matching_threshold=0.5,
 )
+
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
         result, debug_data = evaluator.evaluate(sample)

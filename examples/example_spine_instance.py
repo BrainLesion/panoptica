@@ -17,11 +17,11 @@ sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
 
 evaluator = Panoptic_Evaluator(
     expected_input=MatchedInstancePair,
-    matching_metric=MatchingMetrics.IOU,
     decision_metric=MatchingMetrics.IOU,
     decision_threshold=0.5,
-    matching_threshold=0.5,
 )
+
+
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
         result, debug_data = evaluator.evaluate(sample)
