@@ -15,6 +15,7 @@ from panoptica.utils.processing_pair import (
     UnmatchedInstancePair,
     _ProcessingPair,
 )
+from time import perf_counter
 from panoptica.utils import EdgeCaseHandler
 
 
@@ -111,7 +112,7 @@ def panoptic_evaluate(
     """
     print("Panoptic: Start Evaluation")
     if edge_case_handler is None:
-        # use default edgecase handler TODO define default one separate and just load it here
+        # use default edgecase handler
         edge_case_handler = EdgeCaseHandler()
     debug_data: dict[str, _ProcessingPair] = {}
     # First Phase: Instance Approximation
@@ -125,7 +126,10 @@ def panoptic_evaluate(
     if isinstance(processing_pair, SemanticPair):
         assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
         print("-- Got SemanticPair, will approximate instances")
+        start = perf_counter()
         processing_pair = instance_approximator.approximate_instances(processing_pair)
+        if log_times:
+            print(f"-- Approximation took {perf_counter() - start} seconds")
         debug_data["UnmatchedInstanceMap"] = processing_pair.copy()
 
     # Second Phase: Instance Matching
@@ -135,9 +139,12 @@ def panoptic_evaluate(
     if isinstance(processing_pair, UnmatchedInstancePair):
         print("-- Got UnmatchedInstancePair, will match instances")
         assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
         )
+        if log_times:
+            print(f"-- Matching took {perf_counter() - start} seconds")
 
         debug_data["MatchedInstanceMap"] = processing_pair.copy()
 
@@ -147,6 +154,7 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, MatchedInstancePair):
         print("-- Got MatchedInstancePair, will evaluate instances")
+        start = perf_counter()
         processing_pair = evaluate_matched_instance(
             processing_pair,
             eval_metrics=eval_metrics,
@@ -154,6 +162,8 @@ def panoptic_evaluate(
             decision_threshold=decision_threshold,
             edge_case_handler=edge_case_handler,
         )
+        if log_times:
+            print(f"-- Instance Evaluation took {perf_counter() - start} seconds")
 
     if isinstance(processing_pair, PanopticaResult):
         return processing_pair, debug_data

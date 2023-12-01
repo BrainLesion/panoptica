@@ -88,7 +88,7 @@ class EvalMetric(_Enum_Compare):
     PQ_ASSD = auto()
 
 
-MetricDict = dict[ListMetric | EvalMetric, float | list[float]]
+MetricDict = dict[ListMetric | EvalMetric | str, float | list[float]]
 
 
 list_of_applicable_std_metrics: list[EvalMetric] = [

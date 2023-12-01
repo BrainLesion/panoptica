@@ -49,6 +49,10 @@ class PanopticaResult:
         self._num_ref_instances = num_ref_instances
         self._num_pred_instances = num_pred_instances
 
+        # TODO instead of all the properties, make a generic function inputting metric and std or not,
+        # and returns it if contained in dictionary,
+        # otherwise calls function to calculates, saves it and return
+
     def __str__(self):
         return str(self.metric_dict)
 
