@@ -1,15 +1,19 @@
-from panoptica.utils.constants import _Enum_Compare, auto, Enum
+from dataclasses import dataclass
 from enum import EnumMeta
-from panoptica.metrics import _compute_iou, _compute_dice_coefficient, _average_symmetric_surface_distance
-
 from typing import Callable
 
 import numpy as np
-from dataclasses import dataclass
+
+from panoptica.metrics import (
+    _average_symmetric_surface_distance,
+    _compute_dice_coefficient,
+    _compute_iou,
+)
+from panoptica.utils.constants import Enum, _Enum_Compare, auto
 
 
 @dataclass
-class MatchingMetric:
+class _MatchingMetric:
     name: str
     decreasing: bool
     _metric_function: Callable
@@ -29,7 +33,7 @@ class MatchingMetric:
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
-        if isinstance(__value, MatchingMetric):
+        if isinstance(__value, _MatchingMetric):
             return self.name == __value.name
         elif isinstance(__value, str):
             return self.name == __value
@@ -46,8 +50,12 @@ class MatchingMetric:
     def increasing(self):
         return not self.decreasing
 
-    def score_beats_threshold(self, matching_score: float, matching_threshold: float) -> bool:
-        return (self.increasing and matching_score >= matching_threshold) or (self.decreasing and matching_score <= matching_threshold)
+    def score_beats_threshold(
+        self, matching_score: float, matching_threshold: float
+    ) -> bool:
+        return (self.increasing and matching_score >= matching_threshold) or (
+            self.decreasing and matching_score <= matching_threshold
+        )
 
 
 # class _EnumMeta(EnumMeta):
@@ -59,24 +67,26 @@ class MatchingMetric:
 
 
 # Important metrics that must be calculated in the evaluator, can be set for thresholding in matching and evaluation
-class MatchingMetrics:
+# TODO make abstract class for metric, make enum with references to these classes for referenciation and user exposure
+class Metrics:
     # TODO make this with meta above, and then it can function without the double name, right?
-    DSC = MatchingMetric("DSC", False, _compute_dice_coefficient)
-    IOU = MatchingMetric("IOU", False, _compute_iou)
-    ASSD = MatchingMetric("ASSD", True, _average_symmetric_surface_distance)
+    DSC = _MatchingMetric("DSC", False, _compute_dice_coefficient)
+    IOU = _MatchingMetric("IOU", False, _compute_iou)
+    ASSD = _MatchingMetric("ASSD", True, _average_symmetric_surface_distance)
     # These are all lists of values
 
 
 class ListMetric(_Enum_Compare):
-    DSC = MatchingMetrics.DSC.name
-    IOU = MatchingMetrics.IOU.name
-    ASSD = MatchingMetrics.ASSD.name
+    DSC = Metrics.DSC.name
+    IOU = Metrics.IOU.name
+    ASSD = Metrics.ASSD.name
 
     def __hash__(self) -> int:
         return abs(hash(self.value)) % (10**8)
 
 
 # Metrics that are derived from list metrics and can be calculated later
+# TODO map result properties to this enum
 class EvalMetric(_Enum_Compare):
     TP = auto()
     FP = auto()
@@ -101,12 +111,12 @@ list_of_applicable_std_metrics: list[EvalMetric] = [
 
 
 if __name__ == "__main__":
-    print(MatchingMetrics.DSC)
+    print(Metrics.DSC)
     # print(MatchingMetric.DSC.name)
 
-    print(MatchingMetrics.DSC == MatchingMetrics.DSC)
-    print(MatchingMetrics.DSC == "DSC")
-    print(MatchingMetrics.DSC.name == "DSC")
+    print(Metrics.DSC == Metrics.DSC)
+    print(Metrics.DSC == "DSC")
+    print(Metrics.DSC.name == "DSC")
     #
-    print(MatchingMetrics.DSC == MatchingMetrics.IOU)
-    print(MatchingMetrics.DSC == "IOU")
+    print(Metrics.DSC == Metrics.IOU)
+    print(Metrics.DSC == "IOU")

@@ -11,7 +11,7 @@ from panoptica.instance_approximator import ConnectedComponentsInstanceApproxima
 from panoptica.instance_matcher import NaiveThresholdMatching
 
 # TODO why do we have both
-from panoptica.metrics import MatchingMetric, MatchingMetrics
+from panoptica.metrics import Metrics, _MatchingMetric
 from panoptica.utils.processing_pair import SemanticPair
 
 
@@ -69,8 +69,8 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(matching_metric=MatchingMetrics.DSC),
-            eval_metrics=[MatchingMetrics.DSC],
+            instance_matcher=NaiveThresholdMatching(matching_metric=Metrics.DSC),
+            eval_metrics=[Metrics.DSC],
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -92,7 +92,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
-                matching_metric=MatchingMetrics.ASSD,
+                matching_metric=Metrics.ASSD,
                 matching_threshold=1.0,
             ),
         )
@@ -116,7 +116,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
-                matching_metric=MatchingMetrics.ASSD,
+                matching_metric=Metrics.ASSD,
                 matching_threshold=0.5,
             ),
         )

@@ -2,13 +2,16 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from panoptica._functionals import _map_labels, _calc_matching_metric_of_overlapping_labels
+from panoptica._functionals import (
+    _calc_matching_metric_of_overlapping_labels,
+    _map_labels,
+)
+from panoptica.metrics import Metrics, _MatchingMetric
 from panoptica.utils.processing_pair import (
     InstanceLabelMap,
     MatchedInstancePair,
     UnmatchedInstancePair,
 )
-from panoptica.metrics import MatchingMetric, MatchingMetrics
 
 
 class InstanceMatchingAlgorithm(ABC):
@@ -77,7 +80,9 @@ class InstanceMatchingAlgorithm(ABC):
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
 
-def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap) -> MatchedInstancePair:
+def map_instance_labels(
+    processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap
+) -> MatchedInstancePair:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
@@ -154,7 +159,10 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     """
 
     def __init__(
-        self, matching_metric: MatchingMetric = MatchingMetrics.IOU, matching_threshold: float = 0.5, allow_many_to_one: bool = False
+        self,
+        matching_metric: _MatchingMetric = Metrics.IOU,
+        matching_threshold: float = 0.5,
+        allow_many_to_one: bool = False,
     ) -> None:
         """
         Initialize the NaiveOneToOneMatching instance.
@@ -189,14 +197,24 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
-        pred_arr, ref_arr = unmatched_instance_pair._prediction_arr, unmatched_instance_pair._reference_arr
-        mm_pairs = _calc_matching_metric_of_overlapping_labels(pred_arr, ref_arr, ref_labels, matching_metric=self.matching_metric)
+        pred_arr, ref_arr = (
+            unmatched_instance_pair._prediction_arr,
+            unmatched_instance_pair._reference_arr,
+        )
+        mm_pairs = _calc_matching_metric_of_overlapping_labels(
+            pred_arr, ref_arr, ref_labels, matching_metric=self.matching_metric
+        )
 
         # Loop through matched instances to compute PQ components
         for matching_score, (ref_label, pred_label) in mm_pairs:
-            if labelmap.contains_or(pred_label, ref_label) and not self.allow_many_to_one:
+            if (
+                labelmap.contains_or(pred_label, ref_label)
+                and not self.allow_many_to_one
+            ):
                 continue  # -> doesnt make speed difference
-            if self.matching_metric.score_beats_threshold(matching_score, self.matching_threshold):
+            if self.matching_metric.score_beats_threshold(
+                matching_score, self.matching_threshold
+            ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 # map label ref_idx to pred_idx

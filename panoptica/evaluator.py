@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from time import perf_counter
 from typing import Type
 
 import numpy as np
@@ -6,28 +7,29 @@ import numpy as np
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
+from panoptica.metrics import Metrics, _MatchingMetric
 from panoptica.panoptic_result import PanopticaResult
-from panoptica.metrics import MatchingMetric, MatchingMetrics
 from panoptica.timing import measure_time
+from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
     UnmatchedInstancePair,
     _ProcessingPair,
 )
-from time import perf_counter
-from panoptica.utils import EdgeCaseHandler
 
 
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: Type[SemanticPair]
+        | Type[UnmatchedInstancePair]
+        | Type[MatchedInstancePair] = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
-        eval_metrics: list[MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
-        decision_metric: MatchingMetric | None = None,
+        eval_metrics: list[_MatchingMetric] = [Metrics.DSC, Metrics.IOU, Metrics.ASSD],
+        decision_metric: _MatchingMetric | None = None,
         decision_threshold: float | None = None,
         log_times: bool = False,
         verbose: bool = False,
@@ -48,18 +50,28 @@ class Panoptic_Evaluator:
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
 
-        self.__edge_case_handler = edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
+        self.__edge_case_handler = (
+            edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
+        )
         if self.__decision_metric is not None:
-            assert self.__decision_threshold is not None, "decision metric set but no decision threshold for it"
+            assert (
+                self.__decision_threshold is not None
+            ), "decision metric set but no decision threshold for it"
         #
         self.__log_times = log_times
         self.__verbose = verbose
 
     @measure_time
     def evaluate(
-        self, processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
+        self,
+        processing_pair: SemanticPair
+        | UnmatchedInstancePair
+        | MatchedInstancePair
+        | PanopticaResult,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
-        assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
+        assert (
+            type(processing_pair) == self.__expected_input
+        ), f"input not of expected type {self.__expected_input}"
         return panoptic_evaluate(
             processing_pair=processing_pair,
             edge_case_handler=self.__edge_case_handler,
@@ -72,11 +84,14 @@ class Panoptic_Evaluator:
 
 
 def panoptic_evaluate(
-    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
+    processing_pair: SemanticPair
+    | UnmatchedInstancePair
+    | MatchedInstancePair
+    | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    eval_metrics: list[MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
-    decision_metric: MatchingMetric | None = None,
+    eval_metrics: list[_MatchingMetric] = [Metrics.DSC, Metrics.IOU, Metrics.ASSD],
+    decision_metric: _MatchingMetric | None = None,
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
@@ -124,7 +139,9 @@ def panoptic_evaluate(
     processing_pair.crop_data()
 
     if isinstance(processing_pair, SemanticPair):
-        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
+        assert (
+            instance_approximator is not None
+        ), "Got SemanticPair but not InstanceApproximator"
         print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
         processing_pair = instance_approximator.approximate_instances(processing_pair)
@@ -134,11 +151,15 @@ def panoptic_evaluate(
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        processing_pair = _handle_zero_instances_cases(processing_pair, edge_case_handler=edge_case_handler)
+        processing_pair = _handle_zero_instances_cases(
+            processing_pair, edge_case_handler=edge_case_handler
+        )
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         print("-- Got UnmatchedInstancePair, will match instances")
-        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        assert (
+            instance_matcher is not None
+        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
@@ -150,7 +171,9 @@ def panoptic_evaluate(
 
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        processing_pair = _handle_zero_instances_cases(processing_pair, edge_case_handler=edge_case_handler)
+        processing_pair = _handle_zero_instances_cases(
+            processing_pair, edge_case_handler=edge_case_handler
+        )
 
     if isinstance(processing_pair, MatchedInstancePair):
         print("-- Got MatchedInstancePair, will evaluate instances")

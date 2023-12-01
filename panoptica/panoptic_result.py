@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from typing import Any, List
-from panoptica.metrics import EvalMetric, MetricDict, ListMetric, MatchingMetric
-from panoptica.utils import EdgeCaseHandler
+
 import numpy as np
+
+from panoptica.metrics import EvalMetric, ListMetric, MetricDict, _MatchingMetric
+from panoptica.utils import EdgeCaseHandler
 
 
 class PanopticaResult:
@@ -22,7 +24,7 @@ class PanopticaResult:
         num_ref_instances: int,
         num_pred_instances: int,
         tp: int,
-        list_metrics: dict[MatchingMetric | str, list[float]],
+        list_metrics: dict[_MatchingMetric | str, list[float]],
         edge_case_handler: EdgeCaseHandler,
     ):
         """
@@ -39,7 +41,7 @@ class PanopticaResult:
         self.edge_case_handler = edge_case_handler
         self.metric_dict: MetricDict = {}
         for k, v in list_metrics.items():
-            if isinstance(k, MatchingMetric):
+            if isinstance(k, _MatchingMetric):
                 k = k.name
             self.metric_dict[k] = v
 
@@ -118,7 +120,9 @@ class PanopticaResult:
             float: Recognition Quality (RQ).
         """
         if self.tp == 0:
-            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            return (
+                0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            )
         return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
 
     @property
@@ -133,7 +137,10 @@ class PanopticaResult:
             print("Requested SQ but no IOU metric evaluated")
             return None
         is_edge_case, result = self.edge_case_handler.handle_zero_tp(
-            metric=ListMetric.IOU, tp=self.tp, num_pred_instances=self.num_pred_instances, num_ref_instances=self.num_ref_instances
+            metric=ListMetric.IOU,
+            tp=self.tp,
+            num_pred_instances=self.num_pred_instances,
+            num_ref_instances=self.num_ref_instances,
         )
         if is_edge_case:
             return result
@@ -183,7 +190,10 @@ class PanopticaResult:
             print("Requested DSC but no DSC metric evaluated")
             return None
         is_edge_case, result = self.edge_case_handler.handle_zero_tp(
-            metric=ListMetric.DSC, tp=self.tp, num_pred_instances=self.num_pred_instances, num_ref_instances=self.num_ref_instances
+            metric=ListMetric.DSC,
+            tp=self.tp,
+            num_pred_instances=self.num_pred_instances,
+            num_ref_instances=self.num_ref_instances,
         )
         if is_edge_case:
             return result
@@ -234,7 +244,10 @@ class PanopticaResult:
             return None
 
         is_edge_case, result = self.edge_case_handler.handle_zero_tp(
-            metric=ListMetric.ASSD, tp=self.tp, num_pred_instances=self.num_pred_instances, num_ref_instances=self.num_ref_instances
+            metric=ListMetric.ASSD,
+            tp=self.tp,
+            num_pred_instances=self.num_pred_instances,
+            num_ref_instances=self.num_ref_instances,
         )
         if is_edge_case:
             return result
