@@ -21,19 +21,14 @@ def _compute_instance_iou(
     """
     ref_instance_mask = reference_arr == ref_instance_idx
     pred_instance_mask = prediction_arr == pred_instance_idx
-    intersection = np.logical_and(ref_instance_mask, pred_instance_mask)
-    union = np.logical_or(ref_instance_mask, pred_instance_mask)
-
-    union_sum = np.sum(union)
-    # Handle division by zero
-    if union_sum == 0:
-        return 0.0
-
-    iou = np.sum(intersection) / union_sum
-    return iou
+    return _compute_iou(ref_instance_mask, pred_instance_mask)
 
 
-def _compute_iou(reference: np.ndarray, prediction: np.ndarray) -> float:
+def _compute_iou(
+    reference_arr: np.ndarray,
+    prediction_arr: np.ndarray,
+    *args,
+) -> float:
     """
     Compute Intersection over Union (IoU) between two masks.
 
@@ -45,8 +40,8 @@ def _compute_iou(reference: np.ndarray, prediction: np.ndarray) -> float:
         float: IoU between the two masks. A value between 0 and 1, where higher values
         indicate better overlap and similarity between masks.
     """
-    intersection = np.logical_and(reference, prediction)
-    union = np.logical_or(reference, prediction)
+    intersection = np.logical_and(reference_arr, prediction_arr)
+    union = np.logical_or(reference_arr, prediction_arr)
 
     union_sum = np.sum(union)
 

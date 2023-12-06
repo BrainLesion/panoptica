@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from panoptica.utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair
+from panoptica.utils.processing_pair import SemanticPair, UnmatchedInstancePair, MatchedInstancePair
 from panoptica._functionals import _connected_components, CCABackend
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 from panoptica.timing import measure_time

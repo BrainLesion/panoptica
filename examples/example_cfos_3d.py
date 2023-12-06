@@ -15,7 +15,7 @@ evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
-    iou_threshold=0.5,
+    match_threshold=0.5,
 )
 
 result, debug_data = evaluator.evaluate(sample)
