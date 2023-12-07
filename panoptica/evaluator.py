@@ -1,19 +1,13 @@
-from abc import ABC, abstractmethod
 from typing import Type
-
-import numpy as np
 
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.result import PanopticaResult
 from panoptica.timing import measure_time
-from panoptica.utils.datatypes import (
-    MatchedInstancePair,
-    SemanticPair,
-    UnmatchedInstancePair,
-    _ProcessingPair,
-)
+from panoptica.utils.datatypes import (MatchedInstancePair, SemanticPair,
+                                       UnmatchedInstancePair, _ProcessingPair)
+from panoptica.utils.citation_reminder import citation_reminder
 
 
 class Panoptic_Evaluator:
@@ -41,11 +35,13 @@ class Panoptic_Evaluator:
         self.__log_times = log_times
         self.__verbose = verbose
 
+    @citation_reminder
     @measure_time
     def evaluate(
         self, processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
-        assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
+        assert type(
+            processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
         return panoptic_evaluate(
             processing_pair=processing_pair,
             instance_approximator=self.__instance_approximator,
@@ -105,7 +101,8 @@ def panoptic_evaluate(
     if isinstance(processing_pair, SemanticPair):
         assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
         print("-- Got SemanticPair, will approximate instances")
-        processing_pair = instance_approximator.approximate_instances(processing_pair)
+        processing_pair = instance_approximator.approximate_instances(
+            processing_pair)
         debug_data["UnmatchedInstanceMap"] = processing_pair.copy()
 
     # Second Phase: Instance Matching
@@ -125,7 +122,8 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, MatchedInstancePair):
         print("-- Got MatchedInstancePair, will evaluate instances")
-        processing_pair = evaluate_matched_instance(processing_pair, iou_threshold=iou_threshold)
+        processing_pair = evaluate_matched_instance(
+            processing_pair, iou_threshold=iou_threshold)
 
     if isinstance(processing_pair, PanopticaResult):
         return processing_pair, debug_data
