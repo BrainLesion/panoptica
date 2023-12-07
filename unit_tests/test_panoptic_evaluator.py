@@ -3,7 +3,7 @@
 # coverage report
 # coverage html
 import unittest
-
+import os
 import numpy as np
 
 from panoptica.evaluator import Panoptic_Evaluator
@@ -13,6 +13,10 @@ from panoptica.utils.datatypes import SemanticPair
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
     def test_simple_evaluation(self):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
@@ -104,7 +108,8 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertTrue(np.isnan(result.sq_assd))
 
     def test_dtype_evaluation(self):
-        ddtypes = [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]
+        ddtypes = [np.int8, np.int16, np.int32, np.int64,
+                   np.uint8, np.uint16, np.uint32, np.uint64]
         dtype_combinations = [(a, b) for a in ddtypes for b in ddtypes]
         for da, db in dtype_combinations:
             a = np.zeros([50, 50], dtype=da)
