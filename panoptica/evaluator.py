@@ -5,15 +5,21 @@ from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.result import PanopticaResult
 from panoptica.timing import measure_time
-from panoptica.utils.datatypes import (MatchedInstancePair, SemanticPair,
-                                       UnmatchedInstancePair, _ProcessingPair)
+from panoptica.utils.datatypes import (
+    MatchedInstancePair,
+    SemanticPair,
+    UnmatchedInstancePair,
+    _ProcessingPair,
+)
 from panoptica.utils.citation_reminder import citation_reminder
 
 
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: Type[SemanticPair]
+        | Type[UnmatchedInstancePair]
+        | Type[MatchedInstancePair] = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         log_times: bool = False,
@@ -38,10 +44,15 @@ class Panoptic_Evaluator:
     @citation_reminder
     @measure_time
     def evaluate(
-        self, processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
+        self,
+        processing_pair: SemanticPair
+        | UnmatchedInstancePair
+        | MatchedInstancePair
+        | PanopticaResult,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
-        assert type(
-            processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
+        assert (
+            type(processing_pair) == self.__expected_input
+        ), f"input not of expected type {self.__expected_input}"
         return panoptic_evaluate(
             processing_pair=processing_pair,
             instance_approximator=self.__instance_approximator,
@@ -53,7 +64,10 @@ class Panoptic_Evaluator:
 
 
 def panoptic_evaluate(
-    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
+    processing_pair: SemanticPair
+    | UnmatchedInstancePair
+    | MatchedInstancePair
+    | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
     log_times: bool = False,
@@ -99,10 +113,11 @@ def panoptic_evaluate(
     processing_pair.crop_data()
 
     if isinstance(processing_pair, SemanticPair):
-        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
+        assert (
+            instance_approximator is not None
+        ), "Got SemanticPair but not InstanceApproximator"
         print("-- Got SemanticPair, will approximate instances")
-        processing_pair = instance_approximator.approximate_instances(
-            processing_pair)
+        processing_pair = instance_approximator.approximate_instances(processing_pair)
         debug_data["UnmatchedInstanceMap"] = processing_pair.copy()
 
     # Second Phase: Instance Matching
@@ -111,7 +126,9 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         print("-- Got UnmatchedInstancePair, will match instances")
-        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        assert (
+            instance_matcher is not None
+        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         processing_pair = instance_matcher.match_instances(processing_pair)
 
         debug_data["MatchedInstanceMap"] = processing_pair.copy()
@@ -123,7 +140,8 @@ def panoptic_evaluate(
     if isinstance(processing_pair, MatchedInstancePair):
         print("-- Got MatchedInstancePair, will evaluate instances")
         processing_pair = evaluate_matched_instance(
-            processing_pair, iou_threshold=iou_threshold)
+            processing_pair, iou_threshold=iou_threshold
+        )
 
     if isinstance(processing_pair, PanopticaResult):
         return processing_pair, debug_data

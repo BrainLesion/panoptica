@@ -1,10 +1,15 @@
 import numpy as np
 from scipy.ndimage import _ni_support
-from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 from scipy.ndimage._nd_image import euclidean_feature_transform
+from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
 
-def _average_symmetric_surface_distance(result, reference, voxelspacing=None, connectivity=1) -> float:
+def _average_symmetric_surface_distance(
+    result,
+    reference,
+    voxelspacing=None,
+    connectivity=1,
+) -> float:
     assd = np.mean(
         (
             _average_surface_distance(result, reference, voxelspacing, connectivity),
@@ -44,7 +49,11 @@ def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
 
     # extract only 1-pixel border line of objects
     result_border = result ^ binary_erosion(result, structure=footprint, iterations=1)
-    reference_border = reference ^ binary_erosion(reference, structure=footprint, iterations=1)
+    reference_border = reference ^ binary_erosion(
+        reference,
+        structure=footprint,
+        iterations=1,
+    )
 
     # compute average surface distance
     # Note: scipys distance transform is calculated only inside the borders of the
@@ -55,7 +64,12 @@ def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
     return sds
 
 
-def _distance_transform_edt(input: np.ndarray, sampling=None, return_distances=True, return_indices=False):
+def _distance_transform_edt(
+    input: np.ndarray,
+    sampling=None,
+    return_distances=True,
+    return_indices=False,
+):
     # calculate the feature transform
     # input = np.atleast_1d(np.where(input, 1, 0).astype(np.int8))
     # if sampling is not None:

@@ -1,14 +1,20 @@
 import concurrent.futures
 from panoptica.utils.datatypes import MatchedInstancePair
 from panoptica.result import PanopticaResult
-from panoptica.metrics import _compute_iou, _compute_dice_coefficient, _average_symmetric_surface_distance
+from panoptica.metrics import (
+    _compute_iou,
+    _compute_dice_coefficient,
+    _average_symmetric_surface_distance,
+)
 from panoptica.timing import measure_time
 import numpy as np
 import gc
 from multiprocessing import Pool
 
 
-def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_threshold: float, **kwargs) -> PanopticaResult:
+def evaluate_matched_instance(
+    matched_instance_pair: MatchedInstancePair, iou_threshold: float, **kwargs
+) -> PanopticaResult:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
@@ -27,7 +33,10 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
     # Initialize variables for True Positives (tp)
     tp, dice_list, iou_list, assd_list = 0, [], [], []
 
-    reference_arr, prediction_arr = matched_instance_pair._reference_arr, matched_instance_pair._prediction_arr
+    reference_arr, prediction_arr = (
+        matched_instance_pair._reference_arr,
+        matched_instance_pair._prediction_arr,
+    )
     ref_labels = matched_instance_pair._ref_labels
 
     # instance_pairs = _calc_overlapping_labels(
@@ -37,7 +46,10 @@ def evaluate_matched_instance(matched_instance_pair: MatchedInstancePair, iou_th
     # )
     # instance_pairs = [(ra, pa, rl, iou_threshold) for (ra, pa, rl, pl) in instance_pairs]
 
-    instance_pairs = [(reference_arr, prediction_arr, ref_idx, iou_threshold) for ref_idx in ref_labels]
+    instance_pairs = [
+        (reference_arr, prediction_arr, ref_idx, iou_threshold)
+        for ref_idx in ref_labels
+    ]
     with Pool() as pool:
         metric_values = pool.starmap(_evaluate_instance, instance_pairs)
 

@@ -27,7 +27,10 @@ def _compute_instance_volumetric_dice(
     """
     ref_instance_mask = ref_labels == ref_instance_idx
     pred_instance_mask = pred_labels == pred_instance_idx
-    return _compute_dice_coefficient(reference=ref_instance_mask, prediction=pred_instance_mask)
+    return _compute_dice_coefficient(
+        reference=ref_instance_mask,
+        prediction=pred_instance_mask,
+    )
 
 
 def _compute_dice_coefficient(

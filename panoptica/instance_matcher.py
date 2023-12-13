@@ -2,7 +2,11 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from panoptica._functionals import _calc_iou_matrix, _map_labels, _calc_iou_of_overlapping_labels
+from panoptica._functionals import (
+    _calc_iou_matrix,
+    _map_labels,
+    _calc_iou_of_overlapping_labels,
+)
 from panoptica.utils.datatypes import (
     InstanceLabelMap,
     MatchedInstancePair,
@@ -38,7 +42,9 @@ class InstanceMatchingAlgorithm(ABC):
     """
 
     @abstractmethod
-    def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> InstanceLabelMap:
+    def _match_instances(
+        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+    ) -> InstanceLabelMap:
         """
         Abstract method to be implemented by subclasses for instance matching.
 
@@ -51,7 +57,9 @@ class InstanceMatchingAlgorithm(ABC):
         """
         pass
 
-    def match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> MatchedInstancePair:
+    def match_instances(
+        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+    ) -> MatchedInstancePair:
         """
         Perform instance matching on the given UnmatchedInstancePair.
 
@@ -67,7 +75,9 @@ class InstanceMatchingAlgorithm(ABC):
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
 
-def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap) -> MatchedInstancePair:
+def map_instance_labels(
+    processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap
+) -> MatchedInstancePair:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
@@ -143,7 +153,9 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     >>> result = matcher.match_instances(unmatched_instance_pair)
     """
 
-    def __init__(self, iou_threshold: float = 0.5, allow_many_to_one: bool = False) -> None:
+    def __init__(
+        self, iou_threshold: float = 0.5, allow_many_to_one: bool = False
+    ) -> None:
         """
         Initialize the NaiveOneToOneMatching instance.
 
@@ -156,7 +168,9 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         self.iou_threshold = iou_threshold
         self.allow_many_to_one = allow_many_to_one
 
-    def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> InstanceLabelMap:
+    def _match_instances(
+        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+    ) -> InstanceLabelMap:
         """
         Perform one-to-one instance matching based on IoU values.
 
@@ -173,12 +187,20 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
-        pred_arr, ref_arr = unmatched_instance_pair._prediction_arr, unmatched_instance_pair._reference_arr
-        iou_pairs = _calc_iou_of_overlapping_labels(pred_arr, ref_arr, ref_labels, pred_labels)
+        pred_arr, ref_arr = (
+            unmatched_instance_pair._prediction_arr,
+            unmatched_instance_pair._reference_arr,
+        )
+        iou_pairs = _calc_iou_of_overlapping_labels(
+            pred_arr, ref_arr, ref_labels, pred_labels
+        )
 
         # Loop through matched instances to compute PQ components
         for iou, (ref_label, pred_label) in iou_pairs:
-            if labelmap.contains_or(pred_label, ref_label) and not self.allow_many_to_one:
+            if (
+                labelmap.contains_or(pred_label, ref_label)
+                and not self.allow_many_to_one
+            ):
                 continue  # -> doesnt make speed difference
             if iou >= 0.5:
                 # Match found, increment true positive count and collect IoU and Dice values
@@ -209,7 +231,9 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
     >>> result = matcher.match_instances(unmatched_instance_pair)
     """
 
-    def __init__(self, iou_threshold: float = 0.5, allow_many_to_one: bool = False) -> None:
+    def __init__(
+        self, iou_threshold: float = 0.5, allow_many_to_one: bool = False
+    ) -> None:
         """
         Initialize the NaiveOneToOneMatching instance.
 
@@ -222,7 +246,9 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         self.iou_threshold = iou_threshold
         self.allow_many_to_one = allow_many_to_one
 
-    def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> InstanceLabelMap:
+    def _match_instances(
+        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+    ) -> InstanceLabelMap:
         """
         Perform one-to-one instance matching based on IoU values.
 
@@ -239,8 +265,13 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
-        pred_arr, ref_arr = unmatched_instance_pair._prediction_arr, unmatched_instance_pair._reference_arr
-        iou_pairs = _calc_iou_of_overlapping_labels(pred_arr, ref_arr, ref_labels, pred_labels)
+        pred_arr, ref_arr = (
+            unmatched_instance_pair._prediction_arr,
+            unmatched_instance_pair._reference_arr,
+        )
+        iou_pairs = _calc_iou_of_overlapping_labels(
+            pred_arr, ref_arr, ref_labels, pred_labels
+        )
 
         # Loop through matched instances to compute PQ components
         for iou, (ref_label, pred_label) in iou_pairs:
