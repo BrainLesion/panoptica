@@ -1,5 +1,9 @@
 from abc import abstractmethod, ABC
-from panoptica.utils.datatypes import SemanticPair, UnmatchedInstancePair, MatchedInstancePair
+from panoptica.utils.datatypes import (
+    SemanticPair,
+    UnmatchedInstancePair,
+    MatchedInstancePair,
+)
 from panoptica._functionals import _connected_components, CCABackend
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 from panoptica.timing import measure_time
@@ -35,7 +39,9 @@ class InstanceApproximator(ABC):
     """
 
     @abstractmethod
-    def _approximate_instances(self, semantic_pair: SemanticPair, **kwargs) -> UnmatchedInstancePair | MatchedInstancePair:
+    def _approximate_instances(
+        self, semantic_pair: SemanticPair, **kwargs
+    ) -> UnmatchedInstancePair | MatchedInstancePair:
         """
         Abstract method to be implemented by subclasses for instance approximation.
 
@@ -66,11 +72,19 @@ class InstanceApproximator(ABC):
         """
         # Check validity
         pred_labels, ref_labels = semantic_pair._pred_labels, semantic_pair._ref_labels
-        pred_label_range = (np.min(pred_labels), np.max(pred_labels)) if len(pred_labels) > 0 else (0, 0)
-        ref_label_range = (np.min(ref_labels), np.max(ref_labels)) if len(ref_labels) > 0 else (0, 0)
+        pred_label_range = (
+            (np.min(pred_labels), np.max(pred_labels))
+            if len(pred_labels) > 0
+            else (0, 0)
+        )
+        ref_label_range = (
+            (np.min(ref_labels), np.max(ref_labels)) if len(ref_labels) > 0 else (0, 0)
+        )
         #
         min_value = min(np.min(pred_label_range[0]), np.min(ref_label_range[0]))
-        assert min_value >= 0, "There are negative values in the semantic maps. This is not allowed!"
+        assert (
+            min_value >= 0
+        ), "There are negative values in the semantic maps. This is not allowed!"
         # Set dtype to smalles fitting uint
         max_value = max(np.max(pred_label_range[1]), np.max(ref_label_range[1]))
         dtype = _get_smallest_fitting_uint(max_value)
@@ -110,7 +124,9 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         """
         self.cca_backend = cca_backend
 
-    def _approximate_instances(self, semantic_pair: SemanticPair, **kwargs) -> UnmatchedInstancePair:
+    def _approximate_instances(
+        self, semantic_pair: SemanticPair, **kwargs
+    ) -> UnmatchedInstancePair:
         """
         Approximate instances using the connected components algorithm.
 
@@ -123,7 +139,9 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         """
         cca_backend = self.cca_backend
         if self.cca_backend is None:
-            cca_backend = CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+            cca_backend = (
+                CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+            )
         assert cca_backend is not None
 
         empty_prediction = len(semantic_pair._pred_labels) == 0
@@ -134,7 +152,9 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             else (semantic_pair._prediction_arr, 0)
         )
         reference_arr, n_reference_instance = (
-            _connected_components(semantic_pair._reference_arr, cca_backend) if not empty_reference else (semantic_pair._reference_arr, 0)
+            _connected_components(semantic_pair._reference_arr, cca_backend)
+            if not empty_reference
+            else (semantic_pair._reference_arr, 0)
         )
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr,

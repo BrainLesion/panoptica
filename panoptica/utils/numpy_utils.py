@@ -1,6 +1,7 @@
-import warnings
-import numpy as np
 import itertools
+import warnings
+
+import numpy as np
 
 
 def _unique_without_zeros(arr: np.ndarray) -> np.ndarray:
@@ -62,7 +63,10 @@ def _get_smallest_fitting_uint(max_value: int) -> type:
     return dtype
 
 
-def _get_bbox_nd(img: np.ndarray, px_dist: int | tuple[int, ...] = 0) -> tuple[slice, ...]:
+def _get_bbox_nd(
+    img: np.ndarray,
+    px_dist: int | tuple[int, ...] = 0,
+) -> tuple[slice, ...]:
     """calculates a bounding box in n dimensions given a image (factor ~2 times faster than compute_crop_slice)
 
     Args:
@@ -78,7 +82,9 @@ def _get_bbox_nd(img: np.ndarray, px_dist: int | tuple[int, ...] = 0) -> tuple[s
     shp = img.shape
     if isinstance(px_dist, int):
         px_dist = np.ones(N, dtype=np.uint8) * px_dist
-    assert len(px_dist) == N, f"dimension mismatch, got img shape {shp} and px_dist {px_dist}"
+    assert (
+        len(px_dist) == N
+    ), f"dimension mismatch, got img shape {shp} and px_dist {px_dist}"
 
     out = []
     for ax in itertools.combinations(reversed(range(N)), N - 1):
