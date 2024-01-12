@@ -23,7 +23,9 @@ class _ProcessingPair(ABC):
     _pred_labels: tuple[int, ...]
     n_dim: int
 
-    def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None) -> None:
+    def __init__(
+        self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None
+    ) -> None:
         """Initializes a general Processing Pair
 
         Args:
@@ -36,8 +38,12 @@ class _ProcessingPair(ABC):
         self._reference_arr = reference_arr
         self.dtype = dtype
         self.n_dim = reference_arr.ndim
-        self._ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
-        self._pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self._ref_labels: tuple[int, ...] = tuple(
+            _unique_without_zeros(reference_arr)
+        )  # type:ignore
+        self._pred_labels: tuple[int, ...] = tuple(
+            _unique_without_zeros(prediction_arr)
+        )  # type:ignore
         self.crop: tuple[slice, ...] = None
         self.is_cropped: bool = False
         self.uncropped_shape: tuple[int, ...] = reference_arr.shape
@@ -54,25 +60,33 @@ class _ProcessingPair(ABC):
 
         self._prediction_arr = self._prediction_arr[self.crop]
         self._reference_arr = self._reference_arr[self.crop]
-        print(f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}") if verbose else None
+        print(
+            f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}"
+        ) if verbose else None
         self.is_cropped = True
 
     def uncrop_data(self, verbose: bool = False):
         if self.is_cropped == False:
             return
-        assert self.uncropped_shape is not None, "Calling uncrop_data() without having cropped first"
+        assert (
+            self.uncropped_shape is not None
+        ), "Calling uncrop_data() without having cropped first"
         prediction_arr = np.zeros(self.uncropped_shape)
         prediction_arr[self.crop] = self._prediction_arr
         self._prediction_arr = prediction_arr
 
         reference_arr = np.zeros(self.uncropped_shape)
         reference_arr[self.crop] = self._reference_arr
-        print(f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}") if verbose else None
+        print(
+            f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}"
+        ) if verbose else None
         self._reference_arr = reference_arr
         self.is_cropped = False
 
     def set_dtype(self, type):
-        assert np.issubdtype(type, int_type), "set_dtype: tried to set dtype to something other than integers"
+        assert np.issubdtype(
+            type, int_type
+        ), "set_dtype: tried to set dtype to something other than integers"
         self._prediction_arr = self._prediction_arr.astype(type)
         self._reference_arr = self._reference_arr.astype(type)
 
@@ -151,7 +165,9 @@ class _ProcessingPairInstanced(_ProcessingPair):
         )  # type:ignore
 
 
-def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None):
+def _check_array_integrity(
+    prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None
+):
     """
     Check the integrity of two numpy arrays.
 
@@ -173,8 +189,12 @@ def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray
     assert isinstance(prediction_arr, np.ndarray) and isinstance(
         reference_arr, np.ndarray
     ), "prediction and/or reference are not numpy arrays"
-    assert prediction_arr.shape == reference_arr.shape, f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
-    assert prediction_arr.dtype == reference_arr.dtype, f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
+    assert (
+        prediction_arr.shape == reference_arr.shape
+    ), f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
+    assert (
+        prediction_arr.dtype == reference_arr.dtype
+    ), f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
     if dtype is not None:
         assert (
             np.issubdtype(prediction_arr.dtype, dtype)
@@ -257,11 +277,15 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         self.matched_instances = matched_instances
 
         if missed_reference_labels is None:
-            missed_reference_labels = list([i for i in self._ref_labels if i not in self._pred_labels])
+            missed_reference_labels = list(
+                [i for i in self._ref_labels if i not in self._pred_labels]
+            )
         self.missed_reference_labels = missed_reference_labels
 
         if missed_prediction_labels is None:
-            missed_prediction_labels = list([i for i in self._pred_labels if i not in self._ref_labels])
+            missed_prediction_labels = list(
+                [i for i in self._pred_labels if i not in self._ref_labels]
+            )
         self.missed_prediction_labels = missed_prediction_labels
 
     @property
@@ -295,7 +319,9 @@ class InstanceLabelMap(object):
         if not isinstance(pred_labels, list):
             pred_labels = [pred_labels]
         assert isinstance(ref_label, int), "add_labelmap_entry: got no int as ref_label"
-        assert np.all([isinstance(r, int) for r in pred_labels]), "add_labelmap_entry: got no int as pred_label"
+        assert np.all(
+            [isinstance(r, int) for r in pred_labels]
+        ), "add_labelmap_entry: got no int as pred_label"
         for p in pred_labels:
             if p in self.labelmap and self.labelmap[p] != ref_label:
                 raise Exception(
@@ -303,12 +329,16 @@ class InstanceLabelMap(object):
                 )
             self.labelmap[p] = ref_label
 
-    def contains_and(self, pred_label: int | None = None, ref_label: int | None = None) -> bool:
+    def contains_and(
+        self, pred_label: int | None = None, ref_label: int | None = None
+    ) -> bool:
         pred_in = True if pred_label is None else pred_label in self.labelmap
         ref_in = True if ref_label is None else ref_label in self.labelmap.values()
         return pred_in and ref_in
 
-    def contains_or(self, pred_label: int | None = None, ref_label: int | None = None) -> bool:
+    def contains_or(
+        self, pred_label: int | None = None, ref_label: int | None = None
+    ) -> bool:
         pred_in = True if pred_label is None else pred_label in self.labelmap
         ref_in = True if ref_label is None else ref_label in self.labelmap.values()
         return pred_in or ref_in
@@ -320,7 +350,9 @@ class InstanceLabelMap(object):
         return str(
             list(
                 [
-                    str(tuple(k for k in self.labelmap.keys() if self.labelmap[k] == v)) + " -> " + str(v)
+                    str(tuple(k for k in self.labelmap.keys() if self.labelmap[k] == v))
+                    + " -> "
+                    + str(v)
                     for v in set(self.labelmap.values())
                 ]
             )

@@ -163,7 +163,9 @@ class PanopticaResult:
             float: Recognition Quality (RQ).
         """
         if self.tp == 0:
-            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            return (
+                0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
+            )
         return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
 
     @property

@@ -13,8 +13,12 @@ def _average_symmetric_surface_distance(
 ) -> float:
     assd = np.mean(
         (
-            _average_surface_distance(prediction, reference, voxelspacing, connectivity),
-            _average_surface_distance(reference, prediction, voxelspacing, connectivity),
+            _average_surface_distance(
+                prediction, reference, voxelspacing, connectivity
+            ),
+            _average_surface_distance(
+                reference, prediction, voxelspacing, connectivity
+            ),
         )
     )
     return float(assd)
@@ -49,8 +53,12 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     #    raise RuntimeError("The second supplied array does not contain any binary object.")
 
     # extract only 1-pixel border line of objects
-    result_border = prediction ^ binary_erosion(prediction, structure=footprint, iterations=1)
-    reference_border = reference ^ binary_erosion(reference, structure=footprint, iterations=1)
+    result_border = prediction ^ binary_erosion(
+        prediction, structure=footprint, iterations=1
+    )
+    reference_border = reference ^ binary_erosion(
+        reference, structure=footprint, iterations=1
+    )
 
     # compute average surface distance
     # Note: scipys distance transform is calculated only inside the borders of the

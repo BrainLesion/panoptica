@@ -81,7 +81,9 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
-        self.assertEqual(result.sq, None)  # must be none because no IOU has been calculated
+        self.assertEqual(
+            result.sq, None
+        )  # must be none because no IOU has been calculated
         self.assertEqual(result.pq, None)
         self.assertEqual(result.rq, 1.0)
 

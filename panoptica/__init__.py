@@ -5,4 +5,8 @@ from panoptica.instance_approximator import (
 from panoptica.instance_matcher import NaiveThresholdMatching
 from panoptica.evaluator import Panoptic_Evaluator
 from panoptica.panoptic_result import PanopticaResult
-from panoptica.utils.processing_pair import SemanticPair, UnmatchedInstancePair, MatchedInstancePair
+from panoptica.utils.processing_pair import (
+    SemanticPair,
+    UnmatchedInstancePair,
+    MatchedInstancePair,
+)
