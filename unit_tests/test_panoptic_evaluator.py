@@ -77,8 +77,9 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
-        self.assertEqual(result.sq, 0.0)
-        self.assertEqual(result.pq, 0.0)
+        self.assertEqual(result.sq, None)  # must be none because no IOU has been calculated
+        self.assertEqual(result.pq, None)
+        self.assertEqual(result.rq, 1.0)
 
     def test_simple_evaluation_ASSD(self):
         a = np.zeros([50, 50], dtype=np.uint16)
