@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.ndimage import _ni_support
-from scipy.ndimage.morphology import generate_binary_structure, binary_erosion
 from scipy.ndimage._nd_image import euclidean_feature_transform
+from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
 
 def _average_symmetric_surface_distance(
@@ -61,7 +61,12 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     return sds
 
 
-def _distance_transform_edt(input: np.ndarray, sampling=None, return_distances=True, return_indices=False):
+def _distance_transform_edt(
+    input: np.ndarray,
+    sampling=None,
+    return_distances=True,
+    return_indices=False,
+):
     # calculate the feature transform
     # input = np.atleast_1d(np.where(input, 1, 0).astype(np.int8))
     # if sampling is not None:
