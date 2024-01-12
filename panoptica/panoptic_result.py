@@ -45,9 +45,9 @@ class PanopticaResult:
                 k = k.name
             self.metric_dict[k] = v
 
-        for k in ListMetric:
-            if k.name not in self.metric_dict:
-                self.metric_dict[k.name] = []
+        # for k in ListMetric:
+        #    if k.name not in self.metric_dict:
+        #        self.metric_dict[k.name] = []
         self._num_ref_instances = num_ref_instances
         self._num_pred_instances = num_pred_instances
 
@@ -56,10 +56,53 @@ class PanopticaResult:
         # otherwise calls function to calculates, saves it and return
 
     def __str__(self):
-        return str(self.metric_dict)
+        text = (
+            f"Number of instances in prediction: {self.num_pred_instances}\n"
+            f"Number of instances in reference: {self.num_ref_instances}\n"
+            f"True Positives (tp): {self.tp}\n"
+            f"False Positives (fp): {self.fp}\n"
+            f"False Negatives (fn): {self.fn}\n"
+            f"Recognition Quality / F1 Score (RQ): {self.rq}\n"
+        )
+
+        if ListMetric.IOU.name in self.metric_dict:
+            text += f"Segmentation Quality (SQ): {self.sq} ± {self.sq_sd}\n"
+            text += f"Panoptic Quality (PQ): {self.pq}\n"
+
+        if ListMetric.DSC.name in self.metric_dict:
+            text += f"DSC-based Segmentation Quality (DQ_DSC): {self.sq_dsc} ± {self.sq_dsc_sd}\n"
+            text += f"DSC-based Panoptic Quality (PQ_DSC): {self.pq_dsc}\n"
+
+        if ListMetric.ASSD.name in self.metric_dict:
+            text += f"Average symmetric surface distance (ASSD): {self.sq_assd} ± {self.sq_assd_sd}\n"
+            text += f"ASSD-based Panoptic Quality (PQ_ASSD): {self.pq_assd}"
+        return text
 
     def to_dict(self):
-        return self.metric_dict
+        eval_dict = {
+            "num_pred_instances": self.num_pred_instances,
+            "num_ref_instances": self.num_ref_instances,
+            "tp": self.tp,
+            "fp": self.fp,
+            "fn": self.fn,
+            "rq": self.rq,
+        }
+
+        if ListMetric.IOU.name in self.metric_dict:
+            eval_dict["sq"] = self.sq
+            eval_dict["sq_sd"] = self.sq_sd
+            eval_dict["pq"] = self.pq
+
+        if ListMetric.DSC.name in self.metric_dict:
+            eval_dict["sq_dsc"] = self.sq_dsc
+            eval_dict["sq_dsc_sd"] = self.sq_dsc_sd
+            eval_dict["pq_dsc"] = self.pq_dsc
+
+        if ListMetric.ASSD.name in self.metric_dict:
+            eval_dict["sq_assd"] = self.sq_assd
+            eval_dict["sq_assd_sd"] = self.sq_assd_sd
+            eval_dict["pq_assd"] = self.pq_assd
+        return eval_dict
 
     @property
     def num_ref_instances(self) -> int:
@@ -120,9 +163,7 @@ class PanopticaResult:
             float: Recognition Quality (RQ).
         """
         if self.tp == 0:
-            return (
-                0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
-            )
+            return 0.0 if self.num_pred_instances + self.num_ref_instances > 0 else np.nan
         return self.tp / (self.tp + 0.5 * self.fp + 0.5 * self.fn)
 
     @property
@@ -133,9 +174,6 @@ class PanopticaResult:
         Returns:
             float: Segmentation Quality (SQ).
         """
-        if ListMetric.IOU.name not in self.metric_dict:
-            print("Requested SQ but no IOU metric evaluated")
-            return None
         is_edge_case, result = self.edge_case_handler.handle_zero_tp(
             metric=ListMetric.IOU,
             tp=self.tp,
@@ -144,6 +182,9 @@ class PanopticaResult:
         )
         if is_edge_case:
             return result
+        if ListMetric.IOU.name not in self.metric_dict:
+            print("Requested SQ but no IOU metric evaluated")
+            return None
         return np.sum(self.metric_dict[ListMetric.IOU.name]) / self.tp
 
     @property
@@ -186,9 +227,6 @@ class PanopticaResult:
         Returns:
             float: Average Dice coefficient.
         """
-        if ListMetric.DSC.name not in self.metric_dict:
-            print("Requested DSC but no DSC metric evaluated")
-            return None
         is_edge_case, result = self.edge_case_handler.handle_zero_tp(
             metric=ListMetric.DSC,
             tp=self.tp,
@@ -197,6 +235,9 @@ class PanopticaResult:
         )
         if is_edge_case:
             return result
+        if ListMetric.DSC.name not in self.metric_dict:
+            print("Requested DSC but no DSC metric evaluated")
+            return None
         return np.sum(self.metric_dict[ListMetric.DSC.name]) / self.tp
 
     @property
@@ -239,10 +280,6 @@ class PanopticaResult:
         Returns:
             float: average symmetric surface distance. (ASSD)
         """
-        if ListMetric.ASSD.name not in self.metric_dict:
-            print("Requested ASSD but no ASSD metric evaluated")
-            return None
-
         is_edge_case, result = self.edge_case_handler.handle_zero_tp(
             metric=ListMetric.ASSD,
             tp=self.tp,
@@ -251,6 +288,9 @@ class PanopticaResult:
         )
         if is_edge_case:
             return result
+        if ListMetric.ASSD.name not in self.metric_dict:
+            print("Requested ASSD but no ASSD metric evaluated")
+            return None
         return np.sum(self.metric_dict[ListMetric.ASSD.name]) / self.tp
 
     @property
