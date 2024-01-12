@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 from time import perf_counter
 from typing import Type
 
-import numpy as np
-
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
@@ -17,6 +15,7 @@ from panoptica.utils.processing_pair import (
     UnmatchedInstancePair,
     _ProcessingPair,
 )
+from panoptica.utils.citation_reminder import citation_reminder
 
 
 class Panoptic_Evaluator:
@@ -55,6 +54,7 @@ class Panoptic_Evaluator:
         self.__log_times = log_times
         self.__verbose = verbose
 
+    @citation_reminder
     @measure_time
     def evaluate(
         self,

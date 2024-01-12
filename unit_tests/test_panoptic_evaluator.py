@@ -3,7 +3,7 @@
 # coverage report
 # coverage html
 import unittest
-
+import os
 import numpy as np
 
 from panoptica.evaluator import Panoptic_Evaluator
@@ -16,6 +16,10 @@ from panoptica.utils.processing_pair import SemanticPair
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
     def test_simple_evaluation(self):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)

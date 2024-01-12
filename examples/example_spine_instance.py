@@ -17,8 +17,8 @@ sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
 
 evaluator = Panoptic_Evaluator(
     expected_input=MatchedInstancePair,
+    eval_metrics=[Metrics.ASSD, Metrics.IOU],
     decision_metric=Metrics.IOU,
-    eval_metrics=[Metrics.ASSD],
     decision_threshold=0.5,
 )
 
