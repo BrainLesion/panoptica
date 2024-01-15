@@ -17,6 +17,7 @@ from panoptica.utils.processing_pair import (
 )
 from panoptica.utils.citation_reminder import citation_reminder
 
+
 class Panoptic_Evaluator:
     def __init__(
         self,
