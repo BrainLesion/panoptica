@@ -15,8 +15,8 @@ from panoptica.utils.processing_pair import MatchedInstancePair
 
 def evaluate_matched_instance(
     matched_instance_pair: MatchedInstancePair,
-    eval_metrics: list[_MatchingMetric],
-    decision_metric: _MatchingMetric | None = None,
+    eval_metrics: list[_MatchingMetric] = [Metrics.DSC, Metrics.IOU, Metrics.ASSD],
+    decision_metric: _MatchingMetric | None = Metrics.IOU,
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     **kwargs,
