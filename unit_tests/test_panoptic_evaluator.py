@@ -9,7 +9,7 @@ import numpy as np
 from panoptica.panoptic_evaluator import Panoptic_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching, MaximizeMergeMatching
-from panoptica.metrics import  _MatchingMetric, Metrics
+from panoptica.metrics import _MatchingMetric, Metrics
 from panoptica.utils.processing_pair import SemanticPair
 
 
