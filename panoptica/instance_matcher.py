@@ -216,12 +216,11 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
 
 class MaximizeMergeMatching(InstanceMatchingAlgorithm):
     """
-    Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one
+    Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one. Only matches if at least a single instance exceeds the threshold
 
 
     Methods:
         _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
-            Perform one-to-one instance matching based on IoU values.
 
     Raises:
         AssertionError: If the specified IoU threshold is not within the valid range.
@@ -232,10 +231,11 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         matching_threshold: float = 0.5,
     ) -> None:
         """
-        Initialize the NaiveOneToOneMatching instance.
+        Initialize the MaximizeMergeMatching instance.
 
         Args:
-            iou_threshold (float, optional): The IoU threshold for matching instances. Defaults to 0.5.
+            matching_metric (_MatchingMetric): The metric to be used for matching.
+            matching_threshold (float, optional): The metric threshold for matching instances. Defaults to 0.5.
 
         Raises:
             AssertionError: If the specified IoU threshold is not within the valid range.
@@ -275,7 +275,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
                 continue
             if labelmap.contains_ref(ref_label):
                 pred_labels_ = labelmap.get_pred_labels_matched_to_ref(ref_label)
-                new_score = self.new_combination_score(pred_labels_, pred_label, ref_label, unmatched_instance_pair, self.matching_metric)
+                new_score = self.new_combination_score(pred_labels_, pred_label, ref_label, unmatched_instance_pair)
                 if new_score > score_ref[ref_label]:
                     labelmap.add_labelmap_entry(pred_label, ref_label)
                     score_ref[ref_label] = new_score
@@ -292,10 +292,9 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         new_pred_label: int,
         ref_label: int,
         unmatched_instance_pair: UnmatchedInstancePair,
-        matching_metric: _MatchingMetric,
     ):
         pred_labels.append(new_pred_label)
-        score = matching_metric(
+        score = self.matching_metric(
             unmatched_instance_pair.reference_arr,
             prediction_arr=unmatched_instance_pair.prediction_arr,
             ref_instance_idx=ref_label,
