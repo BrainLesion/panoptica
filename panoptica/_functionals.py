@@ -68,7 +68,9 @@ def _calc_matching_metric_of_overlapping_labels(
         (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
         for idx, i in enumerate(mm_values)
     ]
-    mm_pairs = sorted(mm_pairs, key=lambda x: x[0], reverse=matching_metric.decreasing)
+    mm_pairs = sorted(
+        mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
+    )
 
     return mm_pairs
 

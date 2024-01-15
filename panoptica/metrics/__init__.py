@@ -8,9 +8,9 @@ from panoptica.metrics.dice import (
 )
 from panoptica.metrics.iou import _compute_instance_iou, _compute_iou
 from panoptica.metrics.metrics import (
-    EvalMetric,
-    ListMetric,
-    MetricDict,
     Metrics,
+    ListMetric,
+    EvalMetric,
+    MetricDict,
     _MatchingMetric,
 )

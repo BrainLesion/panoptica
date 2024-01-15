@@ -329,6 +329,15 @@ class InstanceLabelMap(object):
                 )
             self.labelmap[p] = ref_label
 
+    def get_pred_labels_matched_to_ref(self, ref_label: int):
+        return [k for k, v in self.labelmap.items() if v == ref_label]
+
+    def contains_pred(self, pred_label: int):
+        return pred_label in self.labelmap
+
+    def contains_ref(self, ref_label: int):
+        return ref_label in self.labelmap.values()
+
     def contains_and(
         self, pred_label: int | None = None, ref_label: int | None = None
     ) -> bool:

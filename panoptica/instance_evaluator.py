@@ -5,13 +5,13 @@ from multiprocessing import Pool
 import numpy as np
 
 from panoptica.metrics import (
-    Metrics,
     _MatchingMetric,
 )
 from panoptica.panoptic_result import PanopticaResult
 from panoptica.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import MatchedInstancePair
+from panoptica.metrics import Metrics
 
 
 def evaluate_matched_instance(
