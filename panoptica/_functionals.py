@@ -1,9 +1,10 @@
+from multiprocessing import Pool
+
 import numpy as np
-from panoptica.metrics import _compute_instance_iou
+
+from panoptica.metrics import _compute_instance_iou, _MatchingMetric
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.numpy_utils import _get_bbox_nd
-from panoptica.metrics import MatchingMetric
-from multiprocessing import Pool
 
 
 def _calc_overlapping_labels(
@@ -29,14 +30,18 @@ def _calc_overlapping_labels(
     # instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
 
     # (ref, pred)
-    return [(int(i % (max_ref)), int(i // (max_ref))) for i in np.unique(overlap_arr) if i > max_ref]
+    return [
+        (int(i % (max_ref)), int(i // (max_ref)))
+        for i in np.unique(overlap_arr)
+        if i > max_ref
+    ]
 
 
 def _calc_matching_metric_of_overlapping_labels(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
     ref_labels: tuple[int, ...],
-    matching_metric: MatchingMetric,
+    matching_metric: _MatchingMetric,
 ) -> list[tuple[float, tuple[int, int]]]:
     """Calculates the MatchingMetric for all overlapping labels (fast!)
 
@@ -57,16 +62,22 @@ def _calc_matching_metric_of_overlapping_labels(
         )
     ]
     with Pool() as pool:
-        mm_values = pool.starmap(matching_metric.metric_function, instance_pairs)
+        mm_values = pool.starmap(matching_metric._metric_function, instance_pairs)
 
-    mm_pairs = [(i, (instance_pairs[idx][2], instance_pairs[idx][3])) for idx, i in enumerate(mm_values)]
+    mm_pairs = [
+        (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
+        for idx, i in enumerate(mm_values)
+    ]
     mm_pairs = sorted(mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing)
 
     return mm_pairs
 
 
 def _calc_iou_of_overlapping_labels(
-    prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: tuple[int, ...], pred_labels: tuple[int, ...]
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    ref_labels: tuple[int, ...],
+    pred_labels: tuple[int, ...],
 ) -> list[tuple[float, tuple[int, int]]]:
     """Calculates the IOU for all overlapping labels (fast!)
 
@@ -90,13 +101,21 @@ def _calc_iou_of_overlapping_labels(
     with Pool() as pool:
         iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
 
-    iou_pairs = [(i, (instance_pairs[idx][2], instance_pairs[idx][3])) for idx, i in enumerate(iou_values)]
+    iou_pairs = [
+        (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
+        for idx, i in enumerate(iou_values)
+    ]
     iou_pairs = sorted(iou_pairs, key=lambda x: x[0], reverse=True)
 
     return iou_pairs
 
 
-def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_labels: tuple[int, ...], pred_labels: tuple[int, ...]):
+def _calc_iou_matrix(
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    ref_labels: tuple[int, ...],
+    pred_labels: tuple[int, ...],
+):
     """
     Calculate the Intersection over Union (IoU) matrix between reference and prediction arrays.
 
@@ -121,7 +140,11 @@ def _calc_iou_matrix(prediction_arr: np.ndarray, reference_arr: np.ndarray, ref_
     # Create a pool of worker processes to parallelize the computation
     with Pool() as pool:
         #    # Generate all possible pairs of instance indices for IoU computation
-        instance_pairs = [(reference_arr, prediction_arr, ref_idx, pred_idx) for ref_idx in ref_labels for pred_idx in pred_labels]
+        instance_pairs = [
+            (reference_arr, prediction_arr, ref_idx, pred_idx)
+            for ref_idx in ref_labels
+            for pred_idx in pred_labels
+        ]
 
         # Calculate IoU for all instance pairs in parallel using starmap
         iou_values = pool.starmap(_compute_instance_iou, instance_pairs)
@@ -186,7 +209,9 @@ def _connected_components(
     return cc_arr.astype(array.dtype), n_instances
 
 
-def _get_paired_crop(prediction_arr: np.ndarray, reference_arr: np.ndarray, px_pad: int = 2):
+def _get_paired_crop(
+    prediction_arr: np.ndarray, reference_arr: np.ndarray, px_pad: int = 2
+):
     assert prediction_arr.shape == reference_arr.shape
 
     combined = prediction_arr + reference_arr

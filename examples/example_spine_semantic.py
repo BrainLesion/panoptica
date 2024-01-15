@@ -3,13 +3,13 @@ import cProfile
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
     Panoptic_Evaluator,
     SemanticPair,
 )
+from panoptica.metrics import Metrics
 
 directory = turbopath(__file__).parent
 
@@ -18,12 +18,13 @@ pred_masks = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
 
 sample = SemanticPair(pred_masks, ref_masks)
 
+
 evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
-    match_threshold=0.5,
 )
+
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
         result, debug_data = evaluator.evaluate(sample)

@@ -3,17 +3,21 @@
 # coverage report
 # coverage html
 import unittest
-
+import os
 import numpy as np
 
 from panoptica.evaluator import Panoptic_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching, MaximizeMergeMatching
+from panoptica.metrics import  _MatchingMetric, Metrics
 from panoptica.utils.processing_pair import SemanticPair
-from panoptica.metrics import MatchingMetric, MatchingMetrics
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
     def test_simple_evaluation(self):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
@@ -26,7 +30,6 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.IOU,
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -48,7 +51,6 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.DSC,
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -69,17 +71,19 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.DSC,
-            eval_metrics=[MatchingMetrics.DSC],
+            instance_matcher=NaiveThresholdMatching(matching_metric=Metrics.DSC),
+            eval_metrics=[Metrics.DSC],
         )
 
         result, debug_data = evaluator.evaluate(sample)
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
-        self.assertEqual(result.sq, None)
+        self.assertEqual(
+            result.sq, None
+        )  # must be none because no IOU has been calculated
         self.assertEqual(result.pq, None)
+        self.assertEqual(result.rq, 1.0)
 
     def test_simple_evaluation_ASSD(self):
         a = np.zeros([50, 50], dtype=np.uint16)
@@ -92,9 +96,10 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.ASSD,
-            matching_threshold=1.0,
+            instance_matcher=NaiveThresholdMatching(
+                matching_metric=Metrics.ASSD,
+                matching_threshold=1.0,
+            ),
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -115,9 +120,10 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(),
-            matching_metric=MatchingMetrics.ASSD,
-            matching_threshold=0.5,
+            instance_matcher=NaiveThresholdMatching(
+                matching_metric=Metrics.ASSD,
+                matching_threshold=0.5,
+            ),
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -198,7 +204,16 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertTrue(np.isnan(result.sq_assd))
 
     def test_dtype_evaluation(self):
-        ddtypes = [np.int8, np.int16, np.int32, np.int64, np.uint8, np.uint16, np.uint32, np.uint64]
+        ddtypes = [
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+        ]
         dtype_combinations = [(a, b) for a in ddtypes for b in ddtypes]
         for da, db in dtype_combinations:
             a = np.zeros([50, 50], dtype=da)
@@ -236,7 +251,6 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
-            matching_metric=MatchingMetrics.IOU,
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -259,7 +273,6 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
-            matching_metric=MatchingMetrics.IOU,
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -284,7 +297,6 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
-            matching_metric=MatchingMetrics.IOU,
         )
 
         result, debug_data = evaluator.evaluate(sample)

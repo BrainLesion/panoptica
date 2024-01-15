@@ -1,18 +1,22 @@
 import concurrent.futures
-from panoptica.utils.processing_pair import MatchedInstancePair
-from panoptica.panoptic_result import PanopticaResult
-from panoptica.metrics import MatchingMetric, MatchingMetrics
-from panoptica.utils import EdgeCaseHandler
-from panoptica.timing import measure_time
-import numpy as np
 import gc
 from multiprocessing import Pool
+
+import numpy as np
+
+from panoptica.metrics import (
+    _MatchingMetric,
+)
+from panoptica.panoptic_result import PanopticaResult
+from panoptica.timing import measure_time
+from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.processing_pair import MatchedInstancePair
 
 
 def evaluate_matched_instance(
     matched_instance_pair: MatchedInstancePair,
-    eval_metrics: list[MatchingMetric],
-    decision_metric: MatchingMetric | None = None,
+    eval_metrics: list[_MatchingMetric],
+    decision_metric: _MatchingMetric | None = None,
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     **kwargs,
@@ -35,22 +39,35 @@ def evaluate_matched_instance(
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
     if decision_metric is not None:
-        assert decision_metric.name in [v.name for v in eval_metrics], "decision metric not contained in eval_metrics"
+        assert decision_metric.name in [
+            v.name for v in eval_metrics
+        ], "decision metric not contained in eval_metrics"
         assert decision_threshold is not None, "decision metric set but no threshold"
     # Initialize variables for True Positives (tp)
     tp = len(matched_instance_pair.matched_instances)
-    score_dict: dict[str | MatchingMetric, list[float]] = {m.name: [] for m in eval_metrics}
+    score_dict: dict[str | _MatchingMetric, list[float]] = {
+        m.name: [] for m in eval_metrics
+    }
 
-    reference_arr, prediction_arr = matched_instance_pair._reference_arr, matched_instance_pair._prediction_arr
+    reference_arr, prediction_arr = (
+        matched_instance_pair._reference_arr,
+        matched_instance_pair._prediction_arr,
+    )
     ref_matched_labels = matched_instance_pair.matched_instances
 
-    instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
+    instance_pairs = [
+        (reference_arr, prediction_arr, ref_idx, eval_metrics)
+        for ref_idx in ref_matched_labels
+    ]
     with Pool() as pool:
         metric_dicts = pool.starmap(_evaluate_instance, instance_pairs)
 
     for metric_dict in metric_dicts:
         if decision_metric is None or (
-            decision_threshold is not None and decision_metric.score_beats_threshold(metric_dict[decision_metric.name], decision_threshold)
+            decision_threshold is not None
+            and decision_metric.score_beats_threshold(
+                metric_dict[decision_metric.name], decision_threshold
+            )
         ):
             for k, v in metric_dict.items():
                 score_dict[k].append(v)
@@ -69,7 +86,7 @@ def _evaluate_instance(
     reference_arr: np.ndarray,
     prediction_arr: np.ndarray,
     ref_idx: int,
-    eval_metrics: list[MatchingMetric],
+    eval_metrics: list[_MatchingMetric],
 ) -> dict[str, float]:
     """
     Evaluate a single instance.
@@ -90,7 +107,7 @@ def _evaluate_instance(
         return result
     else:
         for metric in eval_metrics:
-            value = metric.metric_function(ref_arr, pred_arr)
+            value = metric._metric_function(ref_arr, pred_arr)
             result[metric.name] = value
 
     return result
