@@ -4,6 +4,7 @@ from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
 from panoptica import MatchedInstancePair, Panoptic_Evaluator
+from panoptica.metrics import Metrics
 
 directory = turbopath(__file__).parent
 
@@ -16,13 +17,16 @@ sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
 
 evaluator = Panoptic_Evaluator(
     expected_input=MatchedInstancePair,
-    instance_approximator=None,
-    instance_matcher=None,
-    iou_threshold=0.5,
+    eval_metrics=[Metrics.ASSD, Metrics.IOU],
+    decision_metric=Metrics.IOU,
+    decision_threshold=0.5,
 )
+
+
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
         result, debug_data = evaluator.evaluate(sample)
+
         print(result)
 
     pr.dump_stats(directory + "/instance_example.log")

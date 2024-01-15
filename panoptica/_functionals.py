@@ -1,8 +1,10 @@
+from multiprocessing import Pool
+
 import numpy as np
-from panoptica.metrics import _compute_instance_iou
+
+from panoptica.metrics import _compute_instance_iou, _MatchingMetric
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.numpy_utils import _get_bbox_nd
-from multiprocessing import Pool
 
 
 def _calc_overlapping_labels(
@@ -33,6 +35,42 @@ def _calc_overlapping_labels(
         for i in np.unique(overlap_arr)
         if i > max_ref
     ]
+
+
+def _calc_matching_metric_of_overlapping_labels(
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    ref_labels: tuple[int, ...],
+    matching_metric: _MatchingMetric,
+) -> list[tuple[float, tuple[int, int]]]:
+    """Calculates the MatchingMetric for all overlapping labels (fast!)
+
+    Args:
+        prediction_arr (np.ndarray): Numpy array containing the prediction labels.
+        reference_arr (np.ndarray): Numpy array containing the reference labels.
+        ref_labels (list[int]): List of unique reference labels.
+
+    Returns:
+        list[tuple[float, tuple[int, int]]]: List of pairs in style: (iou, (ref_label, pred_label))
+    """
+    instance_pairs = [
+        (reference_arr == i[0], prediction_arr == i[1], i[0], i[1])
+        for i in _calc_overlapping_labels(
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
+            ref_labels=ref_labels,
+        )
+    ]
+    with Pool() as pool:
+        mm_values = pool.starmap(matching_metric._metric_function, instance_pairs)
+
+    mm_pairs = [
+        (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
+        for idx, i in enumerate(mm_values)
+    ]
+    mm_pairs = sorted(mm_pairs, key=lambda x: x[0], reverse=matching_metric.decreasing)
+
+    return mm_pairs
 
 
 def _calc_iou_of_overlapping_labels(

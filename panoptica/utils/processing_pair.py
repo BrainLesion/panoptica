@@ -3,8 +3,8 @@ from abc import ABC
 import numpy as np
 from numpy import dtype
 
-from panoptica._functionals import _get_paired_crop
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
+from panoptica._functionals import _get_paired_crop
 
 uint_type: type = np.unsignedinteger
 int_type: type = np.integer
@@ -24,10 +24,7 @@ class _ProcessingPair(ABC):
     n_dim: int
 
     def __init__(
-        self,
-        prediction_arr: np.ndarray,
-        reference_arr: np.ndarray,
-        dtype: type | None,
+        self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None
     ) -> None:
         """Initializes a general Processing Pair
 
@@ -42,10 +39,10 @@ class _ProcessingPair(ABC):
         self.dtype = dtype
         self.n_dim = reference_arr.ndim
         self._ref_labels: tuple[int, ...] = tuple(
-            _unique_without_zeros(reference_arr),
+            _unique_without_zeros(reference_arr)
         )  # type:ignore
         self._pred_labels: tuple[int, ...] = tuple(
-            _unique_without_zeros(prediction_arr),
+            _unique_without_zeros(prediction_arr)
         )  # type:ignore
         self.crop: tuple[slice, ...] = None
         self.is_cropped: bool = False
@@ -113,7 +110,6 @@ class _ProcessingPair(ABC):
         """
         Creates an exact copy of this object
         """
-        # TODO see linter error
         return type(self)(
             prediction_arr=self._prediction_arr,
             reference_arr=self._reference_arr,
@@ -170,9 +166,7 @@ class _ProcessingPairInstanced(_ProcessingPair):
 
 
 def _check_array_integrity(
-    prediction_arr: np.ndarray,
-    reference_arr: np.ndarray,
-    dtype: type | None = None,
+    prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None
 ):
     """
     Check the integrity of two numpy arrays.
@@ -246,7 +240,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
 
     missed_reference_labels: list[int]
     missed_prediction_labels: list[int]
-    n_matched_instances: int
+    matched_instances: list[int]
 
     def __init__(
         self,
@@ -254,7 +248,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         reference_arr: np.ndarray,
         missed_reference_labels: list[int] | None = None,
         missed_prediction_labels: list[int] | None = None,
-        n_matched_instances: int | None = None,
+        matched_instances: list[int] | None = None,
         n_prediction_instance: int | None = None,
         n_reference_instance: int | None = None,
     ) -> None:
@@ -265,7 +259,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             reference_arr (np.ndarray): Numpy array containing the reference matched instance labels
             missed_reference_labels (list[int] | None, optional): List of unmatched reference labels. Defaults to None.
             missed_prediction_labels (list[int] | None, optional): List of unmatched prediction labels. Defaults to None.
-            n_matched_instances (int | None, optional): Number of total matched instances, i.e. unique matched labels in both maps. Defaults to None.
+            matched_instances (int | None, optional): matched instances labels, i.e. unique matched labels in both maps. Defaults to None.
             n_prediction_instance (int | None, optional): Number of prediction instances. Defaults to None.
             n_reference_instance (int | None, optional): Number of reference instances. Defaults to None.
 
@@ -278,11 +272,9 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             n_prediction_instance,
             n_reference_instance,
         )  # type:ignore
-        if n_matched_instances is None:
-            n_matched_instances = len(
-                [i for i in self._pred_labels if i in self._ref_labels]
-            )
-        self.n_matched_instances = n_matched_instances
+        if matched_instances is None:
+            matched_instances = [i for i in self._pred_labels if i in self._ref_labels]
+        self.matched_instances = matched_instances
 
         if missed_reference_labels is None:
             missed_reference_labels = list(
@@ -296,6 +288,10 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             )
         self.missed_prediction_labels = missed_prediction_labels
 
+    @property
+    def n_matched_instances(self):
+        return len(self.matched_instances)
+
     def copy(self):
         """
         Creates an exact copy of this object
@@ -307,7 +303,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             n_reference_instance=self.n_reference_instance,
             missed_reference_labels=self.missed_reference_labels,
             missed_prediction_labels=self.missed_prediction_labels,
-            n_matched_instances=self.n_matched_instances,
+            matched_instances=self.matched_instances,
         )
 
 

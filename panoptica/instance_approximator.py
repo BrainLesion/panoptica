@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from panoptica.utils.datatypes import (
+from panoptica.utils.processing_pair import (
     SemanticPair,
     UnmatchedInstancePair,
     MatchedInstancePair,

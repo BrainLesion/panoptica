@@ -5,41 +5,46 @@ from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
 
 def _average_symmetric_surface_distance(
-    result,
     reference,
+    prediction,
     voxelspacing=None,
     connectivity=1,
+    *args,
 ) -> float:
     assd = np.mean(
         (
-            _average_surface_distance(result, reference, voxelspacing, connectivity),
-            _average_surface_distance(reference, result, voxelspacing, connectivity),
+            _average_surface_distance(
+                prediction, reference, voxelspacing, connectivity
+            ),
+            _average_surface_distance(
+                reference, prediction, voxelspacing, connectivity
+            ),
         )
     )
     return float(assd)
 
 
-def _average_surface_distance(result, reference, voxelspacing=None, connectivity=1):
-    sds = __surface_distances(result, reference, voxelspacing, connectivity)
+def _average_surface_distance(reference, prediction, voxelspacing=None, connectivity=1):
+    sds = __surface_distances(reference, prediction, voxelspacing, connectivity)
     asd = sds.mean()
     return asd
 
 
-def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
+def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1):
     """
     The distances between the surface voxel of binary objects in result and their
     nearest partner surface voxel of a binary object in reference.
     """
-    result = np.atleast_1d(result.astype(bool))
+    prediction = np.atleast_1d(prediction.astype(bool))
     reference = np.atleast_1d(reference.astype(bool))
     if voxelspacing is not None:
-        voxelspacing = _ni_support._normalize_sequence(voxelspacing, result.ndim)
+        voxelspacing = _ni_support._normalize_sequence(voxelspacing, prediction.ndim)
         voxelspacing = np.asarray(voxelspacing, dtype=np.float64)
         if not voxelspacing.flags.contiguous:
             voxelspacing = voxelspacing.copy()
 
     # binary structure
-    footprint = generate_binary_structure(result.ndim, connectivity)
+    footprint = generate_binary_structure(prediction.ndim, connectivity)
 
     # test for emptiness
     # if 0 == np.count_nonzero(result):
@@ -48,11 +53,11 @@ def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
     #    raise RuntimeError("The second supplied array does not contain any binary object.")
 
     # extract only 1-pixel border line of objects
-    result_border = result ^ binary_erosion(result, structure=footprint, iterations=1)
+    result_border = prediction ^ binary_erosion(
+        prediction, structure=footprint, iterations=1
+    )
     reference_border = reference ^ binary_erosion(
-        reference,
-        structure=footprint,
-        iterations=1,
+        reference, structure=footprint, iterations=1
     )
 
     # compute average surface distance
