@@ -9,7 +9,7 @@ from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
     SemanticPair,
-    UnmatchedInstancePair, 
+    UnmatchedInstancePair,
     MatchedInstancePair,
 )
 from panoptica.instance_evaluator import evaluate_matched_instance
@@ -82,16 +82,21 @@ def test_input(processing_pair: SemanticPair):
     processing_pair.crop_data()
     #
     start1 = perf_counter()
-    unmatched_instance_pair = instance_approximator.approximate_instances(semantic_pair=processing_pair)
+    unmatched_instance_pair = instance_approximator.approximate_instances(
+        semantic_pair=processing_pair
+    )
     time1 = perf_counter() - start1
     #
     start2 = perf_counter()
-    matched_instance_pair = instance_matcher.match_instances(unmatched_instance_pair=unmatched_instance_pair)
+    matched_instance_pair = instance_matcher.match_instances(
+        unmatched_instance_pair=unmatched_instance_pair
+    )
     time2 = perf_counter() - start2
     #
     start3 = perf_counter()
     result = evaluate_matched_instance(
-        matched_instance_pair, decision_threshold=iou_threshold,
+        matched_instance_pair,
+        decision_threshold=iou_threshold,
     )
     time3 = perf_counter() - start3
     return time1, time2, time3
