@@ -9,9 +9,7 @@ import numpy as np
 from panoptica.panoptic_evaluator import Panoptic_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
-
-# TODO why do we have both
-from panoptica.metrics import Metrics, _MatchingMetric
+from panoptica.metrics import Metrics
 from panoptica.utils.processing_pair import SemanticPair
 
 
