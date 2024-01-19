@@ -7,10 +7,4 @@ from panoptica.metrics.dice import (
     _compute_instance_volumetric_dice,
 )
 from panoptica.metrics.iou import _compute_instance_iou, _compute_iou
-from panoptica.metrics.metrics import (
-    Metrics,
-    ListMetric,
-    EvalMetric,
-    MetricDict,
-    _MatchingMetric,
-)
+from panoptica.metrics.metrics import Metrics, ListMetric, _MatchingMetric, ListMetricMode

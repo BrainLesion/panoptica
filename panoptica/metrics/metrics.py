@@ -9,7 +9,7 @@ from panoptica.metrics import (
     _compute_dice_coefficient,
     _compute_iou,
 )
-from panoptica.utils.constants import Enum, _Enum_Compare, auto
+from panoptica.utils.constants import _Enum_Compare, auto
 
 
 @dataclass
@@ -52,20 +52,8 @@ class _MatchingMetric:
     def increasing(self):
         return not self.decreasing
 
-    def score_beats_threshold(
-        self, matching_score: float, matching_threshold: float
-    ) -> bool:
-        return (self.increasing and matching_score >= matching_threshold) or (
-            self.decreasing and matching_score <= matching_threshold
-        )
-
-
-# class _EnumMeta(EnumMeta):
-#    def __getattribute__(cls, name) -> MatchingMetric:
-#        value = super().__getattribute__(name)
-#        if isinstance(value, cls):
-#            value = value.value
-#        return value
+    def score_beats_threshold(self, matching_score: float, matching_threshold: float) -> bool:
+        return (self.increasing and matching_score >= matching_threshold) or (self.decreasing and matching_score <= matching_threshold)
 
 
 # Important metrics that must be calculated in the evaluator, can be set for thresholding in matching and evaluation
@@ -78,6 +66,13 @@ class Metrics:
     # These are all lists of values
 
 
+class ListMetricMode(_Enum_Compare):
+    ALL = auto()
+    AVG = auto()
+    SUM = auto()
+    STD = auto()
+
+
 class ListMetric(_Enum_Compare):
     DSC = Metrics.DSC.name
     IOU = Metrics.IOU.name
@@ -85,31 +80,6 @@ class ListMetric(_Enum_Compare):
 
     def __hash__(self) -> int:
         return abs(hash(self.value)) % (10**8)
-
-
-# Metrics that are derived from list metrics and can be calculated later
-# TODO map result properties to this enum
-class EvalMetric(_Enum_Compare):
-    TP = auto()
-    FP = auto()
-    FN = auto()
-    RQ = auto()
-    DQ_DSC = auto()
-    PQ_DSC = auto()
-    ASSD = auto()
-    PQ_ASSD = auto()
-
-
-MetricDict = dict[ListMetric | EvalMetric | str, float | list[float]]
-
-
-list_of_applicable_std_metrics: list[EvalMetric] = [
-    EvalMetric.RQ,
-    EvalMetric.DQ_DSC,
-    EvalMetric.PQ_ASSD,
-    EvalMetric.ASSD,
-    EvalMetric.PQ_ASSD,
-]
 
 
 if __name__ == "__main__":

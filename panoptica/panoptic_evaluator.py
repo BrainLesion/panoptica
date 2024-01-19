@@ -21,9 +21,7 @@ from panoptica.utils.citation_reminder import citation_reminder
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: Type[SemanticPair]
-        | Type[UnmatchedInstancePair]
-        | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
@@ -49,13 +47,9 @@ class Panoptic_Evaluator:
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
 
-        self.__edge_case_handler = (
-            edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
-        )
+        self.__edge_case_handler = edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
         if self.__decision_metric is not None:
-            assert (
-                self.__decision_threshold is not None
-            ), "decision metric set but no decision threshold for it"
+            assert self.__decision_threshold is not None, "decision metric set but no decision threshold for it"
         #
         self.__log_times = log_times
         self.__verbose = verbose
@@ -64,14 +58,10 @@ class Panoptic_Evaluator:
     @measure_time
     def evaluate(
         self,
-        processing_pair: SemanticPair
-        | UnmatchedInstancePair
-        | MatchedInstancePair
-        | PanopticaResult,
+        processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
+        result_all: bool = True,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
-        assert (
-            type(processing_pair) == self.__expected_input
-        ), f"input not of expected type {self.__expected_input}"
+        assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
         return panoptic_evaluate(
             processing_pair=processing_pair,
             edge_case_handler=self.__edge_case_handler,
@@ -80,16 +70,14 @@ class Panoptic_Evaluator:
             eval_metrics=self.__eval_metrics,
             decision_metric=self.__decision_metric,
             decision_threshold=self.__decision_threshold,
+            result_all=result_all,
             log_times=self.__log_times,
             verbose=self.__verbose,
         )
 
 
 def panoptic_evaluate(
-    processing_pair: SemanticPair
-    | UnmatchedInstancePair
-    | MatchedInstancePair
-    | PanopticaResult,
+    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
     eval_metrics: list[_MatchingMetric] = [Metrics.DSC, Metrics.IOU, Metrics.ASSD],
@@ -97,6 +85,7 @@ def panoptic_evaluate(
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
+    result_all: bool = True,
     verbose: bool = False,
     **kwargs,
 ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
@@ -141,9 +130,7 @@ def panoptic_evaluate(
     processing_pair.crop_data()
 
     if isinstance(processing_pair, SemanticPair):
-        assert (
-            instance_approximator is not None
-        ), "Got SemanticPair but not InstanceApproximator"
+        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
         print("-- Got SemanticPair, will approximate instances")
         processing_pair = instance_approximator.approximate_instances(processing_pair)
         start = perf_counter()
@@ -154,15 +141,11 @@ def panoptic_evaluate(
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        processing_pair = _handle_zero_instances_cases(
-            processing_pair, edge_case_handler=edge_case_handler
-        )
+        processing_pair = _handle_zero_instances_cases(processing_pair, edge_case_handler=edge_case_handler)
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         print("-- Got UnmatchedInstancePair, will match instances")
-        assert (
-            instance_matcher is not None
-        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
@@ -174,9 +157,7 @@ def panoptic_evaluate(
 
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        processing_pair = _handle_zero_instances_cases(
-            processing_pair, edge_case_handler=edge_case_handler
-        )
+        processing_pair = _handle_zero_instances_cases(processing_pair, edge_case_handler=edge_case_handler)
 
     if isinstance(processing_pair, MatchedInstancePair):
         print("-- Got MatchedInstancePair, will evaluate instances")
@@ -191,6 +172,8 @@ def panoptic_evaluate(
             print(f"-- Instance Evaluation took {perf_counter() - start} seconds")
 
     if isinstance(processing_pair, PanopticaResult):
+        if result_all:
+            processing_pair.calculate_all(print_errors=False)
         return processing_pair, debug_data
 
     raise RuntimeError("End of panoptic pipeline reached without results")

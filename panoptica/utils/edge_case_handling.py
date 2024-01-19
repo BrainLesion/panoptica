@@ -101,7 +101,7 @@ class EdgeCaseHandler:
         self.__listmetric_zeroTP_handling: dict[
             ListMetric, MetricZeroTPEdgeCaseHandling
         ] = listmetric_zeroTP_handling
-        self.__empty_list_std = empty_list_std
+        self.__empty_list_std: EdgeCaseResult = empty_list_std
 
     def handle_zero_tp(
         self,
@@ -124,7 +124,7 @@ class EdgeCaseHandler:
     def get_metric_zero_tp_handle(self, metric: ListMetric):
         return self.__listmetric_zeroTP_handling[metric]
 
-    def handle_empty_list_std(self):
+    def handle_empty_list_std(self) -> float | None:
         return self.__empty_list_std.value
 
     def __str__(self) -> str:
