@@ -9,7 +9,7 @@ from panoptica import (
     Panoptic_Evaluator,
     SemanticPair,
 )
-from panoptica.metrics import Metrics
+from panoptica.metrics import MatchingMetrics
 
 directory = turbopath(__file__).parent
 

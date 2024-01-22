@@ -6,7 +6,7 @@ from panoptica._functionals import (
     _calc_matching_metric_of_overlapping_labels,
     _map_labels,
 )
-from panoptica.metrics import Metrics, _MatchingMetric
+from panoptica.metrics import MatchingMetrics, _MatchingMetric
 from panoptica.utils.processing_pair import (
     InstanceLabelMap,
     MatchedInstancePair,
@@ -153,7 +153,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
 
     def __init__(
         self,
-        matching_metric: _MatchingMetric = Metrics.IOU,
+        matching_metric: _MatchingMetric = MatchingMetrics.IOU,
         matching_threshold: float = 0.5,
         allow_many_to_one: bool = False,
     ) -> None:
@@ -228,7 +228,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
 
     def __init__(
         self,
-        matching_metric: _MatchingMetric = Metrics.IOU,
+        matching_metric: _MatchingMetric = MatchingMetrics.IOU,
         matching_threshold: float = 0.5,
     ) -> None:
         """

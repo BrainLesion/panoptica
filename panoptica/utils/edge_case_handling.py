@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 
-from panoptica.metrics import ListMetric, Metrics
+from panoptica.metrics import ListMetric, MatchingMetrics
 from panoptica.utils.constants import _Enum_Compare, auto
 
 
@@ -110,6 +110,8 @@ class EdgeCaseHandler:
         num_pred_instances: int,
         num_ref_instances: int,
     ) -> tuple[bool, float | None]:
+        if tp != 0:
+            return False, EdgeCaseResult.NONE.value
         if metric not in self.__listmetric_zeroTP_handling:
             raise NotImplementedError(
                 f"Metric {metric} encountered zero TP, but no edge handling available"

@@ -8,6 +8,7 @@ from panoptica.metrics import (
     _average_symmetric_surface_distance,
     _compute_dice_coefficient,
     _compute_iou,
+    _compute_centerline_dice_coefficient,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -57,14 +58,11 @@ class _MatchingMetric:
 
 
 # Important metrics that must be calculated in the evaluator, can be set for thresholding in matching and evaluation
-# TODO make abstract class for metric, make enum with references to these classes for referenciation and user exposure
-class Metrics:
-    # TODO make this with meta above, and then it can function without the double name, right?
-    DSC = _MatchingMetric("DSC", False, _compute_dice_coefficient)
-    IOU = _MatchingMetric("IOU", False, _compute_iou)
-    ASSD = _MatchingMetric("ASSD", True, _average_symmetric_surface_distance)
-    # These are all lists of values
-
+class MatchingMetrics:
+    DSC: _MatchingMetric = _MatchingMetric("DSC", False, _compute_dice_coefficient)
+    IOU: _MatchingMetric = _MatchingMetric("IOU", False, _compute_iou)
+    ASSD: _MatchingMetric = _MatchingMetric("ASSD", True, _average_symmetric_surface_distance)
+    clDSC: _MatchingMetric = _MatchingMetric("clDSC", False, _compute_centerline_dice_coefficient)
 
 class ListMetricMode(_Enum_Compare):
     ALL = auto()
@@ -74,21 +72,22 @@ class ListMetricMode(_Enum_Compare):
 
 
 class ListMetric(_Enum_Compare):
-    DSC = Metrics.DSC.name
-    IOU = Metrics.IOU.name
-    ASSD = Metrics.ASSD.name
+    DSC = MatchingMetrics.DSC.name
+    IOU = MatchingMetrics.IOU.name
+    ASSD = MatchingMetrics.ASSD.name
+    clDSC = MatchingMetrics.clDSC.name
 
     def __hash__(self) -> int:
         return abs(hash(self.value)) % (10**8)
 
 
 if __name__ == "__main__":
-    print(Metrics.DSC)
+    print(MatchingMetrics.DSC)
     # print(MatchingMetric.DSC.name)
 
-    print(Metrics.DSC == Metrics.DSC)
-    print(Metrics.DSC == "DSC")
-    print(Metrics.DSC.name == "DSC")
+    print(MatchingMetrics.DSC == MatchingMetrics.DSC)
+    print(MatchingMetrics.DSC == "DSC")
+    print(MatchingMetrics.DSC.name == "DSC")
     #
-    print(Metrics.DSC == Metrics.IOU)
-    print(Metrics.DSC == "IOU")
+    print(MatchingMetrics.DSC == MatchingMetrics.IOU)
+    print(MatchingMetrics.DSC == "IOU")

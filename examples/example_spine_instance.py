@@ -4,7 +4,7 @@ from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
 from panoptica import MatchedInstancePair, Panoptic_Evaluator
-from panoptica.metrics import Metrics
+from panoptica.metrics import MatchingMetrics, ListMetric, ListMetricMode
 
 directory = turbopath(__file__).parent
 
@@ -17,8 +17,8 @@ sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
 
 evaluator = Panoptic_Evaluator(
     expected_input=MatchedInstancePair,
-    eval_metrics=[Metrics.ASSD, Metrics.IOU],
-    decision_metric=Metrics.IOU,
+    eval_metrics=[MatchingMetrics.clDSC, MatchingMetrics.DSC],
+    decision_metric=MatchingMetrics.DSC,
     decision_threshold=0.5,
 )
 

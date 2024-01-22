@@ -11,13 +11,13 @@ from panoptica.panoptic_result import PanopticaResult
 from panoptica.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import MatchedInstancePair
-from panoptica.metrics import Metrics, ListMetric
+from panoptica.metrics import MatchingMetrics, ListMetric
 
 
 def evaluate_matched_instance(
     matched_instance_pair: MatchedInstancePair,
-    eval_metrics: list[_MatchingMetric] = [Metrics.DSC, Metrics.IOU, Metrics.ASSD],
-    decision_metric: _MatchingMetric | None = Metrics.IOU,
+    eval_metrics: list[_MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
+    decision_metric: _MatchingMetric | None = MatchingMetrics.IOU,
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     **kwargs,
@@ -67,8 +67,10 @@ def evaluate_matched_instance(
 
     # Create and return the PanopticaResult object with computed metrics
     return PanopticaResult(
-        num_ref_instances=matched_instance_pair.n_reference_instance,
+        reference_arr=matched_instance_pair.reference_arr,
+        prediction_arr=matched_instance_pair.prediction_arr,
         num_pred_instances=matched_instance_pair.n_prediction_instance,
+        num_ref_instances=matched_instance_pair.n_reference_instance,
         tp=tp,
         list_metrics=score_dict,
         edge_case_handler=edge_case_handler,
