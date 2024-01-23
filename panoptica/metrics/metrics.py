@@ -15,8 +15,8 @@ from panoptica.utils.constants import _Enum_Compare, auto
 
 @dataclass
 class _Metric:
-    """A Metric class containing a name, whether higher or lower values is better, and a function to calculate that metric between two instances in an array
-    """
+    """A Metric class containing a name, whether higher or lower values is better, and a function to calculate that metric between two instances in an array"""
+
     name: str
     decreasing: bool
     _metric_function: Callable
@@ -34,7 +34,9 @@ class _Metric:
             reference_arr = reference_arr.copy() == ref_instance_idx
             if isinstance(pred_instance_idx, int):
                 pred_instance_idx = [pred_instance_idx]
-            prediction_arr = np.isin(prediction_arr.copy(), pred_instance_idx) #type:ignore
+            prediction_arr = np.isin(
+                prediction_arr.copy(), pred_instance_idx
+            )  # type:ignore
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
@@ -50,7 +52,7 @@ class _Metric:
 
     def __repr__(self) -> str:
         return str(self)
-    
+
     def __hash__(self) -> int:
         return abs(hash(self.name)) % (10**8)
 
@@ -58,26 +60,32 @@ class _Metric:
     def increasing(self):
         return not self.decreasing
 
-    def score_beats_threshold(self, matching_score: float, matching_threshold: float) -> bool:
-        return (self.increasing and matching_score >= matching_threshold) or (self.decreasing and matching_score <= matching_threshold)
+    def score_beats_threshold(
+        self, matching_score: float, matching_threshold: float
+    ) -> bool:
+        return (self.increasing and matching_score >= matching_threshold) or (
+            self.decreasing and matching_score <= matching_threshold
+        )
 
 
-class DirectValueMeta(EnumMeta):    
+class DirectValueMeta(EnumMeta):
     "Metaclass that allows for directly getting an enum attribute"
+
     def __getattribute__(cls, name) -> _Metric:
         value = super().__getattribute__(name)
         if isinstance(value, cls):
             value = value.value
         return value
-    
+
 
 class Metric(_Enum_Compare):
     """Enum containing important metrics that must be calculated in the evaluator, can be set for thresholding in matching and evaluation
     Never call the .value member here, use the properties directly
-    
+
     Returns:
         _type_: _description_
     """
+
     DSC = _Metric("DSC", False, _compute_dice_coefficient)
     IOU = _Metric("IOU", False, _compute_iou)
     ASSD = _Metric("ASSD", True, _average_symmetric_surface_distance)
@@ -103,9 +111,18 @@ class Metric(_Enum_Compare):
         Returns:
             int | float: The metric value
         """
-        return self.value(reference_arr=reference_arr, prediction_arr=prediction_arr, ref_instance_idx=ref_instance_idx, pred_instance_idx=pred_instance_idx, *args, **kwargs,)
+        return self.value(
+            reference_arr=reference_arr,
+            prediction_arr=prediction_arr,
+            ref_instance_idx=ref_instance_idx,
+            pred_instance_idx=pred_instance_idx,
+            *args,
+            **kwargs,
+        )
 
-    def score_beats_threshold(self, matching_score: float, matching_threshold: float) -> bool:
+    def score_beats_threshold(
+        self, matching_score: float, matching_threshold: float
+    ) -> bool:
         """Calculates whether a score beats a specified threshold
 
         Args:
@@ -115,12 +132,14 @@ class Metric(_Enum_Compare):
         Returns:
             bool: True if the matching_score beats the threshold, False otherwise.
         """
-        return (self.increasing and matching_score >= matching_threshold) or (self.decreasing and matching_score <= matching_threshold)
+        return (self.increasing and matching_score >= matching_threshold) or (
+            self.decreasing and matching_score <= matching_threshold
+        )
 
     @property
     def name(self):
         return self.value.name
-    
+
     @property
     def decreasing(self):
         return self.value.decreasing
@@ -139,6 +158,7 @@ class MetricMode(_Enum_Compare):
     Args:
         _Enum_Compare (_type_): _description_
     """
+
     ALL = auto()
     AVG = auto()
     SUM = auto()

@@ -3,14 +3,17 @@ from __future__ import annotations
 from typing import Any, Callable
 import numpy as np
 from panoptica.metrics import MetricMode, Metric
-from panoptica.metrics import _compute_dice_coefficient, _compute_centerline_dice_coefficient
+from panoptica.metrics import (
+    _compute_dice_coefficient,
+    _compute_centerline_dice_coefficient,
+)
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import MatchedInstancePair
 
 
 class MetricCouldNotBeComputedException(Exception):
-    """Exception for when a Metric cannot be computed
-    """
+    """Exception for when a Metric cannot be computed"""
+
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
 
@@ -43,11 +46,17 @@ class Evaluation_Metric:
     def __call__(self, result_obj: PanopticaResult) -> Any:
         if self.error:
             if self.error_obj is None:
-                raise MetricCouldNotBeComputedException(f"Metric {self.id} requested, but could not be computed")
+                raise MetricCouldNotBeComputedException(
+                    f"Metric {self.id} requested, but could not be computed"
+                )
             else:
                 raise self.error_obj
-        assert not self.was_calculated, f"Metric {self.id} was called to compute, but is set to have been already calculated"
-        assert self.calc_func is not None, f"Metric {self.id} was called to compute, but has no calculation function set"
+        assert (
+            not self.was_calculated
+        ), f"Metric {self.id} was called to compute, but is set to have been already calculated"
+        assert (
+            self.calc_func is not None
+        ), f"Metric {self.id} was called to compute, but has no calculation function set"
         try:
             value = self.calc_func(result_obj)
         except MetricCouldNotBeComputedException as e:
@@ -88,17 +97,27 @@ class Evaluation_List_Metric:
         else:
             self.AVG = None if self.ALL is None else np.average(self.ALL)
             self.SUM = None if self.ALL is None else np.sum(self.ALL)
-        self.STD = None if self.ALL is None else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+        self.STD = (
+            None
+            if self.ALL is None
+            else empty_list_std
+            if len(self.ALL) == 0
+            else np.std(self.ALL)
+        )
 
     def __getitem__(self, mode: MetricMode | str):
         if self.error:
-            raise MetricCouldNotBeComputedException(f"Metric {self.id} has not been calculated, add it to your eval_metrics")
+            raise MetricCouldNotBeComputedException(
+                f"Metric {self.id} has not been calculated, add it to your eval_metrics"
+            )
         if isinstance(mode, MetricMode):
             mode = mode.name
         if hasattr(self, mode):
             return getattr(self, mode)
         else:
-            raise MetricCouldNotBeComputedException(f"List_Metric {self.id} does not contain {mode} member")
+            raise MetricCouldNotBeComputedException(
+                f"List_Metric {self.id} does not contain {mode} member"
+            )
 
 
 class PanopticaResult(object):
@@ -133,7 +152,7 @@ class PanopticaResult(object):
         ######################
         self._evaluation_metrics: dict[str, Evaluation_Metric] = {}
         #
-        #region Already Calculated
+        # region Already Calculated
         self.num_ref_instances: int
         self._add_metric(
             "num_ref_instances",
@@ -158,9 +177,9 @@ class PanopticaResult(object):
             default_value=tp,
             was_calculated=True,
         )
-        #endregion
-        # 
-        #region Basic
+        # endregion
+        #
+        # region Basic
         self.fp: int
         self._add_metric(
             "fp",
@@ -179,9 +198,9 @@ class PanopticaResult(object):
             rq,
             long_name="Recognition Quality",
         )
-        #endregion
-        # 
-        #region Global
+        # endregion
+        #
+        # region Global
         self.global_bin_dsc: int
         self._add_metric(
             "global_bin_dsc",
@@ -195,9 +214,9 @@ class PanopticaResult(object):
             global_bin_cldsc,
             long_name="Global Binary Centerline Dice",
         )
-        #endregion
+        # endregion
         #
-        #region IOU
+        # region IOU
         self.sq: float
         self._add_metric(
             "sq",
@@ -216,9 +235,9 @@ class PanopticaResult(object):
             pq,
             long_name="Panoptic Quality IoU",
         )
-        #endregion
+        # endregion
         #
-        #region DICE
+        # region DICE
         self.sq_dsc: float
         self._add_metric(
             "sq_dsc",
@@ -237,9 +256,9 @@ class PanopticaResult(object):
             pq_dsc,
             long_name="Panoptic Quality Dsc",
         )
-        #endregion
+        # endregion
         #
-        #region clDICE
+        # region clDICE
         self.sq_cldsc: float
         self._add_metric(
             "sq_cldsc",
@@ -258,9 +277,9 @@ class PanopticaResult(object):
             pq_cldsc,
             long_name="Panoptic Quality Centerline Dsc",
         )
-        #endregion
-        # 
-        #region ASSD
+        # endregion
+        #
+        # region ASSD
         self.sq_assd: float
         self._add_metric(
             "sq_assd",
@@ -273,7 +292,7 @@ class PanopticaResult(object):
             sq_assd_std,
             long_name="Segmentation Quality Assd Standard Deviation",
         )
-        #endregion
+        # endregion
 
         ##################
         # List Metrics   #
@@ -286,7 +305,9 @@ class PanopticaResult(object):
                 num_pred_instances=self.num_pred_instances,
                 num_ref_instances=self.num_ref_instances,
             )
-            self._list_metrics[k] = Evaluation_List_Metric(k, empty_list_std, v, is_edge_case, edge_case_result)
+            self._list_metrics[k] = Evaluation_List_Metric(
+                k, empty_list_std, v, is_edge_case, edge_case_result
+            )
 
     def _add_metric(
         self,
@@ -348,7 +369,9 @@ class PanopticaResult(object):
         if metric in self._list_metrics:
             return self._list_metrics[metric][mode]
         else:
-            raise MetricCouldNotBeComputedException(f"{metric} could not be found, have you set it in eval_metrics during evaluation?")
+            raise MetricCouldNotBeComputedException(
+                f"{metric} could not be found, have you set it in eval_metrics during evaluation?"
+            )
 
     def _calc_metric(self, metric_name: str, supress_error: bool = False):
         if metric_name in self._evaluation_metrics:
@@ -364,7 +387,9 @@ class PanopticaResult(object):
             self._evaluation_metrics[metric_name].was_calculated = True
             return value
         else:
-            raise MetricCouldNotBeComputedException(f"could not find metric with name {metric_name}")
+            raise MetricCouldNotBeComputedException(
+                f"could not find metric with name {metric_name}"
+            )
 
     def __getattribute__(self, __name: str) -> Any:
         attr = None
@@ -377,7 +402,9 @@ class PanopticaResult(object):
                 raise e
         if attr is None:
             if self._evaluation_metrics[__name].error:
-                raise MetricCouldNotBeComputedException(f"Requested metric {__name} that could not be computed")
+                raise MetricCouldNotBeComputedException(
+                    f"Requested metric {__name} that could not be computed"
+                )
             elif not self._evaluation_metrics[__name].was_calculated:
                 value = self._calc_metric(__name)
                 setattr(self, __name, value)
@@ -392,7 +419,8 @@ class PanopticaResult(object):
 # Calculation functions #
 #########################
 
-#region Basic
+
+# region Basic
 def fp(res: PanopticaResult):
     return res.num_pred_instances - res.tp
 
@@ -411,9 +439,12 @@ def rq(res: PanopticaResult):
     if res.tp == 0:
         return 0.0 if res.num_pred_instances + res.num_ref_instances > 0 else np.nan
     return res.tp / (res.tp + 0.5 * res.fp + 0.5 * res.fn)
-#endregion
 
-#region IOU
+
+# endregion
+
+
+# region IOU
 def sq(res: PanopticaResult):
     return res.get_list_metric(Metric.IOU, mode=MetricMode.AVG)
 
@@ -424,9 +455,12 @@ def sq_std(res: PanopticaResult):
 
 def pq(res: PanopticaResult):
     return res.sq * res.rq
-#endregion
 
-#region DSC
+
+# endregion
+
+
+# region DSC
 def sq_dsc(res: PanopticaResult):
     return res.get_list_metric(Metric.DSC, mode=MetricMode.AVG)
 
@@ -437,9 +471,12 @@ def sq_dsc_std(res: PanopticaResult):
 
 def pq_dsc(res: PanopticaResult):
     return res.sq_dsc * res.rq
-#endregion
 
-#region clDSC
+
+# endregion
+
+
+# region clDSC
 def sq_cldsc(res: PanopticaResult):
     return res.get_list_metric(Metric.clDSC, mode=MetricMode.AVG)
 
@@ -450,18 +487,24 @@ def sq_cldsc_std(res: PanopticaResult):
 
 def pq_cldsc(res: PanopticaResult):
     return res.sq_cldsc * res.rq
-#endregion
 
-#region ASSD
+
+# endregion
+
+
+# region ASSD
 def sq_assd(res: PanopticaResult):
     return res.get_list_metric(Metric.ASSD, mode=MetricMode.AVG)
 
 
 def sq_assd_std(res: PanopticaResult):
     return res.get_list_metric(Metric.ASSD, mode=MetricMode.STD)
-#endregion
 
-#region Global
+
+# endregion
+
+
+# region Global
 def global_bin_dsc(res: PanopticaResult):
     if res.tp == 0:
         return 0.0
@@ -471,6 +514,7 @@ def global_bin_dsc(res: PanopticaResult):
     ref_binary[ref_binary != 0] = 1
     return _compute_dice_coefficient(ref_binary, pred_binary)
 
+
 def global_bin_cldsc(res: PanopticaResult):
     if res.tp == 0:
         return 0.0
@@ -479,13 +523,15 @@ def global_bin_cldsc(res: PanopticaResult):
     pred_binary[pred_binary != 0] = 1
     ref_binary[ref_binary != 0] = 1
     return _compute_centerline_dice_coefficient(ref_binary, pred_binary)
-#endregion
+
+
+# endregion
 
 
 if __name__ == "__main__":
     c = PanopticaResult(
-        reference_arr=np.zeros([5,5,5]),
-        prediction_arr=np.zeros([5,5,5]),
+        reference_arr=np.zeros([5, 5, 5]),
+        prediction_arr=np.zeros([5, 5, 5]),
         num_ref_instances=2,
         num_pred_instances=5,
         tp=0,

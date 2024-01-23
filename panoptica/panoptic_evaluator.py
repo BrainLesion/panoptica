@@ -21,7 +21,9 @@ from panoptica.utils.citation_reminder import citation_reminder
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: Type[SemanticPair]
+        | Type[UnmatchedInstancePair]
+        | Type[MatchedInstancePair] = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
@@ -47,9 +49,13 @@ class Panoptic_Evaluator:
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
 
-        self.__edge_case_handler = edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
+        self.__edge_case_handler = (
+            edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
+        )
         if self.__decision_metric is not None:
-            assert self.__decision_threshold is not None, "decision metric set but no decision threshold for it"
+            assert (
+                self.__decision_threshold is not None
+            ), "decision metric set but no decision threshold for it"
         #
         self.__log_times = log_times
         self.__verbose = verbose
@@ -58,11 +64,16 @@ class Panoptic_Evaluator:
     @measure_time
     def evaluate(
         self,
-        processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
+        processing_pair: SemanticPair
+        | UnmatchedInstancePair
+        | MatchedInstancePair
+        | PanopticaResult,
         result_all: bool = True,
         verbose: bool | None = None,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
-        assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
+        assert (
+            type(processing_pair) == self.__expected_input
+        ), f"input not of expected type {self.__expected_input}"
         return panoptic_evaluate(
             processing_pair=processing_pair,
             edge_case_handler=self.__edge_case_handler,
@@ -78,7 +89,10 @@ class Panoptic_Evaluator:
 
 
 def panoptic_evaluate(
-    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
+    processing_pair: SemanticPair
+    | UnmatchedInstancePair
+    | MatchedInstancePair
+    | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
@@ -131,7 +145,9 @@ def panoptic_evaluate(
     processing_pair.crop_data()
 
     if isinstance(processing_pair, SemanticPair):
-        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
+        assert (
+            instance_approximator is not None
+        ), "Got SemanticPair but not InstanceApproximator"
         print("-- Got SemanticPair, will approximate instances")
         processing_pair = instance_approximator.approximate_instances(processing_pair)
         start = perf_counter()
@@ -142,11 +158,17 @@ def panoptic_evaluate(
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        processing_pair = _handle_zero_instances_cases(processing_pair, eval_metrics=eval_metrics, edge_case_handler=edge_case_handler)
+        processing_pair = _handle_zero_instances_cases(
+            processing_pair,
+            eval_metrics=eval_metrics,
+            edge_case_handler=edge_case_handler,
+        )
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         print("-- Got UnmatchedInstancePair, will match instances")
-        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        assert (
+            instance_matcher is not None
+        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
@@ -158,7 +180,11 @@ def panoptic_evaluate(
 
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        processing_pair = _handle_zero_instances_cases(processing_pair, eval_metrics=eval_metrics, edge_case_handler=edge_case_handler)
+        processing_pair = _handle_zero_instances_cases(
+            processing_pair,
+            eval_metrics=eval_metrics,
+            edge_case_handler=edge_case_handler,
+        )
 
     if isinstance(processing_pair, MatchedInstancePair):
         print("-- Got MatchedInstancePair, will evaluate instances")
@@ -211,23 +237,23 @@ def _handle_zero_instances_cases(
     # Handle cases where either the reference or the prediction is empty
     if n_prediction_instance == 0 and n_reference_instance == 0:
         # Both references and predictions are empty, perfect match
-        n_reference_instance=0
-        n_prediction_instance=0
-        is_edge_case=True
+        n_reference_instance = 0
+        n_prediction_instance = 0
+        is_edge_case = True
     elif n_reference_instance == 0:
         # All references are missing, only false positives
-        n_reference_instance=0
-        n_prediction_instance=n_prediction_instance
-        is_edge_case=True
+        n_reference_instance = 0
+        n_prediction_instance = n_prediction_instance
+        is_edge_case = True
     elif n_prediction_instance == 0:
         # All predictions are missing, only false negatives
-        n_reference_instance=n_reference_instance
-        n_prediction_instance=0
-        is_edge_case=True
-    
+        n_reference_instance = n_reference_instance
+        n_prediction_instance = 0
+        is_edge_case = True
+
     if is_edge_case:
         panoptica_result_args["num_ref_instances"] = n_reference_instance
         panoptica_result_args["num_pred_instances"] = n_prediction_instance
         return PanopticaResult(**panoptica_result_args)
-    
+
     return processing_pair

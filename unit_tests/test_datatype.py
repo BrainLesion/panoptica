@@ -42,6 +42,4 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertFalse(assd_metric.score_beats_threshold(0.55, 0.5))
         self.assertTrue(assd_metric.score_beats_threshold(0.5, 0.55))
 
-
     # TODO listmetric + Mode (STD and so on)
-        
