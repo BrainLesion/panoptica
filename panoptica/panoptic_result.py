@@ -363,7 +363,7 @@ class PanopticaResult(object):
         return text
 
     def to_dict(self) -> dict:
-        return self._evaluation_metrics
+        return {k: getattr(self, v.id) for k,v in self._evaluation_metrics.items() if (v.error == False and v.was_calculated)}
 
     def get_list_metric(self, metric: Metric, mode: MetricMode):
         if metric in self._list_metrics:

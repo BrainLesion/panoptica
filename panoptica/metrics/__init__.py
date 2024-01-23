@@ -14,4 +14,4 @@ from panoptica.metrics.cldice import (
     _compute_centerline_dice,
     _compute_centerline_dice_coefficient,
 )
-from panoptica.metrics.metrics import Metric, Metric, _Metric, MetricMode
+from panoptica.metrics.metrics import Metric, _Metric, MetricMode
