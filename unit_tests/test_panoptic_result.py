@@ -82,10 +82,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
     def test_existing_metrics(self):
         from itertools import chain, combinations
+
         def powerset(iterable):
             s = list(iterable)
-            return list(chain.from_iterable(combinations(s, r) for r in range(len(s)+1)))
-        
+            return list(
+                chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+            )
+
         power_set = powerset([Metric.DSC, Metric.IOU, Metric.ASSD])
         for m in power_set[1:]:
             list_metrics: dict = {}
