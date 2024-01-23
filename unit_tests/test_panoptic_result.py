@@ -10,7 +10,7 @@ from panoptica.panoptic_evaluator import Panoptic_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching, MaximizeMergeMatching
 from panoptica.panoptic_result import PanopticaResult, MetricCouldNotBeComputedException
-from panoptica.metrics import _MatchingMetric, MatchingMetrics, ListMetric, ListMetricMode
+from panoptica.metrics import _Metric, Metric, Metric, MetricMode
 from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
 from panoptica.utils.processing_pair import SemanticPair
 
@@ -27,7 +27,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             num_ref_instances=2,
             num_pred_instances=5,
             tp=0,
-            list_metrics={ListMetric.IOU: []},
+            list_metrics={Metric.IOU: []},
             edge_case_handler=EdgeCaseHandler(),
         )
         c.calculate_all(print_errors=True)
@@ -49,7 +49,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
                         num_ref_instances=n_ref,
                         num_pred_instances=n_pred,
                         tp=tp,
-                        list_metrics={ListMetric.IOU: []},
+                        list_metrics={Metric.IOU: []},
                         edge_case_handler=EdgeCaseHandler(),
                     )
                     c.calculate_all(print_errors=False)
@@ -67,7 +67,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
                 num_ref_instances=2,
                 num_pred_instances=5,
                 tp=0,
-                list_metrics={ListMetric.IOU: []},
+                list_metrics={Metric.IOU: []},
                 edge_case_handler=EdgeCaseHandler(empty_list_std=ecr),
             )
             c.calculate_all(print_errors=True)
@@ -86,7 +86,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             s = list(iterable)
             return list(chain.from_iterable(combinations(s, r) for r in range(len(s)+1)))
         
-        power_set = powerset([ListMetric.DSC, ListMetric.IOU, ListMetric.ASSD])
+        power_set = powerset([Metric.DSC, Metric.IOU, Metric.ASSD])
         for m in power_set[1:]:
             list_metrics: dict = {}
             for me in m:
@@ -105,7 +105,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             c.calculate_all(print_errors=True)
             print(c)
 
-            if ListMetric.DSC in list_metrics:
+            if Metric.DSC in list_metrics:
                 self.assertEqual(c.sq_dsc, 1.0)
                 self.assertEqual(c.sq_dsc_std, 0.0)
             else:
@@ -114,7 +114,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
                 with self.assertRaises(MetricCouldNotBeComputedException):
                     c.sq_dsc_std
             #
-            if ListMetric.IOU in list_metrics:
+            if Metric.IOU in list_metrics:
                 self.assertEqual(c.sq, 1.0)
                 self.assertEqual(c.sq_std, 0.0)
             else:
@@ -123,7 +123,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
                 with self.assertRaises(MetricCouldNotBeComputedException):
                     c.sq_std
             #
-            if ListMetric.ASSD in list_metrics:
+            if Metric.ASSD in list_metrics:
                 self.assertEqual(c.sq_assd, 1.0)
                 self.assertEqual(c.sq_assd_std, 0.0)
             else:

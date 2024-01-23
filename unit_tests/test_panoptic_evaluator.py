@@ -9,7 +9,7 @@ import numpy as np
 from panoptica.panoptic_evaluator import Panoptic_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching, MaximizeMergeMatching
-from panoptica.metrics import _MatchingMetric, MatchingMetrics
+from panoptica.metrics import _Metric, Metric
 from panoptica.utils.processing_pair import SemanticPair
 from panoptica.panoptic_result import PanopticaResult, MetricCouldNotBeComputedException
 
@@ -72,8 +72,8 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(matching_metric=MatchingMetrics.DSC),
-            eval_metrics=[MatchingMetrics.DSC],
+            instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
+            eval_metrics=[Metric.DSC],
         )
 
         result, debug_data = evaluator.evaluate(sample)
@@ -99,7 +99,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
-                matching_metric=MatchingMetrics.ASSD,
+                matching_metric=Metric.ASSD,
                 matching_threshold=1.0,
             ),
         )
@@ -123,7 +123,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
-                matching_metric=MatchingMetrics.ASSD,
+                matching_metric=Metric.ASSD,
                 matching_threshold=0.5,
             ),
         )

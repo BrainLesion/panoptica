@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from typing import Any, Callable
 import numpy as np
-from panoptica.metrics import ListMetricMode, ListMetric
+from panoptica.metrics import MetricMode, Metric
 from panoptica.metrics import _compute_dice_coefficient, _compute_centerline_dice_coefficient
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import MatchedInstancePair
 
 
 class MetricCouldNotBeComputedException(Exception):
+    """Exception for when a Metric cannot be computed
+    """
     def __init__(self, *args: object) -> None:
         super().__init__(*args)
 
@@ -36,13 +38,23 @@ class Evaluation_Metric:
         self.long_name = long_name
         self.was_calculated = was_calculated
         self.error = error
+        self.error_obj: MetricCouldNotBeComputedException | None = None
 
     def __call__(self, result_obj: PanopticaResult) -> Any:
         if self.error:
-            raise MetricCouldNotBeComputedException(f"Metric {self.id} requested, but could not be computed")
+            if self.error_obj is None:
+                raise MetricCouldNotBeComputedException(f"Metric {self.id} requested, but could not be computed")
+            else:
+                raise self.error_obj
         assert not self.was_calculated, f"Metric {self.id} was called to compute, but is set to have been already calculated"
         assert self.calc_func is not None, f"Metric {self.id} was called to compute, but has no calculation function set"
-        return self.calc_func(result_obj)
+        try:
+            value = self.calc_func(result_obj)
+        except MetricCouldNotBeComputedException as e:
+            value = e
+            self.error = True
+            self.error_obj = e
+        return value
 
     def __str__(self) -> str:
         if self.long_name is not None:
@@ -54,16 +66,16 @@ class Evaluation_Metric:
 class Evaluation_List_Metric:
     def __init__(
         self,
-        name_id: ListMetric,
+        name_id: Metric,
         empty_list_std: float | None,
         value_list: list[float] | None,  # None stands for not calculated
         is_edge_case: bool = False,
         edge_case_result: float | None = None,
     ):
-        """This represents the metrics resulting from a ListMetric (IoU, ASSD, Dice)
+        """This represents the metrics resulting from a Metric calculated between paired instances (IoU, ASSD, Dice, ...)
 
         Args:
-            name_id (ListMetric): code-name of this metric
+            name_id (Metric): code-name of this metric
             empty_list_std (float): Value for the standard deviation if the list of values is empty
             value_list (list[float] | None): List of values of that metric (only the TPs)
         """
@@ -78,10 +90,10 @@ class Evaluation_List_Metric:
             self.SUM = None if self.ALL is None else np.sum(self.ALL)
         self.STD = None if self.ALL is None else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
 
-    def __getitem__(self, mode: ListMetricMode | str):
+    def __getitem__(self, mode: MetricMode | str):
         if self.error:
             raise MetricCouldNotBeComputedException(f"Metric {self.id} has not been calculated, add it to your eval_metrics")
-        if isinstance(mode, ListMetricMode):
+        if isinstance(mode, MetricMode):
             mode = mode.name
         if hasattr(self, mode):
             return getattr(self, mode)
@@ -98,9 +110,20 @@ class PanopticaResult(object):
         num_pred_instances: int,
         num_ref_instances: int,
         tp: int,
-        list_metrics: dict[ListMetric, list[float]],
+        list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
     ):
+        """Result object for Panoptica, contains all calculatable metrics
+
+        Args:
+            reference_arr (np.ndarray): matched reference arr
+            prediction_arr (np.ndarray): matched prediction arr
+            num_pred_instances (int): number of prediction instances
+            num_ref_instances (int): number of reference instances
+            tp (int): number of true positives (matched instances)
+            list_metrics (dict[Metric, list[float]]): dictionary containing the metrics for each TP
+            edge_case_handler (EdgeCaseHandler): EdgeCaseHandler object that handles various forms of edge cases
+        """
         self._edge_case_handler = edge_case_handler
         empty_list_std = self._edge_case_handler.handle_empty_list_std()
         self._prediction_arr = prediction_arr
@@ -255,7 +278,7 @@ class PanopticaResult(object):
         ##################
         # List Metrics   #
         ##################
-        self._list_metrics: dict[ListMetric, Evaluation_List_Metric] = {}
+        self._list_metrics: dict[Metric, Evaluation_List_Metric] = {}
         for k, v in list_metrics.items():
             is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
                 metric=k,
@@ -284,6 +307,11 @@ class PanopticaResult(object):
         return default_value
 
     def calculate_all(self, print_errors: bool = False):
+        """Calculates all possible metrics that can be derived
+
+        Args:
+            print_errors (bool, optional): If true, will print every metric that could not be computed and its reason. Defaults to False.
+        """
         metric_errors: dict[str, Exception] = {}
         for k, v in self._evaluation_metrics.items():
             try:
@@ -316,7 +344,7 @@ class PanopticaResult(object):
     def to_dict(self) -> dict:
         return self._evaluation_metrics
 
-    def get_list_metric(self, metric: ListMetric, mode: ListMetricMode):
+    def get_list_metric(self, metric: Metric, mode: MetricMode):
         if metric in self._list_metrics:
             return self._list_metrics[metric][mode]
         else:
@@ -387,11 +415,11 @@ def rq(res: PanopticaResult):
 
 #region IOU
 def sq(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.IOU, mode=ListMetricMode.AVG)
+    return res.get_list_metric(Metric.IOU, mode=MetricMode.AVG)
 
 
 def sq_std(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.IOU, mode=ListMetricMode.STD)
+    return res.get_list_metric(Metric.IOU, mode=MetricMode.STD)
 
 
 def pq(res: PanopticaResult):
@@ -400,11 +428,11 @@ def pq(res: PanopticaResult):
 
 #region DSC
 def sq_dsc(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.DSC, mode=ListMetricMode.AVG)
+    return res.get_list_metric(Metric.DSC, mode=MetricMode.AVG)
 
 
 def sq_dsc_std(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.DSC, mode=ListMetricMode.STD)
+    return res.get_list_metric(Metric.DSC, mode=MetricMode.STD)
 
 
 def pq_dsc(res: PanopticaResult):
@@ -413,11 +441,11 @@ def pq_dsc(res: PanopticaResult):
 
 #region clDSC
 def sq_cldsc(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.clDSC, mode=ListMetricMode.AVG)
+    return res.get_list_metric(Metric.clDSC, mode=MetricMode.AVG)
 
 
 def sq_cldsc_std(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.clDSC, mode=ListMetricMode.STD)
+    return res.get_list_metric(Metric.clDSC, mode=MetricMode.STD)
 
 
 def pq_cldsc(res: PanopticaResult):
@@ -426,14 +454,17 @@ def pq_cldsc(res: PanopticaResult):
 
 #region ASSD
 def sq_assd(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.ASSD, mode=ListMetricMode.AVG)
+    return res.get_list_metric(Metric.ASSD, mode=MetricMode.AVG)
 
 
 def sq_assd_std(res: PanopticaResult):
-    return res.get_list_metric(ListMetric.ASSD, mode=ListMetricMode.STD)
+    return res.get_list_metric(Metric.ASSD, mode=MetricMode.STD)
 #endregion
 
+#region Global
 def global_bin_dsc(res: PanopticaResult):
+    if res.tp == 0:
+        return 0.0
     pred_binary = res._prediction_arr.copy()
     ref_binary = res._reference_arr.copy()
     pred_binary[pred_binary != 0] = 1
@@ -441,19 +472,24 @@ def global_bin_dsc(res: PanopticaResult):
     return _compute_dice_coefficient(ref_binary, pred_binary)
 
 def global_bin_cldsc(res: PanopticaResult):
+    if res.tp == 0:
+        return 0.0
     pred_binary = res._prediction_arr.copy()
     ref_binary = res._reference_arr.copy()
     pred_binary[pred_binary != 0] = 1
     ref_binary[ref_binary != 0] = 1
     return _compute_centerline_dice_coefficient(ref_binary, pred_binary)
+#endregion
 
 
 if __name__ == "__main__":
     c = PanopticaResult(
+        reference_arr=np.zeros([5,5,5]),
+        prediction_arr=np.zeros([5,5,5]),
         num_ref_instances=2,
         num_pred_instances=5,
         tp=0,
-        list_metrics={ListMetric.IOU: []},
+        list_metrics={Metric.IOU: []},
         edge_case_handler=EdgeCaseHandler(),
     )
 

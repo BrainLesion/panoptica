@@ -5,7 +5,7 @@ from typing import Type
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
-from panoptica.metrics import MatchingMetrics, _MatchingMetric, ListMetric
+from panoptica.metrics import Metric, _Metric, Metric
 from panoptica.panoptic_result import PanopticaResult
 from panoptica.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
@@ -25,8 +25,8 @@ class Panoptic_Evaluator:
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
-        eval_metrics: list[_MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
-        decision_metric: _MatchingMetric | None = None,
+        eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+        decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
         log_times: bool = False,
         verbose: bool = False,
@@ -60,6 +60,7 @@ class Panoptic_Evaluator:
         self,
         processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
         result_all: bool = True,
+        verbose: bool | None = None,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
         assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
         return panoptic_evaluate(
@@ -72,7 +73,7 @@ class Panoptic_Evaluator:
             decision_threshold=self.__decision_threshold,
             result_all=result_all,
             log_times=self.__log_times,
-            verbose=self.__verbose,
+            verbose=self.__verbose if verbose is None else verbose,
         )
 
 
@@ -80,8 +81,8 @@ def panoptic_evaluate(
     processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    eval_metrics: list[_MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
-    decision_metric: _MatchingMetric | None = None,
+    eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
@@ -173,7 +174,7 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, PanopticaResult):
         if result_all:
-            processing_pair.calculate_all(print_errors=False)
+            processing_pair.calculate_all(print_errors=verbose)
         return processing_pair, debug_data
 
     raise RuntimeError("End of panoptic pipeline reached without results")
@@ -182,7 +183,7 @@ def panoptic_evaluate(
 def _handle_zero_instances_cases(
     processing_pair: UnmatchedInstancePair | MatchedInstancePair,
     edge_case_handler: EdgeCaseHandler,
-    eval_metrics: list[_MatchingMetric] = [MatchingMetrics.DSC, MatchingMetrics.IOU, MatchingMetrics.ASSD],
+    eval_metrics: list[_Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
 ) -> UnmatchedInstancePair | MatchedInstancePair | PanopticaResult:
     """
     Handle edge cases when comparing reference and prediction masks.
@@ -198,7 +199,7 @@ def _handle_zero_instances_cases(
     n_prediction_instance = processing_pair.n_prediction_instance
 
     panoptica_result_args = {
-        "list_metrics": {ListMetric[k.name]: [] for k in eval_metrics},
+        "list_metrics": {Metric[k.name]: [] for k in eval_metrics},
         "tp": 0,
         "edge_case_handler": edge_case_handler,
         "reference_arr": processing_pair.reference_arr,
