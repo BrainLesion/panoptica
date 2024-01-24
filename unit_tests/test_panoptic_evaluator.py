@@ -9,8 +9,9 @@ import numpy as np
 from panoptica.panoptic_evaluator import Panoptic_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching, MaximizeMergeMatching
-from panoptica.metrics import _MatchingMetric, Metrics
+from panoptica.metrics import _Metric, Metric
 from panoptica.utils.processing_pair import SemanticPair
+from panoptica.panoptic_result import PanopticaResult, MetricCouldNotBeComputedException
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
@@ -71,18 +72,19 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         evaluator = Panoptic_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
-            instance_matcher=NaiveThresholdMatching(matching_metric=Metrics.DSC),
-            eval_metrics=[Metrics.DSC],
+            instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
+            eval_metrics=[Metric.DSC],
         )
 
         result, debug_data = evaluator.evaluate(sample)
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
-        self.assertEqual(
-            result.sq, None
-        )  # must be none because no IOU has been calculated
-        self.assertEqual(result.pq, None)
+        with self.assertRaises(MetricCouldNotBeComputedException):
+            result.sq
+        # must be none because no IOU has been calculated
+        with self.assertRaises(MetricCouldNotBeComputedException):
+            result.pq
         self.assertEqual(result.rq, 1.0)
 
     def test_simple_evaluation_ASSD(self):
@@ -97,7 +99,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
-                matching_metric=Metrics.ASSD,
+                matching_metric=Metric.ASSD,
                 matching_threshold=1.0,
             ),
         )
@@ -121,7 +123,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
-                matching_metric=Metrics.ASSD,
+                matching_metric=Metric.ASSD,
                 matching_threshold=0.5,
             ),
         )

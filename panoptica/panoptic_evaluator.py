@@ -5,7 +5,7 @@ from typing import Type
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
-from panoptica.metrics import Metrics, _MatchingMetric
+from panoptica.metrics import Metric, _Metric, Metric
 from panoptica.panoptic_result import PanopticaResult
 from panoptica.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
@@ -27,8 +27,8 @@ class Panoptic_Evaluator:
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
-        eval_metrics: list[_MatchingMetric] = [Metrics.DSC, Metrics.IOU, Metrics.ASSD],
-        decision_metric: _MatchingMetric | None = None,
+        eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+        decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
         log_times: bool = False,
         verbose: bool = False,
@@ -68,6 +68,8 @@ class Panoptic_Evaluator:
         | UnmatchedInstancePair
         | MatchedInstancePair
         | PanopticaResult,
+        result_all: bool = True,
+        verbose: bool | None = None,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
         assert (
             type(processing_pair) == self.__expected_input
@@ -80,8 +82,9 @@ class Panoptic_Evaluator:
             eval_metrics=self.__eval_metrics,
             decision_metric=self.__decision_metric,
             decision_threshold=self.__decision_threshold,
+            result_all=result_all,
             log_times=self.__log_times,
-            verbose=self.__verbose,
+            verbose=self.__verbose if verbose is None else verbose,
         )
 
 
@@ -92,11 +95,12 @@ def panoptic_evaluate(
     | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    eval_metrics: list[_MatchingMetric] = [Metrics.DSC, Metrics.IOU, Metrics.ASSD],
-    decision_metric: _MatchingMetric | None = None,
+    eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
+    result_all: bool = True,
     verbose: bool = False,
     **kwargs,
 ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
@@ -155,7 +159,9 @@ def panoptic_evaluate(
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
         processing_pair = _handle_zero_instances_cases(
-            processing_pair, edge_case_handler=edge_case_handler
+            processing_pair,
+            eval_metrics=eval_metrics,
+            edge_case_handler=edge_case_handler,
         )
 
     if isinstance(processing_pair, UnmatchedInstancePair):
@@ -175,7 +181,9 @@ def panoptic_evaluate(
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
         processing_pair = _handle_zero_instances_cases(
-            processing_pair, edge_case_handler=edge_case_handler
+            processing_pair,
+            eval_metrics=eval_metrics,
+            edge_case_handler=edge_case_handler,
         )
 
     if isinstance(processing_pair, MatchedInstancePair):
@@ -191,6 +199,8 @@ def panoptic_evaluate(
             print(f"-- Instance Evaluation took {perf_counter() - start} seconds")
 
     if isinstance(processing_pair, PanopticaResult):
+        if result_all:
+            processing_pair.calculate_all(print_errors=verbose)
         return processing_pair, debug_data
 
     raise RuntimeError("End of panoptic pipeline reached without results")
@@ -199,6 +209,7 @@ def panoptic_evaluate(
 def _handle_zero_instances_cases(
     processing_pair: UnmatchedInstancePair | MatchedInstancePair,
     edge_case_handler: EdgeCaseHandler,
+    eval_metrics: list[_Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
 ) -> UnmatchedInstancePair | MatchedInstancePair | PanopticaResult:
     """
     Handle edge cases when comparing reference and prediction masks.
@@ -213,32 +224,36 @@ def _handle_zero_instances_cases(
     n_reference_instance = processing_pair.n_reference_instance
     n_prediction_instance = processing_pair.n_prediction_instance
 
+    panoptica_result_args = {
+        "list_metrics": {Metric[k.name]: [] for k in eval_metrics},
+        "tp": 0,
+        "edge_case_handler": edge_case_handler,
+        "reference_arr": processing_pair.reference_arr,
+        "prediction_arr": processing_pair.prediction_arr,
+    }
+
+    is_edge_case = False
+
     # Handle cases where either the reference or the prediction is empty
     if n_prediction_instance == 0 and n_reference_instance == 0:
         # Both references and predictions are empty, perfect match
-        return PanopticaResult(
-            num_ref_instances=0,
-            num_pred_instances=0,
-            tp=0,
-            list_metrics={},
-            edge_case_handler=edge_case_handler,
-        )
-    if n_reference_instance == 0:
+        n_reference_instance = 0
+        n_prediction_instance = 0
+        is_edge_case = True
+    elif n_reference_instance == 0:
         # All references are missing, only false positives
-        return PanopticaResult(
-            num_ref_instances=0,
-            num_pred_instances=n_prediction_instance,
-            tp=0,
-            list_metrics={},
-            edge_case_handler=edge_case_handler,
-        )
-    if n_prediction_instance == 0:
+        n_reference_instance = 0
+        n_prediction_instance = n_prediction_instance
+        is_edge_case = True
+    elif n_prediction_instance == 0:
         # All predictions are missing, only false negatives
-        return PanopticaResult(
-            num_ref_instances=n_reference_instance,
-            num_pred_instances=0,
-            tp=0,
-            list_metrics={},
-            edge_case_handler=edge_case_handler,
-        )
+        n_reference_instance = n_reference_instance
+        n_prediction_instance = 0
+        is_edge_case = True
+
+    if is_edge_case:
+        panoptica_result_args["num_ref_instances"] = n_reference_instance
+        panoptica_result_args["num_pred_instances"] = n_prediction_instance
+        return PanopticaResult(**panoptica_result_args)
+
     return processing_pair

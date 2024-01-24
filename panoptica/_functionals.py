@@ -2,7 +2,7 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from panoptica.metrics import _compute_instance_iou, _MatchingMetric
+from panoptica.metrics import _compute_instance_iou, Metric
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.numpy_utils import _get_bbox_nd
 
@@ -41,7 +41,7 @@ def _calc_matching_metric_of_overlapping_labels(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
     ref_labels: tuple[int, ...],
-    matching_metric: _MatchingMetric,
+    matching_metric: Metric,
 ) -> list[tuple[float, tuple[int, int]]]:
     """Calculates the MatchingMetric for all overlapping labels (fast!)
 
@@ -62,7 +62,7 @@ def _calc_matching_metric_of_overlapping_labels(
         )
     ]
     with Pool() as pool:
-        mm_values = pool.starmap(matching_metric._metric_function, instance_pairs)
+        mm_values = pool.starmap(matching_metric.value._metric_function, instance_pairs)
 
     mm_pairs = [
         (i, (instance_pairs[idx][2], instance_pairs[idx][3]))

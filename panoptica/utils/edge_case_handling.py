@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 
-from panoptica.metrics import ListMetric, Metrics
+from panoptica.metrics import Metric, Metric
 from panoptica.utils.constants import _Enum_Compare, auto
 
 
@@ -81,17 +81,17 @@ class MetricZeroTPEdgeCaseHandling(object):
 class EdgeCaseHandler:
     def __init__(
         self,
-        listmetric_zeroTP_handling: dict[ListMetric, MetricZeroTPEdgeCaseHandling] = {
-            ListMetric.DSC: MetricZeroTPEdgeCaseHandling(
+        listmetric_zeroTP_handling: dict[Metric, MetricZeroTPEdgeCaseHandling] = {
+            Metric.DSC: MetricZeroTPEdgeCaseHandling(
                 no_instances_result=EdgeCaseResult.NAN,
                 default_result=EdgeCaseResult.ZERO,
             ),
-            ListMetric.IOU: MetricZeroTPEdgeCaseHandling(
+            Metric.IOU: MetricZeroTPEdgeCaseHandling(
                 no_instances_result=EdgeCaseResult.NAN,
                 empty_prediction_result=EdgeCaseResult.ZERO,
                 default_result=EdgeCaseResult.ZERO,
             ),
-            ListMetric.ASSD: MetricZeroTPEdgeCaseHandling(
+            Metric.ASSD: MetricZeroTPEdgeCaseHandling(
                 no_instances_result=EdgeCaseResult.NAN,
                 default_result=EdgeCaseResult.INF,
             ),
@@ -99,17 +99,19 @@ class EdgeCaseHandler:
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,
     ) -> None:
         self.__listmetric_zeroTP_handling: dict[
-            ListMetric, MetricZeroTPEdgeCaseHandling
+            Metric, MetricZeroTPEdgeCaseHandling
         ] = listmetric_zeroTP_handling
-        self.__empty_list_std = empty_list_std
+        self.__empty_list_std: EdgeCaseResult = empty_list_std
 
     def handle_zero_tp(
         self,
-        metric: ListMetric,
+        metric: Metric,
         tp: int,
         num_pred_instances: int,
         num_ref_instances: int,
     ) -> tuple[bool, float | None]:
+        if tp != 0:
+            return False, EdgeCaseResult.NONE.value
         if metric not in self.__listmetric_zeroTP_handling:
             raise NotImplementedError(
                 f"Metric {metric} encountered zero TP, but no edge handling available"
@@ -121,10 +123,10 @@ class EdgeCaseHandler:
             num_ref_instances=num_ref_instances,
         )
 
-    def get_metric_zero_tp_handle(self, metric: ListMetric):
+    def get_metric_zero_tp_handle(self, metric: Metric):
         return self.__listmetric_zeroTP_handling[metric]
 
-    def handle_empty_list_std(self):
+    def handle_empty_list_std(self) -> float | None:
         return self.__empty_list_std.value
 
     def __str__(self) -> str:
@@ -140,7 +142,7 @@ if __name__ == "__main__":
     print()
     # print(handler.get_metric_zero_tp_handle(ListMetric.IOU))
     r = handler.handle_zero_tp(
-        ListMetric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1
+        Metric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1
     )
     print(r)
 
