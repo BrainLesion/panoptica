@@ -13,10 +13,17 @@ def _average_symmetric_surface_distance(
     assd = np.mean(
         (
             _average_surface_distance(
-                prediction, reference, voxelspacing, connectivity
+                # TODO is this intended?
+                reference=prediction,
+                prediction=reference,
+                voxelspacing=voxelspacing,
+                connectivity=connectivity,
             ),
             _average_surface_distance(
-                reference, prediction, voxelspacing, connectivity
+                reference=reference,
+                prediction=prediction,
+                voxelspacing=voxelspacing,
+                connectivity=connectivity,
             ),
         )
     )
@@ -37,6 +44,7 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     prediction = np.atleast_1d(prediction.astype(bool))
     reference = np.atleast_1d(reference.astype(bool))
     if voxelspacing is not None:
+        # TODO check protected access
         voxelspacing = _ni_support._normalize_sequence(voxelspacing, prediction.ndim)
         voxelspacing = np.asarray(voxelspacing, dtype=np.float64)
         if not voxelspacing.flags.contiguous:
