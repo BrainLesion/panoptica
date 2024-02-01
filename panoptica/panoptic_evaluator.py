@@ -5,17 +5,17 @@ from typing import Type
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
-from panoptica.metrics import Metric, _Metric, Metric
+from panoptica.metrics import Metric, _Metric
 from panoptica.panoptic_result import PanopticaResult
 from panoptica.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.citation_reminder import citation_reminder
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
     UnmatchedInstancePair,
     _ProcessingPair,
 )
-from panoptica.utils.citation_reminder import citation_reminder
 
 
 class Panoptic_Evaluator:

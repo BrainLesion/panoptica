@@ -2,7 +2,7 @@ from typing import Any
 
 import numpy as np
 
-from panoptica.metrics import Metric, Metric
+from panoptica.metrics import Metric
 from panoptica.utils.constants import _Enum_Compare, auto
 
 
