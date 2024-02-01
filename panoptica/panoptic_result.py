@@ -99,7 +99,7 @@ class PanopticaResult(object):
             "rq",
             MetricType.MATCHING,
             rq,
-            long_name="Recognition Quality",
+            long_name="Recognition Quality / F1-Score",
         )
         # endregion
         #
