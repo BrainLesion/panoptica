@@ -62,6 +62,7 @@ def _calc_matching_metric_of_overlapping_labels(
         )
     ]
     with Pool() as pool:
+        # TODO check this protected access
         mm_values = pool.starmap(matching_metric.value._metric_function, instance_pairs)
 
     mm_pairs = [
@@ -79,7 +80,7 @@ def _calc_iou_of_overlapping_labels(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
     ref_labels: tuple[int, ...],
-    pred_labels: tuple[int, ...],
+    **kwargs,
 ) -> list[tuple[float, tuple[int, int]]]:
     """Calculates the IOU for all overlapping labels (fast!)
 
@@ -156,7 +157,10 @@ def _calc_iou_matrix(
     return iou_matrix
 
 
-def _map_labels(arr: np.ndarray, label_map: dict[np.integer, np.integer]) -> np.ndarray:
+def _map_labels(
+    arr: np.ndarray,
+    label_map: dict[np.integer, np.integer],
+) -> np.ndarray:
     """
     Maps labels in the given array according to the label_map dictionary.
 
@@ -212,7 +216,9 @@ def _connected_components(
 
 
 def _get_paired_crop(
-    prediction_arr: np.ndarray, reference_arr: np.ndarray, px_pad: int = 2
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    px_pad: int = 2,
 ):
     assert prediction_arr.shape == reference_arr.shape
 
