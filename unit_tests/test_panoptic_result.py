@@ -7,13 +7,9 @@ import unittest
 
 import numpy as np
 
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
-from panoptica.metrics import Metric, MetricMode, _Metric
-from panoptica.panoptic_evaluator import Panoptic_Evaluator
+from panoptica.metrics import Metric
 from panoptica.panoptic_result import MetricCouldNotBeComputedException, PanopticaResult
 from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
-from panoptica.utils.processing_pair import SemanticPair
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
