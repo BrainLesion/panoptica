@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from time import perf_counter
 from typing import Type
 
