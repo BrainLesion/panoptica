@@ -74,7 +74,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
-            eval_metrics=[Metric.ASSD],
+            eval_metrics=[Metric.DSC],
         )
 
         result, debug_data = evaluator.evaluate(sample)
