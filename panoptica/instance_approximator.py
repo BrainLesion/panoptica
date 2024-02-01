@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from panoptica._functionals import CCABackend, _connected_components
-from panoptica.timing import measure_time
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
