@@ -244,6 +244,7 @@ def _handle_zero_instances_cases(
         is_edge_case = True
     elif n_prediction_instance == 0:
         # All predictions are missing, only false negatives
+        # TODO what is going on here!
         n_reference_instance = n_reference_instance
         n_prediction_instance = 0
         is_edge_case = True
