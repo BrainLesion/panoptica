@@ -4,7 +4,7 @@ from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
 from panoptica import MatchedInstancePair, Panoptic_Evaluator
-from panoptica.metrics import Metric, MetricMode
+from panoptica.metrics import Metric
 
 directory = turbopath(__file__).parent
 
