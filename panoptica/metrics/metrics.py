@@ -292,7 +292,9 @@ class Evaluation_List_Metric:
         self.STD = (
             None
             if self.ALL is None
-            else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+            else empty_list_std
+            if len(self.ALL) == 0
+            else np.std(self.ALL)
         )
 
     def __getitem__(self, mode: MetricMode | str):
