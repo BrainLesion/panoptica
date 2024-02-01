@@ -21,9 +21,9 @@ from panoptica.utils.processing_pair import (
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: Type[SemanticPair]
-        | Type[UnmatchedInstancePair]
-        | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: (
+            Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair]
+        ) = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
@@ -64,10 +64,9 @@ class Panoptic_Evaluator:
     @measure_time
     def evaluate(
         self,
-        processing_pair: SemanticPair
-        | UnmatchedInstancePair
-        | MatchedInstancePair
-        | PanopticaResult,
+        processing_pair: (
+            SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
+        ),
         result_all: bool = True,
         verbose: bool | None = None,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
@@ -89,10 +88,9 @@ class Panoptic_Evaluator:
 
 
 def panoptic_evaluate(
-    processing_pair: SemanticPair
-    | UnmatchedInstancePair
-    | MatchedInstancePair
-    | PanopticaResult,
+    processing_pair: (
+        SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
+    ),
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
