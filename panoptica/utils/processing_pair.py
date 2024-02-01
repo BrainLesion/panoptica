@@ -1,7 +1,6 @@
 from abc import ABC
 
 import numpy as np
-from numpy import dtype
 
 from panoptica._functionals import _get_paired_crop
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
