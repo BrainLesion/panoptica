@@ -6,6 +6,8 @@ CITATION_LINK = "https://github.com/BrainLesion/panoptica#citation"
 
 
 def citation_reminder(func):
+    """Decorator to remind users to cite panoptica."""
+
     def wrapper(*args, **kwargs):
         if os.environ.get("PANOPTICA_CITATION_REMINDER", "true").lower() == "true":
             console = Console()
