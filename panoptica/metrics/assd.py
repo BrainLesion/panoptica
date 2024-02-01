@@ -1,7 +1,6 @@
 import numpy as np
-from scipy.ndimage import _ni_support
+from scipy.ndimage import _ni_support, binary_erosion, generate_binary_structure
 from scipy.ndimage._nd_image import euclidean_feature_transform
-from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
 
 def _average_symmetric_surface_distance(
