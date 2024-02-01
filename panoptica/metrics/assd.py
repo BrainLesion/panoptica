@@ -10,10 +10,10 @@ def _average_symmetric_surface_distance(
     connectivity=1,
     *args,
 ) -> float:
+    """ASSD is computed by computing the average of the bidrectionally computed ASD."""
     assd = np.mean(
         (
             _average_surface_distance(
-                # TODO is this intended?
                 reference=prediction,
                 prediction=reference,
                 voxelspacing=voxelspacing,
