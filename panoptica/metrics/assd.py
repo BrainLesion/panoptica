@@ -77,7 +77,7 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
 
 
 def _distance_transform_edt(
-    input: np.ndarray,
+    input_array: np.ndarray,
     sampling=None,
     return_distances=True,
     return_indices=False,
@@ -90,12 +90,12 @@ def _distance_transform_edt(
     #    if not sampling.flags.contiguous:
     #        sampling = sampling.copy()
 
-    ft = np.zeros((input.ndim,) + input.shape, dtype=np.int32)
+    ft = np.zeros((input_array.ndim,) + input_array.shape, dtype=np.int32)
 
-    euclidean_feature_transform(input, sampling, ft)
+    euclidean_feature_transform(input_array, sampling, ft)
     # if requested, calculate the distance transform
     if return_distances:
-        dt = ft - np.indices(input.shape, dtype=ft.dtype)
+        dt = ft - np.indices(input_array.shape, dtype=ft.dtype)
         dt = dt.astype(np.float64)
         # if sampling is not None:
         #    for ii in range(len(sampling)):
