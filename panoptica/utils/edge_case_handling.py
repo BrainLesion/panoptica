@@ -33,12 +33,26 @@ class MetricZeroTPEdgeCaseHandling(object):
         normal: EdgeCaseResult | None = None,
     ) -> None:
         self.edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}
-        self.edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = empty_prediction_result if empty_prediction_result is not None else default_result
-        self.edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = empty_reference_result if empty_reference_result is not None else default_result
-        self.edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = no_instances_result if no_instances_result is not None else default_result
-        self.edgecase_dict[EdgeCaseZeroTP.NORMAL] = normal if normal is not None else default_result
+        self.edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = (
+            empty_prediction_result
+            if empty_prediction_result is not None
+            else default_result
+        )
+        self.edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = (
+            empty_reference_result
+            if empty_reference_result is not None
+            else default_result
+        )
+        self.edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = (
+            no_instances_result if no_instances_result is not None else default_result
+        )
+        self.edgecase_dict[EdgeCaseZeroTP.NORMAL] = (
+            normal if normal is not None else default_result
+        )
 
-    def __call__(self, tp: int, num_pred_instances, num_ref_instances) -> tuple[bool, float | None]:
+    def __call__(
+        self, tp: int, num_pred_instances, num_ref_instances
+    ) -> tuple[bool, float | None]:
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         #
@@ -83,7 +97,9 @@ class EdgeCaseHandler:
         },
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,
     ) -> None:
-        self.__listmetric_zeroTP_handling: dict[Metric, MetricZeroTPEdgeCaseHandling] = listmetric_zeroTP_handling
+        self.__listmetric_zeroTP_handling: dict[
+            Metric, MetricZeroTPEdgeCaseHandling
+        ] = listmetric_zeroTP_handling
         self.__empty_list_std: EdgeCaseResult = empty_list_std
 
     def handle_zero_tp(
@@ -96,7 +112,9 @@ class EdgeCaseHandler:
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         if metric not in self.__listmetric_zeroTP_handling:
-            raise NotImplementedError(f"Metric {metric} encountered zero TP, but no edge handling available")
+            raise NotImplementedError(
+                f"Metric {metric} encountered zero TP, but no edge handling available"
+            )
 
         return self.__listmetric_zeroTP_handling[metric](
             tp=tp,
@@ -122,7 +140,9 @@ if __name__ == "__main__":
 
     print()
     # print(handler.get_metric_zero_tp_handle(ListMetric.IOU))
-    r = handler.handle_zero_tp(Metric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1)
+    r = handler.handle_zero_tp(
+        Metric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1
+    )
     print(r)
 
     iou_test = MetricZeroTPEdgeCaseHandling(

@@ -5,7 +5,12 @@
 import os
 import unittest
 
-from panoptica.metrics import Metric, Evaluation_List_Metric, MetricMode, MetricCouldNotBeComputedException
+from panoptica.metrics import (
+    Metric,
+    Evaluation_List_Metric,
+    MetricMode,
+    MetricCouldNotBeComputedException,
+)
 
 
 class Test_Datatypes(unittest.TestCase):
