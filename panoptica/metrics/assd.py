@@ -44,7 +44,7 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     prediction = np.atleast_1d(prediction.astype(bool))
     reference = np.atleast_1d(reference.astype(bool))
     if voxelspacing is not None:
-        # TODO check protected access
+        # Protected access presented by Scipy
         voxelspacing = _ni_support._normalize_sequence(voxelspacing, prediction.ndim)
         voxelspacing = np.asarray(voxelspacing, dtype=np.float64)
         if not voxelspacing.flags.contiguous:
@@ -60,12 +60,8 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     #    raise RuntimeError("The second supplied array does not contain any binary object.")
 
     # extract only 1-pixel border line of objects
-    result_border = prediction ^ binary_erosion(
-        prediction, structure=footprint, iterations=1
-    )
-    reference_border = reference ^ binary_erosion(
-        reference, structure=footprint, iterations=1
-    )
+    result_border = prediction ^ binary_erosion(prediction, structure=footprint, iterations=1)
+    reference_border = reference ^ binary_erosion(reference, structure=footprint, iterations=1)
 
     # compute average surface distance
     # Note: scipys distance transform is calculated only inside the borders of the
