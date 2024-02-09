@@ -1,10 +1,11 @@
 from multiprocessing import Pool
+
 import numpy as np
 
+from panoptica.metrics import Metric
 from panoptica.panoptic_result import PanopticaResult
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import MatchedInstancePair
-from panoptica.metrics import Metric
 
 
 def evaluate_matched_instance(
@@ -42,8 +43,8 @@ def evaluate_matched_instance(
     score_dict: dict[Metric, list[float]] = {m: [] for m in eval_metrics}
 
     reference_arr, prediction_arr = (
-        matched_instance_pair._reference_arr,
-        matched_instance_pair._prediction_arr,
+        matched_instance_pair.reference_arr,
+        matched_instance_pair.prediction_arr,
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 

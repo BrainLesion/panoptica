@@ -1,8 +1,7 @@
-from typing import Any
-
 import numpy as np
+from typing import TYPE_CHECKING
 
-from panoptica.metrics import Metric, Metric
+from panoptica.metrics import Metric
 from panoptica.utils.constants import _Enum_Compare, auto
 
 

@@ -1,29 +1,28 @@
-from abc import ABC, abstractmethod
 from time import perf_counter
 from typing import Type
 
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
-from panoptica.metrics import Metric, _Metric, Metric
+from panoptica.metrics import Metric, _Metric
 from panoptica.panoptic_result import PanopticaResult
 from panoptica.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.citation_reminder import citation_reminder
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
     UnmatchedInstancePair,
     _ProcessingPair,
 )
-from panoptica.utils.citation_reminder import citation_reminder
 
 
 class Panoptic_Evaluator:
     def __init__(
         self,
-        expected_input: Type[SemanticPair]
-        | Type[UnmatchedInstancePair]
-        | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: (
+            Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair]
+        ) = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
@@ -64,10 +63,9 @@ class Panoptic_Evaluator:
     @measure_time
     def evaluate(
         self,
-        processing_pair: SemanticPair
-        | UnmatchedInstancePair
-        | MatchedInstancePair
-        | PanopticaResult,
+        processing_pair: (
+            SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
+        ),
         result_all: bool = True,
         verbose: bool | None = None,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
@@ -89,10 +87,9 @@ class Panoptic_Evaluator:
 
 
 def panoptic_evaluate(
-    processing_pair: SemanticPair
-    | UnmatchedInstancePair
-    | MatchedInstancePair
-    | PanopticaResult,
+    processing_pair: (
+        SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
+    ),
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],

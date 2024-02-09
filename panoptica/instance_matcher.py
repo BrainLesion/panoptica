@@ -6,7 +6,7 @@ from panoptica._functionals import (
     _calc_matching_metric_of_overlapping_labels,
     _map_labels,
 )
-from panoptica.metrics import Metric, _Metric
+from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import (
     InstanceLabelMap,
     MatchedInstancePair,
@@ -98,10 +98,10 @@ def map_instance_labels(
     >>> labelmap = [([1, 2], [3, 4]), ([5], [6])]
     >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
     """
-    prediction_arr = processing_pair._prediction_arr
+    prediction_arr = processing_pair.prediction_arr
 
-    ref_labels = processing_pair._ref_labels
-    pred_labels = processing_pair._pred_labels
+    ref_labels = processing_pair.ref_labels
+    pred_labels = processing_pair.pred_labels
 
     ref_matched_labels = []
     label_counter = int(max(ref_labels) + 1)
@@ -185,14 +185,14 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         Returns:
             Instance_Label_Map: The result of the instance matching.
         """
-        ref_labels = unmatched_instance_pair._ref_labels
+        ref_labels = unmatched_instance_pair.ref_labels
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
         pred_arr, ref_arr = (
-            unmatched_instance_pair._prediction_arr,
-            unmatched_instance_pair._reference_arr,
+            unmatched_instance_pair.prediction_arr,
+            unmatched_instance_pair.reference_arr,
         )
         mm_pairs = _calc_matching_metric_of_overlapping_labels(
             pred_arr, ref_arr, ref_labels, matching_metric=self.matching_metric
@@ -259,7 +259,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         Returns:
             Instance_Label_Map: The result of the instance matching.
         """
-        ref_labels = unmatched_instance_pair._ref_labels
+        ref_labels = unmatched_instance_pair.ref_labels
         # pred_labels = unmatched_instance_pair._pred_labels
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
@@ -267,11 +267,14 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         score_ref: dict[int, float] = {}
 
         pred_arr, ref_arr = (
-            unmatched_instance_pair._prediction_arr,
-            unmatched_instance_pair._reference_arr,
+            unmatched_instance_pair.prediction_arr,
+            unmatched_instance_pair.reference_arr,
         )
         mm_pairs = _calc_matching_metric_of_overlapping_labels(
-            pred_arr, ref_arr, ref_labels, matching_metric=self.matching_metric
+            prediction_arr=pred_arr,
+            reference_arr=ref_arr,
+            ref_labels=ref_labels,
+            matching_metric=self.matching_metric,
         )
 
         # Loop through matched instances to compute PQ components

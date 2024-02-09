@@ -2,6 +2,8 @@ import time
 
 
 def measure_time(func):
+    """Decorator to measure the time it takes to execute a function."""
+
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)

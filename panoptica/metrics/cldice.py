@@ -1,5 +1,5 @@
-from skimage.morphology import skeletonize, skeletonize_3d
 import numpy as np
+from skimage.morphology import skeletonize, skeletonize_3d
 
 
 def cl_score(volume: np.ndarray, skeleton: np.ndarray):

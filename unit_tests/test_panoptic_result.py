@@ -2,17 +2,14 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import unittest
 import os
+import unittest
+
 import numpy as np
 
-from panoptica.panoptic_evaluator import Panoptic_Evaluator
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching, MaximizeMergeMatching
-from panoptica.panoptic_result import PanopticaResult, MetricCouldNotBeComputedException
-from panoptica.metrics import _Metric, Metric, Metric, MetricMode
+from panoptica.metrics import Metric
+from panoptica.panoptic_result import MetricCouldNotBeComputedException, PanopticaResult
 from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
-from panoptica.utils.processing_pair import SemanticPair
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):

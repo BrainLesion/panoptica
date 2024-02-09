@@ -2,20 +2,18 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import unittest
 import os
-import numpy as np
+import unittest
 
-from panoptica.panoptic_evaluator import Panoptic_Evaluator
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching, MaximizeMergeMatching
-from panoptica.panoptic_result import PanopticaResult, MetricCouldNotBeComputedException
-from panoptica.metrics import _Metric, Metric, Metric, MetricMode
-from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
-from panoptica.utils.processing_pair import SemanticPair
+from panoptica.metrics import (
+    Metric,
+    Evaluation_List_Metric,
+    MetricMode,
+    MetricCouldNotBeComputedException,
+)
 
 
-class Test_Panoptic_Evaluator(unittest.TestCase):
+class Test_Datatypes(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
         return super().setUp()
@@ -42,4 +40,39 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertFalse(assd_metric.score_beats_threshold(0.55, 0.5))
         self.assertTrue(assd_metric.score_beats_threshold(0.5, 0.55))
 
-    # TODO listmetric + Mode (STD and so on)
+    def test_listmetric(self):
+        lmetric = Evaluation_List_Metric(
+            name_id="Test",
+            empty_list_std=None,
+            value_list=[1, 3, 5],
+        )
+
+        self.assertEqual(lmetric[MetricMode.ALL], [1, 3, 5])
+        self.assertTrue(lmetric[MetricMode.AVG] == 3)
+        self.assertTrue(lmetric[MetricMode.SUM] == 9)
+
+    def test_listmetric_edgecase(self):
+        lmetric = Evaluation_List_Metric(
+            name_id="Test",
+            empty_list_std=None,
+            value_list=[1, 3, 5],
+            is_edge_case=True,
+            edge_case_result=50,
+        )
+
+        self.assertEqual(lmetric[MetricMode.ALL], [1, 3, 5])
+        self.assertTrue(lmetric[MetricMode.AVG] == 50)
+        self.assertTrue(lmetric[MetricMode.SUM] == 50)
+
+    def test_listmetric_emptylist(self):
+        lmetric = Evaluation_List_Metric(
+            name_id="Test",
+            empty_list_std=None,
+            value_list=None,
+            is_edge_case=True,
+            edge_case_result=50,
+        )
+
+        for mode in MetricMode:
+            with self.assertRaises(MetricCouldNotBeComputedException):
+                lmetric[mode]

@@ -1,10 +1,9 @@
 from abc import ABC
 
 import numpy as np
-from numpy import dtype
 
-from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 from panoptica._functionals import _get_paired_crop
+from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 
 uint_type: type = np.unsignedinteger
 int_type: type = np.integer
@@ -60,9 +59,13 @@ class _ProcessingPair(ABC):
 
         self._prediction_arr = self._prediction_arr[self.crop]
         self._reference_arr = self._reference_arr[self.crop]
-        print(
-            f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}"
-        ) if verbose else None
+        (
+            print(
+                f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}"
+            )
+            if verbose
+            else None
+        )
         self.is_cropped = True
 
     def uncrop_data(self, verbose: bool = False):
@@ -77,9 +80,13 @@ class _ProcessingPair(ABC):
 
         reference_arr = np.zeros(self.uncropped_shape)
         reference_arr[self.crop] = self._reference_arr
-        print(
-            f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}"
-        ) if verbose else None
+        (
+            print(
+                f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}"
+            )
+            if verbose
+            else None
+        )
         self._reference_arr = reference_arr
         self.is_cropped = False
 

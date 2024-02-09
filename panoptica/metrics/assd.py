@@ -1,7 +1,6 @@
 import numpy as np
-from scipy.ndimage import _ni_support
+from scipy.ndimage import _ni_support, binary_erosion, generate_binary_structure
 from scipy.ndimage._nd_image import euclidean_feature_transform
-from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
 
 def _average_symmetric_surface_distance(
@@ -11,13 +10,20 @@ def _average_symmetric_surface_distance(
     connectivity=1,
     *args,
 ) -> float:
+    """ASSD is computed by computing the average of the bidrectionally computed ASD."""
     assd = np.mean(
         (
             _average_surface_distance(
-                prediction, reference, voxelspacing, connectivity
+                reference=prediction,
+                prediction=reference,
+                voxelspacing=voxelspacing,
+                connectivity=connectivity,
             ),
             _average_surface_distance(
-                reference, prediction, voxelspacing, connectivity
+                reference=reference,
+                prediction=prediction,
+                voxelspacing=voxelspacing,
+                connectivity=connectivity,
             ),
         )
     )
@@ -38,6 +44,7 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     prediction = np.atleast_1d(prediction.astype(bool))
     reference = np.atleast_1d(reference.astype(bool))
     if voxelspacing is not None:
+        # Protected access presented by Scipy
         voxelspacing = _ni_support._normalize_sequence(voxelspacing, prediction.ndim)
         voxelspacing = np.asarray(voxelspacing, dtype=np.float64)
         if not voxelspacing.flags.contiguous:
@@ -70,7 +77,7 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
 
 
 def _distance_transform_edt(
-    input: np.ndarray,
+    input_array: np.ndarray,
     sampling=None,
     return_distances=True,
     return_indices=False,
@@ -83,12 +90,12 @@ def _distance_transform_edt(
     #    if not sampling.flags.contiguous:
     #        sampling = sampling.copy()
 
-    ft = np.zeros((input.ndim,) + input.shape, dtype=np.int32)
+    ft = np.zeros((input_array.ndim,) + input_array.shape, dtype=np.int32)
 
-    euclidean_feature_transform(input, sampling, ft)
+    euclidean_feature_transform(input_array, sampling, ft)
     # if requested, calculate the distance transform
     if return_distances:
-        dt = ft - np.indices(input.shape, dtype=ft.dtype)
+        dt = ft - np.indices(input_array.shape, dtype=ft.dtype)
         dt = dt.astype(np.float64)
         # if sampling is not None:
         #    for ii in range(len(sampling)):
