@@ -36,6 +36,7 @@ def _compute_instance_volumetric_dice(
 def _compute_dice_coefficient(
     reference: np.ndarray,
     prediction: np.ndarray,
+    *args,
 ) -> float:
     """
     Compute the Dice coefficient between two binary masks.

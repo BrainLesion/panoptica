@@ -3,17 +3,15 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 from panoptica._functionals import (
-    _calc_iou_matrix,
+    _calc_matching_metric_of_overlapping_labels,
     _map_labels,
-    _calc_iou_of_overlapping_labels,
 )
-from panoptica.utils.datatypes import (
+from panoptica.metrics import Metric
+from panoptica.utils.processing_pair import (
     InstanceLabelMap,
     MatchedInstancePair,
     UnmatchedInstancePair,
 )
-from panoptica.timing import measure_time
-from scipy.optimize import linear_sum_assignment
 
 
 class InstanceMatchingAlgorithm(ABC):
@@ -43,7 +41,9 @@ class InstanceMatchingAlgorithm(ABC):
 
     @abstractmethod
     def _match_instances(
-        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+        self,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        **kwargs,
     ) -> InstanceLabelMap:
         """
         Abstract method to be implemented by subclasses for instance matching.
@@ -58,7 +58,9 @@ class InstanceMatchingAlgorithm(ABC):
         pass
 
     def match_instances(
-        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+        self,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        **kwargs,
     ) -> MatchedInstancePair:
         """
         Perform instance matching on the given UnmatchedInstancePair.
@@ -70,7 +72,10 @@ class InstanceMatchingAlgorithm(ABC):
         Returns:
             MatchedInstancePair: The result of the instance matching.
         """
-        instance_labelmap = self._match_instances(unmatched_instance_pair, **kwargs)
+        instance_labelmap = self._match_instances(
+            unmatched_instance_pair,
+            **kwargs,
+        )
         # print("instance_labelmap:", instance_labelmap)
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
@@ -93,18 +98,16 @@ def map_instance_labels(
     >>> labelmap = [([1, 2], [3, 4]), ([5], [6])]
     >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
     """
-    prediction_arr = processing_pair._prediction_arr
+    prediction_arr = processing_pair.prediction_arr
 
-    ref_labels = processing_pair._ref_labels
-    pred_labels = processing_pair._pred_labels
+    ref_labels = processing_pair.ref_labels
+    pred_labels = processing_pair.pred_labels
 
     ref_matched_labels = []
     label_counter = int(max(ref_labels) + 1)
 
     pred_labelmap = labelmap.get_one_to_one_dictionary()
     ref_matched_labels = list([r for r in ref_labels if r in pred_labelmap.values()])
-
-    n_matched_instances = len(ref_matched_labels)
 
     # assign missed instances to next unused labels sequentially
     missed_ref_labels = list([r for r in ref_labels if r not in ref_matched_labels])
@@ -122,11 +125,6 @@ def map_instance_labels(
     matched_instance_pair = MatchedInstancePair(
         prediction_arr=prediction_arr_relabeled,
         reference_arr=processing_pair._reference_arr,
-        missed_reference_labels=missed_ref_labels,
-        missed_prediction_labels=missed_pred_labels,
-        n_prediction_instance=processing_pair.n_prediction_instance,
-        n_reference_instance=processing_pair.n_reference_instance,
-        n_matched_instances=n_matched_instances,
     )
     return matched_instance_pair
 
@@ -154,7 +152,10 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     """
 
     def __init__(
-        self, iou_threshold: float = 0.5, allow_many_to_one: bool = False
+        self,
+        matching_metric: Metric = Metric.IOU,
+        matching_threshold: float = 0.5,
+        allow_many_to_one: bool = False,
     ) -> None:
         """
         Initialize the NaiveOneToOneMatching instance.
@@ -165,11 +166,14 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         Raises:
             AssertionError: If the specified IoU threshold is not within the valid range.
         """
-        self.iou_threshold = iou_threshold
         self.allow_many_to_one = allow_many_to_one
+        self.matching_metric = matching_metric
+        self.matching_threshold = matching_threshold
 
     def _match_instances(
-        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+        self,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        **kwargs,
     ) -> InstanceLabelMap:
         """
         Perform one-to-one instance matching based on IoU values.
@@ -181,28 +185,29 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         Returns:
             Instance_Label_Map: The result of the instance matching.
         """
-        ref_labels = unmatched_instance_pair._ref_labels
-        pred_labels = unmatched_instance_pair._pred_labels
+        ref_labels = unmatched_instance_pair.ref_labels
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
 
         pred_arr, ref_arr = (
-            unmatched_instance_pair._prediction_arr,
-            unmatched_instance_pair._reference_arr,
+            unmatched_instance_pair.prediction_arr,
+            unmatched_instance_pair.reference_arr,
         )
-        iou_pairs = _calc_iou_of_overlapping_labels(
-            pred_arr, ref_arr, ref_labels, pred_labels
+        mm_pairs = _calc_matching_metric_of_overlapping_labels(
+            pred_arr, ref_arr, ref_labels, matching_metric=self.matching_metric
         )
 
         # Loop through matched instances to compute PQ components
-        for iou, (ref_label, pred_label) in iou_pairs:
+        for matching_score, (ref_label, pred_label) in mm_pairs:
             if (
                 labelmap.contains_or(pred_label, ref_label)
                 and not self.allow_many_to_one
             ):
                 continue  # -> doesnt make speed difference
-            if iou >= 0.5:
+            if self.matching_metric.score_beats_threshold(
+                matching_score, self.matching_threshold
+            ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 # map label ref_idx to pred_idx
@@ -211,43 +216,38 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
 
 class MaximizeMergeMatching(InstanceMatchingAlgorithm):
     """
-    Instance matching algorithm that performs many-to-one matching based on IoU values. Will merge if combined instance IOU is greater than individual one
+    Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one. Only matches if at least a single instance exceeds the threshold
 
-    Attributes:
-        iou_threshold (float): The IoU threshold for matching instances.
 
     Methods:
-        __init__(self, iou_threshold: float = 0.5) -> None:
-            Initialize the NaiveOneToOneMatching instance.
         _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
-            Perform one-to-one instance matching based on IoU values.
 
     Raises:
         AssertionError: If the specified IoU threshold is not within the valid range.
-
-    Example:
-    >>> matcher = NaiveOneToOneMatching(iou_threshold=0.6)
-    >>> unmatched_instance_pair = UnmatchedInstancePair(...)
-    >>> result = matcher.match_instances(unmatched_instance_pair)
     """
 
     def __init__(
-        self, iou_threshold: float = 0.5, allow_many_to_one: bool = False
+        self,
+        matching_metric: Metric = Metric.IOU,
+        matching_threshold: float = 0.5,
     ) -> None:
         """
-        Initialize the NaiveOneToOneMatching instance.
+        Initialize the MaximizeMergeMatching instance.
 
         Args:
-            iou_threshold (float, optional): The IoU threshold for matching instances. Defaults to 0.5.
+            matching_metric (_MatchingMetric): The metric to be used for matching.
+            matching_threshold (float, optional): The metric threshold for matching instances. Defaults to 0.5.
 
         Raises:
             AssertionError: If the specified IoU threshold is not within the valid range.
         """
-        self.iou_threshold = iou_threshold
-        self.allow_many_to_one = allow_many_to_one
+        self.matching_metric = matching_metric
+        self.matching_threshold = matching_threshold
 
     def _match_instances(
-        self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs
+        self,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        **kwargs,
     ) -> InstanceLabelMap:
         """
         Perform one-to-one instance matching based on IoU values.
@@ -259,26 +259,70 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         Returns:
             Instance_Label_Map: The result of the instance matching.
         """
-        ref_labels = unmatched_instance_pair._ref_labels
-        pred_labels = unmatched_instance_pair._pred_labels
+        ref_labels = unmatched_instance_pair.ref_labels
+        # pred_labels = unmatched_instance_pair._pred_labels
 
         # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
+        score_ref: dict[int, float] = {}
 
         pred_arr, ref_arr = (
-            unmatched_instance_pair._prediction_arr,
-            unmatched_instance_pair._reference_arr,
+            unmatched_instance_pair.prediction_arr,
+            unmatched_instance_pair.reference_arr,
         )
-        iou_pairs = _calc_iou_of_overlapping_labels(
-            pred_arr, ref_arr, ref_labels, pred_labels
+        mm_pairs = _calc_matching_metric_of_overlapping_labels(
+            prediction_arr=pred_arr,
+            reference_arr=ref_arr,
+            ref_labels=ref_labels,
+            matching_metric=self.matching_metric,
         )
 
         # Loop through matched instances to compute PQ components
-        for iou, (ref_label, pred_label) in iou_pairs:
-            if labelmap.contains_or(None, ref_label):
-                continue  # -> doesnt make speed difference
-            if iou >= 0.5:
+        for matching_score, (ref_label, pred_label) in mm_pairs:
+            if labelmap.contains_pred(pred_label=pred_label):
+                # skip if prediction label is already matched
+                continue
+            if labelmap.contains_ref(ref_label):
+                pred_labels_ = labelmap.get_pred_labels_matched_to_ref(ref_label)
+                new_score = self.new_combination_score(
+                    pred_labels_, pred_label, ref_label, unmatched_instance_pair
+                )
+                if new_score > score_ref[ref_label]:
+                    labelmap.add_labelmap_entry(pred_label, ref_label)
+                    score_ref[ref_label] = new_score
+            elif self.matching_metric.score_beats_threshold(
+                matching_score, self.matching_threshold
+            ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
+                score_ref[ref_label] = matching_score
                 # map label ref_idx to pred_idx
         return labelmap
+
+    def new_combination_score(
+        self,
+        pred_labels: list[int],
+        new_pred_label: int,
+        ref_label: int,
+        unmatched_instance_pair: UnmatchedInstancePair,
+    ):
+        pred_labels.append(new_pred_label)
+        score = self.matching_metric(
+            unmatched_instance_pair.reference_arr,
+            prediction_arr=unmatched_instance_pair.prediction_arr,
+            ref_instance_idx=ref_label,
+            pred_instance_idx=pred_labels,
+        )
+        return score
+
+
+class MatchUntilConvergenceMatching(InstanceMatchingAlgorithm):
+    # Match like the naive matcher (so each to their best reference) and then again and again until no overlapping labels are left
+    pass
+
+
+class DesperateMarriageMatching(InstanceMatchingAlgorithm):
+    # Match as many predictions to references as possible, doesn't need threshold
+    # Option for many-to-one or one-to-one
+    # https://github.com/koseii2122/The-Stable-Matching-Algorithm
+    pass

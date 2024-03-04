@@ -1,19 +1,20 @@
-import concurrent.futures
-from panoptica.utils.datatypes import MatchedInstancePair
-from panoptica.result import PanopticaResult
-from panoptica.metrics import (
-    _compute_iou,
-    _compute_dice_coefficient,
-    _average_symmetric_surface_distance,
-)
-from panoptica.timing import measure_time
-import numpy as np
-import gc
 from multiprocessing import Pool
+
+import numpy as np
+
+from panoptica.metrics import Metric
+from panoptica.panoptic_result import PanopticaResult
+from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.processing_pair import MatchedInstancePair
 
 
 def evaluate_matched_instance(
-    matched_instance_pair: MatchedInstancePair, iou_threshold: float, **kwargs
+    matched_instance_pair: MatchedInstancePair,
+    eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    decision_metric: Metric | None = Metric.IOU,
+    decision_threshold: float | None = None,
+    edge_case_handler: EdgeCaseHandler | None = None,
+    **kwargs,
 ) -> PanopticaResult:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
@@ -30,66 +31,51 @@ def evaluate_matched_instance(
     >>> labelmap = [([1, 2], [3, 4]), ([5], [6])]
     >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
     """
+    if edge_case_handler is None:
+        edge_case_handler = EdgeCaseHandler()
+    if decision_metric is not None:
+        assert decision_metric.name in [
+            v.name for v in eval_metrics
+        ], "decision metric not contained in eval_metrics"
+        assert decision_threshold is not None, "decision metric set but no threshold"
     # Initialize variables for True Positives (tp)
-    tp, dice_list, iou_list, assd_list = 0, [], [], []
+    tp = len(matched_instance_pair.matched_instances)
+    score_dict: dict[Metric, list[float]] = {m: [] for m in eval_metrics}
 
     reference_arr, prediction_arr = (
-        matched_instance_pair._reference_arr,
-        matched_instance_pair._prediction_arr,
+        matched_instance_pair.reference_arr,
+        matched_instance_pair.prediction_arr,
     )
-    ref_labels = matched_instance_pair._ref_labels
-
-    # instance_pairs = _calc_overlapping_labels(
-    #    prediction_arr=prediction_arr,
-    #    reference_arr=reference_arr,
-    #    ref_labels=ref_labels,
-    # )
-    # instance_pairs = [(ra, pa, rl, iou_threshold) for (ra, pa, rl, pl) in instance_pairs]
+    ref_matched_labels = matched_instance_pair.matched_instances
 
     instance_pairs = [
-        (reference_arr, prediction_arr, ref_idx, iou_threshold)
-        for ref_idx in ref_labels
+        (reference_arr, prediction_arr, ref_idx, eval_metrics)
+        for ref_idx in ref_matched_labels
     ]
     with Pool() as pool:
-        metric_values = pool.starmap(_evaluate_instance, instance_pairs)
+        metric_dicts: list[dict[Metric, float]] = pool.starmap(
+            _evaluate_instance, instance_pairs
+        )
 
-    for tp_i, dice_i, iou_i, assd_i in metric_values:
-        tp += tp_i
-        if dice_i is not None and iou_i is not None and assd_i is not None:
-            dice_list.append(dice_i)
-            iou_list.append(iou_i)
-            assd_list.append(assd_i)
+    for metric_dict in metric_dicts:
+        if decision_metric is None or (
+            decision_threshold is not None
+            and decision_metric.score_beats_threshold(
+                metric_dict[decision_metric], decision_threshold
+            )
+        ):
+            for k, v in metric_dict.items():
+                score_dict[k].append(v)
 
-    # Use concurrent.futures.ThreadPoolExecutor for parallelization
-    # with concurrent.futures.ThreadPoolExecutor() as executor:
-    #    futures = [
-    #        executor.submit(
-    #            _evaluate_instance,
-    #            reference_arr,
-    #            prediction_arr,
-    #            ref_idx,
-    #            iou_threshold,
-    #        )
-    #        for ref_idx in ref_labels
-    #    ]
-    #
-    #        for future in concurrent.futures.as_completed(futures):
-    #            tp_i, dice_i, iou_i, assd_i = future.result()
-    #            tp += tp_i
-    #            if dice_i is not None and iou_i is not None and assd_i is not None:
-    #                dice_list.append(dice_i)
-    #                iou_list.append(iou_i)
-    #                assd_list.append(assd_i)
-    #            del future
-    #            gc.collect()
     # Create and return the PanopticaResult object with computed metrics
     return PanopticaResult(
-        num_ref_instances=matched_instance_pair.n_reference_instance,
+        reference_arr=matched_instance_pair.reference_arr,
+        prediction_arr=matched_instance_pair.prediction_arr,
         num_pred_instances=matched_instance_pair.n_prediction_instance,
+        num_ref_instances=matched_instance_pair.n_reference_instance,
         tp=tp,
-        dice_list=dice_list,
-        iou_list=iou_list,
-        assd_list=assd_list,
+        list_metrics=score_dict,
+        edge_case_handler=edge_case_handler,
     )
 
 
@@ -97,8 +83,8 @@ def _evaluate_instance(
     reference_arr: np.ndarray,
     prediction_arr: np.ndarray,
     ref_idx: int,
-    iou_threshold: float,
-) -> tuple[int, float | None, float | None, float | None]:
+    eval_metrics: list[Metric],
+) -> dict[Metric, float]:
     """
     Evaluate a single instance.
 
@@ -113,27 +99,12 @@ def _evaluate_instance(
     """
     ref_arr = reference_arr == ref_idx
     pred_arr = prediction_arr == ref_idx
+    result: dict[Metric, float] = {}
     if ref_arr.sum() == 0 or pred_arr.sum() == 0:
-        tp = 0
-        dice = None
-        iou = None
-        assd = None
+        return result
     else:
-        iou: float | None = _compute_iou(
-            reference=ref_arr,
-            prediction=pred_arr,
-        )
-        if iou > iou_threshold:
-            tp = 1
-            dice = _compute_dice_coefficient(
-                reference=ref_arr,
-                prediction=pred_arr,
-            )
-            assd = _average_symmetric_surface_distance(pred_arr, ref_arr)
-        else:
-            tp = 0
-            dice = None
-            iou = None
-            assd = None
+        for metric in eval_metrics:
+            metric_value = metric(ref_arr, pred_arr)
+            result[metric] = metric_value
 
-    return tp, dice, iou, assd
+    return result

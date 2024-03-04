@@ -1,8 +1,14 @@
+from typing import TYPE_CHECKING
+from multiprocessing import Pool
+
 import numpy as np
-from panoptica.metrics import _compute_instance_iou
+
+from panoptica.metrics.iou import _compute_instance_iou
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.numpy_utils import _get_bbox_nd
-from multiprocessing import Pool
+
+if TYPE_CHECKING:
+    from panoptica.metrics import Metric
 
 
 def _calc_overlapping_labels(
@@ -35,11 +41,49 @@ def _calc_overlapping_labels(
     ]
 
 
+def _calc_matching_metric_of_overlapping_labels(
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    ref_labels: tuple[int, ...],
+    matching_metric: "Metric",
+) -> list[tuple[float, tuple[int, int]]]:
+    """Calculates the MatchingMetric for all overlapping labels (fast!)
+
+    Args:
+        prediction_arr (np.ndarray): Numpy array containing the prediction labels.
+        reference_arr (np.ndarray): Numpy array containing the reference labels.
+        ref_labels (list[int]): List of unique reference labels.
+
+    Returns:
+        list[tuple[float, tuple[int, int]]]: List of pairs in style: (iou, (ref_label, pred_label))
+    """
+    instance_pairs = [
+        (reference_arr, prediction_arr, i[0], i[1])
+        for i in _calc_overlapping_labels(
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
+            ref_labels=ref_labels,
+        )
+    ]
+    with Pool() as pool:
+        mm_values = pool.starmap(matching_metric.value, instance_pairs)
+
+    mm_pairs = [
+        (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
+        for idx, i in enumerate(mm_values)
+    ]
+    mm_pairs = sorted(
+        mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
+    )
+
+    return mm_pairs
+
+
 def _calc_iou_of_overlapping_labels(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
     ref_labels: tuple[int, ...],
-    pred_labels: tuple[int, ...],
+    **kwargs,
 ) -> list[tuple[float, tuple[int, int]]]:
     """Calculates the IOU for all overlapping labels (fast!)
 
@@ -116,7 +160,10 @@ def _calc_iou_matrix(
     return iou_matrix
 
 
-def _map_labels(arr: np.ndarray, label_map: dict[np.integer, np.integer]) -> np.ndarray:
+def _map_labels(
+    arr: np.ndarray,
+    label_map: dict[np.integer, np.integer],
+) -> np.ndarray:
     """
     Maps labels in the given array according to the label_map dictionary.
 
@@ -172,7 +219,9 @@ def _connected_components(
 
 
 def _get_paired_crop(
-    prediction_arr: np.ndarray, reference_arr: np.ndarray, px_pad: int = 2
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    px_pad: int = 2,
 ):
     assert prediction_arr.shape == reference_arr.shape
 

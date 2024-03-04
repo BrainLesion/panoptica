@@ -1,45 +1,57 @@
 import numpy as np
-from scipy.ndimage import _ni_support
+from scipy.ndimage import _ni_support, binary_erosion, generate_binary_structure
 from scipy.ndimage._nd_image import euclidean_feature_transform
-from scipy.ndimage.morphology import binary_erosion, generate_binary_structure
 
 
 def _average_symmetric_surface_distance(
-    result,
     reference,
+    prediction,
     voxelspacing=None,
     connectivity=1,
+    *args,
 ) -> float:
+    """ASSD is computed by computing the average of the bidrectionally computed ASD."""
     assd = np.mean(
         (
-            _average_surface_distance(result, reference, voxelspacing, connectivity),
-            _average_surface_distance(reference, result, voxelspacing, connectivity),
+            _average_surface_distance(
+                reference=prediction,
+                prediction=reference,
+                voxelspacing=voxelspacing,
+                connectivity=connectivity,
+            ),
+            _average_surface_distance(
+                reference=reference,
+                prediction=prediction,
+                voxelspacing=voxelspacing,
+                connectivity=connectivity,
+            ),
         )
     )
     return float(assd)
 
 
-def _average_surface_distance(result, reference, voxelspacing=None, connectivity=1):
-    sds = __surface_distances(result, reference, voxelspacing, connectivity)
+def _average_surface_distance(reference, prediction, voxelspacing=None, connectivity=1):
+    sds = __surface_distances(reference, prediction, voxelspacing, connectivity)
     asd = sds.mean()
     return asd
 
 
-def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
+def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1):
     """
     The distances between the surface voxel of binary objects in result and their
     nearest partner surface voxel of a binary object in reference.
     """
-    result = np.atleast_1d(result.astype(bool))
+    prediction = np.atleast_1d(prediction.astype(bool))
     reference = np.atleast_1d(reference.astype(bool))
     if voxelspacing is not None:
-        voxelspacing = _ni_support._normalize_sequence(voxelspacing, result.ndim)
+        # Protected access presented by Scipy
+        voxelspacing = _ni_support._normalize_sequence(voxelspacing, prediction.ndim)
         voxelspacing = np.asarray(voxelspacing, dtype=np.float64)
         if not voxelspacing.flags.contiguous:
             voxelspacing = voxelspacing.copy()
 
     # binary structure
-    footprint = generate_binary_structure(result.ndim, connectivity)
+    footprint = generate_binary_structure(prediction.ndim, connectivity)
 
     # test for emptiness
     # if 0 == np.count_nonzero(result):
@@ -48,11 +60,11 @@ def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
     #    raise RuntimeError("The second supplied array does not contain any binary object.")
 
     # extract only 1-pixel border line of objects
-    result_border = result ^ binary_erosion(result, structure=footprint, iterations=1)
+    result_border = prediction ^ binary_erosion(
+        prediction, structure=footprint, iterations=1
+    )
     reference_border = reference ^ binary_erosion(
-        reference,
-        structure=footprint,
-        iterations=1,
+        reference, structure=footprint, iterations=1
     )
 
     # compute average surface distance
@@ -65,7 +77,7 @@ def __surface_distances(result, reference, voxelspacing=None, connectivity=1):
 
 
 def _distance_transform_edt(
-    input: np.ndarray,
+    input_array: np.ndarray,
     sampling=None,
     return_distances=True,
     return_indices=False,
@@ -78,12 +90,12 @@ def _distance_transform_edt(
     #    if not sampling.flags.contiguous:
     #        sampling = sampling.copy()
 
-    ft = np.zeros((input.ndim,) + input.shape, dtype=np.int32)
+    ft = np.zeros((input_array.ndim,) + input_array.shape, dtype=np.int32)
 
-    euclidean_feature_transform(input, sampling, ft)
+    euclidean_feature_transform(input_array, sampling, ft)
     # if requested, calculate the distance transform
     if return_distances:
-        dt = ft - np.indices(input.shape, dtype=ft.dtype)
+        dt = ft - np.indices(input_array.shape, dtype=ft.dtype)
         dt = dt.astype(np.float64)
         # if sampling is not None:
         #    for ii in range(len(sampling)):
