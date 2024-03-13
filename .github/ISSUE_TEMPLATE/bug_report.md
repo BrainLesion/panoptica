@@ -33,10 +33,10 @@ e.g. Conda environment with Python 3.10. Check your Python version with:
 python --version
 ```
 
-### version of brainles_preprocessing ?
-please specify your version of brainles_preprocessing (please make sure you run the latest version):
+### version of panoptica ?
+please specify your version of panoptica (please make sure you run the latest version):
 ```sh
-pip freeze | grep brainles_preprocessing
+pip freeze | grep panoptica
 ```
 
 **Additional context**
