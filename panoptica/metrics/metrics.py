@@ -298,8 +298,12 @@ class Evaluation_List_Metric:
         else:
             self.AVG = None if self.ALL is None else np.average(self.ALL)
             self.SUM = None if self.ALL is None else np.sum(self.ALL)
-            self.MIN = None if self.ALL is None or len(self.ALL) == 0 else np.min(self.ALL)
-            self.MAX = None if self.ALL is None or len(self.ALL) == 0 else np.max(self.ALL)
+            self.MIN = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.min(self.ALL)
+            )
+            self.MAX = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.max(self.ALL)
+            )
 
         self.STD = (
             None
