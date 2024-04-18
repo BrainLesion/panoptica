@@ -13,7 +13,7 @@ def citation_reminder(func):
             console = Console()
             console.rule("Thank you for using [bold]panoptica[/bold]")
             console.print(
-                f"Please support our development by citing",
+                "Please support our development by citing",
                 justify="center",
             )
             console.print(
@@ -22,6 +22,7 @@ def citation_reminder(func):
             )
             console.rule()
             console.line()
+            os.environ["PANOPTICA_CITATION_REMINDER"] = "false"  # Show only once
         return func(*args, **kwargs)
 
     return wrapper
