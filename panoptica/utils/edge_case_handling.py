@@ -78,10 +78,15 @@ class MetricZeroTPEdgeCaseHandling(object):
 
 
 class EdgeCaseHandler:
+
     def __init__(
         self,
         listmetric_zeroTP_handling: dict[Metric, MetricZeroTPEdgeCaseHandling] = {
             Metric.DSC: MetricZeroTPEdgeCaseHandling(
+                no_instances_result=EdgeCaseResult.NAN,
+                default_result=EdgeCaseResult.ZERO,
+            ),
+            Metric.clDSC: MetricZeroTPEdgeCaseHandling(
                 no_instances_result=EdgeCaseResult.NAN,
                 default_result=EdgeCaseResult.ZERO,
             ),
@@ -93,6 +98,10 @@ class EdgeCaseHandler:
             Metric.ASSD: MetricZeroTPEdgeCaseHandling(
                 no_instances_result=EdgeCaseResult.NAN,
                 default_result=EdgeCaseResult.INF,
+            ),
+            Metric.RVD: MetricZeroTPEdgeCaseHandling(
+                no_instances_result=EdgeCaseResult.NAN,
+                default_result=EdgeCaseResult.NAN,
             ),
         },
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,

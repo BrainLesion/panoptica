@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def _compute_instance_volumetric_dice(
+def _compute_instance_relative_volume_difference(
     ref_labels: np.ndarray,
     pred_labels: np.ndarray,
     ref_instance_idx: int | None = None,
@@ -26,40 +26,38 @@ def _compute_instance_volumetric_dice(
         indicate better overlap and similarity between instances.
     """
     if ref_instance_idx is None and pred_instance_idx is None:
-        return _compute_dice_coefficient(
+        return _compute_relative_volume_difference(
             reference=ref_labels,
             prediction=pred_labels,
         )
     ref_instance_mask = ref_labels == ref_instance_idx
     pred_instance_mask = pred_labels == pred_instance_idx
-    return _compute_dice_coefficient(
+    return _compute_relative_volume_difference(
         reference=ref_instance_mask,
         prediction=pred_instance_mask,
     )
 
 
-def _compute_dice_coefficient(
+def _compute_relative_volume_difference(
     reference: np.ndarray,
     prediction: np.ndarray,
     *args,
 ) -> float:
     """
-    Compute the Dice coefficient between two binary masks.
+    Compute the relative volume difference between two binary masks.
 
-    The Dice coefficient measures the similarity or overlap between two binary masks.
-    It is defined as:
+    The relative volume difference is the predicted volume of an instance in relation to the reference volume (>0 oversegmented, <0 undersegmented)
 
-    Dice = (2 * intersection) / (area_mask1 + area_mask2)
+    RVD = ((pred_volume-ref_volume) / ref_volume)
 
     Args:
         reference (np.ndarray): Reference binary mask.
         prediction (np.ndarray): Prediction binary mask.
 
     Returns:
-        float: Dice coefficient between the two binary masks. A value between 0 and 1, where higher values
+        float: Relative volume Error between the two binary masks. A value between 0 and 1, where higher values
         indicate better overlap and similarity between masks.
     """
-    intersection = np.logical_and(reference, prediction)
     reference_mask = np.sum(reference)
     prediction_mask = np.sum(prediction)
 
@@ -68,5 +66,5 @@ def _compute_dice_coefficient(
         return 0.0
 
     # Calculate Dice coefficient
-    dice = 2 * np.sum(intersection) / (reference_mask + prediction_mask)
-    return dice
+    rvd = (prediction_mask - reference_mask) / reference_mask
+    return rvd

@@ -5,10 +5,12 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from panoptica.metrics import (
-    _average_symmetric_surface_distance,
-    _compute_centerline_dice_coefficient,
-    _compute_dice_coefficient,
-    _compute_iou,
+    _compute_instance_average_symmetric_surface_distance,
+    _compute_centerline_dice,
+    _compute_instance_volumetric_dice,
+    _compute_instance_iou,
+    _compute_instance_relative_volume_difference,
+    # _compute_instance_segmentation_tendency,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -89,10 +91,12 @@ class Metric(_Enum_Compare):
         _type_: _description_
     """
 
-    DSC = _Metric("DSC", False, _compute_dice_coefficient)
-    IOU = _Metric("IOU", False, _compute_iou)
-    ASSD = _Metric("ASSD", True, _average_symmetric_surface_distance)
-    clDSC = _Metric("clDSC", False, _compute_centerline_dice_coefficient)
+    DSC = _Metric("DSC", False, _compute_instance_volumetric_dice)
+    IOU = _Metric("IOU", False, _compute_instance_iou)
+    ASSD = _Metric("ASSD", True, _compute_instance_average_symmetric_surface_distance)
+    clDSC = _Metric("clDSC", False, _compute_centerline_dice)
+    RVD = _Metric("RVD", True, _compute_instance_relative_volume_difference)
+    # ST = _Metric("ST", False, _compute_instance_segmentation_tendency)
 
     def __call__(
         self,
@@ -166,6 +170,8 @@ class MetricMode(_Enum_Compare):
     AVG = auto()
     SUM = auto()
     STD = auto()
+    MIN = auto()
+    MAX = auto()
 
 
 class MetricType(_Enum_Compare):
@@ -287,9 +293,18 @@ class Evaluation_List_Metric:
         if is_edge_case:
             self.AVG: float | None = edge_case_result
             self.SUM: None | float = edge_case_result
+            self.MIN: None | float = edge_case_result
+            self.MAX: None | float = edge_case_result
         else:
             self.AVG = None if self.ALL is None else np.average(self.ALL)
             self.SUM = None if self.ALL is None else np.sum(self.ALL)
+            self.MIN = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.min(self.ALL)
+            )
+            self.MAX = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.max(self.ALL)
+            )
+
         self.STD = (
             None
             if self.ALL is None

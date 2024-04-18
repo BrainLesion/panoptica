@@ -18,8 +18,8 @@ def cl_score(volume: np.ndarray, skeleton: np.ndarray):
 def _compute_centerline_dice(
     ref_labels: np.ndarray,
     pred_labels: np.ndarray,
-    ref_instance_idx: int,
-    pred_instance_idx: int,
+    ref_instance_idx: int | None = None,
+    pred_instance_idx: int | None = None,
 ) -> float:
     """Compute the centerline Dice (clDice) coefficient between a specific pair of instances.
 
@@ -32,6 +32,11 @@ def _compute_centerline_dice(
     Returns:
         float: clDice coefficient
     """
+    if ref_instance_idx is None and pred_instance_idx is None:
+        return _compute_centerline_dice_coefficient(
+            reference=ref_labels,
+            prediction=pred_labels,
+        )
     ref_instance_mask = ref_labels == ref_instance_idx
     pred_instance_mask = pred_labels == pred_instance_idx
     return _compute_centerline_dice_coefficient(
