@@ -151,7 +151,6 @@ def panoptic_evaluate(
         ), "Got SemanticPair but not InstanceApproximator"
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
-        processing_pair = instance_approximator.approximate_instances(processing_pair)
         start = perf_counter()
         processing_pair = instance_approximator.approximate_instances(processing_pair)
         if log_times:
@@ -192,6 +191,7 @@ def panoptic_evaluate(
     if isinstance(processing_pair, MatchedInstancePair):
         if verbose:
             print("-- Got MatchedInstancePair, will evaluate instances")
+        start = perf_counter()
         processing_pair = evaluate_matched_instance(
             processing_pair,
             eval_metrics=eval_metrics,
