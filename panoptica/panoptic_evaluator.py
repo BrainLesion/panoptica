@@ -21,7 +21,9 @@ class Panoptic_Evaluator:
 
     def __init__(
         self,
-        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: (
+            Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair]
+        ) = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
