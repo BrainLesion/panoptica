@@ -98,7 +98,7 @@ def panoptic_evaluate(
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
     result_all: bool = True,
-    verbose: bool = False,
+    verbose: bool = True,
     **kwargs,
 ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
     """
@@ -128,14 +128,16 @@ def panoptic_evaluate(
     >>> panoptic_evaluate(SemanticPair(...), instance_approximator=InstanceApproximator(), iou_threshold=0.6)
     (PanopticaResult(...), {'UnmatchedInstanceMap': _ProcessingPair(...), 'MatchedInstanceMap': _ProcessingPair(...)})
     """
-    print("Panoptic: Start Evaluation")
+    if verbose:
+        print("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         # use default edgecase handler
         edge_case_handler = EdgeCaseHandler()
     debug_data: dict[str, _ProcessingPair] = {}
     # First Phase: Instance Approximation
     if isinstance(processing_pair, PanopticaResult):
-        print("-- Input was Panoptic Result, will just return")
+        if verbose:
+            print("-- Input was Panoptic Result, will just return")
         return processing_pair, debug_data
 
     # Crops away unecessary space of zeroes
@@ -145,7 +147,8 @@ def panoptic_evaluate(
         assert (
             instance_approximator is not None
         ), "Got SemanticPair but not InstanceApproximator"
-        print("-- Got SemanticPair, will approximate instances")
+        if verbose:
+            print("-- Got SemanticPair, will approximate instances")
         processing_pair = instance_approximator.approximate_instances(processing_pair)
         start = perf_counter()
         processing_pair = instance_approximator.approximate_instances(processing_pair)
@@ -162,7 +165,8 @@ def panoptic_evaluate(
         )
 
     if isinstance(processing_pair, UnmatchedInstancePair):
-        print("-- Got UnmatchedInstancePair, will match instances")
+        if verbose:
+            print("-- Got UnmatchedInstancePair, will match instances")
         assert (
             instance_matcher is not None
         ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
@@ -184,7 +188,8 @@ def panoptic_evaluate(
         )
 
     if isinstance(processing_pair, MatchedInstancePair):
-        print("-- Got MatchedInstancePair, will evaluate instances")
+        if verbose:
+            print("-- Got MatchedInstancePair, will evaluate instances")
         processing_pair = evaluate_matched_instance(
             processing_pair,
             eval_metrics=eval_metrics,
