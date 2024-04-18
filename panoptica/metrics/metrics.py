@@ -175,6 +175,7 @@ class MetricType(_Enum_Compare):
         _Enum_Compare (_type_): _description_
     """
 
+    NO_PRINT = auto()
     MATCHING = auto()
     GLOBAL = auto()
     INSTANCE = auto()

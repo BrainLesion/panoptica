@@ -22,6 +22,7 @@ evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
+    verbose=True,
 )
 
 with cProfile.Profile() as pr:

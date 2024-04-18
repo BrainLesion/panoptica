@@ -13,6 +13,7 @@ from panoptica.metrics import (
     MetricType,
     _compute_centerline_dice_coefficient,
     _compute_dice_coefficient,
+    _average_symmetric_surface_distance,
 )
 from panoptica.utils import EdgeCaseHandler
 
@@ -94,6 +95,20 @@ class PanopticaResult(object):
             fn,
             long_name="False Negatives",
         )
+        self.prec: int
+        self._add_metric(
+            "prec",
+            MetricType.NO_PRINT,
+            prec,
+            long_name="Precision (positive predictive value)",
+        )
+        self.rec: int
+        self._add_metric(
+            "rec",
+            MetricType.NO_PRINT,
+            rec,
+            long_name="Recall (sensitivity)",
+        )
         self.rq: float
         self._add_metric(
             "rq",
@@ -118,6 +133,14 @@ class PanopticaResult(object):
             MetricType.GLOBAL,
             global_bin_cldsc,
             long_name="Global Binary Centerline Dice",
+        )
+        #
+        self.global_bin_assd: int
+        self._add_metric(
+            "global_bin_assd",
+            MetricType.GLOBAL,
+            global_bin_assd,
+            long_name="Global Binary Average Symmetric Surface Distance",
         )
         # endregion
         #
@@ -270,6 +293,8 @@ class PanopticaResult(object):
     def __str__(self) -> str:
         text = ""
         for metric_type in MetricType:
+            if metric_type == MetricType.NO_PRINT:
+                continue
             text += f"\n+++ {metric_type.name} +++\n"
             for k, v in self._evaluation_metrics.items():
                 if v.metric_type != metric_type:
@@ -358,6 +383,14 @@ def fp(res: PanopticaResult):
 
 def fn(res: PanopticaResult):
     return res.num_ref_instances - res.tp
+
+
+def prec(res: PanopticaResult):
+    return res.tp / (res.tp + res.fp)
+
+
+def rec(res: PanopticaResult):
+    return res.tp / (res.tp + res.fn)
 
 
 def rq(res: PanopticaResult):
@@ -454,6 +487,16 @@ def global_bin_cldsc(res: PanopticaResult):
     pred_binary[pred_binary != 0] = 1
     ref_binary[ref_binary != 0] = 1
     return _compute_centerline_dice_coefficient(ref_binary, pred_binary)
+
+
+def global_bin_assd(res: PanopticaResult):
+    if res.tp == 0:
+        return 0.0
+    pred_binary = res._prediction_arr.copy()
+    ref_binary = res._reference_arr.copy()
+    pred_binary[pred_binary != 0] = 1
+    ref_binary[ref_binary != 0] = 1
+    return _average_symmetric_surface_distance(ref_binary, pred_binary)
 
 
 # endregion
