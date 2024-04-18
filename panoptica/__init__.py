@@ -10,3 +10,4 @@ from panoptica.utils.processing_pair import (
     UnmatchedInstancePair,
     MatchedInstancePair,
 )
+from panoptica.metrics import Metric, MetricMode, MetricType

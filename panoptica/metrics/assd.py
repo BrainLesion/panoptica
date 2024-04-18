@@ -3,6 +3,31 @@ from scipy.ndimage import _ni_support, binary_erosion, generate_binary_structure
 from scipy.ndimage._nd_image import euclidean_feature_transform
 
 
+def _compute_instance_average_symmetric_surface_distance(
+    ref_labels: np.ndarray,
+    pred_labels: np.ndarray,
+    ref_instance_idx: int | None = None,
+    pred_instance_idx: int | None = None,
+    voxelspacing=None,
+    connectivity=1,
+):
+    if ref_instance_idx is None and pred_instance_idx is None:
+        return _average_symmetric_surface_distance(
+            reference=ref_labels,
+            prediction=pred_labels,
+            voxelspacing=voxelspacing,
+            connectivity=connectivity,
+        )
+    ref_instance_mask = ref_labels == ref_instance_idx
+    pred_instance_mask = pred_labels == pred_instance_idx
+    return _average_symmetric_surface_distance(
+        reference=ref_instance_mask,
+        prediction=pred_instance_mask,
+        voxelspacing=voxelspacing,
+        connectivity=connectivity,
+    )
+
+
 def _average_symmetric_surface_distance(
     reference,
     prediction,

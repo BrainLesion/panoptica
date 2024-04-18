@@ -4,8 +4,8 @@ import numpy as np
 def _compute_instance_iou(
     reference_arr: np.ndarray,
     prediction_arr: np.ndarray,
-    ref_instance_idx: int,
-    pred_instance_idx: int,
+    ref_instance_idx: int | None = None,
+    pred_instance_idx: int | None = None,
 ) -> float:
     """
     Compute Intersection over Union (IoU) between a specific pair of reference and prediction instances.
@@ -19,6 +19,11 @@ def _compute_instance_iou(
     Returns:
         float: IoU between the specified instances.
     """
+    if ref_instance_idx is None and pred_instance_idx is None:
+        return _compute_iou(
+            reference_arr=reference_arr,
+            prediction_arr=prediction_arr,
+        )
     ref_instance_mask = reference_arr == ref_instance_idx
     pred_instance_mask = prediction_arr == pred_instance_idx
     return _compute_iou(ref_instance_mask, pred_instance_mask)

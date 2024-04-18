@@ -18,15 +18,14 @@ from panoptica.utils.processing_pair import (
 
 
 class Panoptic_Evaluator:
+
     def __init__(
         self,
-        expected_input: (
-            Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair]
-        ) = MatchedInstancePair,
+        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
-        eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+        eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD, Metric.RVD],
         decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
         log_times: bool = False,

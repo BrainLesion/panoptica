@@ -14,6 +14,7 @@ from panoptica.metrics import (
     _compute_centerline_dice_coefficient,
     _compute_dice_coefficient,
     _average_symmetric_surface_distance,
+    _compute_relative_volume_difference,
 )
 from panoptica.utils import EdgeCaseHandler
 
@@ -142,6 +143,14 @@ class PanopticaResult(object):
             global_bin_assd,
             long_name="Global Binary Average Symmetric Surface Distance",
         )
+        #
+        self.global_bin_rvd: int
+        self._add_metric(
+            "global_bin_rvd",
+            MetricType.GLOBAL,
+            global_bin_rvd,
+            long_name="Global Binary Relative Volume Difference",
+        )
         # endregion
         #
         # region IOU
@@ -230,6 +239,23 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             sq_assd_std,
             long_name="Segmentation Quality Assd Standard Deviation",
+        )
+        # endregion
+        #
+        # region RVD
+        self.sq_rvd: float
+        self._add_metric(
+            "sq_rvd",
+            MetricType.INSTANCE,
+            sq_rvd,
+            long_name="Segmentation Quality Relative Volume Difference",
+        )
+        self.sq_rvd_std: float
+        self._add_metric(
+            "sq_rvd_std",
+            MetricType.INSTANCE,
+            sq_rvd_std,
+            long_name="Segmentation Quality Relative Volume Difference Standard Deviation",
         )
         # endregion
 
@@ -468,6 +494,18 @@ def sq_assd_std(res: PanopticaResult):
 # endregion
 
 
+# region RVD
+def sq_rvd(res: PanopticaResult):
+    return res.get_list_metric(Metric.RVD, mode=MetricMode.AVG)
+
+
+def sq_rvd_std(res: PanopticaResult):
+    return res.get_list_metric(Metric.RVD, mode=MetricMode.STD)
+
+
+# endregion
+
+
 # region Global
 def global_bin_dsc(res: PanopticaResult):
     if res.tp == 0:
@@ -497,6 +535,16 @@ def global_bin_assd(res: PanopticaResult):
     pred_binary[pred_binary != 0] = 1
     ref_binary[ref_binary != 0] = 1
     return _average_symmetric_surface_distance(ref_binary, pred_binary)
+
+
+def global_bin_rvd(res: PanopticaResult):
+    if res.tp == 0:
+        return 0.0
+    pred_binary = res._prediction_arr.copy()
+    ref_binary = res._reference_arr.copy()
+    pred_binary[pred_binary != 0] = 1
+    ref_binary[ref_binary != 0] = 1
+    return _compute_relative_volume_difference(ref_binary, pred_binary)
 
 
 # endregion
