@@ -82,7 +82,8 @@ class Panoptic_Evaluator:
             decision_threshold=self.__decision_threshold,
             result_all=result_all,
             log_times=self.__log_times,
-            verbose=self.__verbose if verbose is None else verbose,
+            verbose=True if verbose is None else verbose,
+            verbose_calc=self.__verbose if verbose is None else verbose,
         )
 
 
@@ -98,7 +99,8 @@ def panoptic_evaluate(
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
     result_all: bool = True,
-    verbose: bool = True,
+    verbose=False,
+    verbose_calc=False,
     **kwargs,
 ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
     """
@@ -202,7 +204,7 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, PanopticaResult):
         if result_all:
-            processing_pair.calculate_all(print_errors=verbose)
+            processing_pair.calculate_all(print_errors=verbose_calc)
         return processing_pair, debug_data
 
     raise RuntimeError("End of panoptic pipeline reached without results")
