@@ -13,6 +13,7 @@ from panoptica.metrics import (
     MetricType,
     _compute_centerline_dice_coefficient,
     _compute_dice_coefficient,
+    _average_symmetric_surface_distance,
 )
 from panoptica.utils import EdgeCaseHandler
 
@@ -132,6 +133,14 @@ class PanopticaResult(object):
             MetricType.GLOBAL,
             global_bin_cldsc,
             long_name="Global Binary Centerline Dice",
+        )
+        #
+        self.global_bin_assd: int
+        self._add_metric(
+            "global_bin_assd",
+            MetricType.GLOBAL,
+            global_bin_assd,
+            long_name="Global Binary Average Symmetric Surface Distance",
         )
         # endregion
         #
@@ -466,6 +475,16 @@ def global_bin_cldsc(res: PanopticaResult):
     pred_binary[pred_binary != 0] = 1
     ref_binary[ref_binary != 0] = 1
     return _compute_centerline_dice_coefficient(ref_binary, pred_binary)
+
+
+def global_bin_assd(res: PanopticaResult):
+    if res.tp == 0:
+        return 0.0
+    pred_binary = res._prediction_arr.copy()
+    ref_binary = res._reference_arr.copy()
+    pred_binary[pred_binary != 0] = 1
+    ref_binary[ref_binary != 0] = 1
+    return _average_symmetric_surface_distance(ref_binary, pred_binary)
 
 
 # endregion
