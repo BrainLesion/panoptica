@@ -15,18 +15,19 @@ from panoptica.utils.processing_pair import (
     UnmatchedInstancePair,
     _ProcessingPair,
 )
+from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 
 
 class Panoptic_Evaluator:
 
     def __init__(
         self,
-        expected_input: (
-            Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair]
-        ) = MatchedInstancePair,
+        # TODO let users give prediction and reference arr instead of the processing pair, so let this create the processing pair itself
+        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
+        segmentation_class_groups: SegmentationClassGroups | None = None,
         eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD, Metric.RVD],
         decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
@@ -49,13 +50,11 @@ class Panoptic_Evaluator:
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
 
-        self.__edge_case_handler = (
-            edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
-        )
+        self.__segmentation_class_groups = segmentation_class_groups
+
+        self.__edge_case_handler = edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
         if self.__decision_metric is not None:
-            assert (
-                self.__decision_threshold is not None
-            ), "decision metric set but no decision threshold for it"
+            assert self.__decision_threshold is not None, "decision metric set but no decision threshold for it"
         #
         self.__log_times = log_times
         self.__verbose = verbose
@@ -64,34 +63,59 @@ class Panoptic_Evaluator:
     @measure_time
     def evaluate(
         self,
-        processing_pair: (
-            SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
-        ),
+        processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
         result_all: bool = True,
         verbose: bool | None = None,
     ) -> tuple[PanopticaResult, dict[str, _ProcessingPair]]:
-        assert (
-            type(processing_pair) == self.__expected_input
-        ), f"input not of expected type {self.__expected_input}"
-        return panoptic_evaluate(
-            processing_pair=processing_pair,
-            edge_case_handler=self.__edge_case_handler,
-            instance_approximator=self.__instance_approximator,
-            instance_matcher=self.__instance_matcher,
-            eval_metrics=self.__eval_metrics,
-            decision_metric=self.__decision_metric,
-            decision_threshold=self.__decision_threshold,
-            result_all=result_all,
-            log_times=self.__log_times,
-            verbose=True if verbose is None else verbose,
-            verbose_calc=self.__verbose if verbose is None else verbose,
-        )
+        assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
+
+        if self.__segmentation_class_groups is None:
+            return {
+                "ungrouped": panoptic_evaluate(
+                    processing_pair=processing_pair,
+                    edge_case_handler=self.__edge_case_handler,
+                    instance_approximator=self.__instance_approximator,
+                    instance_matcher=self.__instance_matcher,
+                    eval_metrics=self.__eval_metrics,
+                    decision_metric=self.__decision_metric,
+                    decision_threshold=self.__decision_threshold,
+                    result_all=result_all,
+                    log_times=self.__log_times,
+                    verbose=True if verbose is None else verbose,
+                    verbose_calc=self.__verbose if verbose is None else verbose,
+                )
+            }
+
+        self.__segmentation_class_groups.has_defined_labels_for(processing_pair.prediction_arr, raise_error=True)
+        self.__segmentation_class_groups.has_defined_labels_for(processing_pair.reference_arr, raise_error=True)
+
+        result_grouped = {}
+        for group_name in self.__segmentation_class_groups:
+            label_group = self.__segmentation_class_groups[group_name]
+            assert isinstance(label_group, LabelGroup)
+
+            prediction_arr_grouped = label_group(processing_pair.prediction_arr)
+            reference_arr_grouped = label_group(processing_pair.reference_arr)
+
+            processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)
+            result_grouped[group_name] = panoptic_evaluate(
+                processing_pair=processing_pair_grouped,
+                edge_case_handler=self.__edge_case_handler,
+                instance_approximator=self.__instance_approximator,
+                instance_matcher=self.__instance_matcher,
+                eval_metrics=self.__eval_metrics,
+                decision_metric=self.__decision_metric,
+                decision_threshold=self.__decision_threshold,
+                result_all=result_all,
+                log_times=self.__log_times,
+                verbose=True if verbose is None else verbose,
+                verbose_calc=self.__verbose if verbose is None else verbose,
+            )
+        return result_grouped
 
 
 def panoptic_evaluate(
-    processing_pair: (
-        SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult
-    ),
+    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
@@ -147,9 +171,7 @@ def panoptic_evaluate(
     processing_pair.crop_data()
 
     if isinstance(processing_pair, SemanticPair):
-        assert (
-            instance_approximator is not None
-        ), "Got SemanticPair but not InstanceApproximator"
+        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
@@ -169,9 +191,7 @@ def panoptic_evaluate(
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
             print("-- Got UnmatchedInstancePair, will match instances")
-        assert (
-            instance_matcher is not None
-        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,

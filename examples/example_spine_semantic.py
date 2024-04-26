@@ -17,7 +17,6 @@ pred_masks = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
 
 sample = SemanticPair(pred_masks, ref_masks)
 
-
 evaluator = Panoptic_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
