@@ -9,10 +9,10 @@ enable = true
 name = "panoptica"
 version = "0.0.0"
 description = "Panoptic Quality (PQ) computation for binary masks."
-authors = ["Florian Kofler <florian.kofler@tum.de>"]
-repository = "https://github.com/BrainLesion/panoptica"
-homepage = "https://github.com/BrainLesion/panoptica"
-documentation = "https://panoptica.readthedocs.io/"
+authors = ["BLINDED"]
+repository = "BLINDED"
+homepage = "BLINDED"
+documentation = "BLINDED"
 readme = "README.md"
 
 

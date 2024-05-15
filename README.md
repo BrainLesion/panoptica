@@ -1,6 +1,8 @@
+<!---
 [![PyPI version panoptica](https://badge.fury.io/py/panoptica.svg)](https://pypi.python.org/pypi/panoptica/)
 [![Documentation Status](https://readthedocs.org/projects/panoptica/badge/?version=latest)](http://panoptica.readthedocs.io/?badge=latest)
 [![tests](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml/badge.svg)](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml)
+--->
 
 
 # panoptica
@@ -19,7 +21,7 @@ The package provides three core modules:
 
 ## Installation
 
-With a Python 3.10+ environment, you can install panoptica from [pypi.org](https://pypi.org/project/panoptica/)
+With a Python 3.10+ environment, you can install panoptica from <b>blinded pypi link</b> <!-- [pypi.org](https://pypi.org/project/panoptica/) -->
 
 ```sh
 pip install panoptica
@@ -27,7 +29,7 @@ pip install panoptica
 
 ## Use cases and tutorials
 
-For tutorials featuring various use cases, see: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
+For tutorials featuring various use cases, see: <b>blinded link</b> <!--[BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica) -->
 
 ### Semantic Segmentation Input
 
@@ -62,6 +64,8 @@ If your predicted instances already match the reference instances, you can direc
 
 If you use panoptica in your research, please cite it to support the development!
 
+<b>Blinded Citation</b>
+<!---
 Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., Mekki, I., Shit, S., Negwer, M., Al-Maskari, R., Ertürk, A., Vinayahalingam, S., Isensee, F., Pati, S., Rueckert, D., Kirschke, J. S., Ehrlich, S. K., Reinke, A., Menze, B., Wiestler, B., & Piraud, M. (2023). *Panoptica -- instance-wise evaluation of 3D semantic and instance segmentation maps.* [arXiv preprint arXiv:2312.02608](https://arxiv.org/abs/2312.02608).
 
 ```
@@ -74,3 +78,4 @@ Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., 
       primaryClass={cs.CV}
 }
 ```
+--->

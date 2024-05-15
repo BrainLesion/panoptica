@@ -2,7 +2,7 @@ import os
 
 from rich.console import Console
 
-CITATION_LINK = "https://github.com/BrainLesion/panoptica#citation"
+CITATION_LINK = "BLINDED"
 
 
 def citation_reminder(func):
