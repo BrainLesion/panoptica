@@ -270,7 +270,9 @@ class PanopticaResult(object):
                 num_pred_instances=self.num_pred_instances,
                 num_ref_instances=self.num_ref_instances,
             )
-            self._list_metrics[k] = Evaluation_List_Metric(k, empty_list_std, v, is_edge_case, edge_case_result)
+            self._list_metrics[k] = Evaluation_List_Metric(
+                k, empty_list_std, v, is_edge_case, edge_case_result
+            )
 
     def _add_metric(
         self,
@@ -339,13 +341,19 @@ class PanopticaResult(object):
         return text
 
     def to_dict(self) -> dict:
-        return {k: getattr(self, v.id) for k, v in self._evaluation_metrics.items() if (v._error == False and v._was_calculated)}
+        return {
+            k: getattr(self, v.id)
+            for k, v in self._evaluation_metrics.items()
+            if (v._error == False and v._was_calculated)
+        }
 
     def get_list_metric(self, metric: Metric, mode: MetricMode):
         if metric in self._list_metrics:
             return self._list_metrics[metric][mode]
         else:
-            raise MetricCouldNotBeComputedException(f"{metric} could not be found, have you set it in eval_metrics during evaluation?")
+            raise MetricCouldNotBeComputedException(
+                f"{metric} could not be found, have you set it in eval_metrics during evaluation?"
+            )
 
     def _calc_metric(self, metric_name: str, supress_error: bool = False):
         if metric_name in self._evaluation_metrics:
@@ -361,7 +369,9 @@ class PanopticaResult(object):
             self._evaluation_metrics[metric_name]._was_calculated = True
             return value
         else:
-            raise MetricCouldNotBeComputedException(f"could not find metric with name {metric_name}")
+            raise MetricCouldNotBeComputedException(
+                f"could not find metric with name {metric_name}"
+            )
 
     def __getattribute__(self, __name: str) -> Any:
         attr = None
@@ -374,7 +384,9 @@ class PanopticaResult(object):
                 raise e
         if attr is None:
             if self._evaluation_metrics[__name]._error:
-                raise MetricCouldNotBeComputedException(f"Requested metric {__name} that could not be computed")
+                raise MetricCouldNotBeComputedException(
+                    f"Requested metric {__name} that could not be computed"
+                )
             elif not self._evaluation_metrics[__name]._was_calculated:
                 value = self._calc_metric(__name)
                 setattr(self, __name, value)

@@ -17,12 +17,18 @@ class LabelGroup:
         """
         if isinstance(value_labels, int):
             value_labels = [value_labels]
-        assert len(value_labels) >= 1, f"You tried to define a LabelGroup without any specified labels, got {value_labels}"
+        assert (
+            len(value_labels) >= 1
+        ), f"You tried to define a LabelGroup without any specified labels, got {value_labels}"
         self.__value_labels = value_labels
-        assert np.all([v > 0 for v in self.__value_labels]), f"Given value labels are not >0, got {value_labels}"
+        assert np.all(
+            [v > 0 for v in self.__value_labels]
+        ), f"Given value labels are not >0, got {value_labels}"
         self.__single_instance = single_instance
         if self.__single_instance:
-            assert len(value_labels) == 1, f"single_instance set to True, but got more than one label for this group, got {value_labels}"
+            assert (
+                len(value_labels) == 1
+            ), f"single_instance set to True, but got more than one label for this group, got {value_labels}"
 
     @property
     def value_labels(self) -> list[int]:
@@ -69,25 +75,37 @@ class SegmentationClassGroups:
         # maps name of group to the group itself
 
         if isinstance(groups, list):
-            self.__group_dictionary = {f"group_{idx}": g for idx, g in enumerate(groups)}
+            self.__group_dictionary = {
+                f"group_{idx}": g for idx, g in enumerate(groups)
+            }
         else:
             # transform dict into list of LabelGroups
             for i, g in groups.items():
                 name_lower = str(i).lower()
                 if isinstance(g, LabelGroup):
-                    self.__group_dictionary[name_lower] = LabelGroup(g.value_labels, g.single_instance)
+                    self.__group_dictionary[name_lower] = LabelGroup(
+                        g.value_labels, g.single_instance
+                    )
                 else:
                     self.__group_dictionary[name_lower] = LabelGroup(g[0], g[1])
 
         # needs to check that each label is accounted for exactly ONCE
-        labels = [value_label for lg in self.__group_dictionary.values() for value_label in lg.value_labels]
+        labels = [
+            value_label
+            for lg in self.__group_dictionary.values()
+            for value_label in lg.value_labels
+        ]
         duplicates = list_duplicates(labels)
         if len(duplicates) > 0:
-            raise AssertionError(f"The same label was assigned to two different labelgroups, got {str(self)}")
+            raise AssertionError(
+                f"The same label was assigned to two different labelgroups, got {str(self)}"
+            )
 
         self.__labels = labels
 
-    def has_defined_labels_for(self, arr: np.ndarray | list[int], raise_error: bool = False):
+    def has_defined_labels_for(
+        self, arr: np.ndarray | list[int], raise_error: bool = False
+    ):
         if isinstance(arr, list):
             arr_labels = arr
         else:
