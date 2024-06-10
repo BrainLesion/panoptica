@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 
 from panoptica.metrics import Metric
-from panoptica.panoptic_result import MetricCouldNotBeComputedException, PanopticaResult
+from panoptica.panoptica_result import MetricCouldNotBeComputedException, PanopticaResult
 from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
 
 

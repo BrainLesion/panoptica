@@ -15,7 +15,7 @@ from panoptica.metrics import (
 from panoptica.utils.constants import _Enum_Compare, auto
 
 if TYPE_CHECKING:
-    from panoptic_result import PanopticaResult
+    from panoptica.panoptica_result import PanopticaResult
 
 
 @dataclass

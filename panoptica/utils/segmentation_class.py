@@ -1,10 +1,6 @@
 import numpy as np
 
 
-# TODO also support LabelMergedGroup which takes multi labels and convert them into one before the evaluation
-# Useful for BraTs with hierarchical labels (then define one generic Group class and then two more specific subgroups, one for hierarchical, the other for the current one)
-
-
 class LabelGroup:
     """Defines a group of labels that semantically belong to each other. Only labels within a group will be matched with each other"""
 
@@ -21,6 +17,7 @@ class LabelGroup:
         """
         if isinstance(value_labels, int):
             value_labels = [value_labels]
+        assert len(value_labels) >= 1, f"You tried to define a LabelGroup without any specified labels, got {value_labels}"
         self.__value_labels = value_labels
         assert np.all([v > 0 for v in self.__value_labels]), f"Given value labels are not >0, got {value_labels}"
         self.__single_instance = single_instance
@@ -118,6 +115,13 @@ class SegmentationClassGroups:
 
     def __iter__(self):
         yield from self.__group_dictionary
+
+    def keys(self) -> list[str]:
+        return list(self.__group_dictionary.keys())
+
+    def items(self):
+        for k in self:
+            yield k, self[k]
 
 
 def list_duplicates(seq):

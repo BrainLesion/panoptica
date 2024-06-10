@@ -3,7 +3,7 @@ import cProfile
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica import MatchedInstancePair, Panoptic_Evaluator
+from panoptica import MatchedInstancePair, Panoptica_Evaluator
 from panoptica.metrics import Metric
 from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 
@@ -15,11 +15,7 @@ pred_masks = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
 sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
 
-import numpy as np
-
-print(np.unique(pred_masks))
-
-evaluator = Panoptic_Evaluator(
+evaluator = Panoptica_Evaluator(
     expected_input=MatchedInstancePair,
     eval_metrics=[Metric.DSC, Metric.IOU],
     segmentation_class_groups=SegmentationClassGroups(
