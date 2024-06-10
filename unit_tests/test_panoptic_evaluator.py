@@ -10,9 +10,10 @@ import numpy as np
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
 from panoptica.metrics import Metric
-from panoptica.panoptic_evaluator import Panoptic_Evaluator
-from panoptica.panoptic_result import MetricCouldNotBeComputedException
+from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.panoptica_result import MetricCouldNotBeComputedException
 from panoptica.utils.processing_pair import SemanticPair
+from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 
 
 class Test_Panoptic_Evaluator(unittest.TestCase):
@@ -28,13 +29,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -49,13 +50,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -70,14 +71,14 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
             eval_metrics=[Metric.DSC],
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -96,7 +97,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
@@ -105,7 +106,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             ),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -120,7 +121,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
@@ -129,7 +130,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             ),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 1)
@@ -145,13 +146,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 0)
@@ -168,13 +169,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 1)
@@ -191,13 +192,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 0)
@@ -229,13 +230,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             else:
                 sample = SemanticPair(b, a)
 
-                evaluator = Panoptic_Evaluator(
+                evaluator = Panoptica_Evaluator(
                     expected_input=SemanticPair,
                     instance_approximator=ConnectedComponentsInstanceApproximator(),
                     instance_matcher=NaiveThresholdMatching(),
                 )
 
-                result, debug_data = evaluator.evaluate(sample)
+                result, debug_data = evaluator.evaluate(sample)["ungrouped"]
                 print(result)
                 self.assertEqual(result.tp, 1)
                 self.assertEqual(result.fp, 0)
@@ -250,13 +251,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -272,13 +273,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -296,13 +297,13 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
 
         sample = SemanticPair(b, a)
 
-        evaluator = Panoptic_Evaluator(
+        evaluator = Panoptica_Evaluator(
             expected_input=SemanticPair,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 1)
@@ -310,3 +311,48 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
         self.assertAlmostEqual(result.pq, 0.56666666)
         self.assertAlmostEqual(result.rq, 0.66666666)
         self.assertAlmostEqual(result.sq_dsc, 0.9189189189189)
+
+    def test_single_instance_mode(self):
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy().astype(a.dtype)
+        a[20:40, 10:20] = 5
+        b[20:35, 10:20] = 5
+
+        sample = SemanticPair(b, a)
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=SemanticPair,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            segmentation_class_groups=SegmentationClassGroups({"organ": (5, True)}),
+        )
+
+        result, debug_data = evaluator.evaluate(sample)["organ"]
+        print(result)
+        self.assertEqual(result.tp, 1)
+        self.assertEqual(result.fp, 0)
+        self.assertEqual(result.sq, 0.75)
+        self.assertEqual(result.pq, 0.75)
+
+    def test_single_instance_mode_nooverlap(self):
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy().astype(a.dtype)
+        a[20:40, 10:20] = 5
+        b[5:15, 30:50] = 5
+
+        sample = SemanticPair(b, a)
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=SemanticPair,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            segmentation_class_groups=SegmentationClassGroups({"organ": (5, True)}),
+        )
+
+        result, debug_data = evaluator.evaluate(sample)["organ"]
+        print(result)
+        self.assertEqual(result.tp, 1)
+        self.assertEqual(result.fp, 0)
+        self.assertEqual(result.sq, 0.0)
+        self.assertEqual(result.pq, 0.0)
+        self.assertEqual(result.global_bin_dsc, 0.0)

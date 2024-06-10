@@ -15,3 +15,7 @@ from panoptica.utils.edge_case_handling import (
 )
 
 # from utils.constants import
+from panoptica.utils.segmentation_class import (
+    SegmentationClassGroups,
+    LabelGroup,
+)
