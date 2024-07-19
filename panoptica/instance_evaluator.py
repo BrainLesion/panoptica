@@ -3,7 +3,7 @@ from multiprocessing import Pool
 import numpy as np
 
 from panoptica.metrics import Metric
-from panoptica.panoptic_result import PanopticaResult
+from panoptica.panoptica_result import PanopticaResult
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import MatchedInstancePair
 

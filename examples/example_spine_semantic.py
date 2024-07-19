@@ -6,7 +6,7 @@ from auxiliary.turbopath import turbopath
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
-    Panoptic_Evaluator,
+    Panoptica_Evaluator,
     SemanticPair,
 )
 
@@ -17,8 +17,7 @@ pred_masks = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
 
 sample = SemanticPair(pred_masks, ref_masks)
 
-
-evaluator = Panoptic_Evaluator(
+evaluator = Panoptica_Evaluator(
     expected_input=SemanticPair,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
@@ -27,7 +26,7 @@ evaluator = Panoptic_Evaluator(
 
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
-        result, debug_data = evaluator.evaluate(sample)
+        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
         print(result)
 
         pr.dump_stats(directory + "/semantic_example.log")
