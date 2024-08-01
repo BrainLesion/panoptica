@@ -28,6 +28,7 @@ evaluator = Panoptica_Evaluator(
     ),
     decision_metric=Metric.DSC,
     decision_threshold=0.5,
+    log_times=True,
 )
 
 

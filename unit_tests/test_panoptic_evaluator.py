@@ -16,7 +16,7 @@ from panoptica.utils.processing_pair import SemanticPair
 from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 
 
-class Test_Panoptic_Evaluator(unittest.TestCase):
+class Test_Panoptica_Evaluator(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
         return super().setUp()
