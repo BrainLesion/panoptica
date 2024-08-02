@@ -1,8 +1,10 @@
 import numpy as np
+from pathlib import Path
+from panoptica.utils.config import SupportsConfig
 from panoptica.utils.label_group import LabelGroup
 
 
-class SegmentationClassGroups:
+class SegmentationClassGroups(SupportsConfig):
     #
     def __init__(
         self,
@@ -28,8 +30,9 @@ class SegmentationClassGroups:
         duplicates = list_duplicates(labels)
         if len(duplicates) > 0:
             raise AssertionError(f"The same label was assigned to two different labelgroups, got {str(self)}")
-
         self.__labels = labels
+        SegmentationClassGroups._register_permanently()
+        LabelGroup._register_permanently()
 
     def has_defined_labels_for(self, arr: np.ndarray | list[int], raise_error: bool = False):
         if isinstance(arr, list):
@@ -63,9 +66,17 @@ class SegmentationClassGroups:
     def keys(self) -> list[str]:
         return list(self.__group_dictionary.keys())
 
+    @property
+    def labels(self):
+        return self.__labels
+
     def items(self):
         for k in self:
             yield k, self[k]
+
+    @classmethod
+    def _yaml_repr(cls, node):
+        return {"groups": node.__group_dictionary}
 
 
 def list_duplicates(seq):

@@ -1,7 +1,10 @@
 import numpy as np
+from panoptica.utils.config import SupportsConfig
+
+#
 
 
-class LabelGroup:
+class LabelGroup(SupportsConfig):
     """Defines a group of labels that semantically belong to each other. Only labels within a group will be matched with each other"""
 
     def __init__(
@@ -23,6 +26,8 @@ class LabelGroup:
         self.__single_instance = single_instance
         if self.__single_instance:
             assert len(value_labels) == 1, f"single_instance set to True, but got more than one label for this group, got {value_labels}"
+
+        LabelGroup._register_permanently()
 
     @property
     def value_labels(self) -> list[int]:
@@ -57,3 +62,16 @@ class LabelGroup:
 
     def __repr__(self) -> str:
         return str(self)
+
+    @classmethod
+    def _yaml_repr(cls, node):
+        return {"value_labels": node.value_labels, "single_instance": node.single_instance}
+
+    # @classmethod
+    # def to_yaml(cls, representer, node):
+    #    return representer.represent_mapping("!" + cls.__name__, cls._yaml_repr(node))
+
+    # @classmethod
+    # def from_yaml(cls, constructor, node):
+    #    data = constructor.construct_mapping(node, deep=True)
+    #    return cls(**data)

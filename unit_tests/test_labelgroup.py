@@ -82,9 +82,7 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
             self.assertTrue(isinstance(lg, LabelGroup))
 
     def test_segmentationclassgroup_decarations(self):
-        classgroups = SegmentationClassGroups(
-            groups=[LabelGroup(i) for i in range(1, 5)]
-        )
+        classgroups = SegmentationClassGroups(groups=[LabelGroup(i) for i in range(1, 5)])
 
         keys = classgroups.keys()
         for i in range(1, 5):
