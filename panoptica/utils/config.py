@@ -40,6 +40,7 @@ def _save_yaml(data_dict: dict | object, out_file: str | Path, registered_class=
         #    yaml.dump([registered_class(*data_dict)], out_file)
     else:
         yaml.dump(data_dict, out_file)
+    print(f"Saved config into {out_file}")
 
 
 ####################
