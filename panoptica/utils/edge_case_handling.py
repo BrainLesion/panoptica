@@ -23,48 +23,69 @@ class EdgeCaseZeroTP(_Enum_Compare):
 
 
 class MetricZeroTPEdgeCaseHandling(SupportsConfig):
+
     def __init__(
         self,
-        default_result: EdgeCaseResult,
+        default_result: EdgeCaseResult | None = None,
         no_instances_result: EdgeCaseResult | None = None,
         empty_prediction_result: EdgeCaseResult | None = None,
         empty_reference_result: EdgeCaseResult | None = None,
         normal: EdgeCaseResult | None = None,
     ) -> None:
-        self.edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}
-        self.edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = empty_prediction_result if empty_prediction_result is not None else default_result
-        self.edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = empty_reference_result if empty_reference_result is not None else default_result
-        self.edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = no_instances_result if no_instances_result is not None else default_result
-        self.edgecase_dict[EdgeCaseZeroTP.NORMAL] = normal if normal is not None else default_result
+        assert default_result is not None or (
+            no_instances_result is not None
+            and empty_prediction_result is not None
+            and empty_reference_result is not None
+            and normal is not None
+        ), "default_result is None and the rest is not fully specified"
+
+        self._default_result = default_result
+        self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}
+        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = empty_prediction_result if empty_prediction_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = empty_reference_result if empty_reference_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = no_instances_result if no_instances_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.NORMAL] = normal if normal is not None else default_result
 
     def __call__(self, tp: int, num_pred_instances, num_ref_instances) -> tuple[bool, float | None]:
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         #
         elif num_pred_instances + num_ref_instances == 0:
-            return True, self.edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES].value
+            return True, self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES].value
         elif num_ref_instances == 0:
-            return True, self.edgecase_dict[EdgeCaseZeroTP.EMPTY_REF].value
+            return True, self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF].value
         elif num_pred_instances == 0:
-            return True, self.edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED].value
+            return True, self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED].value
         elif num_pred_instances > 0 and num_ref_instances > 0:
-            return True, self.edgecase_dict[EdgeCaseZeroTP.NORMAL].value
+            return True, self._edgecase_dict[EdgeCaseZeroTP.NORMAL].value
 
         raise NotImplementedError(
             f"MetricZeroTPEdgeCaseHandling: couldn't handle case, got tp {tp}, n_pred_instances {num_pred_instances}, n_ref_instances {num_ref_instances}"
         )
 
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, MetricZeroTPEdgeCaseHandling):
+            for s, k in self._edgecase_dict.items():
+                if s not in __value._edgecase_dict or k != __value._edgecase_dict[s]:
+                    return False
+            return True
+        return False
+
     def __str__(self) -> str:
         txt = ""
-        for k, v in self.edgecase_dict.items():
+        for k, v in self._edgecase_dict.items():
             if v is not None:
                 txt += str(k) + ": " + str(v) + "\n"
         return txt
 
     @classmethod
-    def _yaml_repr(cls, node):
-        # TODO
-        return {"value_labels": node.value_labels, "single_instance": node.single_instance}
+    def _yaml_repr(cls, node) -> dict:
+        return {
+            "no_instances_result": node._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES],
+            "empty_prediction_result": node._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED],
+            "empty_reference_result": node._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF],
+            "normal": node._edgecase_dict[EdgeCaseZeroTP.NORMAL],
+        }
 
 
 class EdgeCaseHandler(SupportsConfig):
@@ -117,17 +138,28 @@ class EdgeCaseHandler(SupportsConfig):
             num_ref_instances=num_ref_instances,
         )
 
+    @property
+    def listmetric_zeroTP_handling(self):
+        return self.__listmetric_zeroTP_handling
+
     def get_metric_zero_tp_handle(self, metric: Metric):
         return self.__listmetric_zeroTP_handling[metric]
 
-    def handle_empty_list_std(self) -> float | None:
-        return self.__empty_list_std.value
+    def handle_empty_list_std(self) -> EdgeCaseResult | None:
+        return self.__empty_list_std
 
     def __str__(self) -> str:
         txt = f"EdgeCaseHandler:\n - Standard Deviation of Empty = {self.__empty_list_std}"
         for k, v in self.__listmetric_zeroTP_handling.items():
             txt += f"\n- {k}: {str(v)}"
         return str(txt)
+
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {
+            "listmetric_zeroTP_handling": node.__listmetric_zeroTP_handling,
+            "empty_list_std": node.__empty_list_std,
+        }
 
 
 if __name__ == "__main__":

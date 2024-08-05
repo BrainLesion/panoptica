@@ -43,7 +43,7 @@ class PanopticaResult(object):
             edge_case_handler (EdgeCaseHandler): EdgeCaseHandler object that handles various forms of edge cases
         """
         self._edge_case_handler = edge_case_handler
-        empty_list_std = self._edge_case_handler.handle_empty_list_std()
+        empty_list_std = self._edge_case_handler.handle_empty_list_std().value
         self._prediction_arr = prediction_arr
         self._reference_arr = reference_arr
         ######################

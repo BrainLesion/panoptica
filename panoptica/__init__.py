@@ -9,5 +9,6 @@ from panoptica.utils.processing_pair import (
     SemanticPair,
     UnmatchedInstancePair,
     MatchedInstancePair,
+    InputType,
 )
 from panoptica.metrics import Metric, MetricMode, MetricType

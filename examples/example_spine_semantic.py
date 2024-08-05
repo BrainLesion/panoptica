@@ -7,18 +7,17 @@ from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
     Panoptica_Evaluator,
-    SemanticPair,
+    InputType,
 )
 
 directory = turbopath(__file__).parent
 
-ref_masks = read_nifti(directory + "/spine_seg/semantic/ref.nii.gz")
-pred_masks = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
+reference_mask = read_nifti(directory + "/spine_seg/semantic/ref.nii.gz")
+prediction_mask = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
 
-sample = SemanticPair(pred_masks, ref_masks)
 
 evaluator = Panoptica_Evaluator(
-    expected_input=SemanticPair,
+    expected_input=InputType.SEMANTIC,
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
     verbose=True,
@@ -26,7 +25,7 @@ evaluator = Panoptica_Evaluator(
 
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(prediction_mask, reference_mask)["ungrouped"]
         print(result)
 
         pr.dump_stats(directory + "/semantic_example.log")

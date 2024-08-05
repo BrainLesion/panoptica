@@ -14,16 +14,18 @@ from panoptica.utils.processing_pair import (
     SemanticPair,
     UnmatchedInstancePair,
     _ProcessingPair,
+    InputType,
 )
+import numpy as np
+from panoptica.utils.config import SupportsConfig
 from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 
 
-class Panoptica_Evaluator:
+class Panoptica_Evaluator(SupportsConfig):
 
     def __init__(
         self,
-        # TODO let users give prediction and reference arr instead of the processing pair, so let this create the processing pair itself
-        expected_input: Type[SemanticPair] | Type[UnmatchedInstancePair] | Type[MatchedInstancePair] = MatchedInstancePair,
+        expected_input: InputType = InputType.MATCHED_INSTANCE,
         instance_approximator: InstanceApproximator | None = None,
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
@@ -37,7 +39,7 @@ class Panoptica_Evaluator:
         """Creates a Panoptica_Evaluator, that saves some parameters to be used for all subsequent evaluations
 
         Args:
-            expected_input (type, optional): Expected DataPair Input. Defaults to type(MatchedInstancePair).
+            expected_input (type, optional): Expected DataPair Input Type. Defaults to InputType.MATCHED_INSTANCE (which is type(MatchedInstancePair)).
             instance_approximator (InstanceApproximator | None, optional): Determines which instance approximator is used if necessary. Defaults to None.
             instance_matcher (InstanceMatchingAlgorithm | None, optional): Determines which instance matching algorithm is used if necessary. Defaults to None.
             iou_threshold (float, optional): Iou Threshold for evaluation. Defaults to 0.5.
@@ -59,15 +61,32 @@ class Panoptica_Evaluator:
         self.__log_times = log_times
         self.__verbose = verbose
 
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {
+            "expected_input": node.__expected_input,
+            "instance_approximator": node.__instance_approximator,
+            "instance_matcher": node.__instance_matcher,
+            "edge_case_handler": node.__edge_case_handler,
+            "segmentation_class_groups": node.__segmentation_class_groups,
+            "eval_metrics": node.__eval_metrics,
+            "decision_metric": node.__decision_metric,
+            "decision_threshold": node.__decision_threshold,
+            "log_times": node.__log_times,
+            "verbose": node.__verbose,
+        }
+
     @citation_reminder
     @measure_time
     def evaluate(
         self,
-        processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | PanopticaResult,
+        prediction_arr: np.ndarray,
+        reference_arr: np.ndarray,
         result_all: bool = True,
         verbose: bool | None = None,
     ) -> dict[str, tuple[PanopticaResult, dict[str, _ProcessingPair]]]:
-        assert type(processing_pair) == self.__expected_input, f"input not of expected type {self.__expected_input}"
+        processing_pair = self.__expected_input(prediction_arr, reference_arr)
+        assert isinstance(processing_pair, self.__expected_input.value), f"input not of expected type {self.__expected_input}"
 
         if self.__segmentation_class_groups is None:
             return {

@@ -1,12 +1,25 @@
 from enum import Enum, auto
 from panoptica.utils.config import _register_class_to_yaml, _load_from_config, _load_from_config_name, _save_to_config
 from pathlib import Path
+import numpy as np
 
 
 class _Enum_Compare(Enum):
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Enum):
-            return self.name == __value.name and self.value == __value.value
+            namecheck = self.name == __value.name
+            if not namecheck:
+                return False
+            if self.value is None:
+                return __value.value is None
+
+            try:
+                if np.isnan(self.value):
+                    return np.isnan(__value.value)
+            except Exception:
+                pass
+
+            return self.value == __value.value
         elif isinstance(__value, str):
             return self.name == __value
         else:

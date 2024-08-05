@@ -31,8 +31,6 @@ class SegmentationClassGroups(SupportsConfig):
         if len(duplicates) > 0:
             raise AssertionError(f"The same label was assigned to two different labelgroups, got {str(self)}")
         self.__labels = labels
-        SegmentationClassGroups._register_permanently()
-        LabelGroup._register_permanently()
 
     def has_defined_labels_for(self, arr: np.ndarray | list[int], raise_error: bool = False):
         if isinstance(arr, list):

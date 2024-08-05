@@ -1,6 +1,7 @@
 from ruamel.yaml import YAML
 from pathlib import Path
 from panoptica.utils.filepath import config_by_name
+from abc import ABC, abstractmethod
 
 supported_helper_classes = []
 
@@ -28,9 +29,11 @@ def _save_yaml(data_dict: dict | object, out_file: str | Path, registered_class=
 
     yaml = YAML(typ="safe")
     yaml.default_flow_style = None
+    yaml.representer.ignore_aliases = lambda *data: True
+    _register_helper_classes(yaml)
     if registered_class is not None:
         yaml.register_class(registered_class)
-        _register_helper_classes(yaml)
+        assert isinstance(data_dict, registered_class)
         # if isinstance(data_dict, object):
         yaml.dump(data_dict, out_file)
         # else:
@@ -130,6 +133,9 @@ def _save_to_config(obj, path: str | Path):
 class SupportsConfig:
     """Metaclass that allows a class to save and load objects by yaml configs"""
 
+    def __init__(self) -> None:
+        raise NotImplementedError(f"Tried to instantiate abstract class {type(self)}")
+
     def __init_subclass__(cls, **kwargs):
         # Registers all subclasses of this
         super().__init_subclass__(**kwargs)
@@ -141,11 +147,15 @@ class SupportsConfig:
 
     @classmethod
     def load_from_config(cls, path: str | Path):
-        return _load_from_config(cls, path)
+        obj = _load_from_config(cls, path)
+        assert isinstance(obj, cls), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
+        return obj
 
     @classmethod
     def load_from_config_name(cls, name: str):
-        return _load_from_config_name(cls, name)
+        obj = _load_from_config_name(cls, name)
+        assert isinstance(obj, cls)
+        return obj
 
     def save_to_config(self, path: str | Path):
         _save_to_config(self, path)
@@ -161,3 +171,8 @@ class SupportsConfig:
         # cls._register_permanently()
         data = constructor.construct_mapping(node, deep=True)
         return cls(**data)
+
+    @classmethod
+    @abstractmethod
+    def _yaml_repr(cls, node) -> dict:
+        pass  # return {"groups": node.__group_dictionary}
