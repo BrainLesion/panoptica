@@ -4,7 +4,9 @@ from itertools import chain
 from pathlib import Path
 
 
-def search_path(basepath: str | Path, query: str, verbose: bool = False, suppress: bool = False) -> list[Path]:
+def search_path(
+    basepath: str | Path, query: str, verbose: bool = False, suppress: bool = False
+) -> list[Path]:
     """Searches from basepath with query
     Args:
         basepath: ground path to look into
@@ -16,7 +18,9 @@ def search_path(basepath: str | Path, query: str, verbose: bool = False, suppres
         All found paths
     """
     basepath = str(basepath)
-    assert os.path.exists(basepath), f"basepath for search_path() doesnt exist, got {basepath}"
+    assert os.path.exists(
+        basepath
+    ), f"basepath for search_path() doesnt exist, got {basepath}"
     if not basepath.endswith("/"):
         basepath += "/"
     print(f"search_path: in {basepath}{query}") if verbose else None
@@ -27,7 +31,12 @@ def search_path(basepath: str | Path, query: str, verbose: bool = False, suppres
 
 
 def config_dir_by_name(name: str) -> tuple[Path, str]:
-    directory = Path(__file__.replace("////", "/").replace("\\\\", "/").replace("//", "/").replace("\\", "/")).parent.parent
+    directory = Path(
+        __file__.replace("////", "/")
+        .replace("\\\\", "/")
+        .replace("//", "/")
+        .replace("\\", "/")
+    ).parent.parent
     if not name.endswith(".yaml"):
         name += ".yaml"
     return directory, name
@@ -37,5 +46,7 @@ def config_dir_by_name(name: str) -> tuple[Path, str]:
 def config_by_name(name: str) -> Path:
     directory, name = config_dir_by_name(name)
     p = search_path(directory, query=f"**/{name}", suppress=True)
-    assert len(p) == 1, f"Did not find exactly one config yaml with name {name} in directory {directory}, got {p}"
+    assert (
+        len(p) == 1
+    ), f"Did not find exactly one config yaml with name {name} in directory {directory}, got {p}"
     return p[0]
