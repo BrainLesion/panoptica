@@ -20,12 +20,18 @@ class LabelGroup(SupportsConfig):
         """
         if isinstance(value_labels, int):
             value_labels = [value_labels]
-        assert len(value_labels) >= 1, f"You tried to define a LabelGroup without any specified labels, got {value_labels}"
+        assert (
+            len(value_labels) >= 1
+        ), f"You tried to define a LabelGroup without any specified labels, got {value_labels}"
         self.__value_labels = value_labels
-        assert np.all([v > 0 for v in self.__value_labels]), f"Given value labels are not >0, got {value_labels}"
+        assert np.all(
+            [v > 0 for v in self.__value_labels]
+        ), f"Given value labels are not >0, got {value_labels}"
         self.__single_instance = single_instance
         if self.__single_instance:
-            assert len(value_labels) == 1, f"single_instance set to True, but got more than one label for this group, got {value_labels}"
+            assert (
+                len(value_labels) == 1
+            ), f"single_instance set to True, but got more than one label for this group, got {value_labels}"
 
         LabelGroup._register_permanently()
 
@@ -65,7 +71,10 @@ class LabelGroup(SupportsConfig):
 
     @classmethod
     def _yaml_repr(cls, node):
-        return {"value_labels": node.value_labels, "single_instance": node.single_instance}
+        return {
+            "value_labels": node.value_labels,
+            "single_instance": node.single_instance,
+        }
 
     # @classmethod
     # def to_yaml(cls, representer, node):

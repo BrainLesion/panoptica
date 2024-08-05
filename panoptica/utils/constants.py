@@ -1,5 +1,10 @@
 from enum import Enum, auto
-from panoptica.utils.config import _register_class_to_yaml, _load_from_config, _load_from_config_name, _save_to_config
+from panoptica.utils.config import (
+    _register_class_to_yaml,
+    _load_from_config,
+    _load_from_config_name,
+    _save_to_config,
+)
 from pathlib import Path
 import numpy as np
 

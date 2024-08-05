@@ -14,7 +14,12 @@ from panoptica.metrics import (
 )
 from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 from panoptica.utils.constants import CCABackend
-from panoptica.utils.edge_case_handling import EdgeCaseResult, EdgeCaseZeroTP, MetricZeroTPEdgeCaseHandling, EdgeCaseHandler
+from panoptica.utils.edge_case_handling import (
+    EdgeCaseResult,
+    EdgeCaseZeroTP,
+    MetricZeroTPEdgeCaseHandling,
+    EdgeCaseHandler,
+)
 from panoptica import ConnectedComponentsInstanceApproximator, NaiveThresholdMatching
 from pathlib import Path
 import numpy as np
@@ -90,7 +95,9 @@ class Test_Datatypes(unittest.TestCase):
             print(t)
             print()
             t.save_to_config(test_file)
-            d: ConnectedComponentsInstanceApproximator = ConnectedComponentsInstanceApproximator.load_from_config(test_file)
+            d: ConnectedComponentsInstanceApproximator = (
+                ConnectedComponentsInstanceApproximator.load_from_config(test_file)
+            )
             os.remove(test_file)
 
             self.assertEqual(d.cca_backend, t.cca_backend)
@@ -99,11 +106,17 @@ class Test_Datatypes(unittest.TestCase):
         for mm in [Metric.DSC, Metric.IOU, Metric.ASSD]:
             for mt in [0.1, 0.4, 0.5, 0.8, 1.0]:
                 for amto in [False, True]:
-                    t = NaiveThresholdMatching(matching_metric=mm, matching_threshold=mt, allow_many_to_one=amto)
+                    t = NaiveThresholdMatching(
+                        matching_metric=mm,
+                        matching_threshold=mt,
+                        allow_many_to_one=amto,
+                    )
                     print(t)
                     print()
                     t.save_to_config(test_file)
-                    d: NaiveThresholdMatching = NaiveThresholdMatching.load_from_config(test_file)
+                    d: NaiveThresholdMatching = NaiveThresholdMatching.load_from_config(
+                        test_file
+                    )
                     os.remove(test_file)
 
                     self.assertEqual(d._allow_many_to_one, t._allow_many_to_one)
@@ -118,7 +131,9 @@ class Test_Datatypes(unittest.TestCase):
             print(t)
             print()
             t.save_to_config(test_file)
-            d: MetricZeroTPEdgeCaseHandling = MetricZeroTPEdgeCaseHandling.load_from_config(test_file)
+            d: MetricZeroTPEdgeCaseHandling = (
+                MetricZeroTPEdgeCaseHandling.load_from_config(test_file)
+            )
             os.remove(test_file)
 
             for k, v in t._edgecase_dict.items():

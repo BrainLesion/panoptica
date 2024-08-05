@@ -320,5 +320,7 @@ class InputType(_Enum_Compare):
     UNMATCHED_INSTANCE = UnmatchedInstancePair
     MATCHED_INSTANCE = MatchedInstancePair
 
-    def __call__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray) -> _ProcessingPair:
+    def __call__(
+        self, prediction_arr: np.ndarray, reference_arr: np.ndarray
+    ) -> _ProcessingPair:
         return self.value(prediction_arr, reference_arr)

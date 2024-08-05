@@ -58,7 +58,9 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         pass
 
     def _yaml_repr(cls, node) -> dict:
-        raise NotImplementedError(f"Tried to get yaml representation of abstract class {cls.__name__}")
+        raise NotImplementedError(
+            f"Tried to get yaml representation of abstract class {cls.__name__}"
+        )
         return {}
 
     def approximate_instances(
@@ -146,7 +148,9 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         """
         cca_backend = self.cca_backend
         if cca_backend is None:
-            cca_backend = CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+            cca_backend = (
+                CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+            )
         assert cca_backend is not None
 
         empty_prediction = len(semantic_pair._pred_labels) == 0
