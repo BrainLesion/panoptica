@@ -26,11 +26,16 @@ def search_path(basepath: str | Path, query: str, verbose: bool = False, suppres
     return paths
 
 
-# Find config path
-def config_by_name(name: str) -> Path:
+def config_dir_by_name(name: str) -> tuple[Path, str]:
     directory = Path(__file__.replace("////", "/").replace("\\\\", "/").replace("//", "/").replace("\\", "/")).parent.parent
     if not name.endswith(".yaml"):
         name += ".yaml"
+    return directory, name
+
+
+# Find config path
+def config_by_name(name: str) -> Path:
+    directory, name = config_dir_by_name(name)
     p = search_path(directory, query=f"**/{name}", suppress=True)
     assert len(p) == 1, f"Did not find exactly one config yaml with name {name} in directory {directory}, got {p}"
     return p[0]

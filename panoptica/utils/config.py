@@ -1,6 +1,6 @@
 from ruamel.yaml import YAML
 from pathlib import Path
-from panoptica.utils.filepath import config_by_name
+from panoptica.utils.filepath import config_by_name, config_dir_by_name
 from abc import ABC, abstractmethod
 
 supported_helper_classes = []
@@ -130,6 +130,11 @@ def _save_to_config(obj, path: str | Path):
     Configuration.save_from_object(obj, path)
 
 
+def _save_to_config_by_name(obj, name: str):
+    dir, name = config_dir_by_name(name)
+    _save_to_config(obj, dir.joinpath(name))
+
+
 class SupportsConfig:
     """Metaclass that allows a class to save and load objects by yaml configs"""
 
@@ -159,6 +164,9 @@ class SupportsConfig:
 
     def save_to_config(self, path: str | Path):
         _save_to_config(self, path)
+
+    def save_to_config_by_name(self, name: str):
+        _save_to_config_by_name(self, name)
 
     @classmethod
     def to_yaml(cls, representer, node):
