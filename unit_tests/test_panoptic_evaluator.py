@@ -7,6 +7,7 @@ import unittest
 
 import numpy as np
 
+from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
 from panoptica.metrics import Metric
@@ -27,15 +28,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -48,15 +47,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -69,16 +66,14 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
             eval_metrics=[Metric.DSC],
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -95,10 +90,8 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
                 matching_metric=Metric.ASSD,
@@ -106,7 +99,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             ),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -119,10 +112,8 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(
                 matching_metric=Metric.ASSD,
@@ -130,7 +121,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             ),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 1)
@@ -144,15 +135,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 1
         # b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 0)
@@ -167,15 +156,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         # a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 1)
@@ -190,15 +177,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         # a[20:40, 10:20] = 1
         # b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 0)
         self.assertEqual(result.fp, 0)
@@ -228,15 +213,14 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             if da != db:
                 self.assertRaises(AssertionError, SemanticPair, b, a)
             else:
-                sample = SemanticPair(b, a)
 
                 evaluator = Panoptica_Evaluator(
-                    expected_input=SemanticPair,
+                    expected_input=InputType.SEMANTIC,
                     instance_approximator=ConnectedComponentsInstanceApproximator(),
                     instance_matcher=NaiveThresholdMatching(),
                 )
 
-                result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+                result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
                 print(result)
                 self.assertEqual(result.tp, 1)
                 self.assertEqual(result.fp, 0)
@@ -249,15 +233,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -271,15 +253,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         b[20:35, 10:20] = 2
         b[36:38, 10:20] = 3
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -295,15 +275,13 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         # match the two above to 1 and the 4 to nothing (FP)
         b[39:47, 10:20] = 4
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaximizeMergeMatching(),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["ungrouped"]
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 1)
@@ -318,16 +296,14 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 5
         b[20:35, 10:20] = 5
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
             segmentation_class_groups=SegmentationClassGroups({"organ": (5, True)}),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["organ"]
+        result, debug_data = evaluator.evaluate(b, a)["organ"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
@@ -340,16 +316,14 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         a[20:40, 10:20] = 5
         b[5:15, 30:50] = 5
 
-        sample = SemanticPair(b, a)
-
         evaluator = Panoptica_Evaluator(
-            expected_input=SemanticPair,
+            expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
             segmentation_class_groups=SegmentationClassGroups({"organ": (5, True)}),
         )
 
-        result, debug_data = evaluator.evaluate(sample)["organ"]
+        result, debug_data = evaluator.evaluate(b, a)["organ"]
         print(result)
         self.assertEqual(result.tp, 1)
         self.assertEqual(result.fp, 0)
