@@ -81,7 +81,9 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
 
     def _yaml_repr(cls, node) -> dict:
-        raise NotImplementedError(f"Tried to get yaml representation of abstract class {cls.__name__}")
+        raise NotImplementedError(
+            f"Tried to get yaml representation of abstract class {cls.__name__}"
+        )
         return {}
 
 
@@ -199,13 +201,20 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             unmatched_instance_pair.prediction_arr,
             unmatched_instance_pair.reference_arr,
         )
-        mm_pairs = _calc_matching_metric_of_overlapping_labels(pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric)
+        mm_pairs = _calc_matching_metric_of_overlapping_labels(
+            pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
+        )
 
         # Loop through matched instances to compute PQ components
         for matching_score, (ref_label, pred_label) in mm_pairs:
-            if labelmap.contains_or(pred_label, ref_label) and not self._allow_many_to_one:
+            if (
+                labelmap.contains_or(pred_label, ref_label)
+                and not self._allow_many_to_one
+            ):
                 continue  # -> doesnt make speed difference
-            if self._matching_metric.score_beats_threshold(matching_score, self._matching_threshold):
+            if self._matching_metric.score_beats_threshold(
+                matching_score, self._matching_threshold
+            ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 # map label ref_idx to pred_idx
@@ -296,7 +305,9 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
                 if new_score > score_ref[ref_label]:
                     labelmap.add_labelmap_entry(pred_label, ref_label)
                     score_ref[ref_label] = new_score
-            elif self._matching_metric.score_beats_threshold(matching_score, self._matching_threshold):
+            elif self._matching_metric.score_beats_threshold(
+                matching_score, self._matching_threshold
+            ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 score_ref[ref_label] = matching_score

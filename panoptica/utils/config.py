@@ -71,13 +71,17 @@ class Configuration:
     @classmethod
     def load(cls, file: str | Path, registered_class=None):
         data = _load_yaml(file, registered_class)
-        assert isinstance(data, dict), f"The config at {file} is registered to a class. Use load_as_object() instead"
+        assert isinstance(
+            data, dict
+        ), f"The config at {file} is registered to a class. Use load_as_object() instead"
         return Configuration(data, registered_class=registered_class)
 
     @classmethod
     def load_as_object(cls, file: str | Path, registered_class=None):
         data = _load_yaml(file, registered_class)
-        assert not isinstance(data, dict), f"The config at {file} is not registered to a class. Use load() instead"
+        assert not isinstance(
+            data, dict
+        ), f"The config at {file} is not registered to a class. Use load() instead"
         return data
 
     def save(self, out_file: str | Path):
@@ -148,7 +152,9 @@ class SupportsConfig:
     @classmethod
     def load_from_config(cls, path: str | Path):
         obj = _load_from_config(cls, path)
-        assert isinstance(obj, cls), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
+        assert isinstance(
+            obj, cls
+        ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
         return obj
 
     @classmethod
@@ -163,7 +169,9 @@ class SupportsConfig:
     @classmethod
     def to_yaml(cls, representer, node):
         # cls._register_permanently()
-        assert hasattr(cls, "_yaml_repr"), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
+        assert hasattr(
+            cls, "_yaml_repr"
+        ), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
         return representer.represent_mapping("!" + cls.__name__, cls._yaml_repr(node))
 
     @classmethod
