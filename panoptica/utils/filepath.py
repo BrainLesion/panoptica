@@ -2,7 +2,6 @@ import os
 import warnings
 from itertools import chain
 from pathlib import Path
-from auxiliary.turbopath import turbopath
 
 
 def search_path(basepath: str | Path, query: str, verbose: bool = False, suppress: bool = False) -> list[Path]:
@@ -29,7 +28,7 @@ def search_path(basepath: str | Path, query: str, verbose: bool = False, suppres
 
 # Find config path
 def config_by_name(name: str) -> Path:
-    directory = turbopath(__file__).parent.parent
+    directory = Path(__file__.replace("////", "/").replace("\\\\", "/").replace("//", "/").replace("\\", "/")).parent.parent
     if not name.endswith(".yaml"):
         name += ".yaml"
     p = search_path(directory, query=f"**/{name}", suppress=True)
