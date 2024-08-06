@@ -15,7 +15,7 @@ from panoptica.panoptica_result import (
 from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
 
 
-class Test_Panoptic_Evaluator(unittest.TestCase):
+class Test_Panoptica_Evaluator(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
         return super().setUp()

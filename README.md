@@ -58,6 +58,16 @@ For this case, the matcher module can be utilized to match instances and the eva
 
 If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
 
+
+### Using Configs (saving and loading)
+
+You can construct Panoptica_Evaluator (among many others) objects and save their arguments, so you can save project-specific configurations and use them later.
+
+[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_config.ipynb) 
+
+It uses ruamel.yaml in a readable way.
+
+
 ## Citation
 
 If you use panoptica in your research, please cite it to support the development!

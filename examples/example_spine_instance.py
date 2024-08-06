@@ -3,20 +3,17 @@ import cProfile
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica import MatchedInstancePair, Panoptica_Evaluator
+from panoptica import Panoptica_Evaluator, InputType
 from panoptica.metrics import Metric
 from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 
 directory = turbopath(__file__).parent
 
-ref_masks = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
-
-pred_masks = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
-
-sample = MatchedInstancePair(prediction_arr=pred_masks, reference_arr=ref_masks)
+reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
+prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
 evaluator = Panoptica_Evaluator(
-    expected_input=MatchedInstancePair,
+    expected_input=InputType.MATCHED_INSTANCE,
     eval_metrics=[Metric.DSC, Metric.IOU],
     segmentation_class_groups=SegmentationClassGroups(
         {
@@ -28,12 +25,13 @@ evaluator = Panoptica_Evaluator(
     ),
     decision_metric=Metric.DSC,
     decision_threshold=0.5,
+    log_times=True,
 )
 
 
 with cProfile.Profile() as pr:
     if __name__ == "__main__":
-        results = evaluator.evaluate(sample, verbose=False)
+        results = evaluator.evaluate(prediction_mask, reference_mask, verbose=False)
         for groupname, (result, debug) in results.items():
             print()
             print("### Group", groupname)

@@ -11,6 +11,7 @@ from panoptica.metrics import (
     MetricMode,
     MetricCouldNotBeComputedException,
 )
+from panoptica.utils.edge_case_handling import EdgeCaseResult
 
 
 class Test_Datatypes(unittest.TestCase):
@@ -28,6 +29,10 @@ class Test_Datatypes(unittest.TestCase):
         #
         self.assertNotEqual(Metric.DSC, Metric.IOU)
         self.assertNotEqual(Metric.DSC, "IOU")
+
+    def test_EdgeCaseResult_enum(self):
+        for e in EdgeCaseResult:
+            self.assertEqual(e, e)
 
     def test_matching_metric(self):
         dsc_metric = Metric.DSC

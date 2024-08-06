@@ -3,11 +3,11 @@ from panoptica.utils.numpy_utils import (
     _unique_without_zeros,
 )
 from panoptica.utils.processing_pair import (
-    InstanceLabelMap,
     MatchedInstancePair,
     SemanticPair,
     UnmatchedInstancePair,
 )
+from panoptica.utils.instancelabelmap import InstanceLabelMap
 from panoptica.utils.edge_case_handling import (
     EdgeCaseHandler,
     EdgeCaseResult,

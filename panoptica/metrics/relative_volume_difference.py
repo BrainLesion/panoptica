@@ -55,16 +55,15 @@ def _compute_relative_volume_difference(
         prediction (np.ndarray): Prediction binary mask.
 
     Returns:
-        float: Relative volume Error between the two binary masks. A value between 0 and 1, where higher values
-        indicate better overlap and similarity between masks.
+        float: Relative volume Error between the two binary masks. A value of zero means perfect volume match, while >0 means oversegmentation and <0 undersegmentation.
     """
-    reference_mask = np.sum(reference)
-    prediction_mask = np.sum(prediction)
+    reference_mask = float(np.sum(reference))
+    prediction_mask = float(np.sum(prediction))
 
     # Handle division by zero
     if reference_mask == 0 and prediction_mask == 0:
         return 0.0
 
     # Calculate Dice coefficient
-    rvd = float(prediction_mask - reference_mask) / reference_mask
+    rvd = (prediction_mask - reference_mask) / reference_mask
     return rvd
