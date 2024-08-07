@@ -70,7 +70,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
-            eval_metrics=[Metric.DSC],
+            instance_metrics=[Metric.DSC],
         )
 
         result, debug_data = evaluator.evaluate(b, a)["ungrouped"]

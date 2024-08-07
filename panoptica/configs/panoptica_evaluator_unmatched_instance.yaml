@@ -19,7 +19,8 @@ edge_case_handler: !EdgeCaseHandler
     !Metric RVD: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult NAN,
       empty_reference_result: !EdgeCaseResult NAN, no_instances_result: !EdgeCaseResult NAN,
       normal: !EdgeCaseResult NAN}
-eval_metrics: [!Metric DSC, !Metric IOU]
+instance_metrics: [!Metric DSC, !Metric IOU]
+global_metrics: [!Metric DSC, !Metric RVD]
 expected_input: !InputType UNMATCHED_INSTANCE
 instance_approximator: null
 instance_matcher: !NaiveThresholdMatching {allow_many_to_one: false, matching_metric: !Metric IOU,

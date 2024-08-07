@@ -28,6 +28,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             num_pred_instances=5,
             tp=0,
             list_metrics={Metric.IOU: []},
+            global_metrics=[Metric.DSC],
             edge_case_handler=EdgeCaseHandler(),
         )
         c.calculate_all(print_errors=True)
@@ -85,9 +86,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
 
         def powerset(iterable):
             s = list(iterable)
-            return list(
-                chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
-            )
+            return list(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
 
         power_set = powerset([Metric.DSC, Metric.IOU, Metric.ASSD])
         for m in power_set[1:]:
