@@ -23,6 +23,7 @@ class _Metric:
     """A Metric class containing a name, whether higher or lower values is better, and a function to calculate that metric between two instances in an array"""
 
     name: str
+    long_name: str
     decreasing: bool
     _metric_function: Callable
 
@@ -91,11 +92,21 @@ class Metric(_Enum_Compare):
         _type_: _description_
     """
 
-    DSC = _Metric("DSC", False, _compute_instance_volumetric_dice)
-    IOU = _Metric("IOU", False, _compute_instance_iou)
-    ASSD = _Metric("ASSD", True, _compute_instance_average_symmetric_surface_distance)
-    clDSC = _Metric("clDSC", False, _compute_centerline_dice)
-    RVD = _Metric("RVD", True, _compute_instance_relative_volume_difference)
+    DSC = _Metric("DSC", "Dice", False, _compute_instance_volumetric_dice)
+    IOU = _Metric("IOU", "Intersection over Union", False, _compute_instance_iou)
+    ASSD = _Metric(
+        "ASSD",
+        "Average Symmetric Surface Distance",
+        True,
+        _compute_instance_average_symmetric_surface_distance,
+    )
+    clDSC = _Metric("clDSC", "Centerline Dice", False, _compute_centerline_dice)
+    RVD = _Metric(
+        "RVD",
+        "Relative Volume Difference",
+        True,
+        _compute_instance_relative_volume_difference,
+    )
     # ST = _Metric("ST", False, _compute_instance_segmentation_tendency)
 
     def __call__(

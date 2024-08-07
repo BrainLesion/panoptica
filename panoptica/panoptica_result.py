@@ -24,12 +24,12 @@ class PanopticaResult(object):
         self,
         reference_arr: np.ndarray,
         prediction_arr: np.ndarray,
-        # TODO some metadata object containing dtype, voxel spacing, ...
         num_pred_instances: int,
         num_ref_instances: int,
         tp: int,
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
+        global_metrics: list[Metric] = [],
     ):
         """Result object for Panoptica, contains all calculatable metrics
 
@@ -46,6 +46,7 @@ class PanopticaResult(object):
         empty_list_std = self._edge_case_handler.handle_empty_list_std().value
         self._prediction_arr = prediction_arr
         self._reference_arr = reference_arr
+        self._global_metrics: list[Metric] = global_metrics
         ######################
         # Evaluation Metrics #
         ######################
@@ -119,39 +120,6 @@ class PanopticaResult(object):
         )
         # endregion
         #
-        # region Global
-        self.global_bin_dsc: int
-        self._add_metric(
-            "global_bin_dsc",
-            MetricType.GLOBAL,
-            global_bin_dsc,
-            long_name="Global Binary Dice",
-        )
-        #
-        self.global_bin_cldsc: int
-        self._add_metric(
-            "global_bin_cldsc",
-            MetricType.GLOBAL,
-            global_bin_cldsc,
-            long_name="Global Binary Centerline Dice",
-        )
-        #
-        self.global_bin_assd: int
-        self._add_metric(
-            "global_bin_assd",
-            MetricType.GLOBAL,
-            global_bin_assd,
-            long_name="Global Binary Average Symmetric Surface Distance",
-        )
-        #
-        self.global_bin_rvd: int
-        self._add_metric(
-            "global_bin_rvd",
-            MetricType.GLOBAL,
-            global_bin_rvd,
-            long_name="Global Binary Relative Volume Difference",
-        )
-        # endregion
         #
         # region IOU
         self.sq: float
@@ -259,19 +227,37 @@ class PanopticaResult(object):
         )
         # endregion
 
+        # region Global
+        # Just for autocomplete
+        self.global_bin_dsc: int
+        self.global_bin_iou: int
+        self.global_bin_cldsc: int
+        self.global_bin_assd: int
+        self.global_bin_rvd: int
+        # endregion
+
         ##################
         # List Metrics   #
         ##################
         self._list_metrics: dict[Metric, Evaluation_List_Metric] = {}
-        for k, v in list_metrics.items():
-            is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
-                metric=k,
-                tp=self.tp,
-                num_pred_instances=self.num_pred_instances,
-                num_ref_instances=self.num_ref_instances,
-            )
-            self._list_metrics[k] = Evaluation_List_Metric(
-                k, empty_list_std, v, is_edge_case, edge_case_result
+        # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
+        for m in Metric:
+            if m in list_metrics:
+                is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
+                    metric=m,
+                    tp=self.tp,
+                    num_pred_instances=self.num_pred_instances,
+                    num_ref_instances=self.num_ref_instances,
+                )
+                self._list_metrics[m] = Evaluation_List_Metric(
+                    m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result
+                )
+            # even if not available, set the global vars
+            self._add_metric(
+                f"global_bin_{m.name.lower()}",
+                MetricType.GLOBAL,
+                _build_global_bin_metric_function(m),
+                long_name="Global Binary " + m.value.long_name,
             )
 
     def _add_metric(
@@ -320,6 +306,8 @@ class PanopticaResult(object):
         text = ""
         for metric_type in MetricType:
             if metric_type == MetricType.NO_PRINT:
+                continue
+            if metric_type == MetricType.GLOBAL and len(self._global_metrics) == 0:
                 continue
             text += f"\n+++ {metric_type.name} +++\n"
             for k, v in self._evaluation_metrics.items():
@@ -506,45 +494,27 @@ def sq_rvd_std(res: PanopticaResult):
 # endregion
 
 
-# region Global
-def global_bin_dsc(res: PanopticaResult):
-    if res.tp == 0:
-        return 0.0
-    pred_binary = res._prediction_arr.copy()
-    ref_binary = res._reference_arr.copy()
-    pred_binary[pred_binary != 0] = 1
-    ref_binary[ref_binary != 0] = 1
-    return _compute_dice_coefficient(ref_binary, pred_binary)
+def _build_global_bin_metric_function(metric: Metric):
 
+    def function_template(res: PanopticaResult):
+        if metric not in res._global_metrics:
+            raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
+        if res.tp == 0:
+            is_edgecase, result = res._edge_case_handler.handle_zero_tp(
+                metric, res.tp, res.num_pred_instances, res.num_ref_instances
+            )
+            if is_edgecase:
+                return result
+        pred_binary = res._prediction_arr.copy()
+        ref_binary = res._reference_arr.copy()
+        pred_binary[pred_binary != 0] = 1
+        ref_binary[ref_binary != 0] = 1
+        return metric(
+            reference_arr=res._reference_arr,
+            prediction_arr=res._prediction_arr,
+        )
 
-def global_bin_cldsc(res: PanopticaResult):
-    if res.tp == 0:
-        return 0.0
-    pred_binary = res._prediction_arr.copy()
-    ref_binary = res._reference_arr.copy()
-    pred_binary[pred_binary != 0] = 1
-    ref_binary[ref_binary != 0] = 1
-    return _compute_centerline_dice_coefficient(ref_binary, pred_binary)
-
-
-def global_bin_assd(res: PanopticaResult):
-    if res.tp == 0:
-        return 0.0
-    pred_binary = res._prediction_arr.copy()
-    ref_binary = res._reference_arr.copy()
-    pred_binary[pred_binary != 0] = 1
-    ref_binary[ref_binary != 0] = 1
-    return _average_symmetric_surface_distance(ref_binary, pred_binary)
-
-
-def global_bin_rvd(res: PanopticaResult):
-    if res.tp == 0:
-        return 0.0
-    pred_binary = res._prediction_arr.copy()
-    ref_binary = res._reference_arr.copy()
-    pred_binary[pred_binary != 0] = 1
-    ref_binary[ref_binary != 0] = 1
-    return _compute_relative_volume_difference(ref_binary, pred_binary)
+    return function_template
 
 
 # endregion

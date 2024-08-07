@@ -5,6 +5,8 @@ import numpy as np
 from panoptica._functionals import _get_paired_crop
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 from panoptica.utils.constants import _Enum_Compare
+from dataclasses import dataclass
+from panoptica.metrics import Metric
 
 uint_type: type = np.unsignedinteger
 int_type: type = np.integer
@@ -313,6 +315,16 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             missed_prediction_labels=self.missed_prediction_labels,
             matched_instances=self.matched_instances,
         )
+
+
+@dataclass
+class EvaluateInstancePair:
+    reference_arr: np.ndarray
+    prediction_arr: np.ndarray
+    num_pred_instances: int
+    num_ref_instances: int
+    tp: int
+    list_metrics: dict[Metric, list[float]]
 
 
 class InputType(_Enum_Compare):

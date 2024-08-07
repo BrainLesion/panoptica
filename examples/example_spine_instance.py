@@ -14,7 +14,7 @@ prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.g
 
 evaluator = Panoptica_Evaluator(
     expected_input=InputType.MATCHED_INSTANCE,
-    eval_metrics=[Metric.DSC, Metric.IOU],
+    instance_metrics=[Metric.DSC, Metric.IOU],
     segmentation_class_groups=SegmentationClassGroups(
         {
             "vertebra": LabelGroup([i for i in range(1, 10)]),

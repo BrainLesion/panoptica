@@ -28,6 +28,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             num_pred_instances=5,
             tp=0,
             list_metrics={Metric.IOU: []},
+            global_metrics=[Metric.DSC],
             edge_case_handler=EdgeCaseHandler(),
         )
         c.calculate_all(print_errors=True)

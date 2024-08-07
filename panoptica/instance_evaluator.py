@@ -1,11 +1,8 @@
 from multiprocessing import Pool
-
 import numpy as np
 
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import PanopticaResult
-from panoptica.utils import EdgeCaseHandler
-from panoptica.utils.processing_pair import MatchedInstancePair
+from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
 
 
 def evaluate_matched_instance(
@@ -13,9 +10,8 @@ def evaluate_matched_instance(
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
     decision_metric: Metric | None = Metric.IOU,
     decision_threshold: float | None = None,
-    edge_case_handler: EdgeCaseHandler | None = None,
     **kwargs,
-) -> PanopticaResult:
+) -> EvaluateInstancePair:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
@@ -31,8 +27,6 @@ def evaluate_matched_instance(
     >>> labelmap = [([1, 2], [3, 4]), ([5], [6])]
     >>> result = map_instance_labels(unmatched_instance_pair, labelmap)
     """
-    if edge_case_handler is None:
-        edge_case_handler = EdgeCaseHandler()
     if decision_metric is not None:
         assert decision_metric.name in [
             v.name for v in eval_metrics
@@ -68,14 +62,13 @@ def evaluate_matched_instance(
                 score_dict[k].append(v)
 
     # Create and return the PanopticaResult object with computed metrics
-    return PanopticaResult(
+    return EvaluateInstancePair(
         reference_arr=matched_instance_pair.reference_arr,
         prediction_arr=matched_instance_pair.prediction_arr,
         num_pred_instances=matched_instance_pair.n_prediction_instance,
         num_ref_instances=matched_instance_pair.n_reference_instance,
         tp=tp,
         list_metrics=score_dict,
-        edge_case_handler=edge_case_handler,
     )
 
 

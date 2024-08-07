@@ -143,6 +143,20 @@ class EdgeCaseHandler(SupportsConfig):
         num_pred_instances: int,
         num_ref_instances: int,
     ) -> tuple[bool, float | None]:
+        """_summary_
+
+        Args:
+            metric (Metric): _description_
+            tp (int): _description_
+            num_pred_instances (int): _description_
+            num_ref_instances (int): _description_
+
+        Raises:
+            NotImplementedError: _description_
+
+        Returns:
+            tuple[bool, float | None]: if edge case, and its edge case value
+        """
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         if metric not in self.__listmetric_zeroTP_handling:
