@@ -29,6 +29,10 @@ pip install panoptica
 
 For tutorials featuring various use cases, see: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
 
+### Metrics
+
+Panoptica supports a large range of metrics. An overview of the supported metrics and their formulas can be found: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/metrics.md)
+
 ### Semantic Segmentation Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/semantic.png?raw=true" alt="semantic_figure" height="300"/>
