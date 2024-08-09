@@ -264,7 +264,7 @@ class PanopticaResult(object):
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
         if self.tp == 0:
-            is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, self.tp, res.num_pred_instances, res.num_ref_instances)
+            is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, self.tp, self.num_pred_instances, self.num_ref_instances)
             if is_edgecase:
                 return result
         pred_binary = prediction_arr
