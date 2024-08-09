@@ -11,10 +11,6 @@ from panoptica.metrics import (
     MetricCouldNotBeComputedException,
     MetricMode,
     MetricType,
-    _compute_centerline_dice_coefficient,
-    _compute_dice_coefficient,
-    _average_symmetric_surface_distance,
-    _compute_relative_volume_difference,
 )
 from panoptica.utils import EdgeCaseHandler
 
@@ -44,8 +40,6 @@ class PanopticaResult(object):
         """
         self._edge_case_handler = edge_case_handler
         empty_list_std = self._edge_case_handler.handle_empty_list_std().value
-        self._prediction_arr = prediction_arr
-        self._reference_arr = reference_arr
         self._global_metrics: list[Metric] = global_metrics
         ######################
         # Evaluation Metrics #
@@ -253,12 +247,42 @@ class PanopticaResult(object):
                     m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result
                 )
             # even if not available, set the global vars
+            default_value = None
+            was_calculated = False
+            if m in self._global_metrics:
+                default_value = self._calc_global_bin_metric(
+                    m, prediction_arr, reference_arr
+                )
+                was_calculated = True
+
             self._add_metric(
                 f"global_bin_{m.name.lower()}",
                 MetricType.GLOBAL,
-                _build_global_bin_metric_function(m),
+                lambda x: MetricCouldNotBeComputedException(
+                    f"Global Metric {m} not set"
+                ),
                 long_name="Global Binary " + m.value.long_name,
+                default_value=default_value,
+                was_calculated=was_calculated,
             )
+
+    def _calc_global_bin_metric(self, metric: Metric, prediction_arr, reference_arr):
+        if metric not in self._global_metrics:
+            raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
+        if self.tp == 0:
+            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                metric, self.tp, self.num_pred_instances, self.num_ref_instances
+            )
+            if is_edgecase:
+                return result
+        pred_binary = prediction_arr
+        ref_binary = reference_arr
+        pred_binary[pred_binary != 0] = 1
+        ref_binary[ref_binary != 0] = 1
+        return metric(
+            reference_arr=ref_binary,
+            prediction_arr=pred_binary,
+        )
 
     def _add_metric(
         self,
@@ -292,6 +316,7 @@ class PanopticaResult(object):
             print_errors (bool, optional): If true, will print every metric that could not be computed and its reason. Defaults to False.
         """
         metric_errors: dict[str, Exception] = {}
+
         for k, v in self._evaluation_metrics.items():
             try:
                 v = getattr(self, k)
@@ -301,6 +326,13 @@ class PanopticaResult(object):
         if print_errors:
             for k, v in metric_errors.items():
                 print(f"Metric {k}: {v}")
+
+    def _calc(self, k, v):
+        try:
+            v = getattr(self, k)
+            return False, v
+        except Exception as e:
+            return True, e
 
     def __str__(self) -> str:
         text = ""
@@ -366,6 +398,8 @@ class PanopticaResult(object):
         try:
             attr = object.__getattribute__(self, __name)
         except AttributeError as e:
+            if __name == "_evaluation_metrics":
+                raise e
             if __name in self._evaluation_metrics.keys():
                 pass
             else:
@@ -514,11 +548,10 @@ def _build_global_bin_metric_function(metric: Metric):
             prediction_arr=res._prediction_arr,
         )
 
-    return function_template
+    return lambda x: function_template(x)
 
 
 # endregion
-
 
 if __name__ == "__main__":
     c = PanopticaResult(

@@ -3,7 +3,6 @@ from multiprocessing import Pool
 
 import numpy as np
 
-from panoptica.metrics.iou import _compute_instance_iou
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.numpy_utils import _get_bbox_nd
 
