@@ -54,6 +54,8 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         with self.assertRaises(AssertionError):
             group1 = LabelGroup([1, 0, -1, 5], single_instance=False)
 
+        group1 = LabelGroup([1, 1, 2, 3], single_instance=False)
+
     def test_segmentationclassgroup_easy(self):
         group1 = LabelGroup([1, 2, 3, 4, 5], single_instance=False)
         classgroups = SegmentationClassGroups(
@@ -81,7 +83,37 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
             self.assertTrue(isinstance(i, str))
             self.assertTrue(isinstance(lg, LabelGroup))
 
-    def test_segmentationclassgroup_decarations(self):
+    def test_wrong_classgroup_definitions(self):
+
+        with self.assertRaises(AssertionError):
+            classgroups = SegmentationClassGroups(
+                groups={
+                    "vertebra": LabelGroup([100, 101, 102]),
+                    "ivds": LabelGroup([100, 101, 102]),
+                }
+            )
+
+        with self.assertRaises(AssertionError):
+            classgroups = SegmentationClassGroups(
+                groups={
+                    "vertebra": LabelGroup([1, 2, 3]),
+                    "ivds": LabelGroup([3, 4, 5]),
+                }
+            )
+
+        classgroups = SegmentationClassGroups(
+            groups={
+                "vertebra": LabelGroup([1, 2, 3]),
+                "ivds": LabelGroup([4, 5, 6]),
+            }
+        )
+        with self.assertRaises(AssertionError):
+            classgroups.has_defined_labels_for([0], raise_error=True)
+        with self.assertRaises(AssertionError):
+            classgroups.has_defined_labels_for([7], raise_error=True)
+        classgroups.has_defined_labels_for([7], raise_error=False)
+
+    def test_segmentationclassgroup_declarations(self):
         classgroups = SegmentationClassGroups(
             groups=[LabelGroup(i) for i in range(1, 5)]
         )
@@ -89,3 +121,26 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         keys = classgroups.keys()
         for i in range(1, 5):
             self.assertTrue(f"group_{i-1}" in keys, f"not {i} in {keys}")
+
+    def test_segmentationclassgroup_default(self):
+        group1 = LabelGroup([1, 2, 3, 4, 5], single_instance=False)
+
+        print(group1)
+        print(group1.value_labels)
+
+        arr = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        group1_arr = group1(arr, True)
+        print(group1_arr)
+
+        classgroups = SegmentationClassGroups(
+            groups={
+                "vertebra": group1,
+                "ivds": LabelGroup([100, 101, 102]),
+            }
+        )
+        print(classgroups)
+
+        print(classgroups.has_defined_labels_for([1, 2, 3]))
+
+        for i in classgroups:
+            print(i)

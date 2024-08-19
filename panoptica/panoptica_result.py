@@ -552,21 +552,3 @@ def _build_global_bin_metric_function(metric: Metric):
 
 
 # endregion
-
-if __name__ == "__main__":
-    c = PanopticaResult(
-        reference_arr=np.zeros([5, 5, 5]),
-        prediction_arr=np.zeros([5, 5, 5]),
-        num_ref_instances=2,
-        num_pred_instances=5,
-        tp=0,
-        list_metrics={Metric.IOU: []},
-        edge_case_handler=EdgeCaseHandler(),
-    )
-
-    print(c)
-
-    c.calculate_all(print_errors=True)
-    print(c)
-
-    # print(c.sq)
