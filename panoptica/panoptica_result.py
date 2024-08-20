@@ -260,7 +260,9 @@ class PanopticaResult(object):
             was_calculated = False
 
             if m in self._global_metrics and arrays_present:
-                default_value = self._calc_global_bin_metric(m, pred_binary, ref_binary, do_binarize=False)
+                default_value = self._calc_global_bin_metric(
+                    m, pred_binary, ref_binary, do_binarize=False
+                )
                 was_calculated = True
 
             self._add_metric(
