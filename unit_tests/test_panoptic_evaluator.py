@@ -14,7 +14,36 @@ from panoptica.metrics import Metric
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.panoptica_result import MetricCouldNotBeComputedException
 from panoptica.utils.processing_pair import SemanticPair
-from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
+from panoptica.utils.segmentation_class import SegmentationClassGroups
+import sys
+from pathlib import Path
+
+
+class Test_Example_Scripts(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_example_scripts(self):
+        directory = Path(__file__).parent.parent.joinpath("examples")
+
+        print(directory)
+        if not directory.exists():
+            self.skipTest(f"directory {directory} does not exist")
+
+        sys.path.append(str(directory))
+
+        from examples.example_spine_semantic import main
+
+        main()
+
+        from examples.example_spine_instance import main
+
+        main()
+
+        from examples.example_spine_instance_config import main
+
+        main()
 
 
 class Test_Panoptica_Evaluator(unittest.TestCase):

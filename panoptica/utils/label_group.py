@@ -20,6 +20,9 @@ class LabelGroup(SupportsConfig):
         """
         if isinstance(value_labels, int):
             value_labels = [value_labels]
+
+        value_labels = list(set(value_labels))
+
         assert (
             len(value_labels) >= 1
         ), f"You tried to define a LabelGroup without any specified labels, got {value_labels}"

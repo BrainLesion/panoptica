@@ -11,10 +11,6 @@ from panoptica.metrics.dice import (
     _compute_instance_volumetric_dice,
 )
 
-# from panoptica.metrics.overunder_segmentation import (
-#    _compute_instance_segmentation_tendency,
-#    _compute_segmentation_tendency,
-# )
 from panoptica.metrics.relative_volume_difference import (
     _compute_instance_relative_volume_difference,
     _compute_relative_volume_difference,

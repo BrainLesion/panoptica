@@ -307,8 +307,8 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self._prediction_arr,
-            reference_arr=self._reference_arr,
+            prediction_arr=self._prediction_arr.copy(),
+            reference_arr=self._reference_arr.copy(),
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
             missed_reference_labels=self.missed_reference_labels,
@@ -336,3 +336,55 @@ class InputType(_Enum_Compare):
         self, prediction_arr: np.ndarray, reference_arr: np.ndarray
     ) -> _ProcessingPair:
         return self.value(prediction_arr, reference_arr)
+
+
+class IntermediateStepsData:
+    def __init__(self, original_input: _ProcessingPair | None):
+        self._original_input = original_input
+        self._intermediatesteps: dict[str, _ProcessingPair] = {}
+
+    def add_intermediate_arr_data(
+        self, processing_pair: _ProcessingPair, inputtype: InputType
+    ):
+        type_name = inputtype.name
+        self.add_intermediate_data(type_name, processing_pair)
+
+    def add_intermediate_data(self, key, value):
+        assert key not in self._intermediatesteps, f"key {key} already added"
+        self._intermediatesteps[key] = value
+
+    @property
+    def original_prediction_arr(self):
+        assert (
+            self._original_input is not None
+        ), "Original prediction_arr is None, there are no intermediate steps"
+        return self._original_input.prediction_arr
+
+    @property
+    def original_reference_arr(self):
+        assert (
+            self._original_input is not None
+        ), "Original reference_arr is None, there are no intermediate steps"
+        return self._original_input.reference_arr
+
+    def prediction_arr(self, inputtype: InputType):
+        type_name = inputtype.name
+        procpair = self[type_name]
+        assert isinstance(
+            procpair, _ProcessingPair
+        ), f"step {type_name} is not a processing pair, error"
+        return procpair.prediction_arr
+
+    def reference_arr(self, inputtype: InputType):
+        type_name = inputtype.name
+        procpair = self[type_name]
+        assert isinstance(
+            procpair, _ProcessingPair
+        ), f"step {type_name} is not a processing pair, error"
+        return procpair.reference_arr
+
+    def __getitem__(self, key):
+        assert (
+            key in self._intermediatesteps
+        ), f"key {key} not in intermediate steps, maybe the step was skipped?"
+        return self._intermediatesteps[key]

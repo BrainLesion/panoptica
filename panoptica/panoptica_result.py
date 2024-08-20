@@ -193,14 +193,14 @@ class PanopticaResult(object):
             "sq_assd",
             MetricType.INSTANCE,
             sq_assd,
-            long_name="Segmentation Quality Assd",
+            long_name="Segmentation Quality ASSD",
         )
         self.sq_assd_std: float
         self._add_metric(
             "sq_assd_std",
             MetricType.INSTANCE,
             sq_assd_std,
-            long_name="Segmentation Quality Assd Standard Deviation",
+            long_name="Segmentation Quality ASSD Standard Deviation",
         )
         # endregion
         #
@@ -235,6 +235,15 @@ class PanopticaResult(object):
         ##################
         self._list_metrics: dict[Metric, Evaluation_List_Metric] = {}
         # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
+
+        arrays_present = False
+        if prediction_arr is not None and reference_arr is not None:
+            pred_binary = prediction_arr.copy()
+            ref_binary = reference_arr.copy()
+            pred_binary[pred_binary != 0] = 1
+            ref_binary[ref_binary != 0] = 1
+            arrays_present = True
+
         for m in Metric:
             if m in list_metrics:
                 is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
@@ -249,9 +258,10 @@ class PanopticaResult(object):
             # even if not available, set the global vars
             default_value = None
             was_calculated = False
-            if m in self._global_metrics:
+
+            if m in self._global_metrics and arrays_present:
                 default_value = self._calc_global_bin_metric(
-                    m, prediction_arr, reference_arr
+                    m, pred_binary, ref_binary, do_binarize=False
                 )
                 was_calculated = True
 
@@ -266,7 +276,13 @@ class PanopticaResult(object):
                 was_calculated=was_calculated,
             )
 
-    def _calc_global_bin_metric(self, metric: Metric, prediction_arr, reference_arr):
+    def _calc_global_bin_metric(
+        self,
+        metric: Metric,
+        prediction_arr,
+        reference_arr,
+        do_binarize: bool = True,
+    ):
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
         if self.tp == 0:
@@ -275,10 +291,16 @@ class PanopticaResult(object):
             )
             if is_edgecase:
                 return result
-        pred_binary = prediction_arr
-        ref_binary = reference_arr
-        pred_binary[pred_binary != 0] = 1
-        ref_binary[ref_binary != 0] = 1
+
+        if do_binarize:
+            pred_binary = prediction_arr.copy()
+            ref_binary = reference_arr.copy()
+            pred_binary[pred_binary != 0] = 1
+            ref_binary[ref_binary != 0] = 1
+        else:
+            pred_binary = prediction_arr
+            ref_binary = reference_arr
+
         return metric(
             reference_arr=ref_binary,
             prediction_arr=pred_binary,
@@ -552,21 +574,3 @@ def _build_global_bin_metric_function(metric: Metric):
 
 
 # endregion
-
-if __name__ == "__main__":
-    c = PanopticaResult(
-        reference_arr=np.zeros([5, 5, 5]),
-        prediction_arr=np.zeros([5, 5, 5]),
-        num_ref_instances=2,
-        num_pred_instances=5,
-        tp=0,
-        list_metrics={Metric.IOU: []},
-        edge_case_handler=EdgeCaseHandler(),
-    )
-
-    print(c)
-
-    c.calculate_all(print_errors=True)
-    print(c)
-
-    # print(c.sq)
