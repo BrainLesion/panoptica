@@ -21,7 +21,11 @@ from panoptica.utils.edge_case_handling import (
     MetricZeroTPEdgeCaseHandling,
     EdgeCaseHandler,
 )
-from panoptica import ConnectedComponentsInstanceApproximator, NaiveThresholdMatching, Panoptica_Evaluator
+from panoptica import (
+    ConnectedComponentsInstanceApproximator,
+    NaiveThresholdMatching,
+    Panoptica_Evaluator,
+)
 from pathlib import Path
 import numpy as np
 import random
@@ -105,7 +109,9 @@ class Test_Datatypes(unittest.TestCase):
 
         configname = "test_file.yaml"
         t.save_to_config_by_name(configname)
-        d: SegmentationClassGroups = SegmentationClassGroups.load_from_config_name(configname)
+        d: SegmentationClassGroups = SegmentationClassGroups.load_from_config_name(
+            configname
+        )
 
         testfile_d = config_by_name(configname)
         os.remove(testfile_d)

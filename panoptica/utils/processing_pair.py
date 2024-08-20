@@ -343,7 +343,9 @@ class IntermediateStepsData:
         self._original_input = original_input
         self._intermediatesteps: dict[str, _ProcessingPair] = {}
 
-    def add_intermediate_arr_data(self, processing_pair: _ProcessingPair, inputtype: InputType):
+    def add_intermediate_arr_data(
+        self, processing_pair: _ProcessingPair, inputtype: InputType
+    ):
         type_name = inputtype.name
         self.add_intermediate_data(type_name, processing_pair)
 
@@ -353,26 +355,36 @@ class IntermediateStepsData:
 
     @property
     def original_prediction_arr(self):
-        assert self._original_input is not None, "Original prediction_arr is None, there are no intermediate steps"
+        assert (
+            self._original_input is not None
+        ), "Original prediction_arr is None, there are no intermediate steps"
         return self._original_input.prediction_arr
 
     @property
     def original_reference_arr(self):
-        assert self._original_input is not None, "Original reference_arr is None, there are no intermediate steps"
+        assert (
+            self._original_input is not None
+        ), "Original reference_arr is None, there are no intermediate steps"
         return self._original_input.reference_arr
 
     def prediction_arr(self, inputtype: InputType):
         type_name = inputtype.name
         procpair = self[type_name]
-        assert isinstance(procpair, _ProcessingPair), f"step {type_name} is not a processing pair, error"
+        assert isinstance(
+            procpair, _ProcessingPair
+        ), f"step {type_name} is not a processing pair, error"
         return procpair.prediction_arr
 
     def reference_arr(self, inputtype: InputType):
         type_name = inputtype.name
         procpair = self[type_name]
-        assert isinstance(procpair, _ProcessingPair), f"step {type_name} is not a processing pair, error"
+        assert isinstance(
+            procpair, _ProcessingPair
+        ), f"step {type_name} is not a processing pair, error"
         return procpair.reference_arr
 
     def __getitem__(self, key):
-        assert key in self._intermediatesteps, f"key {key} not in intermediate steps, maybe the step was skipped?"
+        assert (
+            key in self._intermediatesteps
+        ), f"key {key} not in intermediate steps, maybe the step was skipped?"
         return self._intermediatesteps[key]

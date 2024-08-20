@@ -11,7 +11,11 @@ from panoptica.metrics import (
     MetricMode,
     MetricCouldNotBeComputedException,
 )
-from panoptica.utils.edge_case_handling import EdgeCaseResult, EdgeCaseHandler, MetricZeroTPEdgeCaseHandling
+from panoptica.utils.edge_case_handling import (
+    EdgeCaseResult,
+    EdgeCaseHandler,
+    MetricZeroTPEdgeCaseHandling,
+)
 
 
 class Test_EdgeCaseHandler(unittest.TestCase):
@@ -24,7 +28,9 @@ class Test_EdgeCaseHandler(unittest.TestCase):
 
         print()
         # print(handler.get_metric_zero_tp_handle(ListMetric.IOU))
-        r = handler.handle_zero_tp(Metric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1)
+        r = handler.handle_zero_tp(
+            Metric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1
+        )
         print(r)
 
         iou_test = MetricZeroTPEdgeCaseHandling(
