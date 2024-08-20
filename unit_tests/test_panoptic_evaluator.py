@@ -14,7 +14,36 @@ from panoptica.metrics import Metric
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.panoptica_result import MetricCouldNotBeComputedException
 from panoptica.utils.processing_pair import SemanticPair
-from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
+from panoptica.utils.segmentation_class import SegmentationClassGroups
+import sys
+from pathlib import Path
+
+
+class Test_Example_Scripts(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_example_scripts(self):
+        directory = Path(__file__).parent.parent.joinpath("examples")
+
+        print(directory)
+        if not directory.exists():
+            self.skipTest(f"directory {directory} does not exist")
+
+        sys.path.append(str(directory))
+
+        from examples.example_spine_semantic import main
+
+        main()
+
+        from examples.example_spine_instance import main
+
+        main()
+
+        from examples.example_spine_instance_config import main
+
+        main()
 
 
 class Test_Panoptica_Evaluator(unittest.TestCase):
@@ -40,6 +69,28 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertEqual(result.fp, 0)
         self.assertEqual(result.sq, 0.75)
         self.assertEqual(result.pq, 0.75)
+        self.assertAlmostEqual(result.global_bin_dsc, 0.8571428571428571)
+
+    def test_simple_evaluation_instance_multiclass(self):
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy().astype(a.dtype)
+        a[20:30, 10:20] = 1
+        a[30:40, 10:20] = 3
+        b[20:35, 10:20] = 2
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.UNMATCHED_INSTANCE,
+            instance_matcher=NaiveThresholdMatching(),
+        )
+
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
+        print(result)
+        self.assertAlmostEqual(result.global_bin_dsc, 0.8571428571428571)
+        self.assertEqual(result.tp, 1)
+        self.assertEqual(result.fp, 0)
+        self.assertEqual(result.fn, 1)
+        self.assertAlmostEqual(result.sq, 0.6666666666666666)
+        self.assertAlmostEqual(result.pq, 0.4444444444444444)
 
     def test_simple_evaluation_DSC(self):
         a = np.zeros([50, 50], dtype=np.uint16)

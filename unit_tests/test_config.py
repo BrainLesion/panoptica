@@ -12,6 +12,7 @@ from panoptica.metrics import (
     MetricMode,
     MetricCouldNotBeComputedException,
 )
+from panoptica.utils.filepath import config_by_name
 from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.edge_case_handling import (
@@ -20,7 +21,11 @@ from panoptica.utils.edge_case_handling import (
     MetricZeroTPEdgeCaseHandling,
     EdgeCaseHandler,
 )
-from panoptica import ConnectedComponentsInstanceApproximator, NaiveThresholdMatching
+from panoptica import (
+    ConnectedComponentsInstanceApproximator,
+    NaiveThresholdMatching,
+    Panoptica_Evaluator,
+)
 from pathlib import Path
 import numpy as np
 import random
@@ -89,6 +94,32 @@ class Test_Datatypes(unittest.TestCase):
             self.assertEqual(t[k].single_instance, v.single_instance)
             self.assertEqual(len(t[k].value_labels), len(v.value_labels))
 
+    def test_SegmentationClassGroups_config_by_name(self):
+        e = {
+            "groups": {
+                "vertebra": LabelGroup([i for i in range(1, 11)], False),
+                "ivd": LabelGroup([i for i in range(101, 111)]),
+                "sacrum": LabelGroup(26, True),
+                "endplate": LabelGroup([i for i in range(201, 211)]),
+            }
+        }
+        t = SegmentationClassGroups(**e)
+        print(t)
+        print()
+
+        configname = "test_file.yaml"
+        t.save_to_config_by_name(configname)
+        d: SegmentationClassGroups = SegmentationClassGroups.load_from_config_name(
+            configname
+        )
+
+        testfile_d = config_by_name(configname)
+        os.remove(testfile_d)
+
+        for k, v in d.items():
+            self.assertEqual(t[k].single_instance, v.single_instance)
+            self.assertEqual(len(t[k].value_labels), len(v.value_labels))
+
     def test_InstanceApproximator_config(self):
         for backend in [None, CCABackend.cc3d, CCABackend.scipy]:
             t = ConnectedComponentsInstanceApproximator(cca_backend=backend)
@@ -146,7 +177,7 @@ class Test_Datatypes(unittest.TestCase):
         print()
         t.save_to_config(test_file)
         d: EdgeCaseHandler = EdgeCaseHandler.load_from_config(test_file)
-        # os.remove(test_file)
+        os.remove(test_file)
 
         self.assertEqual(t.handle_empty_list_std(), d.handle_empty_list_std())
         for k, v in t.listmetric_zeroTP_handling.items():
@@ -157,3 +188,11 @@ class Test_Datatypes(unittest.TestCase):
             print(v2)
 
             self.assertEqual(v, v2)
+
+    def test_Panoptica_Evaluator_config(self):
+        t = Panoptica_Evaluator()
+        print(t)
+        print()
+        t.save_to_config(test_file)
+        d: Panoptica_Evaluator = Panoptica_Evaluator.load_from_config(test_file)
+        os.remove(test_file)

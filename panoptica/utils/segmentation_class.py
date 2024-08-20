@@ -50,7 +50,7 @@ class SegmentationClassGroups(SupportsConfig):
         else:
             arr_labels = [i for i in np.unique(arr) if i != 0]
         for al in arr_labels:
-            if al not in self.__labels:
+            if al not in self.labels:
                 if raise_error:
                     raise AssertionError(
                         f"Input array has labels undefined in the SegmentationClassGroups, got label {al} the groups are defined as {str(self)}"
@@ -96,27 +96,3 @@ def list_duplicates(seq):
     seen_twice = set(x for x in seq if x in seen or seen_add(x))
     # turn the set into a list (as requested)
     return list(seen_twice)
-
-
-if __name__ == "__main__":
-    group1 = LabelGroup([1, 2, 3, 4, 5], single_instance=False)
-
-    print(group1)
-    print(group1.value_labels)
-
-    arr = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    group1_arr = group1(arr, True)
-    print(group1_arr)
-
-    classgroups = SegmentationClassGroups(
-        groups={
-            "vertebra": group1,
-            "ivds": LabelGroup([100, 101, 102]),
-        }
-    )
-    print(classgroups)
-
-    print(classgroups.has_defined_labels_for([1, 2, 3]))
-
-    for i in classgroups:
-        print(i)
