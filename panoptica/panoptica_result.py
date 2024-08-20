@@ -193,14 +193,14 @@ class PanopticaResult(object):
             "sq_assd",
             MetricType.INSTANCE,
             sq_assd,
-            long_name="Segmentation Quality Assd",
+            long_name="Segmentation Quality ASSD",
         )
         self.sq_assd_std: float
         self._add_metric(
             "sq_assd_std",
             MetricType.INSTANCE,
             sq_assd_std,
-            long_name="Segmentation Quality Assd Standard Deviation",
+            long_name="Segmentation Quality ASSD Standard Deviation",
         )
         # endregion
         #
