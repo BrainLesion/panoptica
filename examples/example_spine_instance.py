@@ -1,13 +1,13 @@
 import cProfile
 
 from auxiliary.nifti.io import read_nifti
-from auxiliary.turbopath import turbopath
+from pathlib import Path
 
 from panoptica import Panoptica_Evaluator, InputType
 from panoptica.metrics import Metric
 from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 
-directory = turbopath(__file__).parent
+directory = str(Path(__file__).absolute().parent)
 
 reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
 prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")

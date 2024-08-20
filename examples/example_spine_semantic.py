@@ -1,7 +1,7 @@
 import cProfile
 
 from auxiliary.nifti.io import read_nifti
-from auxiliary.turbopath import turbopath
+from pathlib import Path
 
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
@@ -10,7 +10,7 @@ from panoptica import (
     InputType,
 )
 
-directory = turbopath(__file__).parent
+directory = str(Path(__file__).absolute().parent)
 
 reference_mask = read_nifti(directory + "/spine_seg/semantic/ref.nii.gz")
 prediction_mask = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
