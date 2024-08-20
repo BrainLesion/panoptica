@@ -226,11 +226,19 @@ def panoptic_evaluate(
     # Crops away unecessary space of zeroes
     input_pair.crop_data()
 
-    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | EvaluateInstancePair | PanopticaResult = input_pair.copy()
+    processing_pair: (
+        SemanticPair
+        | UnmatchedInstancePair
+        | MatchedInstancePair
+        | EvaluateInstancePair
+        | PanopticaResult
+    ) = input_pair.copy()
 
     # First Phase: Instance Approximation
     if isinstance(processing_pair, SemanticPair):
-        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.SEMANTIC)
+        intermediate_steps_data.add_intermediate_arr_data(
+            processing_pair.copy(), InputType.SEMANTIC
+        )
         assert (
             instance_approximator is not None
         ), "Got SemanticPair but not InstanceApproximator"
@@ -243,7 +251,9 @@ def panoptic_evaluate(
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.UNMATCHED_INSTANCE)
+        intermediate_steps_data.add_intermediate_arr_data(
+            processing_pair.copy(), InputType.UNMATCHED_INSTANCE
+        )
         processing_pair = _handle_zero_instances_cases(
             processing_pair,
             eval_metrics=instance_metrics,
@@ -266,7 +276,9 @@ def panoptic_evaluate(
 
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.MATCHED_INSTANCE)
+        intermediate_steps_data.add_intermediate_arr_data(
+            processing_pair.copy(), InputType.MATCHED_INSTANCE
+        )
         processing_pair = _handle_zero_instances_cases(
             processing_pair,
             eval_metrics=instance_metrics,
