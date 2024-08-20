@@ -21,7 +21,7 @@ from panoptica.utils.edge_case_handling import (
     MetricZeroTPEdgeCaseHandling,
     EdgeCaseHandler,
 )
-from panoptica import ConnectedComponentsInstanceApproximator, NaiveThresholdMatching
+from panoptica import ConnectedComponentsInstanceApproximator, NaiveThresholdMatching, Panoptica_Evaluator
 from pathlib import Path
 import numpy as np
 import random
@@ -171,7 +171,7 @@ class Test_Datatypes(unittest.TestCase):
         print()
         t.save_to_config(test_file)
         d: EdgeCaseHandler = EdgeCaseHandler.load_from_config(test_file)
-        # os.remove(test_file)
+        os.remove(test_file)
 
         self.assertEqual(t.handle_empty_list_std(), d.handle_empty_list_std())
         for k, v in t.listmetric_zeroTP_handling.items():
@@ -182,3 +182,11 @@ class Test_Datatypes(unittest.TestCase):
             print(v2)
 
             self.assertEqual(v, v2)
+
+    def test_Panoptica_Evaluator_config(self):
+        t = Panoptica_Evaluator()
+        print(t)
+        print()
+        t.save_to_config(test_file)
+        d: Panoptica_Evaluator = Panoptica_Evaluator.load_from_config(test_file)
+        os.remove(test_file)

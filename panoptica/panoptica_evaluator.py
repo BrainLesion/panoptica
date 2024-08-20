@@ -90,7 +90,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "instance_matcher": node.__instance_matcher,
             "edge_case_handler": node.__edge_case_handler,
             "segmentation_class_groups": node.__segmentation_class_groups,
-            "eval_metrics": node.__eval_metrics,
+            "instance_metrics": node.__eval_metrics,
             "global_metrics": node.__global_metrics,
             "decision_metric": node.__decision_metric,
             "decision_threshold": node.__decision_threshold,
