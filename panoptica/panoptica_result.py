@@ -235,6 +235,15 @@ class PanopticaResult(object):
         ##################
         self._list_metrics: dict[Metric, Evaluation_List_Metric] = {}
         # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
+
+        arrays_present = False
+        if prediction_arr is not None and reference_arr is not None:
+            pred_binary = prediction_arr.copy()
+            ref_binary = reference_arr.copy()
+            pred_binary[pred_binary != 0] = 1
+            ref_binary[ref_binary != 0] = 1
+            arrays_present = True
+
         for m in Metric:
             if m in list_metrics:
                 is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
@@ -249,10 +258,9 @@ class PanopticaResult(object):
             # even if not available, set the global vars
             default_value = None
             was_calculated = False
-            if m in self._global_metrics:
-                default_value = self._calc_global_bin_metric(
-                    m, prediction_arr, reference_arr
-                )
+
+            if m in self._global_metrics and arrays_present:
+                default_value = self._calc_global_bin_metric(m, pred_binary, ref_binary, do_binarize=False)
                 was_calculated = True
 
             self._add_metric(
@@ -266,7 +274,13 @@ class PanopticaResult(object):
                 was_calculated=was_calculated,
             )
 
-    def _calc_global_bin_metric(self, metric: Metric, prediction_arr, reference_arr):
+    def _calc_global_bin_metric(
+        self,
+        metric: Metric,
+        prediction_arr,
+        reference_arr,
+        do_binarize: bool = True,
+    ):
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
         if self.tp == 0:
@@ -275,10 +289,16 @@ class PanopticaResult(object):
             )
             if is_edgecase:
                 return result
-        pred_binary = prediction_arr
-        ref_binary = reference_arr
-        pred_binary[pred_binary != 0] = 1
-        ref_binary[ref_binary != 0] = 1
+
+        if do_binarize:
+            pred_binary = prediction_arr.copy()
+            ref_binary = reference_arr.copy()
+            pred_binary[pred_binary != 0] = 1
+            ref_binary[ref_binary != 0] = 1
+        else:
+            pred_binary = prediction_arr
+            ref_binary = reference_arr
+
         return metric(
             reference_arr=ref_binary,
             prediction_arr=pred_binary,

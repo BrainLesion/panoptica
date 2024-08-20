@@ -307,8 +307,8 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self._prediction_arr,
-            reference_arr=self._reference_arr,
+            prediction_arr=self._prediction_arr.copy(),
+            reference_arr=self._reference_arr.copy(),
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
             missed_reference_labels=self.missed_reference_labels,
