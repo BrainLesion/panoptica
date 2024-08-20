@@ -16,7 +16,7 @@ from panoptica.panoptica_result import MetricCouldNotBeComputedException
 from panoptica.utils.processing_pair import SemanticPair
 from panoptica.utils.segmentation_class import SegmentationClassGroups
 import sys
-from auxiliary.turbopath import turbopath
+from pathlib import Path
 
 
 class Test_Example_Scripts(unittest.TestCase):
@@ -25,7 +25,7 @@ class Test_Example_Scripts(unittest.TestCase):
         return super().setUp()
 
     def test_example_scripts(self):
-        directory = turbopath(__file__).parent.parent.joinpath("examples")
+        directory = Path(__file__).parent.parent.joinpath("examples")
 
         print(directory)
         if not directory.exists():
