@@ -212,6 +212,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
                 and not self._allow_many_to_one
             ):
                 continue  # -> doesnt make speed difference
+            # TODO always go in here, but add the matching score to the pair (so evaluation over multiple thresholds becomes easy)
             if self._matching_metric.score_beats_threshold(
                 matching_score, self._matching_threshold
             ):

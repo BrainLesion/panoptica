@@ -285,12 +285,6 @@ class PanopticaResult(object):
     ):
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
-        if self.tp == 0:
-            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                metric, self.tp, self.num_pred_instances, self.num_ref_instances
-            )
-            if is_edgecase:
-                return result
 
         if do_binarize:
             pred_binary = prediction_arr.copy()
@@ -300,6 +294,15 @@ class PanopticaResult(object):
         else:
             pred_binary = prediction_arr
             ref_binary = reference_arr
+
+        prediction_empty = pred_binary.sum() == 0
+        reference_empty = ref_binary.sum() == 0
+        if prediction_empty or reference_empty:
+            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                metric, 0, int(prediction_empty), int(reference_empty)
+            )
+            if is_edgecase:
+                return result
 
         return metric(
             reference_arr=ref_binary,
@@ -388,6 +391,10 @@ class PanopticaResult(object):
             for k, v in self._evaluation_metrics.items()
             if (v._error == False and v._was_calculated)
         }
+
+    @property
+    def evaluation_metrics(self):
+        return self._evaluation_metrics
 
     def get_list_metric(self, metric: Metric, mode: MetricMode):
         if metric in self._list_metrics:

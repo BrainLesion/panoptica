@@ -5,11 +5,27 @@ from panoptica.utils.config import SupportsConfig
 
 
 class EdgeCaseResult(_Enum_Compare):
-    INF = np.inf
-    NAN = np.nan
-    ZERO = 0.0
-    ONE = 1.0
-    NONE = None
+    INF = auto()  # np.inf
+    NAN = auto()  # np.nan
+    ZERO = auto()  # 0.0
+    ONE = auto()  # 1.0
+    NONE = auto()  # None
+
+    @property
+    def value(self):
+        return self()
+
+    def __call__(self):
+        transfer_dict = {
+            EdgeCaseResult.INF.name: np.inf,
+            EdgeCaseResult.NAN.name: np.nan,
+            EdgeCaseResult.ZERO.name: 0.0,
+            EdgeCaseResult.ONE.name: 1.0,
+            EdgeCaseResult.NONE.name: None,
+        }
+        if self.name in transfer_dict:
+            return transfer_dict[self.name]
+        raise KeyError(f"No defined value for EdgeCaseResult {str(self)}")
 
 
 class EdgeCaseZeroTP(_Enum_Compare):

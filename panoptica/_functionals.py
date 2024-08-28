@@ -133,7 +133,7 @@ def _connected_components(
     else:
         raise NotImplementedError(cca_backend)
 
-    return cc_arr.astype(array.dtype), n_instances
+    return cc_arr, n_instances
 
 
 def _get_paired_crop(

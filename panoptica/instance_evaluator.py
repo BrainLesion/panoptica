@@ -47,6 +47,7 @@ def evaluate_matched_instance(
             _evaluate_instance, instance_pairs
         )
 
+    # TODO if instance matcher already gives matching metric, adapt here!
     for metric_dict in metric_dicts:
         if decision_metric is None or (
             decision_threshold is not None

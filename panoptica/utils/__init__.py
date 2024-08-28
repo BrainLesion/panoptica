@@ -19,3 +19,4 @@ from panoptica.utils.segmentation_class import (
     SegmentationClassGroups,
     LabelGroup,
 )
+from panoptica.utils.parallel_processing import NonDaemonicPool

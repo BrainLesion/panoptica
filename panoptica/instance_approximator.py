@@ -165,9 +165,14 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             if not empty_reference
             else (semantic_pair._reference_arr, 0)
         )
+
+        dtype = _get_smallest_fitting_uint(
+            max(prediction_arr.max(), reference_arr.max())
+        )
+
         return UnmatchedInstancePair(
-            prediction_arr=prediction_arr,
-            reference_arr=reference_arr,
+            prediction_arr=prediction_arr.astype(dtype),
+            reference_arr=reference_arr.astype(dtype),
             n_prediction_instance=n_prediction_instance,
             n_reference_instance=n_reference_instance,
         )
