@@ -40,6 +40,7 @@ def evaluate_matched_instance(
     with Pool() as pool:
         metric_dicts: list[dict[Metric, float]] = pool.starmap(_evaluate_instance, instance_pairs)
 
+    # TODO if instance matcher already gives matching metric, adapt here!
     for metric_dict in metric_dicts:
         if decision_metric is None or (
             decision_threshold is not None and decision_metric.score_beats_threshold(metric_dict[decision_metric], decision_threshold)
