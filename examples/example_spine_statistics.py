@@ -42,11 +42,19 @@ if __name__ == "__main__":
         for i in range(4):
             results = evaluator.evaluate(prediction_mask, reference_mask, f"sample{i}")
     elif parallel_opt == "joblib":
-        Parallel(n_jobs=4, backend="threading")(delayed(evaluator.evaluate)(prediction_mask, reference_mask) for i in range(4))
+        Parallel(n_jobs=4, backend="threading")(
+            delayed(evaluator.evaluate)(prediction_mask, reference_mask)
+            for i in range(4)
+        )
     elif parallel_opt == "future":
         with ProcessPoolExecutor() as executor:
-            futures = {executor.submit(evaluator.evaluate, prediction_mask, reference_mask) for i in range(4)}
-            for future in tqdm(as_completed(futures), total=len(futures), desc="Panoptica Evaluation"):
+            futures = {
+                executor.submit(evaluator.evaluate, prediction_mask, reference_mask)
+                for i in range(4)
+            }
+            for future in tqdm(
+                as_completed(futures), total=len(futures), desc="Panoptica Evaluation"
+            ):
                 result = future.result()
                 if result is not None:
                     print("Done")
