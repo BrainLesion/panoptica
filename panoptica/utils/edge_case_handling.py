@@ -5,11 +5,27 @@ from panoptica.utils.config import SupportsConfig
 
 
 class EdgeCaseResult(_Enum_Compare):
-    INF = np.inf
-    NAN = np.nan
-    ZERO = 0.0
-    ONE = 1.0
-    NONE = None
+    INF = auto()  # np.inf
+    NAN = auto()  # np.nan
+    ZERO = auto()  # 0.0
+    ONE = auto()  # 1.0
+    NONE = auto()  # None
+
+    @property
+    def value(self):
+        return self()
+
+    def __call__(self):
+        transfer_dict = {
+            EdgeCaseResult.INF.name: np.inf,
+            EdgeCaseResult.NAN.name: np.nan,
+            EdgeCaseResult.ZERO.name: 0.0,
+            EdgeCaseResult.ONE.name: 1.0,
+            EdgeCaseResult.NONE.name: None,
+        }
+        if self.name in transfer_dict:
+            return transfer_dict[self.name]
+        raise KeyError(f"No defined value for EdgeCaseResult {str(self)}")
 
 
 class EdgeCaseZeroTP(_Enum_Compare):
@@ -41,26 +57,12 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
 
         self._default_result = default_result
         self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = (
-            empty_prediction_result
-            if empty_prediction_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = (
-            empty_reference_result
-            if empty_reference_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = (
-            no_instances_result if no_instances_result is not None else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NORMAL] = (
-            normal if normal is not None else default_result
-        )
+        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = empty_prediction_result if empty_prediction_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = empty_reference_result if empty_reference_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = no_instances_result if no_instances_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.NORMAL] = normal if normal is not None else default_result
 
-    def __call__(
-        self, tp: int, num_pred_instances, num_ref_instances
-    ) -> tuple[bool, float | None]:
+    def __call__(self, tp: int, num_pred_instances, num_ref_instances) -> tuple[bool, float | None]:
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         #
@@ -131,9 +133,7 @@ class EdgeCaseHandler(SupportsConfig):
         },
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,
     ) -> None:
-        self.__listmetric_zeroTP_handling: dict[
-            Metric, MetricZeroTPEdgeCaseHandling
-        ] = listmetric_zeroTP_handling
+        self.__listmetric_zeroTP_handling: dict[Metric, MetricZeroTPEdgeCaseHandling] = listmetric_zeroTP_handling
         self.__empty_list_std: EdgeCaseResult = empty_list_std
 
     def handle_zero_tp(
@@ -160,9 +160,7 @@ class EdgeCaseHandler(SupportsConfig):
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         if metric not in self.__listmetric_zeroTP_handling:
-            raise NotImplementedError(
-                f"Metric {metric} encountered zero TP, but no edge handling available"
-            )
+            raise NotImplementedError(f"Metric {metric} encountered zero TP, but no edge handling available")
 
         return self.__listmetric_zeroTP_handling[metric](
             tp=tp,

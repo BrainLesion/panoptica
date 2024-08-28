@@ -21,6 +21,8 @@ import numpy as np
 from panoptica.utils.config import SupportsConfig
 from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 
+NO_GROUP_KEY = "ungrouped"
+
 
 class Panoptica_Evaluator(SupportsConfig):
 
@@ -67,6 +69,7 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__global_metrics = global_metrics
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
+        self.__resulting_metric_keys = None
 
         self.__segmentation_class_groups = segmentation_class_groups
 
@@ -100,6 +103,7 @@ class Panoptica_Evaluator(SupportsConfig):
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
         result_all: bool = True,
+        log_times: bool | None = None,
         verbose: bool | None = None,
     ) -> dict[str, tuple[PanopticaResult, IntermediateStepsData]]:
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
@@ -107,7 +111,7 @@ class Panoptica_Evaluator(SupportsConfig):
 
         if self.__segmentation_class_groups is None:
             return {
-                "ungrouped": panoptic_evaluate(
+                NO_GROUP_KEY: panoptic_evaluate(
                     input_pair=processing_pair,
                     edge_case_handler=self.__edge_case_handler,
                     instance_approximator=self.__instance_approximator,
@@ -117,7 +121,7 @@ class Panoptica_Evaluator(SupportsConfig):
                     decision_metric=self.__decision_metric,
                     decision_threshold=self.__decision_threshold,
                     result_all=result_all,
-                    log_times=self.__log_times,
+                    log_times=self.__log_times if log_times is None else log_times,
                     verbose=True if verbose is None else verbose,
                     verbose_calc=self.__verbose if verbose is None else verbose,
                 )
@@ -128,8 +132,37 @@ class Panoptica_Evaluator(SupportsConfig):
 
         result_grouped = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
-            result_grouped[group_name] = self._evaluate_group(group_name, label_group, processing_pair, result_all, verbose)[1:]
+            result_grouped[group_name] = self._evaluate_group(
+                group_name,
+                label_group,
+                processing_pair,
+                result_all,
+                log_times=log_times,
+                verbose=verbose,
+            )[1:]
         return result_grouped
+
+    @property
+    def segmentation_class_groups_names(self) -> list[str]:
+        if self.__segmentation_class_groups is None:
+            return [NO_GROUP_KEY]
+        return self.__segmentation_class_groups.keys()
+
+    @property
+    def resulting_metric_keys(self) -> list[str]:
+        if self.__resulting_metric_keys is None:
+            dummy_input = MatchedInstancePair(np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8))
+            _, res, _ = self._evaluate_group(
+                group_name="",
+                label_group=LabelGroup(1, single_instance=False),
+                processing_pair=dummy_input,
+                result_all=True,
+                log_times=False,
+                verbose=False,
+            )
+            self.__resulting_metric_keys = list(res.to_dict().keys())
+        return self.__resulting_metric_keys
+        # panoptic_evaluate
 
     def _evaluate_group(
         self,
@@ -138,6 +171,7 @@ class Panoptica_Evaluator(SupportsConfig):
         processing_pair,
         result_all: bool = True,
         verbose: bool | None = None,
+        log_times: bool | None = None,
     ):
         assert isinstance(label_group, LabelGroup)
 
@@ -164,7 +198,7 @@ class Panoptica_Evaluator(SupportsConfig):
             decision_metric=self.__decision_metric,
             decision_threshold=decision_threshold,
             result_all=result_all,
-            log_times=self.__log_times,
+            log_times=self.__log_times if log_times is None else log_times,
             verbose=True if verbose is None else verbose,
             verbose_calc=self.__verbose if verbose is None else verbose,
         )

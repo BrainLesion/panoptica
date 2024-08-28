@@ -199,7 +199,31 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertEqual(result.fn, 1)
         self.assertEqual(result.sq, 0.0)
         self.assertEqual(result.pq, 0.0)
+        self.assertEqual(result.global_bin_dsc, 0.0)
         self.assertEqual(result.sq_assd, np.inf)
+
+    def test_no_TP_but_overlap(self):
+        a = np.zeros([50, 50], np.uint16)
+        b = a.copy()
+        a[20:40, 10:20] = 1
+        b[20:25, 10:15] = 2
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+
+        result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
+        print(result)
+        self.assertEqual(result.tp, 0)
+        self.assertEqual(result.fp, 1)
+        self.assertEqual(result.fn, 1)
+        self.assertEqual(result.sq, 0.0)
+        self.assertEqual(result.pq, 0.0)
+        self.assertAlmostEqual(result.global_bin_dsc, 0.22222222222)
+        self.assertEqual(result.sq_assd, np.inf)
+        self.assertTrue(np.isnan(result.sq_rvd))
 
     def test_ref_empty(self):
         a = np.zeros([50, 50], np.uint16)
