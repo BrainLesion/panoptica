@@ -33,7 +33,11 @@ def _calc_overlapping_labels(
     # instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
 
     # (ref, pred)
-    return [(int(i % (max_ref)), int(i // (max_ref))) for i in np.unique(overlap_arr) if i > max_ref]
+    return [
+        (int(i % (max_ref)), int(i // (max_ref)))
+        for i in np.unique(overlap_arr)
+        if i > max_ref
+    ]
 
 
 def _calc_matching_metric_of_overlapping_labels(
@@ -63,8 +67,13 @@ def _calc_matching_metric_of_overlapping_labels(
     with Pool() as pool:
         mm_values = pool.starmap(matching_metric.value, instance_pairs)
 
-    mm_pairs = [(i, (instance_pairs[idx][2], instance_pairs[idx][3])) for idx, i in enumerate(mm_values)]
-    mm_pairs = sorted(mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing)
+    mm_pairs = [
+        (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
+        for idx, i in enumerate(mm_values)
+    ]
+    mm_pairs = sorted(
+        mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
+    )
 
     return mm_pairs
 
