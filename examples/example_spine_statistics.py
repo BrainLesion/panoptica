@@ -1,7 +1,8 @@
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica import Panoptica_Evaluator, Panoptica_Aggregator, make_curve_over_setups
+from panoptica import Panoptica_Evaluator, Panoptica_Aggregator
+from panoptica.panoptica_statistics import make_curve_over_setups
 from pathlib import Path
 from panoptica.utils import NonDaemonicPool
 from joblib import delayed, Parallel
