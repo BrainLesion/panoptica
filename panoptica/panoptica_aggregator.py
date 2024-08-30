@@ -146,6 +146,10 @@ class Panoptica_Aggregator:
             _write_content(self.__output_file, [content])
             print(f"Saved entry {subject_name} into {str(self.__output_file)}")
 
+    @property
+    def panoptica_evaluator(self):
+        return self.__panoptica_evaluator
+
 
 def _read_first_row(file: str):
     # NOT THREAD SAFE BY ITSELF!
