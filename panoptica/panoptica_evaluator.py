@@ -158,6 +158,9 @@ class Panoptica_Evaluator(SupportsConfig):
             return [NO_GROUP_KEY]
         return self.__segmentation_class_groups.keys()
 
+    def _set_instance_matcher(self, matcher: InstanceMatchingAlgorithm):
+        self.__instance_matcher = matcher
+
     @property
     def resulting_metric_keys(self) -> list[str]:
         if self.__resulting_metric_keys is None:

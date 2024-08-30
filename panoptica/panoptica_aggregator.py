@@ -22,7 +22,7 @@ class Panoptica_Aggregator:
     def __init__(
         self,
         panoptica_evaluator: Panoptica_Evaluator,
-        output_file: Path,
+        output_file: Path | str,
         continue_file: bool = True,
     ):
         """
@@ -36,6 +36,8 @@ class Panoptica_Aggregator:
         self.__output_buffer_file = None
         self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
 
+        if isinstance(output_file, str):
+            output_file = Path(output_file)
         # uses tsv
         assert (
             output_file.parent.exists()
