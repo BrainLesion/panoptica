@@ -39,19 +39,27 @@ class Panoptica_Aggregator:
         if isinstance(output_file, str):
             output_file = Path(output_file)
         # uses tsv
-        assert output_file.parent.exists(), f"Directory {str(output_file.parent)} does not exist"
+        assert (
+            output_file.parent.exists()
+        ), f"Directory {str(output_file.parent)} does not exist"
 
         out_file_path = str(output_file)
         if not out_file_path.endswith(".tsv"):
             out_file_path += ".tsv"
 
-        out_buffer_file: Path = Path(out_file_path).parent.joinpath("panoptica_aggregator_tmp.tsv")
+        out_buffer_file: Path = Path(out_file_path).parent.joinpath(
+            "panoptica_aggregator_tmp.tsv"
+        )
         self.__output_buffer_file = out_buffer_file
 
         Path(out_file_path).parent.mkdir(parents=True, exist_ok=True)
         self.__output_file = out_file_path
 
-        header = ["subject_name"] + [f"{g}-{m}" for g in self.__class_group_names for m in self.__evaluation_metrics]
+        header = ["subject_name"] + [
+            f"{g}-{m}"
+            for g in self.__class_group_names
+            for m in self.__evaluation_metrics
+        ]
         header_hash = hash("+".join(header))
 
         if not output_file.exists():
@@ -60,7 +68,9 @@ class Panoptica_Aggregator:
         else:
             header_list = _read_first_row(output_file)
             # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-            assert header_hash == hash("+".join(header_list)), "Hash of header not the same! You are using a different setup!"
+            assert header_hash == hash(
+                "+".join(header_list)
+            ), "Hash of header not the same! You are using a different setup!"
 
         if out_buffer_file.exists():
             os.remove(out_buffer_file)
