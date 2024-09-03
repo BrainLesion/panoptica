@@ -85,7 +85,8 @@ class Panoptica_Aggregator:
         atexit.register(self.__exist_handler)
 
     def __exist_handler(self):
-        os.remove(self.__output_buffer_file)
+        if os.path.exists(self.__output_buffer_file):
+            os.remove(self.__output_buffer_file)
 
     def make_statistic(self) -> Panoptica_Statistic:
         with filelock:
@@ -120,6 +121,7 @@ class Panoptica_Aggregator:
             _write_content(self.__output_buffer_file, [[subject_name]])
 
         # Run Evaluation (allowed in parallel)
+        print(f"Call evaluate on {subject_name}")
         res = self.__panoptica_evaluator.evaluate(
             prediction_arr,
             reference_arr,
