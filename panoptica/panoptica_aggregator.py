@@ -85,7 +85,8 @@ class Panoptica_Aggregator:
         atexit.register(self.__exist_handler)
 
     def __exist_handler(self):
-        os.remove(self.__output_buffer_file)
+        if os.path.exists(self.__output_buffer_file):
+            os.remove(self.__output_buffer_file)
 
     def make_statistic(self) -> Panoptica_Statistic:
         with filelock:
