@@ -74,7 +74,10 @@ class Panoptica_Statistic:
                 if group_name not in value_dict:
                     value_dict[group_name] = {m: [] for m in metric_names}
 
-                value_dict[group_name][metric_name].append(float(value))
+                if len(value) > 0:
+                    value = float(value)
+                    if not np.isnan(value) and value != np.inf:
+                        value_dict[group_name][metric_name].append(float(value))
 
         return Panoptica_Statistic(subj_names=subj_names, value_dict=value_dict)
 
@@ -157,14 +160,14 @@ class Panoptica_Statistic:
         std = float(np.std(values))
         return (avg, std)
 
-    def print_summary(self):
+    def print_summary(self, ndigits: int = 3):
         summary = self.get_summary_dict()
         print()
         for g in self.__groupnames:
             print(f"Group {g}:")
             for m in self.__metricnames:
                 avg, std = summary[g][m]
-                print(m, ":", avg, "+-", std)
+                print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
             print()
 
     def get_summary_figure(
@@ -201,12 +204,18 @@ def make_curve_over_setups(
     statistics_dict: dict[str | int | float, Panoptica_Statistic],
     metric: str,
     groups: list[str] | str | None = None,
+    alternate_groupnames: list[str] | str | None = None,
+    fig: None = None,
+    plot_dotsize: int | None = None,
+    plot_lines: bool = True,
 ):
     if groups is None:
         groups = list(statistics_dict.values())[0].groupnames
     #
     if isinstance(groups, str):
         groups = [groups]
+    if isinstance(alternate_groupnames, str):
+        alternate_groupnames = [alternate_groupnames]
     #
     for setupname, stat in statistics_dict.items():
         assert (
@@ -226,16 +235,23 @@ def make_curve_over_setups(
     else:
         X = range(len(setupnames))
 
-    fig = plt.figure()
+    if fig is None:
+        fig = plt.figure()
+
     if not convert_x_to_digit:
         plt.xticks(X, setupnames)
 
-    plt.ylabel("average " + metric)
+    plt.ylabel("Average " + metric)
     plt.grid("major")
     # Y values are average metric values in that group and metric
-    for g in groups:
+    for idx, g in enumerate(groups):
         Y = [stat.avg_std(g, metric)[0] for stat in statistics_dict.values()]
-        plt.plot(X, Y, label=g)
+
+        if plot_lines:
+            plt.plot(X, Y, label=g if alternate_groupnames is None else alternate_groupnames[idx])
+
+        if plot_dotsize is not None:
+            plt.scatter(X, Y, s=plot_dotsize)
 
     plt.legend()
     return fig
