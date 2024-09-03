@@ -248,7 +248,11 @@ def make_curve_over_setups(
         Y = [stat.avg_std(g, metric)[0] for stat in statistics_dict.values()]
 
         if plot_lines:
-            plt.plot(X, Y, label=g if alternate_groupnames is None else alternate_groupnames[idx])
+            plt.plot(
+                X,
+                Y,
+                label=g if alternate_groupnames is None else alternate_groupnames[idx],
+            )
 
         if plot_dotsize is not None:
             plt.scatter(X, Y, s=plot_dotsize)
