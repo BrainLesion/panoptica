@@ -120,6 +120,7 @@ class Panoptica_Aggregator:
             _write_content(self.__output_buffer_file, [[subject_name]])
 
         # Run Evaluation (allowed in parallel)
+        print(f"Call evaluate on {subject_name}")
         res = self.__panoptica_evaluator.evaluate(
             prediction_arr,
             reference_arr,
