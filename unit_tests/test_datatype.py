@@ -11,6 +11,40 @@ from panoptica.metrics import (
     MetricMode,
     MetricCouldNotBeComputedException,
 )
+from panoptica.utils.edge_case_handling import (
+    EdgeCaseResult,
+    EdgeCaseHandler,
+    MetricZeroTPEdgeCaseHandling,
+)
+
+
+class Test_EdgeCaseHandler(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_edgecasehandler_simple(self):
+        handler = EdgeCaseHandler()
+
+        print()
+        # print(handler.get_metric_zero_tp_handle(ListMetric.IOU))
+        r = handler.handle_zero_tp(
+            Metric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1
+        )
+        print(r)
+
+        iou_test = MetricZeroTPEdgeCaseHandling(
+            no_instances_result=EdgeCaseResult.NAN,
+            default_result=EdgeCaseResult.ZERO,
+        )
+        # print(iou_test)
+        t = iou_test(tp=0, num_pred_instances=1, num_ref_instances=1)
+        print(t)
+
+        # iou_test = default_iou
+        # print(iou_test)
+        # t = iou_test(tp=0, num_pred_instances=1, num_ref_instances=1)
+        # print(t)
 
 
 class Test_Datatypes(unittest.TestCase):
@@ -28,6 +62,10 @@ class Test_Datatypes(unittest.TestCase):
         #
         self.assertNotEqual(Metric.DSC, Metric.IOU)
         self.assertNotEqual(Metric.DSC, "IOU")
+
+    def test_EdgeCaseResult_enum(self):
+        for e in EdgeCaseResult:
+            self.assertEqual(e, e)
 
     def test_matching_metric(self):
         dsc_metric = Metric.DSC

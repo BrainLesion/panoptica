@@ -1,0 +1,43 @@
+!Panoptica_Evaluator
+decision_metric: !Metric DSC
+decision_threshold: 0.5
+edge_case_handler: !EdgeCaseHandler
+  empty_list_std: !EdgeCaseResult NAN
+  listmetric_zeroTP_handling:
+    !Metric DSC: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult ZERO,
+      empty_reference_result: !EdgeCaseResult ZERO, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult ZERO}
+    !Metric clDSC: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult ZERO,
+      empty_reference_result: !EdgeCaseResult ZERO, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult ZERO}
+    !Metric IOU: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult ZERO,
+      empty_reference_result: !EdgeCaseResult ZERO, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult ZERO}
+    !Metric ASSD: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult INF,
+      empty_reference_result: !EdgeCaseResult INF, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult INF}
+    !Metric RVD: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult NAN,
+      empty_reference_result: !EdgeCaseResult NAN, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult NAN}
+instance_metrics: [!Metric DSC, !Metric IOU]
+global_metrics: [!Metric DSC, !Metric RVD]
+expected_input: !InputType UNMATCHED_INSTANCE
+instance_approximator: null
+instance_matcher: !NaiveThresholdMatching {allow_many_to_one: false, matching_metric: !Metric IOU,
+  matching_threshold: 0.5}
+log_times: true
+segmentation_class_groups: !SegmentationClassGroups
+  groups:
+    endplate: !LabelGroup
+      single_instance: false
+      value_labels: [201, 202, 203, 204, 205, 206, 207, 208, 209, 210]
+    ivd: !LabelGroup
+      single_instance: false
+      value_labels: [101, 102, 103, 104, 105, 106, 107, 108, 109, 110]
+    sacrum: !LabelGroup
+      single_instance: true
+      value_labels: [26]
+    vertebra: !LabelGroup
+      single_instance: false
+      value_labels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+verbose: false

@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
 
 import numpy as np
 
@@ -10,9 +10,10 @@ from panoptica.utils.processing_pair import (
     SemanticPair,
     UnmatchedInstancePair,
 )
+from panoptica.utils.config import SupportsConfig
 
 
-class InstanceApproximator(ABC):
+class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
     """
     Abstract base class for instance approximation algorithms in panoptic segmentation evaluation.
 
@@ -55,6 +56,12 @@ class InstanceApproximator(ABC):
             UnmatchedInstancePair | MatchedInstancePair: The result of the instance approximation.
         """
         pass
+
+    def _yaml_repr(cls, node) -> dict:
+        raise NotImplementedError(
+            f"Tried to get yaml representation of abstract class {cls.__name__}"
+        )
+        return {}
 
     def approximate_instances(
         self, semantic_pair: SemanticPair, verbose: bool = False, **kwargs
@@ -140,7 +147,7 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             UnmatchedInstancePair: The result of the instance approximation.
         """
         cca_backend = self.cca_backend
-        if self.cca_backend is None:
+        if cca_backend is None:
             cca_backend = (
                 CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
             )
@@ -158,9 +165,18 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             if not empty_reference
             else (semantic_pair._reference_arr, 0)
         )
+
+        dtype = _get_smallest_fitting_uint(
+            max(prediction_arr.max(), reference_arr.max())
+        )
+
         return UnmatchedInstancePair(
-            prediction_arr=prediction_arr,
-            reference_arr=reference_arr,
+            prediction_arr=prediction_arr.astype(dtype),
+            reference_arr=reference_arr.astype(dtype),
             n_prediction_instance=n_prediction_instance,
             n_reference_instance=n_reference_instance,
         )
+
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {"cca_backend": node.cca_backend}

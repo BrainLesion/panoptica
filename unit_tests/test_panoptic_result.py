@@ -8,11 +8,14 @@ import unittest
 import numpy as np
 
 from panoptica.metrics import Metric
-from panoptica.panoptic_result import MetricCouldNotBeComputedException, PanopticaResult
+from panoptica.panoptica_result import (
+    MetricCouldNotBeComputedException,
+    PanopticaResult,
+)
 from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
 
 
-class Test_Panoptic_Evaluator(unittest.TestCase):
+class Test_Panoptica_Results(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
         return super().setUp()
@@ -25,6 +28,7 @@ class Test_Panoptic_Evaluator(unittest.TestCase):
             num_pred_instances=5,
             tp=0,
             list_metrics={Metric.IOU: []},
+            global_metrics=[Metric.DSC],
             edge_case_handler=EdgeCaseHandler(),
         )
         c.calculate_all(print_errors=True)

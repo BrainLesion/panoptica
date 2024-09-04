@@ -162,3 +162,8 @@ cython_debug/
 .DS_Store
 
 .vscode
+*.png
+*.tsv
+*.csv
+*.nii.gz
+*.json

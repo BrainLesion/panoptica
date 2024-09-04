@@ -24,6 +24,10 @@ pip install panoptica
 
 For tutorials featuring various use cases, see: <b>blinded link</b>
 
+### Metrics
+
+Panoptica supports a large range of metrics. An overview of the supported metrics and their formulas can be found: <b>blinded link</b>
+
 ### Semantic Segmentation Input
 
 <b>blinded figure</b>
@@ -52,6 +56,16 @@ For this case, the matcher module can be utilized to match instances and the eva
 <b>blinded link to jupyter notebook tutorial</b>
 
 If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
+
+
+### Using Configs (saving and loading)
+
+You can construct Panoptica_Evaluator (among many others) objects and save their arguments, so you can save project-specific configurations and use them later.
+
+<b>blinded link</b>
+
+It uses ruamel.yaml in a readable way.
+
 
 ## Citation
 

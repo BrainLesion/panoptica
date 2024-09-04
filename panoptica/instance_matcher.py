@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
@@ -8,13 +8,14 @@ from panoptica._functionals import (
 )
 from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import (
-    InstanceLabelMap,
     MatchedInstancePair,
     UnmatchedInstancePair,
 )
+from panoptica.utils.instancelabelmap import InstanceLabelMap
+from panoptica.utils.config import SupportsConfig
 
 
-class InstanceMatchingAlgorithm(ABC):
+class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     """
     Abstract base class for instance matching algorithms in panoptic segmentation evaluation.
 
@@ -78,6 +79,12 @@ class InstanceMatchingAlgorithm(ABC):
         )
         # print("instance_labelmap:", instance_labelmap)
         return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
+
+    def _yaml_repr(cls, node) -> dict:
+        raise NotImplementedError(
+            f"Tried to get yaml representation of abstract class {cls.__name__}"
+        )
+        return {}
 
 
 def map_instance_labels(
@@ -166,9 +173,9 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         Raises:
             AssertionError: If the specified IoU threshold is not within the valid range.
         """
-        self.allow_many_to_one = allow_many_to_one
-        self.matching_metric = matching_metric
-        self.matching_threshold = matching_threshold
+        self._allow_many_to_one = allow_many_to_one
+        self._matching_metric = matching_metric
+        self._matching_threshold = matching_threshold
 
     def _match_instances(
         self,
@@ -195,23 +202,32 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             unmatched_instance_pair.reference_arr,
         )
         mm_pairs = _calc_matching_metric_of_overlapping_labels(
-            pred_arr, ref_arr, ref_labels, matching_metric=self.matching_metric
+            pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
         )
 
         # Loop through matched instances to compute PQ components
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if (
                 labelmap.contains_or(pred_label, ref_label)
-                and not self.allow_many_to_one
+                and not self._allow_many_to_one
             ):
                 continue  # -> doesnt make speed difference
-            if self.matching_metric.score_beats_threshold(
-                matching_score, self.matching_threshold
+            # TODO always go in here, but add the matching score to the pair (so evaluation over multiple thresholds becomes easy)
+            if self._matching_metric.score_beats_threshold(
+                matching_score, self._matching_threshold
             ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 # map label ref_idx to pred_idx
         return labelmap
+
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {
+            "matching_metric": node._matching_metric,
+            "matching_threshold": node._matching_threshold,
+            "allow_many_to_one": node._allow_many_to_one,
+        }
 
 
 class MaximizeMergeMatching(InstanceMatchingAlgorithm):
@@ -241,8 +257,8 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         Raises:
             AssertionError: If the specified IoU threshold is not within the valid range.
         """
-        self.matching_metric = matching_metric
-        self.matching_threshold = matching_threshold
+        self._matching_metric = matching_metric
+        self._matching_threshold = matching_threshold
 
     def _match_instances(
         self,
@@ -274,7 +290,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
             prediction_arr=pred_arr,
             reference_arr=ref_arr,
             ref_labels=ref_labels,
-            matching_metric=self.matching_metric,
+            matching_metric=self._matching_metric,
         )
 
         # Loop through matched instances to compute PQ components
@@ -290,8 +306,8 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
                 if new_score > score_ref[ref_label]:
                     labelmap.add_labelmap_entry(pred_label, ref_label)
                     score_ref[ref_label] = new_score
-            elif self.matching_metric.score_beats_threshold(
-                matching_score, self.matching_threshold
+            elif self._matching_metric.score_beats_threshold(
+                matching_score, self._matching_threshold
             ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
@@ -307,13 +323,20 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         unmatched_instance_pair: UnmatchedInstancePair,
     ):
         pred_labels.append(new_pred_label)
-        score = self.matching_metric(
+        score = self._matching_metric(
             unmatched_instance_pair.reference_arr,
             prediction_arr=unmatched_instance_pair.prediction_arr,
             ref_instance_idx=ref_label,
             pred_instance_idx=pred_labels,
         )
         return score
+
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {
+            "matching_metric": node._matching_metric,
+            "matching_threshold": node._matching_threshold,
+        }
 
 
 class MatchUntilConvergenceMatching(InstanceMatchingAlgorithm):
