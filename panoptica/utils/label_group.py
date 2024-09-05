@@ -79,11 +79,42 @@ class LabelGroup(SupportsConfig):
             "single_instance": node.single_instance,
         }
 
-    # @classmethod
-    # def to_yaml(cls, representer, node):
-    #    return representer.represent_mapping("!" + cls.__name__, cls._yaml_repr(node))
 
-    # @classmethod
-    # def from_yaml(cls, constructor, node):
-    #    data = constructor.construct_mapping(node, deep=True)
-    #    return cls(**data)
+class _LabelGroupAny(LabelGroup):
+    def __init__(self) -> None:
+        pass
+
+    @property
+    def value_labels(self) -> list[int]:
+        raise AssertionError("LabelGroupAny has no value_labels, it is all labels")
+
+    @property
+    def single_instance(self) -> bool:
+        return False
+
+    def __call__(
+        self,
+        array: np.ndarray,
+        set_to_binary: bool = False,
+    ) -> np.ndarray:
+        """Extracts the labels of this class
+
+        Args:
+            array (np.ndarray): Array to extract the segmentation group labels from
+            set_to_binary (bool, optional): If true, will output a binary array. Defaults to False.
+
+        Returns:
+            np.ndarray: Array containing only the labels of this segmentation group
+        """
+        array = array.copy()
+        return array
+
+    def __str__(self) -> str:
+        return f"LabelGroupAny"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    @classmethod
+    def _yaml_repr(cls, node):
+        return {}

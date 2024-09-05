@@ -16,6 +16,7 @@ from panoptica.utils import EdgeCaseHandler
 
 
 class PanopticaResult(object):
+
     def __init__(
         self,
         reference_arr: np.ndarray,
@@ -26,6 +27,7 @@ class PanopticaResult(object):
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
         global_metrics: list[Metric] = [],
+        computation_time: float | None = None,
     ):
         """Result object for Panoptica, contains all calculatable metrics
 
@@ -38,13 +40,14 @@ class PanopticaResult(object):
             list_metrics (dict[Metric, list[float]]): dictionary containing the metrics for each TP
             edge_case_handler (EdgeCaseHandler): EdgeCaseHandler object that handles various forms of edge cases
         """
+        self._evaluation_metrics: dict[str, Evaluation_Metric] = {}
         self._edge_case_handler = edge_case_handler
         empty_list_std = self._edge_case_handler.handle_empty_list_std().value
         self._global_metrics: list[Metric] = global_metrics
+        self.computation_time = computation_time
         ######################
         # Evaluation Metrics #
         ######################
-        self._evaluation_metrics: dict[str, Evaluation_Metric] = {}
         #
         # region Already Calculated
         self.num_ref_instances: int
@@ -433,19 +436,24 @@ class PanopticaResult(object):
                 pass
             else:
                 raise e
-        if attr is None:
-            if self._evaluation_metrics[__name]._error:
-                raise MetricCouldNotBeComputedException(
-                    f"Requested metric {__name} that could not be computed"
-                )
-            elif not self._evaluation_metrics[__name]._was_calculated:
-                value = self._calc_metric(__name)
-                setattr(self, __name, value)
-                if isinstance(value, MetricCouldNotBeComputedException):
-                    raise value
-                return value
-        else:
+        if __name == "_evaluation_metrics":
             return attr
+        if (
+            object.__getattribute__(self, "_evaluation_metrics") is not None
+            and __name in self._evaluation_metrics.keys()
+        ):
+            if attr is None:
+                if self._evaluation_metrics[__name]._error:
+                    raise MetricCouldNotBeComputedException(
+                        f"Requested metric {__name} that could not be computed"
+                    )
+                elif not self._evaluation_metrics[__name]._was_calculated:
+                    value = self._calc_metric(__name)
+                    setattr(self, __name, value)
+                    if isinstance(value, MetricCouldNotBeComputedException):
+                        raise value
+                    return value
+        return attr
 
 
 #########################

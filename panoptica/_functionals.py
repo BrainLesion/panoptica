@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from multiprocessing import Pool
 
 import numpy as np
-
+import math
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.numpy_utils import _get_bbox_nd
 
@@ -147,3 +147,13 @@ def _get_paired_crop(
     if combined.sum() == 0:
         combined += 1
     return _get_bbox_nd(combined, px_dist=px_pad)
+
+
+def _round_to_n(value: float | int, n_significant_digits: int = 2):
+    return (
+        value
+        if value == 0
+        else round(
+            value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1)
+        )
+    )
