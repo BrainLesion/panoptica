@@ -27,7 +27,7 @@ pred_masks = read_nifti(directory + "/examples/spine_seg/semantic/pred.nii.gz")
 
 platform_name = "TODO"
 
-csv_out = directory + "/benchmark/" + platform_name + "/performance_"
+csv_out = directory + "/benchmark/results/" + platform_name + "/performance_"
 
 
 def evaluate_nparray(array, return_as_dict=False, verbose=False):
