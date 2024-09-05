@@ -1,7 +1,9 @@
 import numpy as np
 from pathlib import Path
 from panoptica.utils.config import SupportsConfig
-from panoptica.utils.label_group import LabelGroup
+from panoptica.utils.label_group import LabelGroup, _LabelGroupAny
+
+NO_GROUP_KEY = "ungrouped"
 
 
 class SegmentationClassGroups(SupportsConfig):
@@ -96,3 +98,39 @@ def list_duplicates(seq):
     seen_twice = set(x for x in seq if x in seen or seen_add(x))
     # turn the set into a list (as requested)
     return list(seen_twice)
+
+
+class _NoSegmentationClassGroups(SegmentationClassGroups):
+    def __init__(self) -> None:
+        self.__group_dictionary = {NO_GROUP_KEY: _LabelGroupAny()}
+
+    def has_defined_labels_for(
+        self, arr: np.ndarray | list[int], raise_error: bool = False
+    ):
+        return True
+
+    def __str__(self) -> str:
+        text = "NoSegmentationClassGroups"
+        return text
+
+    def __contains__(self, item):
+        return item in self.__group_dictionary
+
+    def __getitem__(self, key):
+        return self.__group_dictionary[key]
+
+    def __iter__(self):
+        yield from self.__group_dictionary
+
+    def keys(self) -> list[str]:
+        return list(self.__group_dictionary.keys())
+
+    @property
+    def labels(self):
+        raise Exception(
+            "_NoSegmentationClassGroups has no explicit definition of labels"
+        )
+
+    @classmethod
+    def _yaml_repr(cls, node):
+        return {}

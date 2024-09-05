@@ -12,6 +12,8 @@ set_start_method("fork")
 filelock = Lock()
 inevalfilelock = Lock()
 
+COMPUTATION_TIME_KEY = "computation_time"
+
 
 #
 class Panoptica_Aggregator:
@@ -23,6 +25,7 @@ class Panoptica_Aggregator:
         self,
         panoptica_evaluator: Panoptica_Evaluator,
         output_file: Path | str,
+        log_times: bool = False,
         continue_file: bool = True,
     ):
         """
@@ -32,9 +35,10 @@ class Panoptica_Aggregator:
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
-        self.__output_file = None
-        self.__output_buffer_file = None
         self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
+
+        if log_times:
+            self.__evaluation_metrics.append(COMPUTATION_TIME_KEY)
 
         if isinstance(output_file, str):
             output_file = Path(output_file)
@@ -44,8 +48,16 @@ class Panoptica_Aggregator:
         ), f"Directory {str(output_file.parent)} does not exist"
 
         out_file_path = str(output_file)
-        if not out_file_path.endswith(".tsv"):
-            out_file_path += ".tsv"
+
+        # extension
+        if "." in out_file_path:
+            # extension exists
+            extension = out_file_path.split(".")[-1]
+            assert (
+                extension == "tsv"
+            ), f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
+        else:
+            out_file_path += ".tsv"  # add extension
 
         out_buffer_file: Path = Path(out_file_path).parent.joinpath(
             "panoptica_aggregator_tmp.tsv"
@@ -67,10 +79,15 @@ class Panoptica_Aggregator:
             _write_content(output_file, [header])
         else:
             header_list = _read_first_row(output_file)
-            # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-            assert header_hash == hash(
-                "+".join(header_list)
-            ), "Hash of header not the same! You are using a different setup!"
+            if len(header_list) == 0:
+                # empty file
+                print("Output file given is empty, will start with header")
+                continue_file = True
+            else:
+                # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
+                assert header_hash == hash(
+                    "+".join(header_list)
+                ), "Hash of header not the same! You are using a different setup!"
 
         if out_buffer_file.exists():
             os.remove(out_buffer_file)
@@ -85,8 +102,8 @@ class Panoptica_Aggregator:
         atexit.register(self.__exist_handler)
 
     def __exist_handler(self):
-        if os.path.exists(self.__output_buffer_file):
-            os.remove(self.__output_buffer_file)
+        if self.__output_buffer_file is not None and self.__output_buffer_file.exists():
+            os.remove(str(self.__output_buffer_file))
 
     def make_statistic(self) -> Panoptica_Statistic:
         with filelock:
@@ -140,6 +157,8 @@ class Panoptica_Aggregator:
             for groupname in self.__class_group_names:
                 result: PanopticaResult = result_grouped[groupname][0]
                 result_dict = result.to_dict()
+                if result.computation_time is not None:
+                    result_dict[COMPUTATION_TIME_KEY] = result.computation_time
                 del result
 
                 for e in self.__evaluation_metrics:
@@ -153,7 +172,9 @@ class Panoptica_Aggregator:
         return self.__panoptica_evaluator
 
 
-def _read_first_row(file: str):
+def _read_first_row(file: str | Path):
+    if isinstance(file, Path):
+        file = str(file)
     # NOT THREAD SAFE BY ITSELF!
     with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
@@ -167,8 +188,10 @@ def _read_first_row(file: str):
     return row
 
 
-def _load_first_column_entries(file: str):
+def _load_first_column_entries(file: str | Path):
     # NOT THREAD SAFE BY ITSELF!
+    if isinstance(file, Path):
+        file = str(file)
     with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
 
@@ -184,7 +207,9 @@ def _load_first_column_entries(file: str):
     return id_list
 
 
-def _write_content(file: str, content: list[list[str]]):
+def _write_content(file: str | Path, content: list[list[str]]):
+    if isinstance(file, Path):
+        file = str(file)
     # NOT THREAD SAFE BY ITSELF!
     with open(str(file), "a", encoding="utf8", newline="") as tsvfile:
         writer = csv.writer(tsvfile, delimiter="\t", lineterminator="\n")
