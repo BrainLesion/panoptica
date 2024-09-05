@@ -3,7 +3,7 @@ import numpy as np
 
 from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
-
+from panoptica._functionals import _get_paired_crop
 
 def evaluate_matched_instance(
     matched_instance_pair: MatchedInstancePair,
@@ -38,10 +38,9 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
-    instance_pairs = [
-        (reference_arr, prediction_arr, ref_idx, eval_metrics)
-        for ref_idx in ref_matched_labels
-    ]
+    instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
+
+    # metric_dicts: list[dict[Metric, float]] = [_evaluate_instance(*i) for i in instance_pairs]
     with Pool() as pool:
         metric_dicts: list[dict[Metric, float]] = pool.starmap(
             _evaluate_instance, instance_pairs
@@ -89,6 +88,16 @@ def _evaluate_instance(
     """
     ref_arr = reference_arr == ref_idx
     pred_arr = prediction_arr == ref_idx
+
+    # Crop down for speedup
+    crop = _get_paired_crop(
+        pred_arr,
+        ref_arr,
+    )
+
+    ref_arr = ref_arr[crop]
+    pred_arr = pred_arr[crop]
+
     result: dict[Metric, float] = {}
     if ref_arr.sum() == 0 or pred_arr.sum() == 0:
         return result

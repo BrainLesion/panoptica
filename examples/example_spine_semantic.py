@@ -21,6 +21,7 @@ evaluator = Panoptica_Evaluator(
     instance_approximator=ConnectedComponentsInstanceApproximator(),
     instance_matcher=NaiveThresholdMatching(),
     verbose=True,
+    log_times=True,
 )
 
 
