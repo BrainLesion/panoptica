@@ -1,7 +1,8 @@
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica import Panoptica_Evaluator, Panoptica_Aggregator
+from panoptica import Panoptica_Evaluator, Panoptica_Aggregator, InputType, NaiveThresholdMatching, Metric
+from panoptica.utils import SegmentationClassGroups, LabelGroup
 from panoptica.panoptica_statistics import make_curve_over_setups
 from pathlib import Path
 from panoptica.utils import NonDaemonicPool
@@ -21,8 +22,10 @@ prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.g
 evaluator = Panoptica_Aggregator(
     Panoptica_Evaluator.load_from_config_name("panoptica_evaluator_unmatched_instance"),
     Path(__file__).parent.joinpath("spine_example.tsv"),
+    log_times=True,
 )
 
+evaluator.panoptica_evaluator.set_log_group_times(True)
 
 if __name__ == "__main__":
     parallel_opt = "future"  # none, pool, joblib, future

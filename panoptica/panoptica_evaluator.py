@@ -19,10 +19,7 @@ from panoptica.utils.processing_pair import (
 )
 import numpy as np
 from panoptica.utils.config import SupportsConfig
-from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
-
-NO_GROUP_KEY = "ungrouped"
-
+from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup, _NoSegmentationClassGroups
 
 class Panoptica_Evaluator(SupportsConfig):
 
@@ -42,6 +39,7 @@ class Panoptica_Evaluator(SupportsConfig):
         global_metrics: list[Metric] = [Metric.DSC],
         decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
+        save_group_times: bool = False,
         log_times: bool = False,
         verbose: bool = False,
     ) -> None:
@@ -70,7 +68,10 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
         self.__resulting_metric_keys = None
+        self.__save_group_times = save_group_times
 
+        if segmentation_class_groups is None:
+            segmentation_class_groups = _NoSegmentationClassGroups()
         self.__segmentation_class_groups = segmentation_class_groups
 
         self.__edge_case_handler = (
@@ -96,6 +97,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "global_metrics": node.__global_metrics,
             "decision_metric": node.__decision_metric,
             "decision_threshold": node.__decision_threshold,
+            "save_group_times": node.__save_group_times,
             "log_times": node.__log_times,
             "verbose": node.__verbose,
         }
@@ -107,6 +109,7 @@ class Panoptica_Evaluator(SupportsConfig):
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
         result_all: bool = True,
+        save_group_times: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
     ) -> dict[str, tuple[PanopticaResult, IntermediateStepsData]]:
@@ -115,24 +118,6 @@ class Panoptica_Evaluator(SupportsConfig):
             processing_pair, self.__expected_input.value
         ), f"input not of expected type {self.__expected_input}"
 
-        if self.__segmentation_class_groups is None:
-            return {
-                NO_GROUP_KEY: panoptic_evaluate(
-                    input_pair=processing_pair,
-                    edge_case_handler=self.__edge_case_handler,
-                    instance_approximator=self.__instance_approximator,
-                    instance_matcher=self.__instance_matcher,
-                    instance_metrics=self.__eval_metrics,
-                    global_metrics=self.__global_metrics,
-                    decision_metric=self.__decision_metric,
-                    decision_threshold=self.__decision_threshold,
-                    result_all=result_all,
-                    log_times=self.__log_times if log_times is None else log_times,
-                    verbose=True if verbose is None else verbose,
-                    verbose_calc=self.__verbose if verbose is None else verbose,
-                )
-            }
-
         self.__segmentation_class_groups.has_defined_labels_for(
             processing_pair.prediction_arr, raise_error=True
         )
@@ -140,13 +125,14 @@ class Panoptica_Evaluator(SupportsConfig):
             processing_pair.reference_arr, raise_error=True
         )
 
-        result_grouped = {}
+        result_grouped: dict[str, tuple[PanopticaResult, IntermediateStepsData]] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
                 processing_pair,
                 result_all,
+                save_group_times=self.__save_group_times if save_group_times is None else save_group_times,
                 log_times=log_times,
                 verbose=verbose,
             )[1:]
@@ -154,9 +140,13 @@ class Panoptica_Evaluator(SupportsConfig):
 
     @property
     def segmentation_class_groups_names(self) -> list[str]:
-        if self.__segmentation_class_groups is None:
-            return [NO_GROUP_KEY]
         return self.__segmentation_class_groups.keys()
+
+    def set_log_group_times(self, should_save: bool):
+        self.__save_group_times = should_save
+
+    def _set_instance_approximator(self, instance_approximator: InstanceApproximator):
+        self.__instance_approximator = instance_approximator
 
     def _set_instance_matcher(self, matcher: InstanceMatchingAlgorithm):
         self.__instance_matcher = matcher
@@ -172,6 +162,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group=LabelGroup(1, single_instance=False),
                 processing_pair=dummy_input,
                 result_all=True,
+                save_group_times=False,
                 log_times=False,
                 verbose=False,
             )
@@ -187,8 +178,11 @@ class Panoptica_Evaluator(SupportsConfig):
         result_all: bool = True,
         verbose: bool | None = None,
         log_times: bool | None = None,
+        save_group_times: bool = False,
     ):
         assert isinstance(label_group, LabelGroup)
+        if self.__save_group_times:
+            start_time = perf_counter()
 
         prediction_arr_grouped = label_group(processing_pair.prediction_arr)
         reference_arr_grouped = label_group(processing_pair.reference_arr)
@@ -219,6 +213,9 @@ class Panoptica_Evaluator(SupportsConfig):
             verbose=True if verbose is None else verbose,
             verbose_calc=self.__verbose if verbose is None else verbose,
         )
+        if save_group_times:
+            duration = perf_counter() - start_time
+            result.computation_time = duration
         return group_name, result, intermediate_steps_data
 
 
