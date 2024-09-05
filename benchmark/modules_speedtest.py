@@ -153,7 +153,8 @@ if __name__ == "__main__":
     # CPU information
     cpu_dict = cpuinfo.get_cpu_info()
 
-    cpu_json_path = directory + "/benchmark/data/" + platform_name + "/platform.json"
+    cpu_json_path = directory + "/benchmark/results/" + platform_name + "/platform.json"
+    print("cpu_json_path:", cpu_json_path.parent)
     os.makedirs(cpu_json_path.parent, exist_ok=True)
 
     with open(cpu_json_path, "w") as fp:
@@ -227,6 +228,7 @@ if __name__ == "__main__":
     # Display the result
     print(agg_df)
 
-    csv_path = directory + "/benchmark/data/" + platform_name + "/dataframe.csv"
+    csv_path = directory + "/benchmark/results/" + platform_name + "/dataframe.csv"
+    print("csv_path:", csv_path.parent)
     os.makedirs(csv_path.parent, exist_ok=True)
     agg_df.to_csv(csv_path)

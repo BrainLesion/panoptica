@@ -164,6 +164,8 @@ cython_debug/
 .vscode
 *.png
 *.tsv
-*.csv
+# *.csv
 *.nii.gz
-*.json
+# *.json
+
+# !benchmark/m1max_v1.1.4
