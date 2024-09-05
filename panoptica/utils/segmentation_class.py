@@ -5,6 +5,7 @@ from panoptica.utils.label_group import LabelGroup, _LabelGroupAny
 
 NO_GROUP_KEY = "ungrouped"
 
+
 class SegmentationClassGroups(SupportsConfig):
     #
     def __init__(
@@ -103,7 +104,9 @@ class _NoSegmentationClassGroups(SegmentationClassGroups):
     def __init__(self) -> None:
         self.__group_dictionary = {NO_GROUP_KEY: _LabelGroupAny()}
 
-    def has_defined_labels_for(self, arr: np.ndarray | list[int], raise_error: bool = False):
+    def has_defined_labels_for(
+        self, arr: np.ndarray | list[int], raise_error: bool = False
+    ):
         return True
 
     def __str__(self) -> str:
@@ -124,7 +127,9 @@ class _NoSegmentationClassGroups(SegmentationClassGroups):
 
     @property
     def labels(self):
-        raise Exception("_NoSegmentationClassGroups has no explicit definition of labels")
+        raise Exception(
+            "_NoSegmentationClassGroups has no explicit definition of labels"
+        )
 
     @classmethod
     def _yaml_repr(cls, node):

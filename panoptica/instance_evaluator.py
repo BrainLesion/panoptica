@@ -5,6 +5,7 @@ from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
 from panoptica._functionals import _get_paired_crop
 
+
 def evaluate_matched_instance(
     matched_instance_pair: MatchedInstancePair,
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
@@ -38,7 +39,10 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
-    instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
+    instance_pairs = [
+        (reference_arr, prediction_arr, ref_idx, eval_metrics)
+        for ref_idx in ref_matched_labels
+    ]
 
     # metric_dicts: list[dict[Metric, float]] = [_evaluate_instance(*i) for i in instance_pairs]
     with Pool() as pool:

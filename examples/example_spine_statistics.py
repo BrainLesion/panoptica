@@ -1,7 +1,13 @@
 from auxiliary.nifti.io import read_nifti
 from auxiliary.turbopath import turbopath
 
-from panoptica import Panoptica_Evaluator, Panoptica_Aggregator, InputType, NaiveThresholdMatching, Metric
+from panoptica import (
+    Panoptica_Evaluator,
+    Panoptica_Aggregator,
+    InputType,
+    NaiveThresholdMatching,
+    Metric,
+)
 from panoptica.utils import SegmentationClassGroups, LabelGroup
 from panoptica.panoptica_statistics import make_curve_over_setups
 from pathlib import Path

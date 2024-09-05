@@ -19,7 +19,12 @@ from panoptica.utils.processing_pair import (
 )
 import numpy as np
 from panoptica.utils.config import SupportsConfig
-from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup, _NoSegmentationClassGroups
+from panoptica.utils.segmentation_class import (
+    SegmentationClassGroups,
+    LabelGroup,
+    _NoSegmentationClassGroups,
+)
+
 
 class Panoptica_Evaluator(SupportsConfig):
 
@@ -132,7 +137,11 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group,
                 processing_pair,
                 result_all,
-                save_group_times=self.__save_group_times if save_group_times is None else save_group_times,
+                save_group_times=(
+                    self.__save_group_times
+                    if save_group_times is None
+                    else save_group_times
+                ),
                 log_times=log_times,
                 verbose=verbose,
             )[1:]

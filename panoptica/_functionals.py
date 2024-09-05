@@ -150,4 +150,10 @@ def _get_paired_crop(
 
 
 def _round_to_n(value: float | int, n_significant_digits: int = 2):
-    return value if value == 0 else round(value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1))
+    return (
+        value
+        if value == 0
+        else round(
+            value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1)
+        )
+    )

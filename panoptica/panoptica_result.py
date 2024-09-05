@@ -438,10 +438,15 @@ class PanopticaResult(object):
                 raise e
         if __name == "_evaluation_metrics":
             return attr
-        if object.__getattribute__(self, "_evaluation_metrics") is not None and __name in self._evaluation_metrics.keys():
+        if (
+            object.__getattribute__(self, "_evaluation_metrics") is not None
+            and __name in self._evaluation_metrics.keys()
+        ):
             if attr is None:
                 if self._evaluation_metrics[__name]._error:
-                    raise MetricCouldNotBeComputedException(f"Requested metric {__name} that could not be computed")
+                    raise MetricCouldNotBeComputedException(
+                        f"Requested metric {__name} that could not be computed"
+                    )
                 elif not self._evaluation_metrics[__name]._was_calculated:
                     value = self._calc_metric(__name)
                     setattr(self, __name, value)

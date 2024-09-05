@@ -14,6 +14,7 @@ inevalfilelock = Lock()
 
 COMPUTATION_TIME_KEY = "computation_time"
 
+
 #
 class Panoptica_Aggregator:
     # internal_list_lock = Lock()
@@ -84,7 +85,9 @@ class Panoptica_Aggregator:
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-                assert header_hash == hash("+".join(header_list)), "Hash of header not the same! You are using a different setup!"
+                assert header_hash == hash(
+                    "+".join(header_list)
+                ), "Hash of header not the same! You are using a different setup!"
 
         if out_buffer_file.exists():
             os.remove(out_buffer_file)
