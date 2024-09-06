@@ -5,8 +5,8 @@ from auxiliary.turbopath import turbopath
 
 # List of CSV files
 csv_list = [
-    "benchmark/m1max/dataframe.csv",
-    "benchmark/ryzen9/dataframe.csv",
+    "benchmark/results/AppleM1Max/dataframe.csv",
+    "benchmark/results/ryzen9/dataframe.csv",
 ]
 
 # Use list comprehension to read and concatenate CSV files
@@ -85,10 +85,11 @@ for i, condition in enumerate(unique_conditions):
 
 # Save the entire figure after all subplots have been created
 plt.tight_layout()
-file_name = turbopath(__file__).parent + "/boxplot_times.eps"
+file_name = turbopath(__file__).parent + "/boxplot_times"
 
 # Save with separate SVG formatter to include colors
-fig.savefig(file_name, format="eps", bbox_inches="tight")
+fig.savefig(file_name + ".png", format="png", bbox_inches="tight")
+fig.savefig(file_name + ".eps", format="eps", bbox_inches="tight")
 plt.close()
 
 print("Plots saved successfully as EPS.")
