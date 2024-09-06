@@ -12,14 +12,14 @@
     "arch_string_raw": "x86_64",
     "vendor_id_raw": "AuthenticAMD",
     "brand_raw": "AMD Ryzen 9 5900X 12-Core Processor",
-    "hz_advertised_friendly": "3.6136 GHz",
-    "hz_actual_friendly": "3.6136 GHz",
+    "hz_advertised_friendly": "2.2000 GHz",
+    "hz_actual_friendly": "2.2000 GHz",
     "hz_advertised": [
-        3613626000,
+        2200000000,
         0
     ],
     "hz_actual": [
-        3613626000,
+        2200000000,
         0
     ],
     "stepping": 2,
@@ -60,6 +60,7 @@
         "cx8",
         "dbx",
         "de",
+        "debug_swap",
         "decodeassists",
         "erms",
         "extapic",
@@ -153,6 +154,7 @@
         "tsc",
         "tsc_scale",
         "umip",
+        "user_shstk",
         "v_spec_ctrl",
         "v_vmsave_vmload",
         "vaes",

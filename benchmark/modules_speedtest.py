@@ -11,7 +11,9 @@ from panoptica import (
     SemanticPair,
     UnmatchedInstancePair,
     MatchedInstancePair,
+    PanopticaResult,
 )
+from panoptica.utils.edge_case_handling import EdgeCaseHandler
 from panoptica.instance_evaluator import evaluate_matched_instance
 from time import perf_counter
 import numpy as np
@@ -82,15 +84,11 @@ def test_input(processing_pair: SemanticPair):
     processing_pair.crop_data()
     #
     start1 = perf_counter()
-    unmatched_instance_pair = instance_approximator.approximate_instances(
-        semantic_pair=processing_pair
-    )
+    unmatched_instance_pair = instance_approximator.approximate_instances(semantic_pair=processing_pair)
     time1 = perf_counter() - start1
     #
     start2 = perf_counter()
-    matched_instance_pair = instance_matcher.match_instances(
-        unmatched_instance_pair=unmatched_instance_pair
-    )
+    matched_instance_pair = instance_matcher.match_instances(unmatched_instance_pair=unmatched_instance_pair)
     time2 = perf_counter() - start2
     #
     start3 = perf_counter()
@@ -98,6 +96,18 @@ def test_input(processing_pair: SemanticPair):
         matched_instance_pair,
         decision_threshold=iou_threshold,
     )
+    r = PanopticaResult(
+        reference_arr=result.reference_arr,
+        prediction_arr=result.prediction_arr,
+        num_pred_instances=result.num_pred_instances,
+        num_ref_instances=result.num_ref_instances,
+        tp=result.tp,
+        list_metrics=result.list_metrics,
+        global_metrics=[],
+        edge_case_handler=EdgeCaseHandler(),
+    )
+    r.calculate_all()
+    print(r)
     time3 = perf_counter() - start3
     return time1, time2, time3
 
@@ -106,7 +116,7 @@ instance_approximator = ConnectedComponentsInstanceApproximator()
 instance_matcher = NaiveThresholdMatching()
 iou_threshold = 0.5
 
-n_iterations = 42
+n_iterations = 1
 time_phase: tuple[list[float], ...] = ([], [], [])
 
 processing_pair_3D_mri_spine = SemanticPair(pred_masks, ref_masks)
@@ -155,10 +165,10 @@ if __name__ == "__main__":
 
     cpu_json_path = directory + "/benchmark/results/" + platform_name + "/platform.json"
     print("cpu_json_path:", cpu_json_path.parent)
-    os.makedirs(cpu_json_path.parent, exist_ok=True)
+    # os.makedirs(cpu_json_path.parent, exist_ok=True)
 
-    with open(cpu_json_path, "w") as fp:
-        json.dump(cpu_dict, fp, indent=4)
+    # with open(cpu_json_path, "w") as fp:
+    #    json.dump(cpu_dict, fp, indent=4)
 
     report_df_list = []
 
@@ -179,9 +189,7 @@ if __name__ == "__main__":
         print(sample_name)
         csv_name = csv_out + sample_name + ".csv"
         with open(csv_name, "w", newline="") as csvfile:
-            spamwriter = csv.writer(
-                csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL
-            )
+            spamwriter = csv.writer(csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL)
             spamwriter.writerow(timing_dict[1])
             spamwriter.writerow(timing_dict[2])
             spamwriter.writerow(timing_dict[3])
@@ -228,8 +236,8 @@ if __name__ == "__main__":
     # Display the result
     print(agg_df)
 
-    csv_path = directory + "/benchmark/results/" + platform_name + "/dataframe.csv"
-    print("csv_path:", csv_path.parent)
-    os.makedirs(csv_path.parent, exist_ok=True)
-    agg_df.to_csv(csv_path)
-    print(f"saved dataframe into {csv_path}")
+    # csv_path = directory + "/benchmark/results/" + platform_name + "/dataframe.csv"
+    # print("csv_path:", csv_path.parent)
+    # os.makedirs(csv_path.parent, exist_ok=True)
+    # agg_df.to_csv(csv_path)
+    # print(f"saved dataframe into {csv_path}")
