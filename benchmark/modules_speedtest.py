@@ -25,7 +25,7 @@ directory = turbopath(__file__).parent.parent
 ref_masks = read_nifti(directory + "/examples/spine_seg/semantic/ref.nii.gz")
 pred_masks = read_nifti(directory + "/examples/spine_seg/semantic/pred.nii.gz")
 
-platform_name = "TODO"
+platform_name = "ryzen9_new"
 
 csv_out = directory + "/benchmark/" + platform_name + "/performance_"
 
@@ -230,3 +230,4 @@ if __name__ == "__main__":
     csv_path = directory + "/benchmark/data/" + platform_name + "/dataframe.csv"
     os.makedirs(csv_path.parent, exist_ok=True)
     agg_df.to_csv(csv_path)
+    print(f"saved dataframe into {csv_path}")
