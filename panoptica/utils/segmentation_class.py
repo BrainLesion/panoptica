@@ -25,9 +25,7 @@ class SegmentationClassGroups(SupportsConfig):
             for i, g in groups.items():
                 name_lower = str(i).lower()
                 if isinstance(g, LabelGroup):
-                    self.__group_dictionary[name_lower] = LabelGroup(
-                        g.value_labels, g.single_instance
-                    )
+                    self.__group_dictionary[name_lower] = g
                 else:
                     self.__group_dictionary[name_lower] = LabelGroup(g[0], g[1])
 
@@ -39,8 +37,8 @@ class SegmentationClassGroups(SupportsConfig):
         ]
         duplicates = list_duplicates(labels)
         if len(duplicates) > 0:
-            raise AssertionError(
-                f"The same label was assigned to two different labelgroups, got {str(self)}"
+            print(
+                f"The same labels {duplicates} were assigned to two different labelgroups, got {str(self)}\nIntended? This will evaluate the duplicate labels in both groups"
             )
         self.__labels = labels
 
