@@ -46,11 +46,11 @@ class LabelGroup(SupportsConfig):
     def single_instance(self) -> bool:
         return self.__single_instance
 
-    def __call__(
+    def extract_label(
         self,
         array: np.ndarray,
         set_to_binary: bool = False,
-    ) -> np.ndarray:
+    ):
         """Extracts the labels of this class
 
         Args:
@@ -66,6 +66,12 @@ class LabelGroup(SupportsConfig):
             array[array != 0] = 1
         return array
 
+    def __call__(
+        self,
+        array: np.ndarray,
+    ) -> np.ndarray:
+        return self.extract_label(array, set_to_binary=False)
+
     def __str__(self) -> str:
         return f"LabelGroup {self.value_labels}, single_instance={self.single_instance}"
 
@@ -78,6 +84,29 @@ class LabelGroup(SupportsConfig):
             "value_labels": node.value_labels,
             "single_instance": node.single_instance,
         }
+
+
+class LabelMergeGroup(LabelGroup):
+    def __init__(self, value_labels: list[int] | int, single_instance: bool = False) -> None:
+        super().__init__(value_labels, single_instance)
+
+    def __call__(
+        self,
+        array: np.ndarray,
+    ) -> np.ndarray:
+        """Extracts the labels of this class
+
+        Args:
+            array (np.ndarray): Array to extract the segmentation group labels from
+            set_to_binary (bool, optional): If true, will output a binary array. Defaults to False.
+
+        Returns:
+            np.ndarray: Array containing only the labels of this segmentation group
+        """
+        return self.extract_label(array, set_to_binary=True)
+
+    def __str__(self) -> str:
+        return f"LabelMergeGroup {self.value_labels} -> ONE, single_instance={self.single_instance}"
 
 
 class _LabelGroupAny(LabelGroup):
