@@ -206,4 +206,6 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
             labels = [l + 1 for l in labels]
             labels = sum(labels)
 
-            self.assertEqual(np.sum(arr_grouped), labels, (group_name, labels, arr_grouped))
+            self.assertEqual(
+                np.sum(arr_grouped), labels, (group_name, labels, arr_grouped)
+            )

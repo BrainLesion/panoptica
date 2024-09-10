@@ -87,7 +87,9 @@ class LabelGroup(SupportsConfig):
 
 
 class LabelMergeGroup(LabelGroup):
-    def __init__(self, value_labels: list[int] | int, single_instance: bool = False) -> None:
+    def __init__(
+        self, value_labels: list[int] | int, single_instance: bool = False
+    ) -> None:
         super().__init__(value_labels, single_instance)
 
     def __call__(
