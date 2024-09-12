@@ -1,10 +1,13 @@
-[![PyPI version panoptica](https://badge.fury.io/py/panoptica.svg)](https://pypi.python.org/pypi/panoptica/)
-[![Documentation Status](https://readthedocs.org/projects/panoptica/badge/?version=latest)](http://panoptica.readthedocs.io/?badge=latest)
-[![tests](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml/badge.svg)](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
 # panoptica
+
+[![Python Versions](https://img.shields.io/pypi/pyversions/panoptica)](https://pypi.org/project/panoptica/)
+[![Stable Version](https://img.shields.io/pypi/v/panoptica?label=stable)](https://pypi.python.org/pypi/panoptica/)
+[![Documentation Status](https://readthedocs.org/projects/panoptica/badge/?version=latest)](http://panoptica.readthedocs.io/?badge=latest)
+[![tests](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml/badge.svg)](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/BrainLesion/panoptica/graph/badge.svg?token=A7FWUKO9Y4)](https://codecov.io/gh/BrainLesion/panoptica)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Computing instance-wise segmentation quality metrics for 2D and 3D semantic- and instance segmentation maps.
 
@@ -28,18 +31,17 @@ pip install panoptica
 
 ## Use cases and tutorials
 
-For tutorials featuring various use cases, see: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
+Jupyter Notebook tutorials featuring various use cases, can be found here: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
 
 ### Metrics
 
-Panoptica supports a large range of metrics. An overview of the supported metrics and their formulas can be found: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/metrics.md)
+Panoptica supports a large range of metrics. An overview of the supported metrics and their formulas can be found: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
 
 ### Semantic Segmentation Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/semantic.png?raw=true" alt="semantic_figure" height="300"/>
 
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb)
-
+Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_semantic.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb) 
 
 Although an instance-wise evaluation is highly relevant and desirable for many biomedical segmentation problems, they are still addressed as semantic segmentation problems due to the lack of appropriate instance labels.
 
@@ -49,7 +51,7 @@ This tutorial leverages all three modules of panoptica: instance approximation, 
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/unmatched_instance.png?raw=true" alt="unmatched_instance_figure" height="300"/>
 
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb)
+Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_unmatched_instance.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb) 
 
 It is a common issue that instance segmentation outputs feature good outlines but mismatched instance labels.
 For this case, the matcher module can be utilized to match instances and the evaluator to report metrics.
@@ -59,7 +61,7 @@ For this case, the matcher module can be utilized to match instances and the eva
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/matched_instance.png?raw=true" alt="matched_instance_figure" height="300"/>
 
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
+Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matched_instance.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
 
 If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
 
@@ -68,7 +70,7 @@ If your predicted instances already match the reference instances, you can direc
 
 You can construct Panoptica_Evaluator (among many others) objects and save their arguments, so you can save project-specific configurations and use them later.
 
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_config.ipynb) 
+Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_config.ipynb) 
 
 It uses ruamel.yaml in a readable way.
 
