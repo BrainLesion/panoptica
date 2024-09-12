@@ -15,7 +15,7 @@ try:
     elif os.name == "nt":
         set_start_method("spawn")
         warnings.warn(
-            "The multiprocessing start method has been set to 'spawn' since 'fork' is not available on Windows. This can lead in the current development state to thread unsafety."
+            "The multiprocessing start method has been set to 'spawn' since 'fork' is not available on Windows. This can lead to thread unsafety in the current development state."
         )
 except RuntimeError:
     # Start method can only be set once per process, so ignore if already set
