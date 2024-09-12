@@ -6,7 +6,7 @@
 Welcome to Panoptica's Documentation!
 =====================================
 
-.. include:: ../../README.md
+.. include:: ../README_preprocessed.md
    :parser: myst_parser.sphinx_
 
 .. toctree::
