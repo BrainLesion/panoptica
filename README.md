@@ -65,6 +65,9 @@ Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tu
 
 If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
 
+### Matching Algorithm Example
+Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matching_algorithm.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matching_algorithm.ipynb) 
+
 
 ### Using Configs (saving and loading)
 
