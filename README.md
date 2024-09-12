@@ -33,12 +33,12 @@ pip install panoptica
 
 > [!NOTE]
 > Panoptica supports a large range of metrics. <br>
-> An overview of the supported metrics and their formulas can be found: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
+> An overview of the supported metrics and their formulas can be found here: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
 
 ## Use cases and tutorials
 
 > [!TIP]
-> We provide Jupyter Notebook tutorials featuring various use cases. <br>
+> We provide Jupyter Notebook tutorials showcasing various use cases. <br>
 > You can explore them here: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
 
 
@@ -77,15 +77,16 @@ Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tu
 ### Using Configs (saving and loading)
 
 You can construct Panoptica_Evaluator (among many others) objects and save their arguments, so you can save project-specific configurations and use them later.
+It uses ruamel.yaml in a readable way.
 
 Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_config.ipynb) 
 
-It uses ruamel.yaml in a readable way.
 
 
 ## Citation
 
-If you use panoptica in your research, please cite it to support the development!
+> [!IMPORTANT]
+> If you use panoptica in your research, please cite it to support the development!
 
 Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., Mekki, I., Shit, S., Negwer, M., Al-Maskari, R., Ertürk, A., Vinayahalingam, S., Isensee, F., Pati, S., Rueckert, D., Kirschke, J. S., Ehrlich, S. K., Reinke, A., Menze, B., Wiestler, B., & Piraud, M. (2023). *Panoptica -- instance-wise evaluation of 3D semantic and instance segmentation maps.* [arXiv preprint arXiv:2312.02608](https://arxiv.org/abs/2312.02608).
 
