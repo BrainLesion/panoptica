@@ -68,32 +68,46 @@ result, intermediate_steps_data = evaluator.evaluate(pred_masks, ref_masks)["ung
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/semantic.png?raw=true" alt="semantic_figure" height="300"/>
 
-Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_semantic.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb) 
-
 Although an instance-wise evaluation is highly relevant and desirable for many biomedical segmentation problems, they are still addressed as semantic segmentation problems due to the lack of appropriate instance labels.
 
 This tutorial leverages all three modules of panoptica: instance approximation, -matching and -evaluation.
+
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_semantic.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_semantic.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 
 ### Unmatched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/unmatched_instance.png?raw=true" alt="unmatched_instance_figure" height="300"/>
 
-Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_unmatched_instance.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb) 
-
 It is a common issue that instance segmentation outputs feature good outlines but mismatched instance labels.
 For this case, the matcher module can be utilized to match instances and the evaluator to report metrics.
+
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_unmatched_instance.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_unmatched_instance.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 
 
 ### Matched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/matched_instance.png?raw=true" alt="matched_instance_figure" height="300"/>
 
-Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matched_instance.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matched_instance.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matched_instance.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
 If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
 
 ### Matching Algorithm Example
-Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matching_algorithm.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matching_algorithm.ipynb) 
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matching_algorithm.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matching_algorithm.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
 
 ### Using Configs (saving and loading)
@@ -101,7 +115,10 @@ Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tu
 You can construct Panoptica_Evaluator (among many others) objects and save their arguments, so you can save project-specific configurations and use them later.
 It uses ruamel.yaml in a readable way.
 
-Jupyter Notebook Tutorial: [NBViewer](https://nbviewer.org/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb) or on [GitHub](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_config.ipynb) 
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
 
 
