@@ -7,8 +7,20 @@ from multiprocessing import Lock, set_start_method
 import csv
 import os
 import atexit
+import warnings
+# Set start method based on the operating system
+try:
+    if os.name == "posix":
+        set_start_method("fork")
+    elif os.name == "nt":
+        set_start_method("spawn")
+        warnings.warn(
+            "The multiprocessing start method has been set to 'spawn' since 'fork' is not available on Windows. This can lead in the current development state to thread unsafety."
+        )
+except RuntimeError:
+    # Start method can only be set once per process, so ignore if already set
+    pass
 
-set_start_method("fork")
 filelock = Lock()
 inevalfilelock = Lock()
 
