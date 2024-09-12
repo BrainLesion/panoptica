@@ -29,13 +29,18 @@ With a Python 3.10+ environment, you can install panoptica from [pypi.org](https
 pip install panoptica
 ```
 
+## Metrics
+
+> [!NOTE]
+> Panoptica supports a large range of metrics. <br>
+> An overview of the supported metrics and their formulas can be found: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
+
 ## Use cases and tutorials
 
-Jupyter Notebook tutorials featuring various use cases, can be found here: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
+> [!TIP]
+> We provide Jupyter Notebook tutorials featuring various use cases. <br>
+> You can explore them here: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
 
-### Metrics
-
-Panoptica supports a large range of metrics. An overview of the supported metrics and their formulas can be found: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
 
 ### Semantic Segmentation Input
 
@@ -94,3 +99,11 @@ Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., 
       primaryClass={cs.CV}
 }
 ```
+
+## Contributing
+
+We welcome all kinds of contributions from the community!
+
+### Reporting Bugs, Feature Requests and Questions
+
+Please open a new issue [here](https://github.com/BrainLesion/panoptica/issues).
