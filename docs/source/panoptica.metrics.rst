@@ -1,22 +1,53 @@
-panoptica.utils
-===========================
+Metrics
+=========================
 
+Submodules
+----------
 
-panoptica.metrics.assd
---------------------------------------------
+panoptica.metrics.assd module
+-----------------------------
 
 .. automodule:: panoptica.metrics.assd
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
+panoptica.metrics.cldice module
+-------------------------------
 
-panoptica.metrics.dice
---------------------------------------
+.. automodule:: panoptica.metrics.cldice
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+panoptica.metrics.dice module
+-----------------------------
 
 .. automodule:: panoptica.metrics.dice
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-
-
-panoptica.metrics.iou
---------------------------------------
+panoptica.metrics.iou module
+----------------------------
 
 .. automodule:: panoptica.metrics.iou
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
+panoptica.metrics.metrics module
+--------------------------------
+
+.. automodule:: panoptica.metrics.metrics
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+panoptica.metrics.relative\_volume\_difference module
+-----------------------------------------------------
+
+.. automodule:: panoptica.metrics.relative_volume_difference
+   :members:
+   :undoc-members:
+   :show-inheritance:
