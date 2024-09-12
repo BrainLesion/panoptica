@@ -29,13 +29,35 @@ With a Python 3.10+ environment, you can install panoptica from [pypi.org](https
 pip install panoptica
 ```
 
-## Metrics
+## Available Metrics
 
 > [!NOTE]
 > Panoptica supports a large range of metrics. <br>
 > An overview of the supported metrics and their formulas can be found here: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
 
 ## Use cases and tutorials
+
+### Minimal example
+
+A minimal example of using panoptica could look e.g. like this (here with Matched Instances as Input):
+```python
+from panoptica import InputType, Panoptica_Evaluator
+from panoptica.metrics import Metric
+
+from auxiliary.nifti.io import read_nifti # feel free to use any other way to read nifti files
+
+ref_masks = read_nifti("reference.nii.gz")
+pred_masks = read_nifti("prediction.nii.gz")
+
+evaluator = Panoptica_Evaluator(
+    expected_input=InputType.MATCHED_INSTANCE,
+    decision_metric=Metric.IOU,
+    decision_threshold=0.5,
+)
+
+result, intermediate_steps_data = evaluator.evaluate(pred_masks, ref_masks)["ungrouped"]
+```
+
 
 > [!TIP]
 > We provide Jupyter Notebook tutorials showcasing various use cases. <br>
