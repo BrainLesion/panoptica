@@ -8,6 +8,7 @@ import csv
 import os
 import atexit
 import warnings
+
 # Set start method based on the operating system
 try:
     if os.name == "posix":
