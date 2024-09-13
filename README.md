@@ -1,12 +1,18 @@
-[![PyPI version panoptica](https://badge.fury.io/py/panoptica.svg)](https://pypi.python.org/pypi/panoptica/)
-[![Documentation Status](https://readthedocs.org/projects/panoptica/badge/?version=latest)](http://panoptica.readthedocs.io/?badge=latest)
-[![tests](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml/badge.svg)](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 
 # panoptica
 
+[![Python Versions](https://img.shields.io/pypi/pyversions/panoptica)](https://pypi.org/project/panoptica/)
+[![Stable Version](https://img.shields.io/pypi/v/panoptica?label=stable)](https://pypi.python.org/pypi/panoptica/)
+[![Documentation Status](https://readthedocs.org/projects/panoptica/badge/?version=latest)](http://panoptica.readthedocs.io/?badge=latest)
+[![tests](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml/badge.svg)](https://github.com/BrainLesion/panoptica/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/BrainLesion/panoptica/graph/badge.svg?token=A7FWUKO9Y4)](https://codecov.io/gh/BrainLesion/panoptica)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 Computing instance-wise segmentation quality metrics for 2D and 3D semantic- and instance segmentation maps.
+
+ 
+[Use Cases & Tutorials](#use-cases--tutorials) | [Documentation](#documentation)
 
 ## Features
 
@@ -26,56 +32,105 @@ With a Python 3.10+ environment, you can install panoptica from [pypi.org](https
 pip install panoptica
 ```
 
-## Use cases and tutorials
+## Available Metrics
 
-For tutorials featuring various use cases, see: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
+> [!NOTE]
+> Panoptica supports a large range of metrics. <br>
+> An overview of the supported metrics and their formulas can be found here: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
 
-### Metrics
+## Use Cases & Tutorials
 
-Panoptica supports a large range of metrics. An overview of the supported metrics and their formulas can be found: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/metrics.md)
+
+### Minimal example
+
+A minimal example of using panoptica could look e.g. like this (here with Matched Instances as Input):
+```python
+from panoptica import InputType, Panoptica_Evaluator
+from panoptica.metrics import Metric
+
+from auxiliary.nifti.io import read_nifti # feel free to use any other way to read nifti files
+
+ref_masks = read_nifti("reference.nii.gz")
+pred_masks = read_nifti("prediction.nii.gz")
+
+evaluator = Panoptica_Evaluator(
+    expected_input=InputType.MATCHED_INSTANCE,
+    decision_metric=Metric.IOU,
+    decision_threshold=0.5,
+)
+
+result, intermediate_steps_data = evaluator.evaluate(pred_masks, ref_masks)["ungrouped"]
+```
+
+
+> [!TIP]
+> We provide Jupyter Notebook tutorials showcasing various use cases. <br>
+> You can explore them here: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica) <br>
 
 ### Semantic Segmentation Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/semantic.png?raw=true" alt="semantic_figure" height="300"/>
 
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_semantic.ipynb)
-
-
 Although an instance-wise evaluation is highly relevant and desirable for many biomedical segmentation problems, they are still addressed as semantic segmentation problems due to the lack of appropriate instance labels.
 
 This tutorial leverages all three modules of panoptica: instance approximation, -matching and -evaluation.
+
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_semantic.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_semantic.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 
 ### Unmatched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/unmatched_instance.png?raw=true" alt="unmatched_instance_figure" height="300"/>
 
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_unmatched_instance.ipynb)
-
 It is a common issue that instance segmentation outputs feature good outlines but mismatched instance labels.
 For this case, the matcher module can be utilized to match instances and the evaluator to report metrics.
+
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_unmatched_instance.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_unmatched_instance.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
 
 
 ### Matched Instances Input
 
 <img src="https://github.com/BrainLesion/panoptica/blob/main/examples/figures/matched_instance.png?raw=true" alt="matched_instance_figure" height="300"/>
 
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_spine_matched_instance.ipynb) 
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matched_instance.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matched_instance.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
 If your predicted instances already match the reference instances, you can directly compute metrics using the evaluator module.
+
+### Matching Algorithm Example
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matching_algorithm.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_spine_matching_algorithm.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
 
 
 ### Using Configs (saving and loading)
 
 You can construct Panoptica_Evaluator (among many others) objects and save their arguments, so you can save project-specific configurations and use them later.
-
-[Jupyter notebook tutorial](https://github.com/BrainLesion/tutorials/tree/main/panoptica/example_config.ipynb) 
-
 It uses ruamel.yaml in a readable way.
 
+[![nbviewer](https://raw.githubusercontent.com/jupyter/design/master/logos/Badges/nbviewer_badge.svg)](https://nbviewer.jupyter.org/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb)
+<a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a>
+
+## Documentation
+
+We provide a readthedocs documentation of our codebase [here](https://panoptica.readthedocs.io/en/latest/?badge=latest)
 
 ## Citation
 
-If you use panoptica in your research, please cite it to support the development!
+> [!IMPORTANT]
+> If you use panoptica in your research, please cite it to support the development!
 
 Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., Mekki, I., Shit, S., Negwer, M., Al-Maskari, R., Ertürk, A., Vinayahalingam, S., Isensee, F., Pati, S., Rueckert, D., Kirschke, J. S., Ehrlich, S. K., Reinke, A., Menze, B., Wiestler, B., & Piraud, M. (2023). *Panoptica -- instance-wise evaluation of 3D semantic and instance segmentation maps.* [arXiv preprint arXiv:2312.02608](https://arxiv.org/abs/2312.02608).
 
@@ -89,3 +144,11 @@ Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., 
       primaryClass={cs.CV}
 }
 ```
+
+## Contributing
+
+We welcome all kinds of contributions from the community!
+
+### Reporting Bugs, Feature Requests and Questions
+
+Please open a new issue [here](https://github.com/BrainLesion/panoptica/issues).

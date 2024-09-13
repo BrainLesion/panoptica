@@ -1,32 +1,13 @@
-panoptica 
-======================
+API Reference
+=================
 
+Subpackages
+-----------
 
-panoptica.evaluator
---------------------------------------------
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: panoptica.evaluator
+   panoptica.core
+   panoptica.metrics
+   panoptica.utils
 
-
-panoptica.instance_approximator
---------------------------------------------
-
-.. automodule:: panoptica.instance_approximator
-
-
-panoptica.instance_matcher
---------------------------------------------
-
-.. automodule:: panoptica.instance_matcher
-
-
-panoptica.instance_evaluator
---------------------------------------------
-
-.. automodule:: panoptica.instance_evaluator
-
-
-panoptica.result
---------------------------------------------
-
-.. automodule:: panoptica.result

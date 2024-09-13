@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to panoptica's documentation!
+Welcome to Panoptica's Documentation!
 =====================================
 
-.. include:: ../../README.md
+.. include:: ../README_preprocessed.md
    :parser: myst_parser.sphinx_
 
 .. toctree::
@@ -22,24 +22,9 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Panoptica:
-
-   panoptica.rst
-
-
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Metrics:
+   :maxdepth: 3
+   
+   panoptica
 
-   panoptica.metrics.rst
-
-
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Utils:
-
-   panoptica.utils.rst
