@@ -11,6 +11,9 @@
 
 Computing instance-wise segmentation quality metrics for 2D and 3D semantic- and instance segmentation maps.
 
+ 
+[Use Cases & Tutorials](#use-cases--tutorials) | [Documentation](#documentation)
+
 ## Features
 
 The package provides three core modules:
@@ -35,7 +38,8 @@ pip install panoptica
 > Panoptica supports a large range of metrics. <br>
 > An overview of the supported metrics and their formulas can be found here: [panoptica/metrics.md](https://github.com/BrainLesion/panoptica/tree/main/metrics.md)
 
-## Use cases and tutorials
+## Use Cases & Tutorials
+
 
 ### Minimal example
 
@@ -61,8 +65,7 @@ result, intermediate_steps_data = evaluator.evaluate(pred_masks, ref_masks)["ung
 
 > [!TIP]
 > We provide Jupyter Notebook tutorials showcasing various use cases. <br>
-> You can explore them here: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica)
-
+> You can explore them here: [BrainLesion/tutorials/panoptica](https://github.com/BrainLesion/tutorials/tree/main/panoptica) <br>
 
 ### Semantic Segmentation Input
 
@@ -120,7 +123,9 @@ It uses ruamel.yaml in a readable way.
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
+## Documentation
 
+We provide a readthedocs documentation of our codebase [here](https://panoptica.readthedocs.io/en/latest/?badge=latest)
 
 ## Citation
 
