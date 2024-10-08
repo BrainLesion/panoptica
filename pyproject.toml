@@ -32,6 +32,9 @@ scikit-image = "^0.22.0"
 pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 pytest-mock = "^3.6.0"
+pandas = "^2.1.0"
+plotly = "^5.16.1"
+matplotlib = "^3.7.3"
 
 [tool.poetry.group.docs]
 optional = true
