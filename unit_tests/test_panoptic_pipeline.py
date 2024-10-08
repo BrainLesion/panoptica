@@ -11,7 +11,11 @@ from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
 from panoptica.metrics import Metric
-from panoptica.instance_evaluator import evaluate_matched_instance, _evaluate_instance, _get_paired_crop
+from panoptica.instance_evaluator import (
+    evaluate_matched_instance,
+    _evaluate_instance,
+    _get_paired_crop,
+)
 import sys
 from pathlib import Path
 

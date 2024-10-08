@@ -31,7 +31,9 @@ def main(parallel_opt: str = "future"):  # none, pool, joblib, future
     prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
     evaluator = Panoptica_Aggregator(
-        Panoptica_Evaluator.load_from_config_name("panoptica_evaluator_unmatched_instance"),
+        Panoptica_Evaluator.load_from_config_name(
+            "panoptica_evaluator_unmatched_instance"
+        ),
         Path(__file__).parent.joinpath("spine_example.tsv"),
         log_times=True,
     )
@@ -54,11 +56,17 @@ def main(parallel_opt: str = "future"):  # none, pool, joblib, future
             results = evaluator.evaluate(prediction_mask, reference_mask, f"sample{i}")
     elif parallel_opt == "joblib":
         Parallel(n_jobs=5, backend="threading")(
-            delayed(evaluator.evaluate)(prediction_mask, reference_mask, f"sample{i}") for i in range(8)
+            delayed(evaluator.evaluate)(prediction_mask, reference_mask, f"sample{i}")
+            for i in range(8)
         )
     elif parallel_opt == "future":
         with ProcessPoolExecutor(max_workers=5) as executor:
-            futures = {executor.submit(evaluator.evaluate, prediction_mask, reference_mask, f"sample{i}") for i in range(8)}
+            futures = {
+                executor.submit(
+                    evaluator.evaluate, prediction_mask, reference_mask, f"sample{i}"
+                )
+                for i in range(8)
+            }
             for future in tqdm(
                 as_completed(futures), total=len(futures), desc="Panoptica Evaluation"
             ):
