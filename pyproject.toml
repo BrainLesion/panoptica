@@ -33,6 +33,7 @@ pytest = "^6.2.5"
 pytest-cov = "^3.0.0"
 pytest-mock = "^3.6.0"
 flake8 = ">=4.0.1"
+auxiliary = ">=0.1.0"
 
 [tool.poetry.group.docs]
 optional = true
