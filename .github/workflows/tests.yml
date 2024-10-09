@@ -39,7 +39,7 @@ jobs:
           python -m poetry run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - name: Test with pytest
         run: |
-          coverage run --source=panoptica -m pytest
+          python -m poetry run coverage run --source=panoptica -m pytest
       - name: Upload results to Codecov
         # Only upload to Codecov after a merge to the main branch
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
