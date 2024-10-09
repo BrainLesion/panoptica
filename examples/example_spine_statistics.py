@@ -16,25 +16,32 @@ from joblib import delayed, Parallel
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 from multiprocessing import set_start_method
-
+import os
 
 # set_start_method("fork")
 
-directory = turbopath(__file__).parent
 
-reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
-prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
+def main(parallel_opt: str = "future"):  # none, pool, joblib, future
+    file_dir = Path(__file__).parent.joinpath("spine_example.tsv")
+    try:
+        os.remove(str(file_dir))
+    except:
+        pass
 
-evaluator = Panoptica_Aggregator(
-    Panoptica_Evaluator.load_from_config_name("panoptica_evaluator_unmatched_instance"),
-    Path(__file__).parent.joinpath("spine_example.tsv"),
-    log_times=True,
-)
+    directory = turbopath(__file__).parent
 
-evaluator.panoptica_evaluator.set_log_group_times(True)
+    reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
+    prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
-if __name__ == "__main__":
-    parallel_opt = "future"  # none, pool, joblib, future
+    evaluator = Panoptica_Aggregator(
+        Panoptica_Evaluator.load_from_config_name(
+            "panoptica_evaluator_unmatched_instance"
+        ),
+        Path(__file__).parent.joinpath("spine_example.tsv"),
+        log_times=True,
+    )
+
+    evaluator.panoptica_evaluator.set_log_group_times(True)
     #
     parallel_opt = parallel_opt.lower()
 
@@ -53,7 +60,7 @@ if __name__ == "__main__":
     elif parallel_opt == "joblib":
         Parallel(n_jobs=5, backend="threading")(
             delayed(evaluator.evaluate)(prediction_mask, reference_mask, f"sample{i}")
-            for i in range(10)
+            for i in range(8)
         )
     elif parallel_opt == "future":
         with ProcessPoolExecutor(max_workers=5) as executor:
@@ -61,7 +68,7 @@ if __name__ == "__main__":
                 executor.submit(
                     evaluator.evaluate, prediction_mask, reference_mask, f"sample{i}"
                 )
-                for i in range(10)
+                for i in range(8)
             }
             for future in tqdm(
                 as_completed(futures), total=len(futures), desc="Panoptica Evaluation"
@@ -75,7 +82,7 @@ if __name__ == "__main__":
 
     fig = panoptic_statistic.get_summary_figure("sq_dsc", horizontal=True)
     out_figure = str(Path(__file__).parent.joinpath("example_sq_dsc_figure.png"))
-    fig.write_image(out_figure)
+    # fig.write_image(out_figure)
 
     fig2 = make_curve_over_setups(
         {
@@ -89,4 +96,8 @@ if __name__ == "__main__":
     )
 
     out_figure = str(Path(__file__).parent.joinpath("example_multiple_statistics.png"))
-    fig2.savefig(out_figure)
+    # fig2.savefig(out_figure)
+
+
+if __name__ == "__main__":
+    main()

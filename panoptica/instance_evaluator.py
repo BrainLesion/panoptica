@@ -93,6 +93,9 @@ def _evaluate_instance(
     ref_arr = reference_arr == ref_idx
     pred_arr = prediction_arr == ref_idx
 
+    if ref_arr.sum() == 0 or pred_arr.sum() == 0:
+        return {}
+
     # Crop down for speedup
     crop = _get_paired_crop(
         pred_arr,
@@ -103,11 +106,8 @@ def _evaluate_instance(
     pred_arr = pred_arr[crop]
 
     result: dict[Metric, float] = {}
-    if ref_arr.sum() == 0 or pred_arr.sum() == 0:
-        return result
-    else:
-        for metric in eval_metrics:
-            metric_value = metric(ref_arr, pred_arr)
-            result[metric] = metric_value
+    for metric in eval_metrics:
+        metric_value = metric(ref_arr, pred_arr)
+        result[metric] = metric_value
 
     return result
