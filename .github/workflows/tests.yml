@@ -42,9 +42,10 @@ jobs:
       - name: Test with pytest
         run: |
           python -m poetry run coverage run --source=panoptica -m pytest
+          python -m poetry run coverage xml
       - name: Upload results to Codecov
         # Only upload to Codecov after a merge to the main branch
-        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          pip install codecov-cli
-          codecovcli --verbose upload-process --disable-search  -t ${{ secrets.CODECOV_TOKEN }} -n 'job-name'-${{ github.run_id }} -f .coverage
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
