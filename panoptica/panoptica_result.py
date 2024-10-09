@@ -563,29 +563,3 @@ def sq_rvd_std(res: PanopticaResult):
 
 
 # endregion
-
-
-def _build_global_bin_metric_function(metric: Metric):
-
-    def function_template(res: PanopticaResult):
-        if metric not in res._global_metrics:
-            raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
-        if res.tp == 0:
-            is_edgecase, result = res._edge_case_handler.handle_zero_tp(
-                metric, res.tp, res.num_pred_instances, res.num_ref_instances
-            )
-            if is_edgecase:
-                return result
-        pred_binary = res._prediction_arr.copy()
-        ref_binary = res._reference_arr.copy()
-        pred_binary[pred_binary != 0] = 1
-        ref_binary[ref_binary != 0] = 1
-        return metric(
-            reference_arr=res._reference_arr,
-            prediction_arr=res._prediction_arr,
-        )
-
-    return lambda x: function_template(x)
-
-
-# endregion
