@@ -23,7 +23,10 @@ import os
 
 def main(parallel_opt: str = "future"):  # none, pool, joblib, future
     file_dir = Path(__file__).parent.joinpath("spine_example.tsv")
-    os.remove(str(file_dir))
+    try:
+        os.remove(str(file_dir))
+    except:
+        pass
 
     directory = turbopath(__file__).parent
 
