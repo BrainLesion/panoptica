@@ -9,7 +9,7 @@ import numpy as np
 
 from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
+from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching, InstanceLabelMap
 from panoptica.metrics import Metric
 from panoptica.instance_evaluator import (
     evaluate_matched_instance,
@@ -32,6 +32,26 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
         return super().setUp()
+
+    def test_labelmap(self):
+        labelmap = InstanceLabelMap()
+
+        labelmap.add_labelmap_entry(1, 1)
+        labelmap.add_labelmap_entry([2, 3], 2)
+
+        with self.assertRaises(Exception):
+            labelmap.add_labelmap_entry(1, 1)
+            labelmap.add_labelmap_entry(1, 2)
+
+        self.assertTrue(labelmap.contains_and(None, None))
+        self.assertTrue(labelmap.contains_and(1, 1))
+        self.assertTrue(not labelmap.contains_and(1, 3))
+        self.assertTrue(not labelmap.contains_and(4, 1))
+
+        print(labelmap)
+
+        with self.assertRaises(Exception):
+            labelmap.labelmap = {}
 
 
 class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
