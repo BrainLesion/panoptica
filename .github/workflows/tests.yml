@@ -45,7 +45,7 @@ jobs:
           python -m poetry run coverage xml
       - name: Upload results to Codecov
         # Only upload to Codecov after a merge to the main branch
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
