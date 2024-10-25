@@ -97,7 +97,12 @@ class Test_RVD(unittest.TestCase):
     def test_rvd_case_simple_identical(self):
 
         pred_arr, ref_arr = case_simple_identical()
-        rvd = Metric.RVD(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=1, pred_instance_idx=1)
+        rvd = Metric.RVD(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
         self.assertEqual(rvd, 0.0)
 
     def test_rvd_case_simple_identical_idx(self):
@@ -139,7 +144,12 @@ class Test_DSC(unittest.TestCase):
     def test_dsc_case_simple_identical_idx(self):
 
         pred_arr, ref_arr = case_simple_identical()
-        dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=1, pred_instance_idx=1)
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
         self.assertEqual(dsc, 1.0)
 
     def test_dsc_case_simple_identical_wrong_idx(self):
@@ -179,7 +189,12 @@ class Test_ASSD(unittest.TestCase):
 
     def test_st_case_simple_identical_idx(self):
         pred_arr, ref_arr = case_simple_identical()
-        st = Metric.ASSD(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=1, pred_instance_idx=1)
+        st = Metric.ASSD(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
         self.assertEqual(st, 0.0)
 
     def test_st_case_simple_nooverlap(self):
@@ -210,7 +225,12 @@ class Test_clDSC(unittest.TestCase):
 
     def test_st_case_simple_identical_idx(self):
         pred_arr, ref_arr = case_simple_identical()
-        st = Metric.clDSC(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=1, pred_instance_idx=1)
+        st = Metric.clDSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
         self.assertEqual(st, 1.0)
 
     def test_st_case_simple_nooverlap(self):

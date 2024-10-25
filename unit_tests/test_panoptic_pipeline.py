@@ -9,7 +9,11 @@ import numpy as np
 
 from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching, InstanceLabelMap
+from panoptica.instance_matcher import (
+    MaximizeMergeMatching,
+    NaiveThresholdMatching,
+    InstanceLabelMap,
+)
 from panoptica.metrics import Metric
 from panoptica.instance_evaluator import (
     evaluate_matched_instance,
