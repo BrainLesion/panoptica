@@ -174,7 +174,9 @@ class SupportsConfig:
             An instance of the class.
         """
         obj = _load_from_config(cls, path)
-        assert isinstance(obj, cls), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
+        assert isinstance(
+            obj, cls
+        ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
         return obj
 
     @classmethod
@@ -218,7 +220,9 @@ class SupportsConfig:
         Returns:
             YAML node: YAML-compatible node representation of the object.
         """
-        assert hasattr(cls, "_yaml_repr"), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
+        assert hasattr(
+            cls, "_yaml_repr"
+        ), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
         return representer.represent_mapping("!" + cls.__name__, cls._yaml_repr(node))
 
     @classmethod

@@ -34,7 +34,9 @@ class SegmentationClassGroups(SupportsConfig):
         # maps name of group to the group itself
 
         if isinstance(groups, list):
-            self.__group_dictionary = {f"group_{idx}": g for idx, g in enumerate(groups)}
+            self.__group_dictionary = {
+                f"group_{idx}": g for idx, g in enumerate(groups)
+            }
         elif isinstance(groups, dict):
             # transform dict into list of LabelGroups
             for i, g in groups.items():
@@ -45,7 +47,11 @@ class SegmentationClassGroups(SupportsConfig):
                     self.__group_dictionary[name_lower] = LabelGroup(g[0], g[1])
 
         # needs to check that each label is accounted for exactly ONCE
-        labels = [value_label for lg in self.__group_dictionary.values() for value_label in lg.value_labels]
+        labels = [
+            value_label
+            for lg in self.__group_dictionary.values()
+            for value_label in lg.value_labels
+        ]
         duplicates = list_duplicates(labels)
         if len(duplicates) > 0:
             print(
@@ -53,7 +59,9 @@ class SegmentationClassGroups(SupportsConfig):
             )
         self.__labels = labels
 
-    def has_defined_labels_for(self, arr: np.ndarray | list[int], raise_error: bool = False):
+    def has_defined_labels_for(
+        self, arr: np.ndarray | list[int], raise_error: bool = False
+    ):
         """Checks if the labels in the provided array are defined in the segmentation class groups.
 
         Args:
@@ -139,7 +147,9 @@ class _NoSegmentationClassGroups(SegmentationClassGroups):
     def __init__(self) -> None:
         self.__group_dictionary = {NO_GROUP_KEY: _LabelGroupAny()}
 
-    def has_defined_labels_for(self, arr: np.ndarray | list[int], raise_error: bool = False):
+    def has_defined_labels_for(
+        self, arr: np.ndarray | list[int], raise_error: bool = False
+    ):
         return True
 
     def __str__(self) -> str:
@@ -160,7 +170,9 @@ class _NoSegmentationClassGroups(SegmentationClassGroups):
 
     @property
     def labels(self):
-        raise Exception("_NoSegmentationClassGroups has no explicit definition of labels")
+        raise Exception(
+            "_NoSegmentationClassGroups has no explicit definition of labels"
+        )
 
     @classmethod
     def _yaml_repr(cls, node):

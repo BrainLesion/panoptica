@@ -33,7 +33,9 @@ class _ProcessingPair(ABC):
     _pred_labels: tuple[int, ...]
     n_dim: int
 
-    def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None) -> None:
+    def __init__(
+        self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None
+    ) -> None:
         """Initializes the processing pair with prediction and reference arrays.
 
         Args:
@@ -46,8 +48,12 @@ class _ProcessingPair(ABC):
         self._reference_arr = reference_arr
         self.dtype = dtype
         self.n_dim = reference_arr.ndim
-        self._ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
-        self._pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self._ref_labels: tuple[int, ...] = tuple(
+            _unique_without_zeros(reference_arr)
+        )  # type:ignore
+        self._pred_labels: tuple[int, ...] = tuple(
+            _unique_without_zeros(prediction_arr)
+        )  # type:ignore
         self.crop: tuple[slice, ...] = None
         self.is_cropped: bool = False
         self.uncropped_shape: tuple[int, ...] = reference_arr.shape
@@ -69,7 +75,13 @@ class _ProcessingPair(ABC):
 
         self._prediction_arr = self._prediction_arr[self.crop]
         self._reference_arr = self._reference_arr[self.crop]
-        (print(f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}") if verbose else None)
+        (
+            print(
+                f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}"
+            )
+            if verbose
+            else None
+        )
         self.is_cropped = True
 
     def uncrop_data(self, verbose: bool = False):
@@ -80,14 +92,22 @@ class _ProcessingPair(ABC):
         """
         if self.is_cropped == False:
             return
-        assert self.uncropped_shape is not None, "Calling uncrop_data() without having cropped first"
+        assert (
+            self.uncropped_shape is not None
+        ), "Calling uncrop_data() without having cropped first"
         prediction_arr = np.zeros(self.uncropped_shape)
         prediction_arr[self.crop] = self._prediction_arr
         self._prediction_arr = prediction_arr
 
         reference_arr = np.zeros(self.uncropped_shape)
         reference_arr[self.crop] = self._reference_arr
-        (print(f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}") if verbose else None)
+        (
+            print(
+                f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}"
+            )
+            if verbose
+            else None
+        )
         self._reference_arr = reference_arr
         self.is_cropped = False
 
@@ -97,7 +117,9 @@ class _ProcessingPair(ABC):
         Args:
             dtype (type): Expected integer type for the arrays.
         """
-        assert np.issubdtype(type, int_type), "set_dtype: tried to set dtype to something other than integers"
+        assert np.issubdtype(
+            type, int_type
+        ), "set_dtype: tried to set dtype to something other than integers"
         self._prediction_arr = self._prediction_arr.astype(type)
         self._reference_arr = self._reference_arr.astype(type)
 
@@ -189,7 +211,9 @@ class _ProcessingPairInstanced(_ProcessingPair):
         )  # type:ignore
 
 
-def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None):
+def _check_array_integrity(
+    prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None
+):
     """Validates integrity between two arrays, checking shape, dtype, and consistency with `dtype`.
 
     Args:
@@ -210,8 +234,12 @@ def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray
     assert isinstance(prediction_arr, np.ndarray) and isinstance(
         reference_arr, np.ndarray
     ), "prediction and/or reference are not numpy arrays"
-    assert prediction_arr.shape == reference_arr.shape, f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
-    assert prediction_arr.dtype == reference_arr.dtype, f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
+    assert (
+        prediction_arr.shape == reference_arr.shape
+    ), f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
+    assert (
+        prediction_arr.dtype == reference_arr.dtype
+    ), f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
     if dtype is not None:
         assert (
             np.issubdtype(prediction_arr.dtype, dtype)
@@ -303,11 +331,15 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         self.matched_instances = matched_instances
 
         if missed_reference_labels is None:
-            missed_reference_labels = list([i for i in self._ref_labels if i not in self._pred_labels])
+            missed_reference_labels = list(
+                [i for i in self._ref_labels if i not in self._pred_labels]
+            )
         self.missed_reference_labels = missed_reference_labels
 
         if missed_prediction_labels is None:
-            missed_prediction_labels = list([i for i in self._pred_labels if i not in self._ref_labels])
+            missed_prediction_labels = list(
+                [i for i in self._pred_labels if i not in self._ref_labels]
+            )
         self.missed_prediction_labels = missed_prediction_labels
 
     @property
@@ -380,7 +412,9 @@ class InputType(_Enum_Compare):
     UNMATCHED_INSTANCE = UnmatchedInstancePair
     MATCHED_INSTANCE = MatchedInstancePair
 
-    def __call__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray) -> _ProcessingPair:
+    def __call__(
+        self, prediction_arr: np.ndarray, reference_arr: np.ndarray
+    ) -> _ProcessingPair:
         return self.value(prediction_arr, reference_arr)
 
 
@@ -398,7 +432,9 @@ class IntermediateStepsData:
         self._original_input = original_input
         self._intermediatesteps: dict[str, _ProcessingPair] = {}
 
-    def add_intermediate_arr_data(self, processing_pair: _ProcessingPair, inputtype: InputType):
+    def add_intermediate_arr_data(
+        self, processing_pair: _ProcessingPair, inputtype: InputType
+    ):
         type_name = inputtype.name
         self.add_intermediate_data(type_name, processing_pair)
 
@@ -408,26 +444,36 @@ class IntermediateStepsData:
 
     @property
     def original_prediction_arr(self):
-        assert self._original_input is not None, "Original prediction_arr is None, there are no intermediate steps"
+        assert (
+            self._original_input is not None
+        ), "Original prediction_arr is None, there are no intermediate steps"
         return self._original_input.prediction_arr
 
     @property
     def original_reference_arr(self):
-        assert self._original_input is not None, "Original reference_arr is None, there are no intermediate steps"
+        assert (
+            self._original_input is not None
+        ), "Original reference_arr is None, there are no intermediate steps"
         return self._original_input.reference_arr
 
     def prediction_arr(self, inputtype: InputType):
         type_name = inputtype.name
         procpair = self[type_name]
-        assert isinstance(procpair, _ProcessingPair), f"step {type_name} is not a processing pair, error"
+        assert isinstance(
+            procpair, _ProcessingPair
+        ), f"step {type_name} is not a processing pair, error"
         return procpair.prediction_arr
 
     def reference_arr(self, inputtype: InputType):
         type_name = inputtype.name
         procpair = self[type_name]
-        assert isinstance(procpair, _ProcessingPair), f"step {type_name} is not a processing pair, error"
+        assert isinstance(
+            procpair, _ProcessingPair
+        ), f"step {type_name} is not a processing pair, error"
         return procpair.reference_arr
 
     def __getitem__(self, key):
-        assert key in self._intermediatesteps, f"key {key} not in intermediate steps, maybe the step was skipped?"
+        assert (
+            key in self._intermediatesteps
+        ), f"key {key} not in intermediate steps, maybe the step was skipped?"
         return self._intermediatesteps[key]

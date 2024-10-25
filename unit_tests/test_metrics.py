@@ -155,7 +155,12 @@ class Test_DSC(unittest.TestCase):
     def test_dsc_case_simple_identical_wrong_idx(self):
 
         pred_arr, ref_arr = case_simple_identical()
-        dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=2, pred_instance_idx=2)
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=2,
+            pred_instance_idx=2,
+        )
         self.assertEqual(dsc, 0.0)
 
     def test_dsc_case_simple_nooverlap(self):
