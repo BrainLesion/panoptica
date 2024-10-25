@@ -85,12 +85,8 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     #    raise RuntimeError("The second supplied array does not contain any binary object.")
 
     # extract only 1-pixel border line of objects
-    result_border = prediction ^ binary_erosion(
-        prediction, structure=footprint, iterations=1
-    )
-    reference_border = reference ^ binary_erosion(
-        reference, structure=footprint, iterations=1
-    )
+    result_border = prediction ^ binary_erosion(prediction, structure=footprint, iterations=1)
+    reference_border = reference ^ binary_erosion(reference, structure=footprint, iterations=1)
 
     # compute average surface distance
     # Note: scipys distance transform is calculated only inside the borders of the
@@ -107,6 +103,29 @@ def _distance_transform_edt(
     return_distances=True,
     return_indices=False,
 ):
+    """Computes the Euclidean distance transform and/or feature transform of a binary array.
+
+    This function calculates the Euclidean distance transform (EDT) of a binary array,
+    which gives the distance from each non-zero point to the nearest zero point. It can
+    also return the feature transform, which provides indices to the nearest non-zero point.
+
+    Args:
+        input_array (np.ndarray): The input binary array where non-zero values are considered
+            foreground.
+        sampling (optional): A sequence or array that specifies the spacing along each dimension.
+            If provided, scales the distances by the sampling value along each axis.
+        return_distances (bool, optional): If True, returns the distance transform. Default is True.
+        return_indices (bool, optional): If True, returns the feature transform with indices to
+            the nearest foreground points. Default is False.
+
+    Returns:
+        np.ndarray or tuple[np.ndarray, ...]: If `return_distances` is True, returns the distance
+        transform as an array. If `return_indices` is True, returns the feature transform. If both
+        are True, returns a tuple with the distance and feature transforms.
+
+    Raises:
+        ValueError: If the input array is empty or has unsupported dimensions.
+    """
     # calculate the feature transform
     # input = np.atleast_1d(np.where(input, 1, 0).astype(np.int8))
     # if sampling is not None:

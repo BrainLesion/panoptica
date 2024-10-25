@@ -5,6 +5,23 @@ from panoptica.utils.config import SupportsConfig
 
 
 class EdgeCaseResult(_Enum_Compare):
+    """Enumeration of edge case values used for handling specific metric situations.
+
+    This enum defines several common edge case values for handling zero-true-positive (zero-TP)
+    situations in various metrics. The values include infinity, NaN, zero, one, and None.
+
+    Attributes:
+        INF: Represents infinity (`np.inf`).
+        NAN: Represents not-a-number (`np.nan`).
+        ZERO: Represents zero (0.0).
+        ONE: Represents one (1.0).
+        NONE: Represents a None value.
+
+    Methods:
+        value: Returns the value associated with the edge case.
+        __call__(): Returns the numeric or None representation of the enum member.
+    """
+
     INF = auto()  # np.inf
     NAN = auto()  # np.nan
     ZERO = auto()  # 0.0
@@ -29,6 +46,15 @@ class EdgeCaseResult(_Enum_Compare):
 
 
 class EdgeCaseZeroTP(_Enum_Compare):
+    """Enum defining scenarios that could produce zero true positives (zero-TP) in metrics.
+
+    Attributes:
+        NO_INSTANCES: No instances in both the prediction and reference.
+        EMPTY_PRED: The prediction is empty.
+        EMPTY_REF: The reference is empty.
+        NORMAL: A typical scenario with non-zero instances.
+    """
+
     NO_INSTANCES = auto()
     EMPTY_PRED = auto()
     EMPTY_REF = auto()
@@ -39,6 +65,21 @@ class EdgeCaseZeroTP(_Enum_Compare):
 
 
 class MetricZeroTPEdgeCaseHandling(SupportsConfig):
+    """Handles zero-TP edge cases for metrics, mapping different zero-TP scenarios to specific results.
+
+    Attributes:
+        default_result (EdgeCaseResult | None): Default result if specific edge cases are not provided.
+        no_instances_result (EdgeCaseResult | None): Result when no instances are present.
+        empty_prediction_result (EdgeCaseResult | None): Result when prediction is empty.
+        empty_reference_result (EdgeCaseResult | None): Result when reference is empty.
+        normal (EdgeCaseResult | None): Result when a normal zero-TP scenario occurs.
+
+    Methods:
+        __call__(tp, num_pred_instances, num_ref_instances): Determines if an edge case is detected and returns its result.
+        __eq__(value): Compares this handling object to another.
+        __str__(): String representation of edge cases.
+        _yaml_repr(cls, node): YAML representation for the edge case.
+    """
 
     def __init__(
         self,
@@ -57,26 +98,12 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
 
         self._default_result = default_result
         self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = (
-            empty_prediction_result
-            if empty_prediction_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = (
-            empty_reference_result
-            if empty_reference_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = (
-            no_instances_result if no_instances_result is not None else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NORMAL] = (
-            normal if normal is not None else default_result
-        )
+        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = empty_prediction_result if empty_prediction_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = empty_reference_result if empty_reference_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = no_instances_result if no_instances_result is not None else default_result
+        self._edgecase_dict[EdgeCaseZeroTP.NORMAL] = normal if normal is not None else default_result
 
-    def __call__(
-        self, tp: int, num_pred_instances, num_ref_instances
-    ) -> tuple[bool, float | None]:
+    def __call__(self, tp: int, num_pred_instances, num_ref_instances) -> tuple[bool, float | None]:
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         #
@@ -119,6 +146,19 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
 
 
 class EdgeCaseHandler(SupportsConfig):
+    """Manages edge cases across multiple metrics, including standard deviation handling for empty lists.
+
+    Attributes:
+        listmetric_zeroTP_handling (dict): Dictionary mapping metrics to their zero-TP edge case handling.
+        empty_list_std (EdgeCaseResult): Default edge case for handling standard deviation of empty lists.
+
+    Methods:
+        handle_zero_tp(metric, tp, num_pred_instances, num_ref_instances): Checks if an edge case exists and returns its result.
+        listmetric_zeroTP_handling: Returns the edge case handling dictionary.
+        get_metric_zero_tp_handle(metric): Returns the zero-TP handler for a specific metric.
+        handle_empty_list_std(): Handles standard deviation of empty lists.
+        _yaml_repr(cls, node): YAML representation of the handler.
+    """
 
     def __init__(
         self,
@@ -147,9 +187,7 @@ class EdgeCaseHandler(SupportsConfig):
         },
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,
     ) -> None:
-        self.__listmetric_zeroTP_handling: dict[
-            Metric, MetricZeroTPEdgeCaseHandling
-        ] = listmetric_zeroTP_handling
+        self.__listmetric_zeroTP_handling: dict[Metric, MetricZeroTPEdgeCaseHandling] = listmetric_zeroTP_handling
         self.__empty_list_std: EdgeCaseResult = empty_list_std
 
     def handle_zero_tp(
@@ -176,9 +214,7 @@ class EdgeCaseHandler(SupportsConfig):
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         if metric not in self.__listmetric_zeroTP_handling:
-            raise NotImplementedError(
-                f"Metric {metric} encountered zero TP, but no edge handling available"
-            )
+            raise NotImplementedError(f"Metric {metric} encountered zero TP, but no edge handling available")
 
         return self.__listmetric_zeroTP_handling[metric](
             tp=tp,

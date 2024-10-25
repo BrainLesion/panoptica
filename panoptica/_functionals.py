@@ -33,11 +33,7 @@ def _calc_overlapping_labels(
     # instance_pairs = [(reference_arr, prediction_arr, i, j) for i, j in overlapping_indices]
 
     # (ref, pred)
-    return [
-        (int(i % (max_ref)), int(i // (max_ref)))
-        for i in np.unique(overlap_arr)
-        if i > max_ref
-    ]
+    return [(int(i % (max_ref)), int(i // (max_ref))) for i in np.unique(overlap_arr) if i > max_ref]
 
 
 def _calc_matching_metric_of_overlapping_labels(
@@ -67,13 +63,8 @@ def _calc_matching_metric_of_overlapping_labels(
     with Pool() as pool:
         mm_values = pool.starmap(matching_metric.value, instance_pairs)
 
-    mm_pairs = [
-        (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
-        for idx, i in enumerate(mm_values)
-    ]
-    mm_pairs = sorted(
-        mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
-    )
+    mm_pairs = [(i, (instance_pairs[idx][2], instance_pairs[idx][3])) for idx, i in enumerate(mm_values)]
+    mm_pairs = sorted(mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing)
 
     return mm_pairs
 
@@ -141,6 +132,23 @@ def _get_paired_crop(
     reference_arr: np.ndarray,
     px_pad: int = 2,
 ):
+    """Calculates a bounding box based on paired prediction and reference arrays.
+
+    This function combines the prediction and reference arrays, checks if they are identical,
+    and computes a bounding box around the non-zero regions. If both arrays are completely zero,
+    a small value is added to ensure the bounding box is valid.
+
+    Args:
+        prediction_arr (np.ndarray): The predicted segmentation array.
+        reference_arr (np.ndarray): The ground truth segmentation array.
+        px_pad (int, optional): Padding to apply around the bounding box. Defaults to 2.
+
+    Returns:
+        np.ndarray: The bounding box coordinates around the combined non-zero regions.
+
+    Raises:
+        AssertionError: If the prediction and reference arrays do not have the same shape.
+    """
     assert prediction_arr.shape == reference_arr.shape
 
     combined = prediction_arr + reference_arr
@@ -150,10 +158,17 @@ def _get_paired_crop(
 
 
 def _round_to_n(value: float | int, n_significant_digits: int = 2):
-    return (
-        value
-        if value == 0
-        else round(
-            value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1)
-        )
-    )
+    """Rounds a number to a specified number of significant digits.
+
+    This function rounds the given value to the specified number of significant digits.
+    If the value is zero, it is returned unchanged.
+
+    Args:
+        value (float | int): The number to be rounded.
+        n_significant_digits (int, optional): The number of significant digits to round to.
+            Defaults to 2.
+
+    Returns:
+        float: The rounded value.
+    """
+    return value if value == 0 else round(value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1))
