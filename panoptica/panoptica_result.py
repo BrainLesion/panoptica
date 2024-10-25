@@ -286,6 +286,21 @@ class PanopticaResult(object):
         reference_arr,
         do_binarize: bool = True,
     ):
+        """
+        Calculates a global binary metric based on predictions and references.
+
+        Args:
+            metric (Metric): The metric to compute.
+            prediction_arr: The predicted values.
+            reference_arr: The ground truth values.
+            do_binarize (bool): Whether to binarize the input arrays. Defaults to True.
+
+        Returns:
+            The calculated metric value.
+
+        Raises:
+            MetricCouldNotBeComputedException: If the specified metric is not set.
+        """
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
 
@@ -321,6 +336,20 @@ class PanopticaResult(object):
         default_value=None,
         was_calculated: bool = False,
     ):
+        """
+        Adds a new metric to the evaluation metrics.
+
+        Args:
+            name_id (str): The unique identifier for the metric.
+            metric_type (MetricType): The type of the metric.
+            calc_func (Callable | None): The function to calculate the metric.
+            long_name (str | None): A longer, descriptive name for the metric.
+            default_value: The default value for the metric.
+            was_calculated (bool): Indicates if the metric has been calculated.
+
+        Returns:
+            The default value of the metric.
+        """
         setattr(self, name_id, default_value)
         # assert hasattr(self, name_id), f"added metric {name_id} but it is not a member variable of this class"
         if calc_func is None:
@@ -338,7 +367,8 @@ class PanopticaResult(object):
         return default_value
 
     def calculate_all(self, print_errors: bool = False):
-        """Calculates all possible metrics that can be derived
+        """
+        Calculates all possible metrics that can be derived.
 
         Args:
             print_errors (bool, optional): If true, will print every metric that could not be computed and its reason. Defaults to False.
@@ -356,6 +386,16 @@ class PanopticaResult(object):
                 print(f"Metric {k}: {v}")
 
     def _calc(self, k, v):
+        """
+        Attempts to get the value of a metric and captures any exceptions.
+
+        Args:
+            k: The metric key.
+            v: The metric value.
+
+        Returns:
+            A tuple indicating success or failure and the corresponding value or exception.
+        """
         try:
             v = getattr(self, k)
             return False, v
@@ -389,6 +429,12 @@ class PanopticaResult(object):
         return text
 
     def to_dict(self) -> dict:
+        """
+        Converts the metrics to a dictionary format.
+
+        Returns:
+            A dictionary containing metric names and their values.
+        """
         return {
             k: getattr(self, v.id)
             for k, v in self._evaluation_metrics.items()
@@ -400,6 +446,19 @@ class PanopticaResult(object):
         return self._evaluation_metrics
 
     def get_list_metric(self, metric: Metric, mode: MetricMode):
+        """
+        Retrieves a list of metrics based on the given metric type and mode.
+
+        Args:
+            metric (Metric): The metric to retrieve.
+            mode (MetricMode): The mode of the metric.
+
+        Returns:
+            The corresponding list of metrics.
+
+        Raises:
+            MetricCouldNotBeComputedException: If the metric cannot be found.
+        """
         if metric in self._list_metrics:
             return self._list_metrics[metric][mode]
         else:
@@ -408,6 +467,19 @@ class PanopticaResult(object):
             )
 
     def _calc_metric(self, metric_name: str, supress_error: bool = False):
+        """
+        Calculates a specific metric by its name.
+
+        Args:
+            metric_name (str): The name of the metric to calculate.
+            supress_error (bool): If true, suppresses errors during calculation.
+
+        Returns:
+            The calculated metric value or raises an exception if it cannot be computed.
+
+        Raises:
+            MetricCouldNotBeComputedException: If the metric cannot be found.
+        """
         if metric_name in self._evaluation_metrics:
             try:
                 value = self._evaluation_metrics[metric_name](self)
@@ -426,6 +498,18 @@ class PanopticaResult(object):
             )
 
     def __getattribute__(self, __name: str) -> Any:
+        """
+        Retrieves an attribute, with special handling for evaluation metrics.
+
+        Args:
+            __name (str): The name of the attribute to retrieve.
+
+        Returns:
+            The attribute value.
+
+        Raises:
+            MetricCouldNotBeComputedException: If the requested metric could not be computed.
+        """
         attr = None
         try:
             attr = object.__getattribute__(self, __name)

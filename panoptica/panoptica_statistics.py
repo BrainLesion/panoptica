@@ -174,6 +174,7 @@ class Panoptica_Statistic:
         self,
         metric: str,
         horizontal: bool = True,
+        sort: bool = True,
         # title overwrite?
     ):
         """Returns a figure object that shows the given metric for each group and its std
@@ -191,6 +192,7 @@ class Panoptica_Statistic:
             data=data_plot,
             orientation=orientation,
             score=metric,
+            sort=sort,
         )
 
     # groupwise or in total

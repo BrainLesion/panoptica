@@ -20,7 +20,25 @@ if TYPE_CHECKING:
 
 @dataclass
 class _Metric:
-    """A Metric class containing a name, whether higher or lower values is better, and a function to calculate that metric between two instances in an array"""
+    """Represents a metric with a name, direction (increasing or decreasing), and a calculation function.
+
+    This class provides a framework for defining and calculating metrics, which can be used
+    to evaluate the similarity or performance between reference and prediction arrays.
+    The metric direction indicates whether higher or lower values are better.
+
+    Attributes:
+        name (str): Short name of the metric.
+        long_name (str): Full descriptive name of the metric.
+        decreasing (bool): If True, lower metric values are better; otherwise, higher values are preferred.
+        _metric_function (Callable): A callable function that computes the metric
+            between two input arrays.
+
+    Example:
+        >>> my_metric = _Metric(name="accuracy", long_name="Accuracy", decreasing=False, _metric_function=accuracy_function)
+        >>> score = my_metric(reference_array, prediction_array)
+        >>> print(score)
+
+    """
 
     name: str
     long_name: str
@@ -36,6 +54,20 @@ class _Metric:
         *args,
         **kwargs,
     ) -> int | float:
+        """Calculates the metric between reference and prediction arrays.
+
+        Args:
+            reference_arr (np.ndarray): The reference array.
+            prediction_arr (np.ndarray): The prediction array.
+            ref_instance_idx (int, optional): The instance index to filter in the reference array.
+            pred_instance_idx (int | list[int], optional): Instance index or indices to filter in
+                the prediction array.
+            *args: Additional positional arguments for the metric function.
+            **kwargs: Additional keyword arguments for the metric function.
+
+        Returns:
+            int | float: The computed metric value.
+        """
         if ref_instance_idx is not None and pred_instance_idx is not None:
             reference_arr = reference_arr.copy() == ref_instance_idx
             if isinstance(pred_instance_idx, int):
@@ -60,15 +92,35 @@ class _Metric:
         return str(self)
 
     def __hash__(self) -> int:
+        """Hash based on metric name, constrained to fit within 8 digits.
+
+        Returns:
+            int: The hash value of the metric.
+        """
         return abs(hash(self.name)) % (10**8)
 
     @property
     def increasing(self):
+        """Indicates if higher values of the metric are better.
+
+        Returns:
+            bool: True if increasing values are preferred, otherwise False.
+        """
         return not self.decreasing
 
     def score_beats_threshold(
         self, matching_score: float, matching_threshold: float
     ) -> bool:
+        """Determines if a matching score meets a specified threshold.
+
+        Args:
+            matching_score (float): The score to evaluate.
+            matching_threshold (float): The threshold value to compare against.
+
+        Returns:
+            bool: True if the score meets the threshold, taking into account the
+            metric's preferred direction.
+        """
         return (self.increasing and matching_score >= matching_threshold) or (
             self.decreasing and matching_score <= matching_threshold
         )
@@ -206,6 +258,16 @@ class MetricCouldNotBeComputedException(Exception):
 
 
 class Evaluation_Metric:
+    """This represents a metric in the evaluation derived from other metrics or list metrics (no circular dependancies!)
+
+    Args:
+        name_id (str): code-name of this metric, must be same as the member variable of PanopticResult
+        calc_func (Callable): the function to calculate this metric based on the PanopticResult object
+        long_name (str | None, optional): A longer descriptive name for printing/logging purposes. Defaults to None.
+        was_calculated (bool, optional): Whether this metric has been calculated or not. Defaults to False.
+        error (bool, optional): If true, means the metric could not have been calculated (because dependancies do not exist or have this flag set to True). Defaults to False.
+    """
+
     def __init__(
         self,
         name_id: str,
@@ -215,15 +277,7 @@ class Evaluation_Metric:
         was_calculated: bool = False,
         error: bool = False,
     ):
-        """This represents a metric in the evaluation derived from other metrics or list metrics (no circular dependancies!)
 
-        Args:
-            name_id (str): code-name of this metric, must be same as the member variable of PanopticResult
-            calc_func (Callable): the function to calculate this metric based on the PanopticResult object
-            long_name (str | None, optional): A longer descriptive name for printing/logging purposes. Defaults to None.
-            was_calculated (bool, optional): Whether this metric has been calculated or not. Defaults to False.
-            error (bool, optional): If true, means the metric could not have been calculated (because dependancies do not exist or have this flag set to True). Defaults to False.
-        """
         self.id = name_id
         self.metric_type = metric_type
         self._calc_func = calc_func

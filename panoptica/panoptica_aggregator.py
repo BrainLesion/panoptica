@@ -30,9 +30,11 @@ COMPUTATION_TIME_KEY = "computation_time"
 
 #
 class Panoptica_Aggregator:
-    # internal_list_lock = Lock()
-    #
-    """Aggregator that calls evaluations and saves the resulting metrics per sample. Can be used to create statistics, ..."""
+    """Aggregator that manages evaluations and saves resulting metrics per sample.
+
+    This class interfaces with the `Panoptica_Evaluator` to perform evaluations,
+    store results, and manage file outputs for statistical analysis.
+    """
 
     def __init__(
         self,
@@ -41,10 +43,18 @@ class Panoptica_Aggregator:
         log_times: bool = False,
         continue_file: bool = True,
     ):
-        """
+        """Initializes the Panoptica_Aggregator.
+
         Args:
-            panoptica_evaluator (Panoptica_Evaluator): The Panoptica_Evaluator used for the pipeline.
-            output_file (Path | None, optional): If given, will stream the sample results into this file. If the file is existent, will append results if not already there. Defaults to None.
+            panoptica_evaluator (Panoptica_Evaluator): The evaluator used for performing evaluations.
+            output_file (Path | str): Path to the output file for storing results. If the file exists,
+                results will be appended. If it doesn't, a new file will be created.
+            log_times (bool, optional): If True, computation times will be logged. Defaults to False.
+            continue_file (bool, optional): If True, results will continue from existing entries in the file.
+                Defaults to True.
+
+        Raises:
+            AssertionError: If the output directory does not exist or if the file extension is not `.tsv`.
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
@@ -115,10 +125,16 @@ class Panoptica_Aggregator:
         atexit.register(self.__exist_handler)
 
     def __exist_handler(self):
+        """Handles cleanup upon program exit by removing the temporary output buffer file."""
         if self.__output_buffer_file is not None and self.__output_buffer_file.exists():
             os.remove(str(self.__output_buffer_file))
 
     def make_statistic(self) -> Panoptica_Statistic:
+        """Generates statistics from the aggregated evaluation results.
+
+        Returns:
+            Panoptica_Statistic: The statistics object containing the results.
+        """
         with filelock:
             obj = Panoptica_Statistic.from_file(self.__output_file)
         return obj
@@ -129,14 +145,16 @@ class Panoptica_Aggregator:
         reference_arr: np.ndarray,
         subject_name: str,
     ):
-        """Evaluates one case
+        """Evaluates a single case using the provided prediction and reference arrays.
 
         Args:
-            prediction_arr (np.ndarray): Prediction array
-            reference_arr (np.ndarray): reference array
-            subject_name (str | None, optional): Unique name of the sample. If none, will give it a name based on count. Defaults to None.
-            skip_already_existent (bool): If true, will skip subjects which were already evaluated instead of crashing. Defaults to False.
-            verbose (bool | None, optional): Verbose. Defaults to None.
+            prediction_arr (np.ndarray): The array containing the predicted segmentation.
+            reference_arr (np.ndarray): The array containing the ground truth segmentation.
+            subject_name (str): A unique name for the sample being evaluated. If none is provided,
+                a name will be generated based on the count.
+
+        Raises:
+            ValueError: If the subject name has already been evaluated or is in process.
         """
         # Read tmp file to see which sample names are blocked
         with inevalfilelock:
@@ -164,6 +182,12 @@ class Panoptica_Aggregator:
         self._save_one_subject(subject_name, res)
 
     def _save_one_subject(self, subject_name, result_grouped):
+        """Saves the evaluation results for a single subject.
+
+        Args:
+            subject_name (str): The name of the subject whose results are being saved.
+            result_grouped (dict): A dictionary of grouped results from the evaluation.
+        """
         with filelock:
             #
             content = [subject_name]
@@ -186,9 +210,19 @@ class Panoptica_Aggregator:
 
 
 def _read_first_row(file: str | Path):
+    """Reads the first row of a TSV file.
+
+    NOT THREAD SAFE BY ITSELF!
+
+    Args:
+        file (str | Path): The path to the file from which to read the first row.
+
+    Returns:
+        list: The first row of the file as a list of strings.
+    """
     if isinstance(file, Path):
         file = str(file)
-    # NOT THREAD SAFE BY ITSELF!
+    #
     with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
 
@@ -202,7 +236,19 @@ def _read_first_row(file: str | Path):
 
 
 def _load_first_column_entries(file: str | Path):
-    # NOT THREAD SAFE BY ITSELF!
+    """Loads the entries from the first column of a TSV file.
+
+    NOT THREAD SAFE BY ITSELF!
+
+    Args:
+        file (str | Path): The path to the file from which to load entries.
+
+    Returns:
+        list: A list of entries from the first column of the file.
+
+    Raises:
+        AssertionError: If the file contains duplicate entries.
+    """
     if isinstance(file, Path):
         file = str(file)
     with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
@@ -221,6 +267,12 @@ def _load_first_column_entries(file: str | Path):
 
 
 def _write_content(file: str | Path, content: list[list[str]]):
+    """Writes content to a TSV file.
+
+    Args:
+        file (str | Path): The path to the file where content will be written.
+        content (list[list[str]]): A list of lists containing the rows of data to write.
+    """
     if isinstance(file, Path):
         file = str(file)
     # NOT THREAD SAFE BY ITSELF!

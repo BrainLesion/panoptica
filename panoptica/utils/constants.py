@@ -10,6 +10,22 @@ import numpy as np
 
 
 class _Enum_Compare(Enum):
+    """An extended Enum class that supports additional comparison and YAML configuration functionality.
+
+    This class enhances standard `Enum` capabilities, allowing comparisons with other enums or strings by
+    name and adding support for YAML serialization and deserialization methods.
+
+    Methods:
+        __eq__(__value): Checks equality with another Enum or string.
+        __str__(): Returns a string representation of the Enum instance.
+        __repr__(): Returns a string representation for debugging.
+        load_from_config(cls, path): Loads an Enum instance from a configuration file.
+        load_from_config_name(cls, name): Loads an Enum instance from a configuration file identified by name.
+        save_to_config(path): Saves the Enum instance to a configuration file.
+        to_yaml(cls, representer, node): Serializes the Enum to YAML.
+        from_yaml(cls, constructor, node): Deserializes YAML data into an Enum instance.
+    """
+
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Enum):
             namecheck = self.name == __value.name

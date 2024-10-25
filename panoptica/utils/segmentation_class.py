@@ -7,7 +7,24 @@ NO_GROUP_KEY = "ungrouped"
 
 
 class SegmentationClassGroups(SupportsConfig):
-    #
+    """Represents a collection of segmentation class groups.
+
+    This class manages groups of labels used in segmentation tasks, ensuring that each label is defined
+    exactly once across all groups. It supports both list and dictionary formats for group initialization.
+
+    Attributes:
+        __group_dictionary (dict[str, LabelGroup]): A dictionary mapping group names to their respective LabelGroup instances.
+        __labels (list[int]): A flat list of unique labels collected from all LabelGroups.
+
+    Args:
+        groups (list[LabelGroup] | dict[str, LabelGroup | tuple[list[int] | int, bool]]):
+            A list of `LabelGroup` instances or a dictionary where keys are group names (str) and values are either
+            `LabelGroup` instances or tuples containing a list of label values and a boolean.
+
+    Raises:
+        AssertionError: If the same label is assigned to multiple groups.
+    """
+
     def __init__(
         self,
         groups: list[LabelGroup] | dict[str, LabelGroup | tuple[list[int] | int, bool]],
@@ -45,6 +62,18 @@ class SegmentationClassGroups(SupportsConfig):
     def has_defined_labels_for(
         self, arr: np.ndarray | list[int], raise_error: bool = False
     ):
+        """Checks if the labels in the provided array are defined in the segmentation class groups.
+
+        Args:
+            arr (np.ndarray | list[int]): The array of labels to check.
+            raise_error (bool): If True, raises an error when an undefined label is found. Defaults to False.
+
+        Returns:
+            bool: True if all labels are defined; False otherwise.
+
+        Raises:
+            AssertionError: If an undefined label is found and raise_error is True.
+        """
         if isinstance(arr, list):
             arr_labels = arr
         else:
@@ -90,6 +119,14 @@ class SegmentationClassGroups(SupportsConfig):
 
 
 def list_duplicates(seq):
+    """Identifies duplicates in a sequence.
+
+    Args:
+        seq (list): The input sequence to check for duplicates.
+
+    Returns:
+        list: A list of duplicates found in the input sequence.
+    """
     seen = set()
     seen_add = seen.add
     # adds all elements it doesn't know yet to seen and all other to seen_twice
@@ -99,6 +136,14 @@ def list_duplicates(seq):
 
 
 class _NoSegmentationClassGroups(SegmentationClassGroups):
+    """Represents a placeholder for segmentation class groups with no defined labels.
+
+    This class indicates that no specific segmentation groups or labels are defined, and any label is valid.
+
+    Attributes:
+        __group_dictionary (dict[str, LabelGroup]): A dictionary with a single entry representing all labels as a group.
+    """
+
     def __init__(self) -> None:
         self.__group_dictionary = {NO_GROUP_KEY: _LabelGroupAny()}
 

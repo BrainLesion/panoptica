@@ -141,6 +141,23 @@ def _get_paired_crop(
     reference_arr: np.ndarray,
     px_pad: int = 2,
 ):
+    """Calculates a bounding box based on paired prediction and reference arrays.
+
+    This function combines the prediction and reference arrays, checks if they are identical,
+    and computes a bounding box around the non-zero regions. If both arrays are completely zero,
+    a small value is added to ensure the bounding box is valid.
+
+    Args:
+        prediction_arr (np.ndarray): The predicted segmentation array.
+        reference_arr (np.ndarray): The ground truth segmentation array.
+        px_pad (int, optional): Padding to apply around the bounding box. Defaults to 2.
+
+    Returns:
+        np.ndarray: The bounding box coordinates around the combined non-zero regions.
+
+    Raises:
+        AssertionError: If the prediction and reference arrays do not have the same shape.
+    """
     assert prediction_arr.shape == reference_arr.shape
 
     combined = prediction_arr + reference_arr
@@ -150,6 +167,19 @@ def _get_paired_crop(
 
 
 def _round_to_n(value: float | int, n_significant_digits: int = 2):
+    """Rounds a number to a specified number of significant digits.
+
+    This function rounds the given value to the specified number of significant digits.
+    If the value is zero, it is returned unchanged.
+
+    Args:
+        value (float | int): The number to be rounded.
+        n_significant_digits (int, optional): The number of significant digits to round to.
+            Defaults to 2.
+
+    Returns:
+        float: The rounded value.
+    """
     return (
         value
         if value == 0
