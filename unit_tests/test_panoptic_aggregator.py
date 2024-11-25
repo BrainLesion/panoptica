@@ -96,4 +96,3 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
         statistic_obj.print_summary()
 
         os.remove(str(output_test_dir))
-
