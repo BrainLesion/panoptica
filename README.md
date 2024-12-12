@@ -5,8 +5,7 @@
 
 Computing instance-wise segmentation quality metrics for 2D and 3D semantic- and instance segmentation maps.
 
- 
-[Use Cases & Tutorials](#use-cases--tutorials) | [Documentation](#documentation)
+
 
 ## Features
 
@@ -124,7 +123,7 @@ It uses ruamel.yaml in a readable way.
 
 ## Documentation
 
-We provide a readthedocs documentation of our codebase [here](https://panoptica.readthedocs.io/en/latest/?badge=latest)
+We provide a readthedocs documentation of our codebase <b>blinded link</b>
 
 ## Citation
 
