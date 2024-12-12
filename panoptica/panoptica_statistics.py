@@ -293,6 +293,7 @@ def make_curve_over_setups(
     fig: None = None,
     plot_dotsize: int | None = None,
     plot_lines: bool = True,
+    plot_std: bool = False,
 ):
     if groups is None:
         groups = list(statistics_dict.values())[0].groupnames
@@ -334,13 +335,26 @@ def make_curve_over_setups(
             ValueSummary(stat.get(g, metric, remove_nones=True)).avg
             for stat in statistics_dict.values()
         ]
+        Ystd = [
+            ValueSummary(stat.get(g, metric, remove_nones=True)).std
+            for stat in statistics_dict.values()
+        ]
 
         if plot_lines:
-            plt.plot(
+            p = plt.plot(
                 X,
                 Y,
                 label=g if alternate_groupnames is None else alternate_groupnames[idx],
             )
+
+            if plot_std:
+                plt.fill_between(
+                    X,
+                    np.subtract(Y, Ystd),
+                    np.add(Y, Ystd),
+                    alpha=0.25,
+                    edgecolor=p[-1].get_color(),
+                )
 
         if plot_dotsize is not None:
             plt.scatter(X, Y, s=plot_dotsize)
