@@ -1,0 +1,3 @@
+subject_name	ungrouped-num_ref_instances	ungrouped-num_pred_instances	ungrouped-tp	ungrouped-fp	ungrouped-fn	ungrouped-prec	ungrouped-rec	ungrouped-rq	ungrouped-sq	ungrouped-sq_std	ungrouped-pq	ungrouped-sq_dsc	ungrouped-sq_dsc_std	ungrouped-pq_dsc	ungrouped-sq_assd	ungrouped-sq_assd_std	ungrouped-sq_rvd	ungrouped-sq_rvd_std	ungrouped-global_bin_dsc
+test	1	1	1	0	0	1.0	1.0	1.0	0.75	0.0	0.75	0.8571428571428571	0.0	0.8571428571428571	0.842391304347826	0.0	-0.25	0.0	0.8571428571428571
+test2	2	1	1	0	1	1.0	0.5	0.6666666666666666	1.0	0.0	0.6666666666666666	1.0	0.0	0.6666666666666666	0.0	0.0	0.0	0.0	0.8

@@ -17,6 +17,6 @@ from panoptica.utils.edge_case_handling import (
 # from utils.constants import
 from panoptica.utils.segmentation_class import (
     SegmentationClassGroups,
-    LabelGroup,
 )
+from panoptica.utils.label_group import LabelGroup, LabelMergeGroup
 from panoptica.utils.parallel_processing import NonDaemonicPool

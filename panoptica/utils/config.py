@@ -7,10 +7,24 @@ supported_helper_classes = []
 
 
 def _register_helper_classes(yaml: YAML):
+    """Registers globally supported helper classes to a YAML instance.
+
+    Args:
+        yaml (YAML): The YAML instance to register helper classes to.
+    """
     [yaml.register_class(s) for s in supported_helper_classes]
 
 
 def _load_yaml(file: str | Path, registered_class=None):
+    """Loads a YAML file into a Python dictionary or object, with optional class registration.
+
+    Args:
+        file (str | Path): Path to the YAML file.
+        registered_class (optional): Optional class to register with the YAML parser.
+
+    Returns:
+        dict | object: Parsed content from the YAML file.
+    """
     if isinstance(file, str):
         file = Path(file)
     yaml = YAML(typ="safe")
@@ -24,6 +38,13 @@ def _load_yaml(file: str | Path, registered_class=None):
 
 
 def _save_yaml(data_dict: dict | object, out_file: str | Path, registered_class=None):
+    """Saves a Python dictionary or object to a YAML file, with optional class registration.
+
+    Args:
+        data_dict (dict | object): Data to save.
+        out_file (str | Path): Output file path.
+        registered_class (optional): Class type to register with YAML if saving an object.
+    """
     if isinstance(out_file, str):
         out_file = Path(out_file)
 
@@ -43,120 +64,115 @@ def _save_yaml(data_dict: dict | object, out_file: str | Path, registered_class=
     print(f"Saved config into {out_file}")
 
 
-####################
-# TODO Merge into SupportsConfig
-class Configuration:
-    """General Configuration class that handles yaml"""
-
-    _data_dict: dict
-    _registered_class = None
-
-    def __init__(self, data_dict: dict, registered_class=None) -> None:
-        assert isinstance(data_dict, dict)
-        self._data_dict = data_dict
-        if registered_class is not None:
-            self.register_to_class(registered_class)
-
-    def register_to_class(self, cls):
-        global supported_helper_classes
-        if cls not in supported_helper_classes:
-            supported_helper_classes.append(cls)
-        self._registered_class = cls
-        return self
-
-    @classmethod
-    def save_from_object(cls, obj: object, file: str | Path):
-        _save_yaml(obj, file, registered_class=type(obj))
-        # return Configuration.load(file, registered_class=type(obj))
-
-    @classmethod
-    def load(cls, file: str | Path, registered_class=None):
-        data = _load_yaml(file, registered_class)
-        assert isinstance(
-            data, dict
-        ), f"The config at {file} is registered to a class. Use load_as_object() instead"
-        return Configuration(data, registered_class=registered_class)
-
-    @classmethod
-    def load_as_object(cls, file: str | Path, registered_class=None):
-        data = _load_yaml(file, registered_class)
-        assert not isinstance(
-            data, dict
-        ), f"The config at {file} is not registered to a class. Use load() instead"
-        return data
-
-    def save(self, out_file: str | Path):
-        _save_yaml(self._data_dict, out_file)
-
-    def cls_object_from_this(self):
-        assert self._registered_class is not None
-        return self._registered_class(**self._data_dict)
-
-    @property
-    def data_dict(self):
-        return self._data_dict
-
-    @property
-    def cls(self):
-        return self._registered_class
-
-    def __str__(self) -> str:
-        return f"Config({self.cls.__name__ if self.cls is not None else 'NoClass'} = {self.data_dict})"  # type: ignore
-
-
 #########
 # Universal Functions
 #########
 def _register_class_to_yaml(cls):
+    """Registers a class to the global supported helper classes for YAML serialization.
+
+    Args:
+        cls: The class to register.
+    """
     global supported_helper_classes
     if cls not in supported_helper_classes:
         supported_helper_classes.append(cls)
 
 
 def _load_from_config(cls, path: str | Path):
-    # cls._register_permanently()
+    """Loads an instance of a class from a YAML configuration file.
+
+    Args:
+        cls: The class type to instantiate.
+        path (str | Path): Path to the YAML configuration file.
+
+    Returns:
+        An instance of the specified class, loaded from configuration.
+    """
     if isinstance(path, str):
         path = Path(path)
     assert path.exists(), f"load_from_config: {path} does not exist"
-    obj = Configuration.load_as_object(path, registered_class=cls)
+    obj = _load_yaml(path, registered_class=cls)
     assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
     return obj
 
 
 def _load_from_config_name(cls, name: str):
+    """Loads an instance of a class from a configuration file identified by name.
+
+    Args:
+        cls: The class type to instantiate.
+        name (str): The name used to find the configuration file.
+
+    Returns:
+        An instance of the specified class.
+    """
     path = config_by_name(name)
     assert path.exists(), f"load_from_config: {path} does not exist"
     return _load_from_config(cls, path)
 
 
 def _save_to_config(obj, path: str | Path):
+    """Saves an instance of a class to a YAML configuration file.
+
+    Args:
+        obj: The object to save.
+        path (str | Path): The file path to save the configuration.
+    """
     if isinstance(path, str):
         path = Path(path)
-    Configuration.save_from_object(obj, path)
+    _save_yaml(obj, path, registered_class=type(obj))
 
 
 def _save_to_config_by_name(obj, name: str):
+    """Saves an instance of a class to a configuration file by name.
+
+    Args:
+        obj: The object to save.
+        name (str): The name used to determine the configuration file path.
+    """
     dir, name = config_dir_by_name(name)
     _save_to_config(obj, dir.joinpath(name))
 
 
 class SupportsConfig:
-    """Metaclass that allows a class to save and load objects by yaml configs"""
+    """Base class that provides methods for loading and saving instances as YAML configurations.
+
+    This class should be inherited by classes that wish to have load and save functionality for YAML
+    configurations, with class registration to enable custom serialization and deserialization.
+
+    Methods:
+        load_from_config(cls, path): Loads a class instance from a YAML file.
+        load_from_config_name(cls, name): Loads a class instance from a configuration file identified by name.
+        save_to_config(path): Saves the instance to a YAML file.
+        save_to_config_by_name(name): Saves the instance to a configuration file identified by name.
+        to_yaml(cls, representer, node): YAML serialization method (requires _yaml_repr).
+        from_yaml(cls, constructor, node): YAML deserialization method.
+    """
 
     def __init__(self) -> None:
+        """Prevents instantiation of SupportsConfig as it is intended to be a metaclass."""
         raise NotImplementedError(f"Tried to instantiate abstract class {type(self)}")
 
     def __init_subclass__(cls, **kwargs):
-        # Registers all subclasses of this
+        """Registers subclasses of SupportsConfig to enable YAML support."""
         super().__init_subclass__(**kwargs)
         cls._register_permanently()
 
     @classmethod
     def _register_permanently(cls):
+        """Registers the class to globally supported helper classes."""
         _register_class_to_yaml(cls)
 
     @classmethod
     def load_from_config(cls, path: str | Path):
+        """Loads an instance of the class from a YAML file.
+
+        Args:
+            path (str | Path): The file path to load the configuration.
+
+        Returns:
+            An instance of the class.
+        """
         obj = _load_from_config(cls, path)
         assert isinstance(
             obj, cls
@@ -165,19 +181,45 @@ class SupportsConfig:
 
     @classmethod
     def load_from_config_name(cls, name: str):
+        """Loads an instance of the class from a configuration file identified by name.
+
+        Args:
+            name (str): The name used to find the configuration file.
+
+        Returns:
+            An instance of the class.
+        """
         obj = _load_from_config_name(cls, name)
         assert isinstance(obj, cls)
         return obj
 
     def save_to_config(self, path: str | Path):
+        """Saves the instance to a YAML configuration file.
+
+        Args:
+            path (str | Path): The file path to save the configuration.
+        """
         _save_to_config(self, path)
 
     def save_to_config_by_name(self, name: str):
+        """Saves the instance to a configuration file identified by name.
+
+        Args:
+            name (str): The name used to determine the configuration file path.
+        """
         _save_to_config_by_name(self, name)
 
     @classmethod
     def to_yaml(cls, representer, node):
-        # cls._register_permanently()
+        """Serializes the class to YAML format.
+
+        Args:
+            representer: YAML representer instance.
+            node: The object instance to serialize.
+
+        Returns:
+            YAML node: YAML-compatible node representation of the object.
+        """
         assert hasattr(
             cls, "_yaml_repr"
         ), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
@@ -185,11 +227,27 @@ class SupportsConfig:
 
     @classmethod
     def from_yaml(cls, constructor, node):
-        # cls._register_permanently()
+        """Deserializes a YAML node to an instance of the class.
+
+        Args:
+            constructor: YAML constructor instance.
+            node: YAML node to deserialize.
+
+        Returns:
+            An instance of the class with attributes populated from YAML data.
+        """
         data = constructor.construct_mapping(node, deep=True)
         return cls(**data)
 
     @classmethod
     @abstractmethod
     def _yaml_repr(cls, node) -> dict:
+        """Abstract method for representing the class in YAML.
+
+        Args:
+            node: The object instance to represent in YAML.
+
+        Returns:
+            dict: A dictionary representation of the class.
+        """
         pass  # return {"groups": node.__group_dictionary}

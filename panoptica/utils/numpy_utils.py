@@ -17,7 +17,7 @@ def _unique_without_zeros(arr: np.ndarray) -> np.ndarray:
     Issues a warning if negative values are present.
     """
     if np.any(arr < 0):
-        warnings.warn("Negative values are present in the input array.")
+        warnings.warn("Negative values are present in the input array.", UserWarning)
 
     return np.unique(arr[arr != 0])
 
@@ -33,7 +33,7 @@ def _count_unique_without_zeros(arr: np.ndarray) -> int:
         int: Number of unique elements excluding zeros.
     """
     if np.any(arr < 0):
-        warnings.warn("Negative values are present in the input array.")
+        warnings.warn("Negative values are present in the input array.", UserWarning)
 
     return len(_unique_without_zeros(arr))
 
