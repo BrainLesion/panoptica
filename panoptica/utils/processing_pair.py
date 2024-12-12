@@ -237,9 +237,7 @@ def _check_array_integrity(
     assert (
         prediction_arr.shape == reference_arr.shape
     ), f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
-    assert (
-        prediction_arr.dtype == reference_arr.dtype
-    ), f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
+    # assert prediction_arr.dtype == reference_arr.dtype, f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
     if dtype is not None:
         assert (
             np.issubdtype(prediction_arr.dtype, dtype)
