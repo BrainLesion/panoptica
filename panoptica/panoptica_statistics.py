@@ -309,10 +309,14 @@ def make_curve_over_setups(
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
 
-    assert plot_as_barchart or len(groups) == 1, "When plotting without barcharts, you cannot plot more than one group at the same time"
+    assert (
+        plot_as_barchart or len(groups) == 1
+    ), "When plotting without barcharts, you cannot plot more than one group at the same time"
     #
     for setupname, stat in statistics_dict.items():
-        assert metric in stat.metricnames, f"metric {metric} not in statistic obj {setupname}"
+        assert (
+            metric in stat.metricnames
+        ), f"metric {metric} not in statistic obj {setupname}"
 
     setupnames = list(statistics_dict.keys())
     convert_x_to_digit = True
@@ -332,20 +336,36 @@ def make_curve_over_setups(
 
     # Y values are average metric values in that group and metric
     for idx, g in enumerate(groups):
-        Y = [ValueSummary(stat.get(g, metric, remove_nones=True)).avg for stat in statistics_dict.values()]
+        Y = [
+            ValueSummary(stat.get(g, metric, remove_nones=True)).avg
+            for stat in statistics_dict.values()
+        ]
 
         name = g if alternate_groupnames is None else alternate_groupnames[idx]
 
         if plot_std:
-            Ystd = [ValueSummary(stat.get(g, metric, remove_nones=True)).std for stat in statistics_dict.values()]
+            Ystd = [
+                ValueSummary(stat.get(g, metric, remove_nones=True)).std
+                for stat in statistics_dict.values()
+            ]
         else:
             Ystd = None
 
         if plot_as_barchart:
-            fig.add_trace(go.Bar(name=name, x=X, y=Y, error_y=dict(type="data", array=Ystd)))
+            fig.add_trace(
+                go.Bar(name=name, x=X, y=Y, error_y=dict(type="data", array=Ystd))
+            )
         else:
             # lineplot
-            fig.add_trace(go.Scatter(x=X, y=Y, mode="lines+markers", name="lines+markers", error_y=dict(type="data", array=Ystd)))
+            fig.add_trace(
+                go.Scatter(
+                    x=X,
+                    y=Y,
+                    mode="lines+markers",
+                    name="lines+markers",
+                    error_y=dict(type="data", array=Ystd),
+                )
+            )
 
     fig.update_layout(
         autosize=False,

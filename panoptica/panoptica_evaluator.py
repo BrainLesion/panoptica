@@ -140,7 +140,11 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group,
                 processing_pair,
                 result_all,
-                save_group_times=(self.__save_group_times if save_group_times is None else save_group_times),
+                save_group_times=(
+                    self.__save_group_times
+                    if save_group_times is None
+                    else save_group_times
+                ),
                 log_times=log_times,
                 verbose=verbose,
             )
