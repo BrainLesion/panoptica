@@ -18,7 +18,7 @@ evaluator = Panoptica_Evaluator.load_from_config_name(
 def main():
     with cProfile.Profile() as pr:
         results = evaluator.evaluate(prediction_mask, reference_mask, verbose=False)
-        for groupname, (result, intermediate_steps_data) in results.items():
+        for groupname, result in results.items():
             print()
             print("### Group", groupname)
             print(result)

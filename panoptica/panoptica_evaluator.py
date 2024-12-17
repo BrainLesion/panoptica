@@ -3,7 +3,7 @@ from time import perf_counter
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
-from panoptica.metrics import Metric, _Metric
+from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
@@ -12,7 +12,6 @@ from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
     UnmatchedInstancePair,
-    _ProcessingPair,
     InputType,
     EvaluateInstancePair,
     IntermediateStepsData,
@@ -121,7 +120,7 @@ class Panoptica_Evaluator(SupportsConfig):
         save_group_times: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
-    ) -> dict[str, tuple[PanopticaResult, IntermediateStepsData]]:
+    ) -> dict[str, PanopticaResult]:
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
         assert isinstance(
             processing_pair, self.__expected_input.value
@@ -134,21 +133,17 @@ class Panoptica_Evaluator(SupportsConfig):
             processing_pair.reference_arr, raise_error=True
         )
 
-        result_grouped: dict[str, tuple[PanopticaResult, IntermediateStepsData]] = {}
+        result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
                 processing_pair,
                 result_all,
-                save_group_times=(
-                    self.__save_group_times
-                    if save_group_times is None
-                    else save_group_times
-                ),
+                save_group_times=(self.__save_group_times if save_group_times is None else save_group_times),
                 log_times=log_times,
                 verbose=verbose,
-            )[1:]
+            )
         return result_grouped
 
     @property
@@ -170,7 +165,7 @@ class Panoptica_Evaluator(SupportsConfig):
             dummy_input = MatchedInstancePair(
                 np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8)
             )
-            _, res, _ = self._evaluate_group(
+            res = self._evaluate_group(
                 group_name="",
                 label_group=LabelGroup(1, single_instance=False),
                 processing_pair=dummy_input,
@@ -192,7 +187,7 @@ class Panoptica_Evaluator(SupportsConfig):
         verbose: bool | None = None,
         log_times: bool | None = None,
         save_group_times: bool = False,
-    ):
+    ) -> PanopticaResult:
         assert isinstance(label_group, LabelGroup)
         if self.__save_group_times:
             start_time = perf_counter()
@@ -212,7 +207,7 @@ class Panoptica_Evaluator(SupportsConfig):
             )
             decision_threshold = 0.0
 
-        result, intermediate_steps_data = panoptic_evaluate(
+        result = panoptic_evaluate(
             input_pair=processing_pair_grouped,
             edge_case_handler=self.__edge_case_handler,
             instance_approximator=self.__instance_approximator,
@@ -229,7 +224,7 @@ class Panoptica_Evaluator(SupportsConfig):
         if save_group_times:
             duration = perf_counter() - start_time
             result.computation_time = duration
-        return group_name, result, intermediate_steps_data
+        return result
 
 
 def panoptic_evaluate(
@@ -246,7 +241,7 @@ def panoptic_evaluate(
     verbose=False,
     verbose_calc=False,
     **kwargs,
-) -> tuple[PanopticaResult, IntermediateStepsData]:
+) -> PanopticaResult:
     """
     Perform panoptic evaluation on the given processing pair.
 
@@ -368,13 +363,14 @@ def panoptic_evaluate(
             list_metrics=processing_pair.list_metrics,
             global_metrics=global_metrics,
             edge_case_handler=edge_case_handler,
+            intermediate_steps_data=intermediate_steps_data,
         )
 
     if isinstance(processing_pair, PanopticaResult):
         processing_pair._global_metrics = global_metrics
         if result_all:
             processing_pair.calculate_all(print_errors=verbose_calc)
-        return processing_pair, intermediate_steps_data
+        return processing_pair
 
     raise RuntimeError("End of panoptic pipeline reached without results")
 
