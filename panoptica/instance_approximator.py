@@ -4,7 +4,7 @@ import numpy as np
 
 from panoptica.utils.constants import CCABackend
 from panoptica._functionals import _connected_components
-from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
+# from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
@@ -80,7 +80,7 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
             AssertionError: If there are negative values in the semantic maps, which is not allowed.
         """
         # Check validity
-        pred_labels, ref_labels = semantic_pair._pred_labels, semantic_pair._ref_labels
+        pred_labels, ref_labels = semantic_pair.pred_labels, semantic_pair.ref_labels
         pred_label_range = (
             (np.min(pred_labels), np.max(pred_labels))
             if len(pred_labels) > 0
@@ -95,10 +95,10 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
             min_value >= 0
         ), "There are negative values in the semantic maps. This is not allowed!"
         # Set dtype to smalles fitting uint
-        max_value = max(np.max(pred_label_range[1]), np.max(ref_label_range[1]))
-        dtype = _get_smallest_fitting_uint(max_value)
-        semantic_pair.set_dtype(dtype)
-        print(f"-- Set dtype to {dtype}") if verbose else None
+        # max_value = max(np.max(pred_label_range[1]), np.max(ref_label_range[1]))
+        # dtype = _get_smallest_fitting_uint(max_value)
+        # semantic_pair.set_dtype(dtype)
+        # print(f"-- Set dtype to {dtype}") if verbose else None
 
         # Call algorithm
         instance_pair = self._approximate_instances(semantic_pair, **kwargs)
@@ -148,31 +148,21 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         """
         cca_backend = self.cca_backend
         if cca_backend is None:
-            cca_backend = (
-                CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
-            )
+            cca_backend = CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
         assert cca_backend is not None
 
-        empty_prediction = len(semantic_pair._pred_labels) == 0
-        empty_reference = len(semantic_pair._ref_labels) == 0
+        empty_prediction = len(semantic_pair.pred_labels) == 0
+        empty_reference = len(semantic_pair.ref_labels) == 0
         prediction_arr, n_prediction_instance = (
-            _connected_components(semantic_pair._prediction_arr, cca_backend)
-            if not empty_prediction
-            else (semantic_pair._prediction_arr, 0)
+            _connected_components(semantic_pair.prediction_arr, cca_backend) if not empty_prediction else (semantic_pair.prediction_arr, 0)
         )
         reference_arr, n_reference_instance = (
-            _connected_components(semantic_pair._reference_arr, cca_backend)
-            if not empty_reference
-            else (semantic_pair._reference_arr, 0)
-        )
-
-        dtype = _get_smallest_fitting_uint(
-            max(prediction_arr.max(), reference_arr.max())
+            _connected_components(semantic_pair.reference_arr, cca_backend) if not empty_reference else (semantic_pair.reference_arr, 0)
         )
 
         return UnmatchedInstancePair(
-            prediction_arr=prediction_arr.astype(dtype),
-            reference_arr=reference_arr.astype(dtype),
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
             n_prediction_instance=n_prediction_instance,
             n_reference_instance=n_reference_instance,
         )

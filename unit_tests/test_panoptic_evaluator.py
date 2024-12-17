@@ -285,22 +285,18 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             a[20:40, 10:20] = 1
             b[20:35, 10:20] = 2
 
-            if da != db:
-                self.assertRaises(AssertionError, SemanticPair, b, a)
-            else:
+            evaluator = Panoptica_Evaluator(
+                expected_input=InputType.SEMANTIC,
+                instance_approximator=ConnectedComponentsInstanceApproximator(),
+                instance_matcher=NaiveThresholdMatching(),
+            )
 
-                evaluator = Panoptica_Evaluator(
-                    expected_input=InputType.SEMANTIC,
-                    instance_approximator=ConnectedComponentsInstanceApproximator(),
-                    instance_matcher=NaiveThresholdMatching(),
-                )
-
-                result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
-                print(result)
-                self.assertEqual(result.tp, 1)
-                self.assertEqual(result.fp, 0)
-                self.assertEqual(result.sq, 0.75)
-                self.assertEqual(result.pq, 0.75)
+            result, debug_data = evaluator.evaluate(b, a)["ungrouped"]
+            print(result)
+            self.assertEqual(result.tp, 1)
+            self.assertEqual(result.fp, 0)
+            self.assertEqual(result.sq, 0.75)
+            self.assertEqual(result.pq, 0.75)
 
     def test_simple_evaluation_maximize_matcher(self):
         a = np.zeros([50, 50], dtype=np.uint16)

@@ -131,7 +131,7 @@ def map_instance_labels(
     # Build a MatchedInstancePair out of the newly derived data
     matched_instance_pair = MatchedInstancePair(
         prediction_arr=prediction_arr_relabeled,
-        reference_arr=processing_pair._reference_arr,
+        reference_arr=processing_pair.reference_arr,
     )
     return matched_instance_pair
 

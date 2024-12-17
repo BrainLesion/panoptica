@@ -7,6 +7,7 @@ from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 from panoptica.utils.constants import _Enum_Compare
 from dataclasses import dataclass
 from panoptica.metrics import Metric
+from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
 uint_type: type = np.unsignedinteger
 int_type: type = np.integer
@@ -26,16 +27,7 @@ class _ProcessingPair(ABC):
         uncropped_shape (tuple[int, ...]): The original shape of the arrays before cropping.
     """
 
-    _prediction_arr: np.ndarray
-    _reference_arr: np.ndarray
-    # unique labels without zero
-    _ref_labels: tuple[int, ...]
-    _pred_labels: tuple[int, ...]
-    n_dim: int
-
-    def __init__(
-        self, prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None
-    ) -> None:
+    def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray) -> None:
         """Initializes the processing pair with prediction and reference arrays.
 
         Args:
@@ -43,20 +35,19 @@ class _ProcessingPair(ABC):
             reference_arr (np.ndarray): Numpy array of reference labels.
             dtype (type | None): The expected datatype of arrays. If None, no datatype check is performed.
         """
-        _check_array_integrity(prediction_arr, reference_arr, dtype=dtype)
-        self._prediction_arr = prediction_arr
-        self._reference_arr = reference_arr
-        self.dtype = dtype
-        self.n_dim = reference_arr.ndim
-        self._ref_labels: tuple[int, ...] = tuple(
-            _unique_without_zeros(reference_arr)
-        )  # type:ignore
-        self._pred_labels: tuple[int, ...] = tuple(
-            _unique_without_zeros(prediction_arr)
-        )  # type:ignore
-        self.crop: tuple[slice, ...] = None
-        self.is_cropped: bool = False
-        self.uncropped_shape: tuple[int, ...] = reference_arr.shape
+        self.__prediction_arr: np.ndarray = prediction_arr
+        self.__reference_arr: np.ndarray = reference_arr
+        _check_array_integrity(self.__prediction_arr, self.__reference_arr, dtype=int_type)
+        max_value = max(prediction_arr.max(), reference_arr.max())
+        dtype = _get_smallest_fitting_uint(max_value)
+        self.set_dtype(dtype)
+        self.__dtype = dtype
+        self.__n_dim: int = reference_arr.ndim
+        self.__ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
+        self.__pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self.__crop: tuple[slice, ...] = None
+        self.__is_cropped: bool = False
+        self.__uncropped_shape: tuple[int, ...] = reference_arr.shape
 
     def crop_data(self, verbose: bool = False):
         """Crops prediction and reference arrays to non-zero regions.
@@ -64,25 +55,19 @@ class _ProcessingPair(ABC):
         Args:
             verbose (bool, optional): If True, prints cropping details. Defaults to False.
         """
-        if self.is_cropped:
+        if self.__is_cropped:
             return
-        if self.crop is None:
-            self.uncropped_shape = self._prediction_arr.shape
-            self.crop = _get_paired_crop(
-                self._prediction_arr,
-                self._reference_arr,
+        if self.__crop is None:
+            self.__uncropped_shape = self.__prediction_arr.shape
+            self.__crop = _get_paired_crop(
+                self.__prediction_arr,
+                self.__reference_arr,
             )
 
-        self._prediction_arr = self._prediction_arr[self.crop]
-        self._reference_arr = self._reference_arr[self.crop]
-        (
-            print(
-                f"-- Cropped from {self.uncropped_shape} to {self._prediction_arr.shape}"
-            )
-            if verbose
-            else None
-        )
-        self.is_cropped = True
+        self.__prediction_arr = self.__prediction_arr[self.__crop]
+        self.__reference_arr = self.__reference_arr[self.__crop]
+        (print(f"-- Cropped from {self.__uncropped_shape} to {self.__prediction_arr.shape}") if verbose else None)
+        self.__is_cropped = True
 
     def uncrop_data(self, verbose: bool = False):
         """Restores the arrays to their original, uncropped shape.
@@ -90,26 +75,18 @@ class _ProcessingPair(ABC):
         Args:
             verbose (bool, optional): If True, prints uncropping details. Defaults to False.
         """
-        if self.is_cropped == False:
+        if self.__is_cropped == False:
             return
-        assert (
-            self.uncropped_shape is not None
-        ), "Calling uncrop_data() without having cropped first"
-        prediction_arr = np.zeros(self.uncropped_shape)
-        prediction_arr[self.crop] = self._prediction_arr
-        self._prediction_arr = prediction_arr
+        assert self.__uncropped_shape is not None, "Calling uncrop_data() without having cropped first"
+        prediction_arr = np.zeros(self.__uncropped_shape)
+        prediction_arr[self.__crop] = self.__prediction_arr
+        self.__prediction_arr = prediction_arr
 
-        reference_arr = np.zeros(self.uncropped_shape)
-        reference_arr[self.crop] = self._reference_arr
-        (
-            print(
-                f"-- Uncropped from {self._reference_arr.shape} to {self.uncropped_shape}"
-            )
-            if verbose
-            else None
-        )
-        self._reference_arr = reference_arr
-        self.is_cropped = False
+        reference_arr = np.zeros(self.__uncropped_shape)
+        reference_arr[self.__crop] = self.__reference_arr
+        (print(f"-- Uncropped from {self.__reference_arr.shape} to {self.__uncropped_shape}") if verbose else None)
+        self.__reference_arr = reference_arr
+        self.__is_cropped = False
 
     def set_dtype(self, type):
         """Sets the data type for both prediction and reference arrays.
@@ -120,42 +97,37 @@ class _ProcessingPair(ABC):
         assert np.issubdtype(
             type, int_type
         ), "set_dtype: tried to set dtype to something other than integers"
-        self._prediction_arr = self._prediction_arr.astype(type)
-        self._reference_arr = self._reference_arr.astype(type)
+        self.__prediction_arr = self.__prediction_arr.astype(type)
+        self.__reference_arr = self.__reference_arr.astype(type)
 
     @property
     def prediction_arr(self):
-        return self._prediction_arr
+        return self.__prediction_arr
 
     @property
     def reference_arr(self):
-        return self._reference_arr
+        return self.__reference_arr
 
     @property
     def pred_labels(self):
-        return self._pred_labels
+        return self.__pred_labels
 
     @property
     def ref_labels(self):
-        return self._ref_labels
+        return self.__ref_labels
+
+    @property
+    def n_dim(self):
+        return self.__n_dim
 
     def copy(self):
         """
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self._prediction_arr,
-            reference_arr=self._reference_arr,
+            prediction_arr=self.__prediction_arr,
+            reference_arr=self.__reference_arr,
         )  # type:ignore
-
-    # Make all variables read-only!
-    # def __setattr__(self, attr, value):
-    #    if hasattr(self, attr):
-    #        raise Exception("Attempting to alter read-only value")
-
-
-#
-#        self.__dict__[attr] = value
 
 
 class _ProcessingPairInstanced(_ProcessingPair):
@@ -175,7 +147,6 @@ class _ProcessingPairInstanced(_ProcessingPair):
         self,
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
-        dtype: type | None,
         n_prediction_instance: int | None = None,
         n_reference_instance: int | None = None,
     ) -> None:
@@ -188,7 +159,7 @@ class _ProcessingPairInstanced(_ProcessingPair):
             n_prediction_instance (int | None, optional): Pre-calculated number of prediction instances.
             n_reference_instance (int | None, optional): Pre-calculated number of reference instances.
         """
-        super().__init__(prediction_arr, reference_arr, dtype)
+        super().__init__(prediction_arr, reference_arr)
         if n_prediction_instance is None:
             self.n_prediction_instance = _count_unique_without_zeros(prediction_arr)
 
@@ -204,8 +175,8 @@ class _ProcessingPairInstanced(_ProcessingPair):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self._prediction_arr,
-            reference_arr=self._reference_arr,
+            prediction_arr=self.prediction_arr,
+            reference_arr=self.reference_arr,
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
         )  # type:ignore
@@ -237,6 +208,12 @@ def _check_array_integrity(
     assert (
         prediction_arr.shape == reference_arr.shape
     ), f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
+
+    min_value = min(prediction_arr.min(), reference_arr.min())
+    assert min_value >= 0, "There are negative values in the semantic maps. This is not allowed!"
+
+    # if prediction_arr.dtype != reference_arr.dtype:
+    #    print(f"Dtype is equal in prediction and reference, got {prediction_arr.dtype},{reference_arr.dtype}. Intended?")
     # assert prediction_arr.dtype == reference_arr.dtype, f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
     if dtype is not None:
         assert (
@@ -253,7 +230,7 @@ class SemanticPair(_ProcessingPair):
     """
 
     def __init__(self, prediction_arr: np.ndarray, reference_arr: np.ndarray) -> None:
-        super().__init__(prediction_arr, reference_arr, dtype=int_type)
+        super().__init__(prediction_arr, reference_arr)
 
 
 class UnmatchedInstancePair(_ProcessingPairInstanced):
@@ -272,7 +249,6 @@ class UnmatchedInstancePair(_ProcessingPairInstanced):
         super().__init__(
             prediction_arr,
             reference_arr,
-            uint_type,
             n_prediction_instance,
             n_reference_instance,
         )  # type:ignore
@@ -320,24 +296,19 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         super().__init__(
             prediction_arr,
             reference_arr,
-            uint_type,
             n_prediction_instance,
             n_reference_instance,
         )  # type:ignore
         if matched_instances is None:
-            matched_instances = [i for i in self._pred_labels if i in self._ref_labels]
+            matched_instances = [i for i in self.pred_labels if i in self.ref_labels]
         self.matched_instances = matched_instances
 
         if missed_reference_labels is None:
-            missed_reference_labels = list(
-                [i for i in self._ref_labels if i not in self._pred_labels]
-            )
+            missed_reference_labels = list([i for i in self.ref_labels if i not in self.pred_labels])
         self.missed_reference_labels = missed_reference_labels
 
         if missed_prediction_labels is None:
-            missed_prediction_labels = list(
-                [i for i in self._pred_labels if i not in self._ref_labels]
-            )
+            missed_prediction_labels = list([i for i in self.pred_labels if i not in self.ref_labels])
         self.missed_prediction_labels = missed_prediction_labels
 
     @property
@@ -349,8 +320,8 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self._prediction_arr.copy(),
-            reference_arr=self._reference_arr.copy(),
+            prediction_arr=self.prediction_arr.copy(),
+            reference_arr=self.reference_arr.copy(),
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
             missed_reference_labels=self.missed_reference_labels,
