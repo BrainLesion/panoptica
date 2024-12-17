@@ -111,7 +111,8 @@ class LabelGroup(SupportsConfig):
 class LabelMergeGroup(LabelGroup):
     """Defines a group of labels that will be merged into a single label when extracted.
 
-    Inherits from LabelGroup and sets extracted labels to binary format.
+    Inherits from LabelGroup and sets extracted labels to a binary format.
+    This is useful for region-evaluation (e.g. BRATS), where you want to merge multiple labels into one before evaluation.
 
     Methods:
         __call__(array): Extracts the label group as a binary array.

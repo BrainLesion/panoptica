@@ -54,14 +54,18 @@ class Panoptica_Evaluator(SupportsConfig):
             expected_input (type, optional): Expected DataPair Input Type. Defaults to InputType.MATCHED_INSTANCE (which is type(MatchedInstancePair)).
             instance_approximator (InstanceApproximator | None, optional): Determines which instance approximator is used if necessary. Defaults to None.
             instance_matcher (InstanceMatchingAlgorithm | None, optional): Determines which instance matching algorithm is used if necessary. Defaults to None.
-            iou_threshold (float, optional): Iou Threshold for evaluation. Defaults to 0.5.
+
             edge_case_handler (edge_case_handler, optional): EdgeCaseHandler to be used. If none, will create the default one
-            segmentation_class_groups (SegmentationClassGroups, optional): If not none, will evaluate per class group defined, instead of over all at the same time.
+            segmentation_class_groups (SegmentationClassGroups, optional): If not none, will evaluate per class group defined, instead of over all at the same time. A class group is a collection of labels that are considered of the same class / structure.
+
             instance_metrics (list[Metric]): List of all metrics that should be calculated between all instances
             global_metrics (list[Metric]): List of all metrics that should be calculated on the global binary masks
+
             decision_metric: (Metric | None, optional): This metric is the final decision point between True Positive and False Positive. Can be left away if the matching algorithm is used (it will match by a metric and threshold already)
             decision_threshold: (float | None, optional): Threshold for the decision_metric
-            log_times (bool): If true, will printout the times for the different phases of the pipeline.
+
+            save_group_times(bool): If true, will save the computation time of each sample and put that into the result object.
+            log_times (bool): If true, will print the times for the different phases of the pipeline.
             verbose (bool): If true, will spit out more details than you want.
         """
         self.__expected_input = expected_input
