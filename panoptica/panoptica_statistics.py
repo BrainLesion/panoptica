@@ -380,7 +380,7 @@ def make_curve_over_setups(
     )
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
     if manual_metric_range is not None:
-        fig.update_xaxes(range=[manual_metric_range[0], manual_metric_range[1]])
+        fig.update_yaxes(range=[manual_metric_range[0], manual_metric_range[1]])
     return fig
 
 
