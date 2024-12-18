@@ -27,13 +27,13 @@ evaluator = Panoptica_Evaluator(
 
 def main():
     with cProfile.Profile() as pr:
-        result, intermediate_steps_data = evaluator.evaluate(
-            prediction_mask, reference_mask
-        )["ungrouped"]
+        result = evaluator.evaluate(prediction_mask, reference_mask)["ungrouped"]
 
         # To print the results, just call print
         print(result)
 
+        intermediate_steps_data = result.intermediate_steps_data
+        assert intermediate_steps_data is not None
         # To get the different intermediate arrays, just use the second returned object
         intermediate_steps_data.original_prediction_arr  # Input prediction array, untouched
         intermediate_steps_data.original_reference_arr  # Input reference array, untouched

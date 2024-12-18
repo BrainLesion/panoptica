@@ -5,7 +5,6 @@ import numpy as np
 
 try:
     import pandas as pd
-    import matplotlib.pyplot as plt
     import plotly.express as px
     import plotly.graph_objects as go
 except Exception as e:
@@ -278,11 +277,14 @@ class Panoptica_Statistic:
             manual_metric_range=manual_metric_range,
         )
 
-    # groupwise or in total
-    # Mean over instances
-    # mean over subjects
-    # give below/above percentile of metric (the names)
-    # make auc curve as plot
+
+def make_autc_plots(
+    statistics_dict: dict[str | int | float, Panoptica_Statistic],
+    metric: str,
+    groups: list[str] | str | None = None,
+    alternate_groupnames: list[str] | str | None = None,
+):
+    raise NotImplementedError("AUTC plots currently in works")
 
 
 def make_curve_over_setups(
@@ -290,11 +292,15 @@ def make_curve_over_setups(
     metric: str,
     groups: list[str] | str | None = None,
     alternate_groupnames: list[str] | str | None = None,
-    fig: None = None,
-    plot_dotsize: int | None = None,
-    plot_lines: bool = True,
-    plot_std: bool = False,
+    fig: go.Figure | None = None,
+    plot_as_barchart=True,
+    plot_std: bool = True,
+    figure_title: str = "",
+    width: int = 850,
+    height: int = 1200,
+    manual_metric_range: None | tuple[float, float] = None,
 ):
+    # TODO make this flexibel whether the second grouping are the groups or metrics?
     if groups is None:
         groups = list(statistics_dict.values())[0].groupnames
     #
@@ -302,6 +308,10 @@ def make_curve_over_setups(
         groups = [groups]
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
+
+    assert (
+        plot_as_barchart or len(groups) == 1
+    ), "When plotting without barcharts, you cannot plot more than one group at the same time"
     #
     for setupname, stat in statistics_dict.items():
         assert (
@@ -319,47 +329,58 @@ def make_curve_over_setups(
     if convert_x_to_digit:
         X = [float(s) for s in setupnames]
     else:
-        X = range(len(setupnames))
+        X = setupnames
 
     if fig is None:
-        fig = plt.figure()
+        fig = go.Figure()
 
-    if not convert_x_to_digit:
-        plt.xticks(X, setupnames)
-
-    plt.ylabel("Average " + metric)
-    plt.grid("major")
     # Y values are average metric values in that group and metric
     for idx, g in enumerate(groups):
         Y = [
             ValueSummary(stat.get(g, metric, remove_nones=True)).avg
             for stat in statistics_dict.values()
         ]
-        Ystd = [
-            ValueSummary(stat.get(g, metric, remove_nones=True)).std
-            for stat in statistics_dict.values()
-        ]
 
-        if plot_lines:
-            p = plt.plot(
-                X,
-                Y,
-                label=g if alternate_groupnames is None else alternate_groupnames[idx],
+        name = g if alternate_groupnames is None else alternate_groupnames[idx]
+
+        if plot_std:
+            Ystd = [
+                ValueSummary(stat.get(g, metric, remove_nones=True)).std
+                for stat in statistics_dict.values()
+            ]
+        else:
+            Ystd = None
+
+        if plot_as_barchart:
+            fig.add_trace(
+                go.Bar(name=name, x=X, y=Y, error_y=dict(type="data", array=Ystd))
+            )
+        else:
+            # lineplot
+            fig.add_trace(
+                go.Scatter(
+                    x=X,
+                    y=Y,
+                    mode="lines+markers",
+                    name="lines+markers",
+                    error_y=dict(type="data", array=Ystd),
+                )
             )
 
-            if plot_std:
-                plt.fill_between(
-                    X,
-                    np.subtract(Y, Ystd),
-                    np.add(Y, Ystd),
-                    alpha=0.25,
-                    edgecolor=p[-1].get_color(),
-                )
-
-        if plot_dotsize is not None:
-            plt.scatter(X, Y, s=plot_dotsize)
-
-    plt.legend()
+    fig.update_layout(
+        autosize=False,
+        barmode="group",
+        width=width,
+        height=height,
+        showlegend=True,
+        yaxis_title=metric,
+        xaxis_title="Different setups and groups",
+        font={"family": "Arial"},
+        title=figure_title,
+    )
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
+    if manual_metric_range is not None:
+        fig.update_xaxes(range=[manual_metric_range[0], manual_metric_range[1]])
     return fig
 
 

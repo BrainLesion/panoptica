@@ -4,6 +4,7 @@
 # coverage html
 import os
 import unittest
+import numpy as np
 
 from panoptica.metrics import (
     Metric,
@@ -16,6 +17,7 @@ from panoptica.utils.edge_case_handling import (
     EdgeCaseHandler,
     MetricZeroTPEdgeCaseHandling,
 )
+from panoptica import InputType
 
 
 class Test_EdgeCaseHandler(unittest.TestCase):
@@ -47,7 +49,7 @@ class Test_EdgeCaseHandler(unittest.TestCase):
         # print(t)
 
 
-class Test_Datatypes(unittest.TestCase):
+class Test_Enums(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
         return super().setUp()
@@ -114,3 +116,45 @@ class Test_Datatypes(unittest.TestCase):
         for mode in MetricMode:
             with self.assertRaises(MetricCouldNotBeComputedException):
                 lmetric[mode]
+
+
+class Test_ProcessingPair(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_semanticpair(self):
+        ddtypes = [
+            np.int8,
+            np.int16,
+            np.int32,
+            np.int64,
+            np.uint8,
+            np.uint16,
+            np.uint32,
+            np.uint64,
+        ]
+        dtype_combinations = [(a, b) for a in ddtypes for b in ddtypes]
+        for da, db in dtype_combinations:
+            a = np.zeros([50, 50], dtype=da)
+            b = a.copy().astype(db)
+            a[20:40, 10:20] = 1
+            b[20:35, 10:20] = 2
+
+            for it in InputType:
+                # SemanticPair accepts everything
+                # For Unmatched and MatchedInstancePair, the numpys must be uints!
+                it(a, b)
+
+                c = -a
+                d = -b
+
+                if c.min() < 0:
+                    with self.assertRaises(AssertionError):
+                        it(c, b)
+                if d.min() < 0:
+                    with self.assertRaises(AssertionError):
+                        it(a, d)
+                if c.min() < 0 or d.min() < 0:
+                    with self.assertRaises(AssertionError):
+                        it(c, d)

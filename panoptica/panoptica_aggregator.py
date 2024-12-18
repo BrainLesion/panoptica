@@ -192,7 +192,7 @@ class Panoptica_Aggregator:
             #
             content = [subject_name]
             for groupname in self.__class_group_names:
-                result: PanopticaResult = result_grouped[groupname][0]
+                result: PanopticaResult = result_grouped[groupname]
                 result_dict = result.to_dict()
                 if result.computation_time is not None:
                     result_dict[COMPUTATION_TIME_KEY] = result.computation_time

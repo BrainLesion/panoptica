@@ -13,6 +13,7 @@ from panoptica.metrics import (
     MetricType,
 )
 from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.processing_pair import IntermediateStepsData
 
 
 class PanopticaResult(object):
@@ -27,6 +28,7 @@ class PanopticaResult(object):
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
         global_metrics: list[Metric] = [],
+        intermediate_steps_data: IntermediateStepsData | None = None,
         computation_time: float | None = None,
     ):
         """Result object for Panoptica, contains all calculatable metrics
@@ -45,6 +47,7 @@ class PanopticaResult(object):
         empty_list_std = self._edge_case_handler.handle_empty_list_std().value
         self._global_metrics: list[Metric] = global_metrics
         self.computation_time = computation_time
+        self.intermediate_steps_data = intermediate_steps_data
         ######################
         # Evaluation Metrics #
         ######################
