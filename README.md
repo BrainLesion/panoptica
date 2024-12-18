@@ -59,7 +59,7 @@ evaluator = Panoptica_Evaluator(
     decision_threshold=0.5,
 )
 
-result, intermediate_steps_data = evaluator.evaluate(pred_masks, ref_masks)["ungrouped"]
+result = evaluator.evaluate(pred_masks, ref_masks)["ungrouped"]
 ```
 
 
@@ -122,6 +122,14 @@ It uses ruamel.yaml in a readable way.
 <a target="_blank" href="https://colab.research.google.com/github/BrainLesion/tutorials/blob/main/panoptica/example_config.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
+
+
+### Using Panoptica Aggregator
+
+Using our Panoptica Aggregator, you can evaluate your data while the Aggregator takes care of writing the results into a .tsv file (threading-safe). This allows you to focus only on the important part, that is loading and iterating over your data.
+From the aggregator, you can immediately get a Panoptica Statistics object that yield you the statistics over your metrics as well as create nice figures for you.
+
+Tutorial: TBD
 
 ## Documentation
 
