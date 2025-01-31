@@ -361,8 +361,12 @@ class Evaluation_List_Metric:
             self.MIN: None | float = edge_case_result
             self.MAX: None | float = edge_case_result
         else:
-            self.AVG = None if self.ALL is None else np.average(self.ALL)
-            self.SUM = None if self.ALL is None else np.sum(self.ALL)
+            self.AVG = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.average(self.ALL)
+            )
+            self.SUM = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.sum(self.ALL)
+            )
             self.MIN = (
                 None if self.ALL is None or len(self.ALL) == 0 else np.min(self.ALL)
             )

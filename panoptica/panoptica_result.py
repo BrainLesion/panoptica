@@ -243,6 +243,7 @@ class PanopticaResult(object):
         # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
 
         arrays_present = False
+        # TODO move this after m is in global metrics otherwise this is unecessarily computed
         if prediction_arr is not None and reference_arr is not None:
             pred_binary = prediction_arr.copy()
             ref_binary = reference_arr.copy()
@@ -251,6 +252,7 @@ class PanopticaResult(object):
             arrays_present = True
 
         for m in Metric:
+            # Set metrics for instances for each TP
             if m in list_metrics:
                 is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
                     metric=m,
@@ -266,9 +268,24 @@ class PanopticaResult(object):
             was_calculated = False
 
             if m in self._global_metrics and arrays_present:
-                default_value = self._calc_global_bin_metric(
-                    m, pred_binary, ref_binary, do_binarize=False
-                )
+                combi = pred_binary + ref_binary
+                combi[combi != 2] = 0
+                combi[combi != 0] = 1
+                is_edge_case = combi.sum() == 0
+                if is_edge_case:
+                    is_edge_case, edge_case_result = (
+                        self._edge_case_handler.handle_zero_tp(
+                            metric=m,
+                            tp=0,
+                            num_pred_instances=self.num_pred_instances,
+                            num_ref_instances=self.num_ref_instances,
+                        )
+                    )
+                    default_value = edge_case_result
+                else:
+                    default_value = self._calc_global_bin_metric(
+                        m, pred_binary, ref_binary, do_binarize=False
+                    )
                 was_calculated = True
 
             self._add_metric(
