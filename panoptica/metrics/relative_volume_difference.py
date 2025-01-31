@@ -65,5 +65,5 @@ def _compute_relative_volume_difference(
         return 0.0
 
     # Calculate Dice coefficient
-    rvd = (prediction_mask - reference_mask) / reference_mask
-    return rvd
+    rve = (prediction_mask - reference_mask) / reference_mask
+    return rve

@@ -226,6 +226,23 @@ class PanopticaResult(object):
             long_name="Segmentation Quality Relative Volume Difference Standard Deviation",
         )
         # endregion
+        #
+        # region RVAE
+        self.sq_rvae: float
+        self._add_metric(
+            "sq_rvae",
+            MetricType.INSTANCE,
+            sq_rvae,
+            long_name="Segmentation Quality Relative Volume Absolute Error",
+        )
+        self.sq_rvae_std: float
+        self._add_metric(
+            "sq_rvae_std",
+            MetricType.INSTANCE,
+            sq_rvae_std,
+            long_name="Segmentation Quality Relative Volume Absolute Error Standard Deviation",
+        )
+        # endregion
 
         # region Global
         # Just for autocomplete
@@ -234,6 +251,7 @@ class PanopticaResult(object):
         self.global_bin_cldsc: int
         self.global_bin_assd: int
         self.global_bin_rvd: int
+        self.global_bin_rvae: int
         # endregion
 
         ##################
@@ -260,9 +278,7 @@ class PanopticaResult(object):
                     num_pred_instances=self.num_pred_instances,
                     num_ref_instances=self.num_ref_instances,
                 )
-                self._list_metrics[m] = Evaluation_List_Metric(
-                    m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result
-                )
+                self._list_metrics[m] = Evaluation_List_Metric(m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result)
             # even if not available, set the global vars
             default_value = None
             was_calculated = False
@@ -273,27 +289,21 @@ class PanopticaResult(object):
                 combi[combi != 0] = 1
                 is_edge_case = combi.sum() == 0
                 if is_edge_case:
-                    is_edge_case, edge_case_result = (
-                        self._edge_case_handler.handle_zero_tp(
-                            metric=m,
-                            tp=0,
-                            num_pred_instances=self.num_pred_instances,
-                            num_ref_instances=self.num_ref_instances,
-                        )
+                    is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
+                        metric=m,
+                        tp=0,
+                        num_pred_instances=self.num_pred_instances,
+                        num_ref_instances=self.num_ref_instances,
                     )
                     default_value = edge_case_result
                 else:
-                    default_value = self._calc_global_bin_metric(
-                        m, pred_binary, ref_binary, do_binarize=False
-                    )
+                    default_value = self._calc_global_bin_metric(m, pred_binary, ref_binary, do_binarize=False)
                 was_calculated = True
 
             self._add_metric(
                 f"global_bin_{m.name.lower()}",
                 MetricType.GLOBAL,
-                lambda x: MetricCouldNotBeComputedException(
-                    f"Global Metric {m} not set"
-                ),
+                lambda x: MetricCouldNotBeComputedException(f"Global Metric {m} not set"),
                 long_name="Global Binary " + m.value.long_name,
                 default_value=default_value,
                 was_calculated=was_calculated,
@@ -336,9 +346,7 @@ class PanopticaResult(object):
         prediction_empty = pred_binary.sum() == 0
         reference_empty = ref_binary.sum() == 0
         if prediction_empty or reference_empty:
-            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                metric, 0, int(prediction_empty), int(reference_empty)
-            )
+            is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, int(prediction_empty), int(reference_empty))
             if is_edgecase:
                 return result
 
@@ -455,11 +463,7 @@ class PanopticaResult(object):
         Returns:
             A dictionary containing metric names and their values.
         """
-        return {
-            k: getattr(self, v.id)
-            for k, v in self._evaluation_metrics.items()
-            if (v._error == False and v._was_calculated)
-        }
+        return {k: getattr(self, v.id) for k, v in self._evaluation_metrics.items() if (v._error == False and v._was_calculated)}
 
     @property
     def evaluation_metrics(self):
@@ -482,9 +486,7 @@ class PanopticaResult(object):
         if metric in self._list_metrics:
             return self._list_metrics[metric][mode]
         else:
-            raise MetricCouldNotBeComputedException(
-                f"{metric} could not be found, have you set it in eval_metrics during evaluation?"
-            )
+            raise MetricCouldNotBeComputedException(f"{metric} could not be found, have you set it in eval_metrics during evaluation?")
 
     def _calc_metric(self, metric_name: str, supress_error: bool = False):
         """
@@ -513,9 +515,7 @@ class PanopticaResult(object):
             self._evaluation_metrics[metric_name]._was_calculated = True
             return value
         else:
-            raise MetricCouldNotBeComputedException(
-                f"could not find metric with name {metric_name}"
-            )
+            raise MetricCouldNotBeComputedException(f"could not find metric with name {metric_name}")
 
     def __getattribute__(self, __name: str) -> Any:
         """
@@ -542,15 +542,10 @@ class PanopticaResult(object):
                 raise e
         if __name == "_evaluation_metrics":
             return attr
-        if (
-            object.__getattribute__(self, "_evaluation_metrics") is not None
-            and __name in self._evaluation_metrics.keys()
-        ):
+        if object.__getattribute__(self, "_evaluation_metrics") is not None and __name in self._evaluation_metrics.keys():
             if attr is None:
                 if self._evaluation_metrics[__name]._error:
-                    raise MetricCouldNotBeComputedException(
-                        f"Requested metric {__name} that could not be computed"
-                    )
+                    raise MetricCouldNotBeComputedException(f"Requested metric {__name} that could not be computed")
                 elif not self._evaluation_metrics[__name]._was_calculated:
                     value = self._calc_metric(__name)
                     setattr(self, __name, value)
@@ -664,6 +659,14 @@ def sq_rvd(res: PanopticaResult):
 
 def sq_rvd_std(res: PanopticaResult):
     return res.get_list_metric(Metric.RVD, mode=MetricMode.STD)
+
+
+def sq_rvae(res: PanopticaResult):
+    return res.get_list_metric(Metric.RVAE, mode=MetricMode.AVG)
+
+
+def sq_rvae_std(res: PanopticaResult):
+    return res.get_list_metric(Metric.RVAE, mode=MetricMode.STD)
 
 
 # endregion

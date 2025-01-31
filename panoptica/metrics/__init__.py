@@ -15,6 +15,7 @@ from panoptica.metrics.relative_volume_difference import (
     _compute_instance_relative_volume_difference,
     _compute_relative_volume_difference,
 )
+from panoptica.metrics.relative_absolute_volume_error import _compute_instance_relative_volume_error, _compute_relative_volume_error
 from panoptica.metrics.iou import _compute_instance_iou, _compute_iou
 from panoptica.metrics.metrics import (
     Evaluation_List_Metric,
