@@ -59,8 +59,9 @@ class Panoptica_Aggregator:
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
         self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
+        self.__log_times = log_times
 
-        if log_times:
+        if log_times and COMPUTATION_TIME_KEY not in self.__evaluation_metrics:
             self.__evaluation_metrics.append(COMPUTATION_TIME_KEY)
 
         if isinstance(output_file, str):
@@ -176,6 +177,7 @@ class Panoptica_Aggregator:
             result_all=True,
             verbose=False,
             log_times=False,
+            save_group_times=self.__log_times,
         )
 
         # Add to file
@@ -207,6 +209,10 @@ class Panoptica_Aggregator:
     @property
     def panoptica_evaluator(self):
         return self.__panoptica_evaluator
+
+    @property
+    def evaluation_metrics(self):
+        return self.__evaluation_metrics
 
 
 def _read_first_row(file: str | Path):

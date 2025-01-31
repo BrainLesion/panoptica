@@ -193,7 +193,7 @@ class Panoptica_Evaluator(SupportsConfig):
         save_group_times: bool = False,
     ) -> PanopticaResult:
         assert isinstance(label_group, LabelGroup)
-        if self.__save_group_times:
+        if self.__save_group_times or save_group_times:
             start_time = perf_counter()
 
         prediction_arr_grouped = label_group(processing_pair.prediction_arr)
@@ -225,7 +225,7 @@ class Panoptica_Evaluator(SupportsConfig):
             verbose=True if verbose is None else verbose,
             verbose_calc=self.__verbose if verbose is None else verbose,
         )
-        if save_group_times:
+        if self.__save_group_times or save_group_times:
             duration = perf_counter() - start_time
             result.computation_time = duration
         return result

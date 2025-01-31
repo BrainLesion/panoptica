@@ -15,10 +15,16 @@ except Exception as e:
 class ValueSummary:
     def __init__(self, value_list: list[float]) -> None:
         self.__value_list = value_list
-        self.__avg = float(np.average(value_list))
-        self.__std = float(np.std(value_list))
-        self.__min = min(value_list)
-        self.__max = max(value_list)
+        if len(value_list) == 0:
+            self.__avg = np.nan
+            self.__std = np.nan
+            self.__min = np.nan
+            self.__max = np.nan
+        else:
+            self.__avg = float(np.average(value_list))
+            self.__std = float(np.std(value_list))
+            self.__min = min(value_list)
+            self.__max = max(value_list)
 
     @property
     def values(self) -> list[float]:
@@ -39,6 +45,9 @@ class ValueSummary:
     @property
     def max(self) -> float:
         return self.__max
+
+    def __repr__(self):
+        return str(self)
 
     def __str__(self):
         return f"[{round(self.min, 3)}, {round(self.max, 3)}], avg = {round(self.avg, 3)} +- {round(self.std, 3)}"
@@ -180,6 +189,30 @@ class Panoptica_Statistic:
             g: {m: self.get(g, m)[sidx] for m in self.__metricnames}
             for g in self.__groupnames
         }
+
+    def get_one_metric(self, metricname: str):
+        """Gets the dictionary mapping the group to the metrics specified
+
+        Args:
+            metricname (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        self._assertmetric(metricname)
+        return {g: self.get(g, metricname) for g in self.__groupnames}
+
+    def get_one_group(self, groupname: str):
+        """Gets the dictionary mapping metric to values for ONE group
+
+        Args:
+            groupname (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        self._assertgroup(groupname)
+        return {m: self.get(groupname, m) for m in self.__metricnames}
 
     def get_across_groups(self, metric) -> list[float]:
         """Given metric, gives list of all values (even across groups!) Treat with care!
