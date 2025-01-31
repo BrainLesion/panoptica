@@ -9,7 +9,7 @@ enable = true
 name = "panoptica"
 version = "0.0.0"
 description = "Panoptic Quality (PQ) computation for binary masks."
-authors = ["Florian Kofler <florian.kofler@tum.de>"]
+authors = ["Hendrik Möller <hendrik.moeller@tum.de>", "Florian Kofler <florian.kofler@tum.de>"]
 repository = "https://github.com/BrainLesion/panoptica"
 homepage = "https://github.com/BrainLesion/panoptica"
 documentation = "https://panoptica.readthedocs.io/"
@@ -27,13 +27,13 @@ scipy = "^1.7.0"
 rich = "^13.6.0"
 scikit-image = "^0.22.0"
 "ruamel.yaml" = "^0.18.6"
+plotly = "^5.16.1"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=8.1.1"
 coverage = ">=7.0.1"
 pytest-mock = "^3.6.0"
 pandas = "^2.1.0"
-plotly = "^5.16.1"
 joblib = "^1.3.2"
 future = "^0.18.3"
 flake8 = ">=4.0.1"
