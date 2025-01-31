@@ -266,7 +266,10 @@ class PanopticaResult(object):
             was_calculated = False
 
             if m in self._global_metrics and arrays_present:
-                default_value = self._calc_global_bin_metric(m, pred_binary, ref_binary, do_binarize=False)
+                combi = pred_binary + ref_binary
+                combi[combi != 2] = 0
+                combi[combi != 0] = 1
+                is_edge_case = combi.sum() == 0
                 if is_edge_case:
                     is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
                         metric=m,
