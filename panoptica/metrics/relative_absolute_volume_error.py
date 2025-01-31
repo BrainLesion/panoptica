@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def _compute_instance_relative_volume_difference(
+def _compute_instance_relative_volume_error(
     ref_labels: np.ndarray,
     pred_labels: np.ndarray,
     ref_instance_idx: int | None = None,
@@ -26,19 +26,19 @@ def _compute_instance_relative_volume_difference(
         indicate better overlap and similarity between instances.
     """
     if ref_instance_idx is None and pred_instance_idx is None:
-        return _compute_relative_volume_difference(
+        return _compute_relative_volume_error(
             reference=ref_labels,
             prediction=pred_labels,
         )
     ref_instance_mask = ref_labels == ref_instance_idx
     pred_instance_mask = pred_labels == pred_instance_idx
-    return _compute_relative_volume_difference(
+    return _compute_relative_volume_error(
         reference=ref_instance_mask,
         prediction=pred_instance_mask,
     )
 
 
-def _compute_relative_volume_difference(
+def _compute_relative_volume_error(
     reference: np.ndarray,
     prediction: np.ndarray,
     *args,
@@ -64,6 +64,6 @@ def _compute_relative_volume_difference(
     if reference_mask == 0 and prediction_mask == 0:
         return 0.0
 
-    # Calculate Dice coefficient
-    rve = (prediction_mask - reference_mask) / reference_mask
+    # Calculate metric
+    rve = abs((prediction_mask - reference_mask) / reference_mask)
     return rve

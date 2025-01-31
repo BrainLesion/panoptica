@@ -10,6 +10,7 @@ from panoptica.metrics import (
     _compute_instance_volumetric_dice,
     _compute_instance_iou,
     _compute_instance_relative_volume_difference,
+    _compute_instance_relative_volume_error,
     # _compute_instance_segmentation_tendency,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
@@ -158,6 +159,12 @@ class Metric(_Enum_Compare):
         "Relative Volume Difference",
         True,
         _compute_instance_relative_volume_difference,
+    )
+    RVAE = _Metric(
+        "RVAE",
+        "Relative Volume Absolute Error",
+        True,
+        _compute_instance_relative_volume_error,
     )
     # ST = _Metric("ST", False, _compute_instance_segmentation_tendency)
 

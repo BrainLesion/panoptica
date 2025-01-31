@@ -254,6 +254,52 @@ class Test_clDSC(unittest.TestCase):
         self.assertEqual(st, 1.0)
 
 
+class Test_RVAE(unittest.TestCase):
+    # case_simple_nooverlap
+    # case_simple_nooverlap
+    # case_simple_overpredicted
+    # case_simple_underpredicted
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_rvae_case_simple_identical(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        rvd = Metric.RVAE(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        self.assertEqual(rvd, 0.0)
+
+    def test_rvae_case_simple_identical_idx(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(rvd, 0.0)
+
+    def test_rvae_case_simple_nooverlap(self):
+
+        pred_arr, ref_arr = case_simple_nooverlap()
+        rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(rvd, 0.4)
+
+    def test_rvae_case_simple_overpredicted(self):
+
+        pred_arr, ref_arr = case_simple_overpredicted()
+        rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(rvd, 1.5)
+
+    def test_rvae_case_simple_underpredicted(self):
+
+        pred_arr, ref_arr = case_simple_underpredicted()
+        rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(rvd, 0.6)
+
+
 # class Test_ST(unittest.TestCase):
 #    def setUp(self) -> None:
 #        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"

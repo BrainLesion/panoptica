@@ -226,6 +226,23 @@ class PanopticaResult(object):
             long_name="Segmentation Quality Relative Volume Difference Standard Deviation",
         )
         # endregion
+        #
+        # region RVAE
+        self.sq_rvae: float
+        self._add_metric(
+            "sq_rvae",
+            MetricType.INSTANCE,
+            sq_rvae,
+            long_name="Segmentation Quality Relative Volume Absolute Error",
+        )
+        self.sq_rvae_std: float
+        self._add_metric(
+            "sq_rvae_std",
+            MetricType.INSTANCE,
+            sq_rvae_std,
+            long_name="Segmentation Quality Relative Volume Absolute Error Standard Deviation",
+        )
+        # endregion
 
         # region Global
         # Just for autocomplete
@@ -234,6 +251,7 @@ class PanopticaResult(object):
         self.global_bin_cldsc: int
         self.global_bin_assd: int
         self.global_bin_rvd: int
+        self.global_bin_rvae: int
         # endregion
 
         ##################
@@ -664,6 +682,14 @@ def sq_rvd(res: PanopticaResult):
 
 def sq_rvd_std(res: PanopticaResult):
     return res.get_list_metric(Metric.RVD, mode=MetricMode.STD)
+
+
+def sq_rvae(res: PanopticaResult):
+    return res.get_list_metric(Metric.RVAE, mode=MetricMode.AVG)
+
+
+def sq_rvae_std(res: PanopticaResult):
+    return res.get_list_metric(Metric.RVAE, mode=MetricMode.STD)
 
 
 # endregion

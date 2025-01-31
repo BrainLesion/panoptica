@@ -90,7 +90,8 @@ class Test_Panoptica_Results(unittest.TestCase):
                 chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
             )
 
-        power_set = powerset([Metric.DSC, Metric.IOU, Metric.ASSD])
+        metrics_list = [m for m in Metric]
+        power_set = powerset(metrics_list)  # [Metric.DSC, Metric.IOU, Metric.ASSD])
         for m in power_set[1:]:
             list_metrics: dict = {}
             for me in m:
@@ -135,3 +136,21 @@ class Test_Panoptica_Results(unittest.TestCase):
                     c.sq_assd
                 with self.assertRaises(MetricCouldNotBeComputedException):
                     c.sq_assd_std
+            #
+            if Metric.RVD in list_metrics:
+                self.assertEqual(c.sq_rvd, 1.0)
+                self.assertEqual(c.sq_rvd_std, 0.0)
+            else:
+                with self.assertRaises(MetricCouldNotBeComputedException):
+                    c.sq_rvd
+                with self.assertRaises(MetricCouldNotBeComputedException):
+                    c.sq_rvd_std
+            #
+            if Metric.RVAE in list_metrics:
+                self.assertEqual(c.sq_rvae, 1.0)
+                self.assertEqual(c.sq_rvae_std, 0.0)
+            else:
+                with self.assertRaises(MetricCouldNotBeComputedException):
+                    c.sq_rvae
+                with self.assertRaises(MetricCouldNotBeComputedException):
+                    c.sq_rvae_std

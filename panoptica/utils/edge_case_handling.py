@@ -195,7 +195,9 @@ class EdgeCaseHandler(SupportsConfig):
                 default_result=EdgeCaseResult.INF,
             ),
             Metric.RVD: MetricZeroTPEdgeCaseHandling(
-                no_instances_result=EdgeCaseResult.NAN,
+                default_result=EdgeCaseResult.NAN,
+            ),
+            Metric.RVAE: MetricZeroTPEdgeCaseHandling(
                 default_result=EdgeCaseResult.NAN,
             ),
         },
