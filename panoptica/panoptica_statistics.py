@@ -40,6 +40,9 @@ class ValueSummary:
     def max(self) -> float:
         return self.__max
 
+    def __str__(self):
+        return f"[{round(self.min, 3)}, {round(self.max, 3)}], avg = {round(self.avg, 3)} +- {round(self.std, 3)}"
+
 
 class Panoptica_Statistic:
 
@@ -255,7 +258,6 @@ class Panoptica_Statistic:
         Returns:
             _type_: _description_
         """
-        orientation = "h" if horizontal else "v"
         data_plot = {
             g: np.asarray(self.get(g, metric, remove_nones=True))
             for g in self.__groupnames
@@ -269,7 +271,7 @@ class Panoptica_Statistic:
             )
         return plot_box(
             data=data_plot,
-            orientation=orientation,
+            orientation_horizontal=horizontal,
             name_method=name_method,
             name_metric=metric,
             sort=sort,
@@ -298,6 +300,8 @@ def make_curve_over_setups(
     figure_title: str = "",
     width: int = 850,
     height: int = 1200,
+    xaxis_title: str | None = None,
+    yaxis_title: str | None = None,
     manual_metric_range: None | tuple[float, float] = None,
 ):
     # TODO make this flexibel whether the second grouping are the groups or metrics?
@@ -373,8 +377,10 @@ def make_curve_over_setups(
         width=width,
         height=height,
         showlegend=True,
-        yaxis_title=metric,
-        xaxis_title="Different setups and groups",
+        yaxis_title=metric if yaxis_title is None else yaxis_title,
+        xaxis_title=(
+            "Different setups and groups" if xaxis_title is None else xaxis_title
+        ),
         font={"family": "Arial"},
         title=figure_title,
     )
@@ -394,7 +400,7 @@ def _flatten_extend(matrix):
 def plot_box(
     data: dict[str, np.ndarray],
     sort=True,
-    orientation="h",
+    orientation_horizontal: bool = True,  # "h"
     name_method: str = "Structure",
     name_metric: str = "Dice-Score",
     figure_title: str = "",
@@ -402,8 +408,9 @@ def plot_box(
     height=1200,
     manual_metric_range: None | tuple[float, float] = None,
 ):
-    xaxis_title = name_metric if orientation == "h" else name_method
-    yaxis_title = name_metric if orientation != "h" else name_method
+    xaxis_title = name_metric if orientation_horizontal else name_method
+    yaxis_title = name_metric if not orientation_horizontal else name_method
+    orientation = "h" if orientation_horizontal else "v"
 
     data = {e.replace("_", " "): v for e, v in data.items()}
     df_data = pd.DataFrame(
@@ -416,10 +423,10 @@ def plot_box(
         df_by_spec_count = df_data.groupby(name_method).mean()
         df_by_spec_count = dict(df_by_spec_count[name_metric].items())
         df_data["mean"] = df_data[name_method].apply(
-            lambda x: df_by_spec_count[x] * (1 if orientation == "h" else -1)
+            lambda x: df_by_spec_count[x] * (1 if orientation_horizontal else -1)
         )
         df_data = df_data.sort_values(by="mean")
-    if orientation == "v":
+    if not orientation_horizontal:
         fig = px.strip(
             df_data,
             x=name_method,
