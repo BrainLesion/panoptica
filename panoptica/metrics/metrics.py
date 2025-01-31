@@ -72,7 +72,9 @@ class _Metric:
             reference_arr = reference_arr.copy() == ref_instance_idx
             if isinstance(pred_instance_idx, int):
                 pred_instance_idx = [pred_instance_idx]
-            prediction_arr = np.isin(prediction_arr.copy(), pred_instance_idx)  # type:ignore
+            prediction_arr = np.isin(
+                prediction_arr.copy(), pred_instance_idx
+            )  # type:ignore
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
@@ -106,7 +108,9 @@ class _Metric:
         """
         return not self.decreasing
 
-    def score_beats_threshold(self, matching_score: float, matching_threshold: float) -> bool:
+    def score_beats_threshold(
+        self, matching_score: float, matching_threshold: float
+    ) -> bool:
         """Determines if a matching score meets a specified threshold.
 
         Args:
@@ -117,7 +121,9 @@ class _Metric:
             bool: True if the score meets the threshold, taking into account the
             metric's preferred direction.
         """
-        return (self.increasing and matching_score >= matching_threshold) or (self.decreasing and matching_score <= matching_threshold)
+        return (self.increasing and matching_score >= matching_threshold) or (
+            self.decreasing and matching_score <= matching_threshold
+        )
 
 
 class DirectValueMeta(EnumMeta):
@@ -184,7 +190,9 @@ class Metric(_Enum_Compare):
             **kwargs,
         )
 
-    def score_beats_threshold(self, matching_score: float, matching_threshold: float) -> bool:
+    def score_beats_threshold(
+        self, matching_score: float, matching_threshold: float
+    ) -> bool:
         """Calculates whether a score beats a specified threshold
 
         Args:
@@ -194,7 +202,9 @@ class Metric(_Enum_Compare):
         Returns:
             bool: True if the matching_score beats the threshold, False otherwise.
         """
-        return (self.increasing and matching_score >= matching_threshold) or (self.decreasing and matching_score <= matching_threshold)
+        return (self.increasing and matching_score >= matching_threshold) or (
+            self.decreasing and matching_score <= matching_threshold
+        )
 
     @property
     def name(self):
@@ -293,7 +303,9 @@ class Evaluation_Metric:
         # ERROR
         if self._error:
             if self._error_obj is None:
-                self._error_obj = MetricCouldNotBeComputedException(f"Metric {self.id} requested, but could not be computed")
+                self._error_obj = MetricCouldNotBeComputedException(
+                    f"Metric {self.id} requested, but could not be computed"
+                )
             raise self._error_obj
         # Already calculated?
         if self._was_calculated:
@@ -301,8 +313,12 @@ class Evaluation_Metric:
 
         # Calculate it
         try:
-            assert not self._was_calculated, f"Metric {self.id} was called to compute, but is set to have been already calculated"
-            assert self._calc_func is not None, f"Metric {self.id} was called to compute, but has no calculation function set"
+            assert (
+                not self._was_calculated
+            ), f"Metric {self.id} was called to compute, but is set to have been already calculated"
+            assert (
+                self._calc_func is not None
+            ), f"Metric {self.id} was called to compute, but has no calculation function set"
             value = self._calc_func(result_obj)
         except MetricCouldNotBeComputedException as e:
             value = e
@@ -345,22 +361,38 @@ class Evaluation_List_Metric:
             self.MIN: None | float = edge_case_result
             self.MAX: None | float = edge_case_result
         else:
-            self.AVG = None if self.ALL is None or len(self.ALL) == 0 else np.average(self.ALL)
-            self.SUM = None if self.ALL is None or len(self.ALL) == 0 else np.sum(self.ALL)
-            self.MIN = None if self.ALL is None or len(self.ALL) == 0 else np.min(self.ALL)
-            self.MAX = None if self.ALL is None or len(self.ALL) == 0 else np.max(self.ALL)
+            self.AVG = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.average(self.ALL)
+            )
+            self.SUM = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.sum(self.ALL)
+            )
+            self.MIN = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.min(self.ALL)
+            )
+            self.MAX = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.max(self.ALL)
+            )
 
-        self.STD = None if self.ALL is None else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+        self.STD = (
+            None
+            if self.ALL is None
+            else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+        )
 
     def __getitem__(self, mode: MetricMode | str):
         if self.error:
-            raise MetricCouldNotBeComputedException(f"Metric {self.id} has not been calculated, add it to your eval_metrics")
+            raise MetricCouldNotBeComputedException(
+                f"Metric {self.id} has not been calculated, add it to your eval_metrics"
+            )
         if isinstance(mode, MetricMode):
             mode = mode.name
         if hasattr(self, mode):
             return getattr(self, mode)
         else:
-            raise MetricCouldNotBeComputedException(f"List_Metric {self.id} does not contain {mode} member")
+            raise MetricCouldNotBeComputedException(
+                f"List_Metric {self.id} does not contain {mode} member"
+            )
 
 
 if __name__ == "__main__":
