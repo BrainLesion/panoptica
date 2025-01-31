@@ -8,6 +8,7 @@ import csv
 import os
 import atexit
 import warnings
+import tempfile
 
 # Set start method based on the operating system
 try:
@@ -67,9 +68,7 @@ class Panoptica_Aggregator:
         if isinstance(output_file, str):
             output_file = Path(output_file)
         # uses tsv
-        assert (
-            output_file.parent.exists()
-        ), f"Directory {str(output_file.parent)} does not exist"
+        assert output_file.parent.exists(), f"Directory {str(output_file.parent)} does not exist"
 
         out_file_path = str(output_file)
 
@@ -83,19 +82,16 @@ class Panoptica_Aggregator:
         else:
             out_file_path += ".tsv"  # add extension
 
-        out_buffer_file: Path = Path(out_file_path).parent.joinpath(
-            "panoptica_aggregator_tmp.tsv"
-        )
-        self.__output_buffer_file = out_buffer_file
+        # buffer_file = tempfile.NamedTemporaryFile()
+        # out_buffer_file: Path = Path(out_file_path).parent.joinpath("panoptica_aggregator_tmp.tsv")
+        # self.tmpfile =
+        self.__output_buffer_file = tempfile.NamedTemporaryFile(delete=False).name  # out_buffer_file
+        # print(self.__output_buffer_file)
 
-        Path(out_file_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(out_file_path).parent.mkdir(parents=False, exist_ok=True)
         self.__output_file = out_file_path
 
-        header = ["subject_name"] + [
-            f"{g}-{m}"
-            for g in self.__class_group_names
-            for m in self.__evaluation_metrics
-        ]
+        header = ["subject_name"] + [f"{g}-{m}" for g in self.__class_group_names for m in self.__evaluation_metrics]
         header_hash = hash("+".join(header))
 
         if not output_file.exists():
@@ -109,13 +105,7 @@ class Panoptica_Aggregator:
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-                assert header_hash == hash(
-                    "+".join(header_list)
-                ), "Hash of header not the same! You are using a different setup!"
-
-        if out_buffer_file.exists():
-            os.remove(out_buffer_file)
-        open(out_buffer_file, "a").close()
+                assert header_hash == hash("+".join(header_list)), "Hash of header not the same! You are using a different setup!"
 
         if continue_file:
             with inevalfilelock:
@@ -127,7 +117,7 @@ class Panoptica_Aggregator:
 
     def __exist_handler(self):
         """Handles cleanup upon program exit by removing the temporary output buffer file."""
-        if self.__output_buffer_file is not None and self.__output_buffer_file.exists():
+        if Path(self.__output_buffer_file).exists():
             os.remove(str(self.__output_buffer_file))
 
     def make_statistic(self) -> Panoptica_Statistic:
