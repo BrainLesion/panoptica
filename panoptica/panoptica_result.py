@@ -261,16 +261,12 @@ class PanopticaResult(object):
                     num_ref_instances=self.num_ref_instances,
                 )
                 self._list_metrics[m] = Evaluation_List_Metric(m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result)
-
-            # Set Global Binary Metric
+            # even if not available, set the global vars
             default_value = None
             was_calculated = False
 
             if m in self._global_metrics and arrays_present:
-                combi = pred_binary + ref_binary
-                combi[combi != 2] = 0
-                combi[combi != 0] = 1
-                is_edge_case = combi.sum() == 0  # no overlap
+                default_value = self._calc_global_bin_metric(m, pred_binary, ref_binary, do_binarize=False)
                 if is_edge_case:
                     is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
                         metric=m,
@@ -326,12 +322,12 @@ class PanopticaResult(object):
             pred_binary = prediction_arr
             ref_binary = reference_arr
 
-        # prediction_empty = pred_binary.sum() == 0
-        # reference_empty = ref_binary.sum() == 0
-        # if prediction_empty or reference_empty:
-        #    is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, int(prediction_empty), int(reference_empty))
-        #    if is_edgecase:
-        #        return result
+        prediction_empty = pred_binary.sum() == 0
+        reference_empty = ref_binary.sum() == 0
+        if prediction_empty or reference_empty:
+            is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, int(prediction_empty), int(reference_empty))
+            if is_edgecase:
+                return result
 
         return metric(
             reference_arr=ref_binary,
