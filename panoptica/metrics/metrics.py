@@ -11,6 +11,9 @@ from panoptica.metrics import (
     _compute_instance_iou,
     _compute_instance_relative_volume_difference,
     _compute_instance_relative_volume_error,
+    _compute_instance_center_distance,
+    _compute_instance_hausdorff_distance,
+    _compute_instance_hausdorff_distance95,
     # _compute_instance_segmentation_tendency,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
@@ -166,7 +169,24 @@ class Metric(_Enum_Compare):
         True,
         _compute_instance_relative_volume_error,
     )
-    # ST = _Metric("ST", False, _compute_instance_segmentation_tendency)
+    CEDI = _Metric(
+        "CEDI",
+        "Center Distance",
+        True,
+        _compute_instance_center_distance,
+    )
+    HD = _Metric(
+        "HD",
+        "Hausdorff Distance",
+        True,
+        _compute_instance_hausdorff_distance,
+    )
+    HD95 = _Metric(
+        "HD95",
+        "Hausdorff Distance 95",
+        True,
+        _compute_instance_hausdorff_distance95,
+    )
 
     def __call__(
         self,
