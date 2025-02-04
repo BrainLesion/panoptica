@@ -303,7 +303,10 @@ def panoptic_evaluate(
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
-        processing_pair = instance_approximator.approximate_instances(processing_pair)
+        processing_pair = instance_approximator.approximate_instances(
+            processing_pair,
+            **kwargs,
+        )
         if log_times:
             print(f"-- Approximation took {perf_counter() - start} seconds")
 
@@ -328,6 +331,7 @@ def panoptic_evaluate(
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
+            **kwargs,
         )
         if log_times:
             print(f"-- Matching took {perf_counter() - start} seconds")
@@ -353,6 +357,7 @@ def panoptic_evaluate(
             eval_metrics=instance_metrics,
             decision_metric=decision_metric,
             decision_threshold=decision_threshold,
+            **kwargs,
         )
         if log_times:
             print(f"-- Instance Evaluation took {perf_counter() - start} seconds")
