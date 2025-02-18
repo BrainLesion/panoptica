@@ -13,75 +13,14 @@ from panoptica.panoptica_result import (
     PanopticaResult,
 )
 from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
-
-
-def case_simple_identical():
-    # trivial 100% overlap
-    prediction_arr = np.array(
-        [
-            [0, 1, 1, 1],
-            [0, 1, 1, 1],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-        ]
-    )
-    return prediction_arr, prediction_arr.copy()
-
-
-def case_simple_nooverlap():
-    # binary opposites
-    prediction_arr = np.array(
-        [
-            [0, 1, 0, 1],
-            [0, 1, 0, 1],
-            [0, 1, 0, 0],
-            [0, 1, 0, 0],
-        ]
-    )
-    reference_arr = 1 - prediction_arr
-    return prediction_arr, reference_arr
-
-
-def case_simple_overpredicted():
-    # reference is real subset of prediction
-    prediction_arr = np.array(
-        [
-            [0, 0, 1, 0],
-            [1, 1, 1, 0],
-            [1, 1, 1, 1],
-            [0, 1, 1, 0],
-        ]
-    )
-    reference_arr = np.array(
-        [
-            [0, 0, 0, 0],
-            [0, 1, 1, 0],
-            [0, 1, 1, 0],
-            [0, 0, 0, 0],
-        ]
-    )
-    return prediction_arr, reference_arr
-
-
-def case_simple_underpredicted():
-    # prediction is real subset of reference
-    prediction_arr = np.array(
-        [
-            [0, 0, 0, 0],
-            [0, 1, 1, 0],
-            [0, 1, 1, 0],
-            [0, 0, 0, 0],
-        ]
-    )
-    reference_arr = np.array(
-        [
-            [0, 0, 1, 0],
-            [1, 1, 1, 0],
-            [1, 1, 1, 1],
-            [0, 1, 1, 0],
-        ]
-    )
-    return prediction_arr, reference_arr
+from unit_tests.unit_test_utils import (
+    case_simple_identical,
+    case_simple_nooverlap,
+    case_simple_overpredicted,
+    case_simple_shifted,
+    case_simple_underpredicted,
+    case_simple_overlap_but_large_discrepancy,
+)
 
 
 class Test_RVD(unittest.TestCase):
@@ -298,6 +237,127 @@ class Test_RVAE(unittest.TestCase):
         pred_arr, ref_arr = case_simple_underpredicted()
         rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, 0.6)
+
+
+class Test_CEDI(unittest.TestCase):
+    # case_simple_nooverlap
+    # case_simple_nooverlap
+    # case_simple_overpredicted
+    # case_simple_underpredicted
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_cedi_case_simple_identical(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.CEDI(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        self.assertEqual(mv, 0.0)
+
+    def test_cedi_case_simple_identical_idx(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 0.0)
+
+    def test_cedi_case_simple_shifted(self):
+
+        pred_arr, ref_arr = case_simple_shifted()
+        mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+
+    def test_cedi_case_simple_overpredicted(self):
+
+        pred_arr, ref_arr = case_simple_overpredicted()
+        mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertAlmostEqual(mv, 0.22360679774997896)
+
+    def test_cedi_case_simple_underpredicted(self):
+
+        pred_arr, ref_arr = case_simple_underpredicted()
+        mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 0.22360679774997896)
+
+
+class Test_HD(unittest.TestCase):
+    # case_simple_nooverlap
+    # case_simple_nooverlap
+    # case_simple_overpredicted
+    # case_simple_underpredicted
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_hd_case_simple_identical(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.HD(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        self.assertEqual(mv, 0.0)
+        #
+        mv = Metric.HD95(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        self.assertEqual(mv, 0.0)
+
+    def test_hd_case_simple_identical_idx(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 0.0)
+        #
+        mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 0.0)
+
+    def test_hd_case_simple_shifted(self):
+
+        pred_arr, ref_arr = case_simple_shifted()
+        mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+        #
+        mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+
+    def test_hd_case_simple_overpredicted(self):
+
+        pred_arr, ref_arr = case_simple_overpredicted()
+        mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+        #
+        mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+
+    def test_hd_case_simple_underpredicted(self):
+
+        pred_arr, ref_arr = case_simple_underpredicted()
+        mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+        #
+        mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+
+    def test_hd_case_overlap_but_large_discrepancy(self):
+
+        pred_arr, ref_arr = case_simple_overlap_but_large_discrepancy()
+        mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertAlmostEqual(mv, 2.82842712474619)
+        #
+        mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertAlmostEqual(mv, 2.473011636398349)
 
 
 # class Test_ST(unittest.TestCase):

@@ -243,15 +243,66 @@ class PanopticaResult(object):
             long_name="Segmentation Quality Relative Volume Absolute Error Standard Deviation",
         )
         # endregion
+        #
+        # region CEDI
+        self.sq_cedi: float
+        self._add_metric(
+            "sq_cedi",
+            MetricType.INSTANCE,
+            sq_cedi,
+            long_name="Segmentation Quality Center Distance",
+        )
+        self.sq_cedi_std: float
+        self._add_metric(
+            "sq_cedi_std",
+            MetricType.INSTANCE,
+            sq_cedi_std,
+            long_name="Segmentation Quality Center Distance Standard Deviation",
+        )
+        # endregion
+        #
+        # region HD
+        self.sq_hd: float
+        self._add_metric(
+            "sq_hd",
+            MetricType.INSTANCE,
+            sq_hd,
+            long_name="Segmentation Quality Hausdorff Distance",
+        )
+        self.sq_hd_std: float
+        self._add_metric(
+            "sq_hd_std",
+            MetricType.INSTANCE,
+            sq_hd_std,
+            long_name="Segmentation Quality Hausdorff Distance Standard Deviation",
+        )
+        self.sq_hd95: float
+        self._add_metric(
+            "sq_hd95",
+            MetricType.INSTANCE,
+            sq_hd95,
+            long_name="Segmentation Quality Hausdorff Distance 95",
+        )
+        self.sq_hd95_std: float
+        self._add_metric(
+            "sq_hd95_std",
+            MetricType.INSTANCE,
+            sq_hd95_std,
+            long_name="Segmentation Quality Hausdorff Distance 95 Standard Deviation",
+        )
+        # endregion
 
         # region Global
         # Just for autocomplete
-        self.global_bin_dsc: int
-        self.global_bin_iou: int
-        self.global_bin_cldsc: int
-        self.global_bin_assd: int
-        self.global_bin_rvd: int
-        self.global_bin_rvae: int
+        self.global_bin_dsc: float
+        self.global_bin_iou: float
+        self.global_bin_cldsc: float
+        self.global_bin_assd: float
+        self.global_bin_rvd: float
+        self.global_bin_rvae: float
+        self.global_bin_cedi: float
+        self.global_bin_hd: float
+        self.global_bin_hd95: float
         # endregion
 
         ##################
@@ -690,6 +741,38 @@ def sq_rvae(res: PanopticaResult):
 
 def sq_rvae_std(res: PanopticaResult):
     return res.get_list_metric(Metric.RVAE, mode=MetricMode.STD)
+
+
+# endregion
+
+
+# region CEDI
+def sq_cedi(res: PanopticaResult):
+    return res.get_list_metric(Metric.CEDI, mode=MetricMode.AVG)
+
+
+def sq_cedi_std(res: PanopticaResult):
+    return res.get_list_metric(Metric.CEDI, mode=MetricMode.STD)
+
+
+# endregion
+
+
+# region HD
+def sq_hd(res: PanopticaResult):
+    return res.get_list_metric(Metric.HD, mode=MetricMode.AVG)
+
+
+def sq_hd_std(res: PanopticaResult):
+    return res.get_list_metric(Metric.HD, mode=MetricMode.STD)
+
+
+def sq_hd95(res: PanopticaResult):
+    return res.get_list_metric(Metric.HD95, mode=MetricMode.AVG)
+
+
+def sq_hd95_std(res: PanopticaResult):
+    return res.get_list_metric(Metric.HD95, mode=MetricMode.STD)
 
 
 # endregion

@@ -60,6 +60,12 @@ class Panoptica_Statistic:
         subj_names: list[str],
         value_dict: dict[str, dict[str, list[float]]],
     ) -> None:
+        """_summary_
+
+        Args:
+            subj_names (list[str]): List of subject names in the same order as the list of values passed in value_dict
+            value_dict (dict[str, dict[str, list[float]]]): Mapping Group to Metric to list of values
+        """
         self.__subj_names = subj_names
         self.__value_dict = value_dict
 
