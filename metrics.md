@@ -1,12 +1,16 @@
 # Metrics
 
-A details list of all metrics currently supported by Panoptica.
-- Dice (DSC)
-- Intersection over Union (IoU)
-- Centerline Dice (clDSC)
-- Average Symmetric Surface Distance (ASSD)
-- Relative Volume Difference (RVD)
-- Relative Absolute Volume Error (RVAE)
+A list of all metrics currently supported by Panoptica.
+- DSC: Dice Similarity Coefficient
+- IoU: Intersection over Union
+- clDSC: Centerline Dice
+- ASSD: Average Symmetric Surface Distance
+- RVD: Relative Volume Difference
+- RVAE: Relative Absolute Volume Error
+- HD: Hausdorff Distance
+- HD95: Hausdorff Distance 95 Percentile
+- CEDI: Center Distance
+
 
 For instance-wise metrics:
 - True Positives (tp)
