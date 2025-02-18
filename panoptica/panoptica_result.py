@@ -742,6 +742,7 @@ def sq_rvae(res: PanopticaResult):
 def sq_rvae_std(res: PanopticaResult):
     return res.get_list_metric(Metric.RVAE, mode=MetricMode.STD)
 
+
 # endregion
 
 
