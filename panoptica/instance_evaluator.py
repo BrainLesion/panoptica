@@ -25,7 +25,9 @@ def evaluate_matched_instance(
 
     """
     if decision_metric is not None:
-        assert decision_metric.name in [v.name for v in eval_metrics], "decision metric not contained in eval_metrics"
+        assert decision_metric.name in [
+            v.name for v in eval_metrics
+        ], "decision metric not contained in eval_metrics"
         assert decision_threshold is not None, "decision metric set but no threshold"
     # Initialize variables for True Positives (tp)
     tp = len(matched_instance_pair.matched_instances)
@@ -38,7 +40,8 @@ def evaluate_matched_instance(
     ref_matched_labels = matched_instance_pair.matched_instances
 
     metric_dicts: list[dict[Metric, float]] = [
-        _evaluate_instance(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels
+        _evaluate_instance(reference_arr, prediction_arr, ref_idx, eval_metrics)
+        for ref_idx in ref_matched_labels
     ]
     # instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
     # with Pool() as pool:
@@ -49,7 +52,10 @@ def evaluate_matched_instance(
     # TODO if instance matcher already gives matching metric, adapt here!
     for metric_dict in metric_dicts:
         if decision_metric is None or (
-            decision_threshold is not None and decision_metric.score_beats_threshold(metric_dict[decision_metric], decision_threshold)
+            decision_threshold is not None
+            and decision_metric.score_beats_threshold(
+                metric_dict[decision_metric], decision_threshold
+            )
         ):
             for k, v in metric_dict.items():
                 score_dict[k].append(v)
