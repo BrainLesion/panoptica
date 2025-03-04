@@ -39,16 +39,15 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
-    instance_pairs = [
-        (reference_arr, prediction_arr, ref_idx, eval_metrics)
+    metric_dicts: list[dict[Metric, float]] = [
+        _evaluate_instance(reference_arr, prediction_arr, ref_idx, eval_metrics)
         for ref_idx in ref_matched_labels
     ]
-
-    # metric_dicts: list[dict[Metric, float]] = [_evaluate_instance(*i) for i in instance_pairs]
-    with Pool() as pool:
-        metric_dicts: list[dict[Metric, float]] = pool.starmap(
-            _evaluate_instance, instance_pairs
-        )
+    # instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
+    # with Pool() as pool:
+    #    metric_dicts: list[dict[Metric, float]] = pool.starmap(
+    #        _evaluate_instance, instance_pairs
+    #    )
 
     # TODO if instance matcher already gives matching metric, adapt here!
     for metric_dict in metric_dicts:

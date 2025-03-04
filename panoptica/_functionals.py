@@ -56,20 +56,22 @@ def _calc_matching_metric_of_overlapping_labels(
     Returns:
         list[tuple[float, tuple[int, int]]]: List of pairs in style: (iou, (ref_label, pred_label))
     """
-    instance_pairs = [
-        (reference_arr, prediction_arr, i[0], i[1])
-        for i in _calc_overlapping_labels(
-            prediction_arr=prediction_arr,
-            reference_arr=reference_arr,
-            ref_labels=ref_labels,
-        )
-    ]
-    with Pool() as pool:
-        mm_values = pool.starmap(matching_metric.value, instance_pairs)
-
+    overlapping_labels = _calc_overlapping_labels(
+        prediction_arr=prediction_arr,
+        reference_arr=reference_arr,
+        ref_labels=ref_labels,
+    )
+    # instance_pairs = [
+    #    (reference_arr, prediction_arr, i[0], i[1])
+    #    for i in overlapping_labels
+    # ]
+    ## with Pool() as pool:
+    ##    mm_values = pool.starmap(matching_metric.value, instance_pairs)
+    # mm_values = [matching_metric.value(*i) for i in instance_pairs]
+    # mm_pairs = [(i, (instance_pairs[idx][2], instance_pairs[idx][3])) for idx, i in enumerate(mm_values)]
     mm_pairs = [
-        (i, (instance_pairs[idx][2], instance_pairs[idx][3]))
-        for idx, i in enumerate(mm_values)
+        (matching_metric.value(reference_arr, prediction_arr, i[0], i[1]), (i[0], i[1]))
+        for i in overlapping_labels
     ]
     mm_pairs = sorted(
         mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
