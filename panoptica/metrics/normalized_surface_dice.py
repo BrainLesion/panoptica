@@ -12,9 +12,9 @@ def _compute_normalized_surface_dice(
     *args,
 ) -> float:
     """
-    Computes the normalized surface dice between two instances. 
+    Computes the normalized surface dice between two instances.
     Copied from https://github.com/mlcommons/GaNDLF/blob/641e6c75e698ce2b52a2acf12bbdcb819804c3e2/GANDLF/metrics/segmentation.py#L142
-    
+
     This implementation differs from the official surface dice implementation! These two are not comparable!!!!!
     The normalized surface dice is symmetric, so it should not matter whether a or b is the reference image
     This implementation natively supports 2D and 3D images.
