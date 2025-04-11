@@ -360,6 +360,34 @@ class Test_HD(unittest.TestCase):
         self.assertAlmostEqual(mv, 2.473011636398349)
 
 
+class Test_NSD(unittest.TestCase):
+    # case_simple_nooverlap
+    # case_simple_nooverlap
+    # case_simple_overpredicted
+    # case_simple_underpredicted
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_hd_case_simple_identical(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.NSD(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        self.assertEqual(mv, 1.0)
+
+    def test_hd_case_simple_identical_idx(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+
+
 # class Test_ST(unittest.TestCase):
 #    def setUp(self) -> None:
 #        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
