@@ -15,6 +15,8 @@ from panoptica.metrics import (
     _compute_instance_hausdorff_distance,
     _compute_instance_hausdorff_distance95,
     # _compute_instance_segmentation_tendency,
+    _compute_instance_normalized_surface_dice,
+    _compute_normalized_surface_dice,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -186,6 +188,12 @@ class Metric(_Enum_Compare):
         "Hausdorff Distance 95",
         True,
         _compute_instance_hausdorff_distance95,
+    )
+    NSD = _Metric(
+        "NSD",
+        "Normalized Surface Dice",
+        True,
+        _compute_instance_normalized_surface_dice,
     )
 
     def __call__(
