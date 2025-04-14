@@ -9,6 +9,9 @@ import SimpleITK as sitk
 from panoptica import InputType, Panoptica_Evaluator
 from panoptica.metrics import Metric
 
+all_input_types = ",".join([i.name for i in InputType])
+all_metrics = ",".join([i.name for i in Metric])
+
 
 def version_callback(value: bool):
     __version__ = version("panoptica")
@@ -40,6 +43,30 @@ def main(
             help="The path to the predicted image",
         ),
     ],
+    input_type: Annotated[
+        str,
+        typer.Option(
+            "-it",
+            "--input-type",
+            help="The input type of the images. Can be one of: " + all_input_types,
+        ),
+    ],
+    decision_metric: Annotated[
+        str,
+        typer.Option(
+            "-dm",
+            "--decision-metric",
+            help="The decision metric to use. Can be one of: " + all_metrics,
+        ),
+    ],
+    threshold: Annotated[
+        float,
+        typer.Option(
+            "-th",
+            "--threshold",
+            help="The decision threshold to use.",
+        ),
+    ] = 0.5,
     version: Annotated[
         Optional[bool],
         typer.Option(
@@ -52,19 +79,31 @@ def main(
     ] = None,
 ):
     """
-    Preprocess the input images according to the BraTS protocol.
+    Generate the panoptica evaluation report for the given reference and prediction images.
     """
 
     ref_masks = sitk.GetArrayFromImage(sitk.ReadImage(reference))
     pred_masks = sitk.GetArrayFromImage(sitk.ReadImage(prediction))
 
+    input_type = input_type.upper()
+    for input_type_it in InputType:
+        if input_type == input_type_it.name:
+            input_type = input_type_it
+            break
+
+    decision_metric = decision_metric.upper()
+    for decision_metric_it in Metric:
+        if decision_metric == decision_metric_it.name:
+            decision_metric = decision_metric_it
+            break
+
     evaluator = Panoptica_Evaluator(
-        expected_input=InputType.MATCHED_INSTANCE,
-        decision_metric=Metric.IOU,
-        decision_threshold=0.5,
+        expected_input=input_type,
+        decision_metric=decision_metric,
+        decision_threshold=threshold,
     )
 
-    pprint(evaluator.evaluate(pred_masks, ref_masks)["ungrouped"])
+    print(evaluator.evaluate(pred_masks, ref_masks)["ungrouped"])
 
 
 if __name__ == "__main__":
