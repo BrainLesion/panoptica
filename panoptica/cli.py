@@ -8,6 +8,7 @@ import SimpleITK as sitk
 
 from panoptica import InputType, Panoptica_Evaluator
 from panoptica.metrics import Metric
+from panoptica.utils import sanity_checker_with_files
 
 
 def version_callback(value: bool):
@@ -80,6 +81,10 @@ def main(
     """
     Generate the panoptica evaluation report for the given reference and prediction images.
     """
+
+    assert sanity_checker_with_files(
+        reference, prediction
+    ), "The reference and prediction images do not match in dimension, size, spacing, origin, or orientation."
 
     ref_masks = sitk.GetArrayFromImage(sitk.ReadImage(reference))
     pred_masks = sitk.GetArrayFromImage(sitk.ReadImage(prediction))
