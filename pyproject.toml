@@ -30,12 +30,12 @@ scikit-image = "^0.22.0"
 plotly = "^5.16.1"
 SimpleITK = "^2.2.2"
 typer = "^0.15.0"
+pandas = "^2.1.0"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=8.1.1"
 coverage = ">=7.0.1"
 pytest-mock = "^3.6.0"
-pandas = "^2.1.0"
 joblib = "^1.3.2"
 future = "^0.18.3"
 flake8 = ">=4.0.1"
