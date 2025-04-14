@@ -9,9 +9,6 @@ import SimpleITK as sitk
 from panoptica import InputType, Panoptica_Evaluator
 from panoptica.metrics import Metric
 
-all_input_types = ",".join([i.name for i in InputType])
-all_metrics = ",".join([i.name for i in Metric])
-
 
 def version_callback(value: bool):
     __version__ = version("panoptica")
@@ -48,7 +45,8 @@ def main(
         typer.Option(
             "-it",
             "--input-type",
-            help="The input type of the images. Can be one of: " + all_input_types,
+            help="The input type of the images. Can be one of: "
+            + ",".join([i.name for i in InputType]),
         ),
     ],
     decision_metric: Annotated[
@@ -56,7 +54,8 @@ def main(
         typer.Option(
             "-dm",
             "--decision-metric",
-            help="The decision metric to use. Can be one of: " + all_metrics,
+            help="The decision metric to use. Can be one of: "
+            + ",".join([i.name for i in Metric]),
         ),
     ],
     threshold: Annotated[
