@@ -1,13 +1,12 @@
+import os
 from typing import Optional
-from pprint import pprint
 import typer
 from typing_extensions import Annotated
 from importlib.metadata import version
 import SimpleITK as sitk
 
 
-from panoptica import InputType, Panoptica_Evaluator
-from panoptica.metrics import Metric
+from panoptica import Panoptica_Evaluator
 from panoptica.utils import sanity_checker_with_files
 
 
@@ -41,32 +40,14 @@ def main(
             help="The path to the predicted image",
         ),
     ],
-    input_type: Annotated[
+    config: Annotated[
         str,
         typer.Option(
-            "-it",
-            "--input-type",
-            help="The input type of the images. Can be one of: "
-            + ",".join([i.name for i in InputType]),
+            "-c",
+            "--config",
+            help="The path to the configuration file.",
         ),
     ],
-    decision_metric: Annotated[
-        str,
-        typer.Option(
-            "-dm",
-            "--decision-metric",
-            help="The decision metric to use. Can be one of: "
-            + ",".join([i.name for i in Metric]),
-        ),
-    ],
-    threshold: Annotated[
-        float,
-        typer.Option(
-            "-th",
-            "--threshold",
-            help="The decision threshold to use.",
-        ),
-    ] = 0.5,
     version: Annotated[
         Optional[bool],
         typer.Option(
@@ -82,6 +63,11 @@ def main(
     Generate the panoptica evaluation report for the given reference and prediction images.
     """
 
+    # check if files exist
+    for file in [reference, prediction, config]:
+        assert os.path.exists(file), f"File {file} does not exist."
+
+    # add a basic sanity check to ensure the images are compatible
     assert sanity_checker_with_files(
         reference, prediction
     ), "The reference and prediction images do not match in dimension, size, spacing, origin, or orientation."
@@ -89,23 +75,7 @@ def main(
     ref_masks = sitk.GetArrayFromImage(sitk.ReadImage(reference))
     pred_masks = sitk.GetArrayFromImage(sitk.ReadImage(prediction))
 
-    input_type = input_type.upper()
-    for input_type_it in InputType:
-        if input_type == input_type_it.name:
-            input_type = input_type_it
-            break
-
-    decision_metric = decision_metric.upper()
-    for decision_metric_it in Metric:
-        if decision_metric == decision_metric_it.name:
-            decision_metric = decision_metric_it
-            break
-
-    evaluator = Panoptica_Evaluator(
-        expected_input=input_type,
-        decision_metric=decision_metric,
-        decision_threshold=threshold,
-    )
+    evaluator = Panoptica_Evaluator.load_from_config_name(config)
 
     print(evaluator.evaluate(pred_masks, ref_masks)["ungrouped"])
 
