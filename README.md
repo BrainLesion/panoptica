@@ -32,6 +32,12 @@ With a Python 3.10+ environment, you can install panoptica from [pypi.org](https
 pip install panoptica
 ```
 
+Or, alternatively, from [conda](https://anaconda.org/conda-forge/panoptica):
+
+```sh
+conda install conda-forge::panoptica
+```
+
 ## Available Metrics
 
 > [!NOTE]
