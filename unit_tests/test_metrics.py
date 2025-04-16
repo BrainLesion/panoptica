@@ -393,7 +393,7 @@ class Test_NSD(unittest.TestCase):
         mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=0.5)
         self.assertEqual(mv, 0.375)
         #
-        mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=1)
+        mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=1)
         self.assertEqual(mv, 1.0)
 
 
