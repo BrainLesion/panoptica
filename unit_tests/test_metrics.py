@@ -370,7 +370,7 @@ class Test_NSD(unittest.TestCase):
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
         return super().setUp()
 
-    def test_hd_case_simple_identical(self):
+    def test_nsd_case_simple_identical(self):
 
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.NSD(
@@ -381,10 +381,19 @@ class Test_NSD(unittest.TestCase):
         )
         self.assertEqual(mv, 1.0)
 
-    def test_hd_case_simple_identical_idx(self):
+    def test_nsd_case_simple_identical_idx(self):
 
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+
+    def test_nsd_case_simple_underpredicted_thresholds(self):
+
+        pred_arr, ref_arr = case_simple_underpredicted()
+        mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=0.5)
+        self.assertEqual(mv, 0.375)
+        #
+        mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=1)
         self.assertEqual(mv, 1.0)
 
 
