@@ -79,6 +79,7 @@ def _compute_instance_normalized_surface_dice(
             prediction=pred_labels,
             voxelspacing=voxelspacing,
             connectivity=connectivity,
+            threshold=threshold,
         )
     ref_instance_mask = ref_labels == ref_instance_idx
     pred_instance_mask = pred_labels == pred_instance_idx
@@ -87,4 +88,5 @@ def _compute_instance_normalized_surface_dice(
         prediction=pred_instance_mask,
         voxelspacing=voxelspacing,
         connectivity=connectivity,
+        threshold=threshold,
     )
