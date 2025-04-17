@@ -35,7 +35,7 @@ pip install panoptica
 Or, alternatively, from [conda](https://anaconda.org/conda-forge/panoptica):
 
 ```sh
-conda install conda-forge::panoptica
+conda install -c conda-forge panoptica
 ```
 
 ## Available Metrics
