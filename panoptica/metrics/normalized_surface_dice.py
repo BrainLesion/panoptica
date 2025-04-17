@@ -77,7 +77,7 @@ def _compute_instance_normalized_surface_dice(
         threshold (float): The threshold for the surface distance in real world coordinates. If None, the minimum voxel spacing is used. If voxelspacing is None, the threshold is set to 0.5.
 
     Returns:
-        float: Hausdorff Distance
+        float: Normalized Surface Dice
     """
     if ref_instance_idx is None and pred_instance_idx is None:
         return _compute_normalized_surface_dice(
