@@ -165,9 +165,7 @@ class Test_Datatypes(unittest.TestCase):
                 print(t)
                 print()
                 t.save_to_config(test_file)
-                d: HungryMatching = HungryMatching.load_from_config(
-                    test_file
-                )
+                d: HungryMatching = HungryMatching.load_from_config(test_file)
                 os.remove(test_file)
 
                 self.assertEqual(d._matching_metric, t._matching_metric)

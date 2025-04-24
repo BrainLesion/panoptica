@@ -229,11 +229,12 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             "matching_threshold": node._matching_threshold,
             "allow_many_to_one": node._allow_many_to_one,
         }
-    
+
+
 class HungryMatching(InstanceMatchingAlgorithm):
     """
     Instance matching algorithm that performs optimal one-to-one matching based on the Hungarian algorithm.
-    
+
     This implementation is based on the approach described in the original Panoptic Quality paper,
     which maximizes the global matching score between predictions and references.
 
@@ -286,37 +287,37 @@ class HungryMatching(InstanceMatchingAlgorithm):
         # Get labels from unmatched instance pair
         ref_labels = unmatched_instance_pair.ref_labels
         pred_labels = unmatched_instance_pair.pred_labels
-        
+
         # Initialize variables
         labelmap = InstanceLabelMap()
-        
+
         # Get arrays for prediction and reference
         pred_arr, ref_arr = (
             unmatched_instance_pair.prediction_arr,
             unmatched_instance_pair.reference_arr,
         )
-        
+
         # Calculate matching metrics for all overlapping label pairs
         mm_pairs = _calc_matching_metric_of_overlapping_labels(
             pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
         )
-        
+
         # Create a cost matrix for the Hungarian algorithm
         # Each entry (i,j) represents the cost of matching reference i to prediction j
         # We use the negative of the matching score because Hungarian algorithm minimizes cost
-        
+
         # First, build dictionaries to map between indices and labels
         ref_index_to_label = {i: label for i, label in enumerate(ref_labels)}
         pred_index_to_label = {i: label for i, label in enumerate(pred_labels)}
         ref_label_to_index = {label: i for i, label in enumerate(ref_labels)}
         pred_label_to_index = {label: i for i, label in enumerate(pred_labels)}
-        
+
         # Create cost matrix filled with default high cost (will be replaced for overlapping instances)
         # Add a small amount to ensure stability and avoid division by zero issues
         small_number = 1e-6
         default_cost = 1.0 + small_number
         cost_matrix = np.ones((len(ref_labels), len(pred_labels))) * default_cost
-        
+
         # Fill in known costs for overlapping instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
             # Skip pairs that don't meet the threshold
@@ -324,31 +325,32 @@ class HungryMatching(InstanceMatchingAlgorithm):
                 matching_score, self._matching_threshold
             ):
                 continue
-                
+
             # Convert labels to indices in the cost matrix
             ref_idx = ref_label_to_index[ref_label]
             pred_idx = pred_label_to_index[pred_label]
-            
+
             # Set the cost (negative matching score, since we're minimizing)
             cost_matrix[ref_idx, pred_idx] = 1.0 - matching_score
-        
+
         # Apply Hungarian algorithm to find optimal assignment
         # Only import if we have valid pairs
         if len(ref_labels) > 0 and len(pred_labels) > 0:
             from scipy.optimize import linear_sum_assignment
+
             row_indices, col_indices = linear_sum_assignment(cost_matrix)
-            
+
             # Create labelmap from the optimal assignment
             for i, j in zip(row_indices, col_indices):
                 ref_label = ref_index_to_label[i]
                 pred_label = pred_index_to_label[j]
-                
+
                 # Only include if the cost indicates a match that meets the threshold
                 # (cost < 1.0 means matching_score > 0)
                 if cost_matrix[i, j] < 1.0:
                     # Ensure both labels are Python ints
                     labelmap.add_labelmap_entry(int(pred_label), int(ref_label))
-                        
+
         return labelmap
 
     @classmethod
@@ -466,6 +468,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
             "matching_metric": node._matching_metric,
             "matching_threshold": node._matching_threshold,
         }
+
 
 class MatchUntilConvergenceMatching(InstanceMatchingAlgorithm):
     # Match like the naive matcher (so each to their best reference) and then again and again until no overlapping labels are left
