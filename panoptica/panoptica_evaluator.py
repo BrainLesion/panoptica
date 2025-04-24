@@ -110,7 +110,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "verbose": node.__verbose,
         }
 
-    # @citation_reminder
+    @citation_reminder
     @measure_time
     def evaluate(
         self,
@@ -303,10 +303,12 @@ def panoptic_evaluate(
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
+
         processing_pair = instance_approximator.approximate_instances(
             processing_pair,
             **kwargs,
         )
+
         if log_times:
             print(f"-- Approximation took {perf_counter() - start} seconds")
 

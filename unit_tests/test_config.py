@@ -24,7 +24,7 @@ from panoptica.utils.edge_case_handling import (
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
     NaiveThresholdMatching,
-    HungryMatching,
+    MaxBipartiteMatching,
     Panoptica_Evaluator,
 )
 from pathlib import Path
@@ -155,17 +155,19 @@ class Test_Datatypes(unittest.TestCase):
                     self.assertEqual(d._matching_metric, t._matching_metric)
                     self.assertEqual(d._matching_threshold, t._matching_threshold)
 
-    def test_HungryMatching_config(self):
+    def test_MaxBipartiteMatching_config(self):
         for mm in [Metric.DSC, Metric.IOU, Metric.ASSD]:
             for mt in [0.1, 0.4, 0.5, 0.8, 1.0]:
-                t = HungryMatching(
+                t = MaxBipartiteMatching(
                     matching_metric=mm,
                     matching_threshold=mt,
                 )
                 print(t)
                 print()
                 t.save_to_config(test_file)
-                d: HungryMatching = HungryMatching.load_from_config(test_file)
+                d: MaxBipartiteMatching = MaxBipartiteMatching.load_from_config(
+                    test_file
+                )
                 os.remove(test_file)
 
                 self.assertEqual(d._matching_metric, t._matching_metric)

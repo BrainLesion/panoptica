@@ -231,9 +231,9 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         }
 
 
-class HungryMatching(InstanceMatchingAlgorithm):
+class MaxBipartiteMatching(InstanceMatchingAlgorithm):
     """
-    Instance matching algorithm that performs optimal one-to-one matching based on the Hungarian algorithm.
+    Instance matching algorithm that performs optimal one-to-one matching based on the maximum bipartite graph matching.
 
     This implementation is based on the approach described in the original Panoptic Quality paper,
     which maximizes the global matching score between predictions and references.
@@ -244,12 +244,12 @@ class HungryMatching(InstanceMatchingAlgorithm):
 
     Methods:
         __init__(self, matching_metric: Metric = Metric.IOU, matching_threshold: float = 0.5) -> None:
-            Initialize the HungryMatching instance.
+            Initialize the MaxBipartiteMatching instance.
         _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> InstanceLabelMap:
-            Perform one-to-one instance matching based on the Hungarian algorithm.
+            Perform one-to-one instance matching based on the maximum bipartite graph matching.
 
     Example:
-    >>> matcher = HungryMatching(matching_metric=Metric.IOU, matching_threshold=0.5)
+    >>> matcher = MaxBipartiteMatching(matching_metric=Metric.IOU, matching_threshold=0.5)
     >>> unmatched_instance_pair = UnmatchedInstancePair(...)
     >>> result = matcher.match_instances(unmatched_instance_pair)
     """
@@ -260,7 +260,7 @@ class HungryMatching(InstanceMatchingAlgorithm):
         matching_threshold: float = 0.5,
     ) -> None:
         """
-        Initialize the HungryMatching instance.
+        Initialize the MaxBipartiteMatching instance.
 
         Args:
             matching_metric (Metric): The metric to be used for matching.
@@ -275,7 +275,7 @@ class HungryMatching(InstanceMatchingAlgorithm):
         **kwargs,
     ) -> InstanceLabelMap:
         """
-        Perform optimal instance matching based on the Hungarian algorithm.
+        Perform optimal instance matching based on the maximum bipartite graph matching.
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
@@ -302,9 +302,9 @@ class HungryMatching(InstanceMatchingAlgorithm):
             pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
         )
 
-        # Create a cost matrix for the Hungarian algorithm
+        # Create a cost matrix for the maximum bipartite graph matching
         # Each entry (i,j) represents the cost of matching reference i to prediction j
-        # We use the negative of the matching score because Hungarian algorithm minimizes cost
+        # We use the negative of the matching score because maximum bipartite graph matching minimizes cost
 
         # First, build dictionaries to map between indices and labels
         ref_index_to_label = {i: label for i, label in enumerate(ref_labels)}
@@ -333,7 +333,7 @@ class HungryMatching(InstanceMatchingAlgorithm):
             # Set the cost (negative matching score, since we're minimizing)
             cost_matrix[ref_idx, pred_idx] = 1.0 - matching_score
 
-        # Apply Hungarian algorithm to find optimal assignment
+        # Apply maximum bipartite graph matching to find optimal assignment
         # Only import if we have valid pairs
         if len(ref_labels) > 0 and len(pred_labels) > 0:
             from scipy.optimize import linear_sum_assignment
