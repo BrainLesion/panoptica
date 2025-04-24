@@ -110,7 +110,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "verbose": node.__verbose,
         }
 
-    @citation_reminder
+    # @citation_reminder
     @measure_time
     def evaluate(
         self,
