@@ -162,7 +162,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         self,
         matching_metric: Metric = Metric.IOU,
         matching_threshold: float = 0.5,
-        allow_many_to_one: bool = True,
+        allow_many_to_one: bool = False,
     ) -> None:
         """
         Initialize the NaiveOneToOneMatching instance.
@@ -219,6 +219,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 # map label ref_idx to pred_idx
+
         return labelmap
 
     @classmethod
