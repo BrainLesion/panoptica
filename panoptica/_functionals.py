@@ -73,6 +73,7 @@ def _calc_matching_metric_of_overlapping_labels(
         (matching_metric.value(reference_arr, prediction_arr, i[0], i[1]), (i[0], i[1]))
         for i in overlapping_labels
     ]
+
     mm_pairs = sorted(
         mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
     )
@@ -93,6 +94,7 @@ def _map_labels(
     Returns:
         np.ndarray: Returns a copy of the remapped array
     """
+
     k = np.array(list(label_map.keys()), dtype=arr.dtype)
     v = np.array(list(label_map.values()), dtype=arr.dtype)
 
@@ -189,3 +191,114 @@ def _round_to_n(value: float | int, n_significant_digits: int = 2):
             value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1)
         )
     )
+
+def _remove_isolated_parts(array: np.ndarray, thing_label: int, part_labels: list[int]) -> np.ndarray:
+    """Checks if part labels are connected to thing labels and creates a mask for valid parts.
+    
+    Args:
+        array (np.ndarray): The array containing thing and part labels.
+        thing_label (int): The label representing the thing/semantic class.
+        part_labels (list[int]): The labels representing the part classes.
+        
+    Returns:
+        np.ndarray: A binary mask where True indicates valid regions (thing and valid parts)
+                   and False indicates regions to be zeroed out.
+    """
+    # Create a mask for the thing
+    thing_mask = array == thing_label
+    
+    # Create a mask for all parts
+    parts_mask = np.zeros_like(array, dtype=bool)
+    for part_label in part_labels:
+        parts_mask[array == part_label] = True
+    
+    from scipy import ndimage
+    
+    # Label the connected components in the parts mask
+    labeled_parts, num_parts = ndimage.label(parts_mask)
+    
+    # Create a dilated thing mask
+    dilated_thing = ndimage.binary_dilation(thing_mask)
+    
+    # For each connected component in the parts mask, check if it's valid
+    valid_parts = np.zeros_like(parts_mask)
+    for i in range(1, num_parts + 1):
+        part_component = labeled_parts == i
+        
+        # A part is valid if:
+        # 1. It overlaps with the dilated thing OR
+        # 2. It's completely surrounded by the thing
+        
+        # Check if part touches the dilated thing
+        if np.any(part_component & dilated_thing):
+            valid_parts |= part_component
+        else:
+            # Additionally check if the part is completely surrounded by the thing
+            # by dilating the part and checking if all its boundaries touch the thing
+            dilated_part = ndimage.binary_dilation(part_component)
+            boundary = dilated_part & ~part_component
+            
+            # If all boundary pixels are thing pixels, the part is surrounded
+            if np.all((boundary & thing_mask) == boundary):
+                valid_parts |= part_component
+    
+    # Final valid regions are the thing plus valid parts
+    valid_regions = thing_mask | valid_parts
+    
+    return valid_regions
+
+def _calc_matching_metric_of_overlapping_partlabels(
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    ref_label: int,
+    pred_label: int,
+    part_labels: list[int],
+    matching_metric: "Metric",
+) -> float:
+    """Calculates a combined matching metric for thing+part overlapping labels.
+    
+    This function calculates a combined score between the panoptic (thing) labels
+    and their corresponding parts. The score is the mean of the thing instance
+    score and the mean of all part instance scores.
+    
+    Args:
+        prediction_arr (np.ndarray): Numpy array containing the prediction labels.
+        reference_arr (np.ndarray): Numpy array containing the reference labels.
+        ref_label (int): Reference panoptic/thing label.
+        pred_label (int): Prediction panoptic/thing label.
+        part_labels (list[int]): List of part labels to consider.
+        matching_metric (Metric): The metric to use for evaluation.
+        
+    Returns:
+        float: The combined matching score for the thing+parts.
+    """
+    # First calculate the score for the thing/panoptic label
+    thing_score = matching_metric.value(reference_arr, prediction_arr, ref_label, pred_label)
+    
+    # Get masks for the reference and prediction regions of interest
+    ref_mask = reference_arr == ref_label
+    pred_mask = prediction_arr == pred_label
+    
+    # Create a combined mask for the region of interest (where to look for parts)
+    region_of_interest = ref_mask | pred_mask
+    
+    # Extract parts only in the region of interest to avoid parts from other things
+    part_scores = []
+    for part_label in part_labels:
+        # Check if this part exists in both reference and prediction
+        ref_part = np.where(reference_arr == part_label, 1, 0) * region_of_interest
+        pred_part = np.where(prediction_arr == part_label, 1, 0) * region_of_interest
+        
+        # Only calculate score if part exists in at least one of them
+        if np.any(ref_part) or np.any(pred_part):
+            part_score = matching_metric.value_binary(ref_part, pred_part)
+            part_scores.append(part_score)
+    
+    # Calculate the mean part score if there are any parts
+    if part_scores:
+        mean_part_score = sum(part_scores) / len(part_scores)
+        # Return the mean of the thing score and the mean part score
+        return (thing_score + mean_part_score) / 2
+    else:
+        # If no parts are present, return just the thing score
+        return thing_score

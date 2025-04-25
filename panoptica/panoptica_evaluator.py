@@ -224,6 +224,7 @@ class Panoptica_Evaluator(SupportsConfig):
             log_times=self.__log_times if log_times is None else log_times,
             verbose=True if verbose is None else verbose,
             verbose_calc=self.__verbose if verbose is None else verbose,
+            label_group=label_group,  # <-- pass label_group
         )
         if self.__save_group_times or save_group_times:
             duration = perf_counter() - start_time
@@ -244,6 +245,7 @@ def panoptic_evaluate(
     result_all: bool = True,
     verbose=False,
     verbose_calc=False,
+    label_group=None,  # <-- add label_group argument
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -333,6 +335,7 @@ def panoptic_evaluate(
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
+            label_group=label_group,  # <-- forward label_group
             **kwargs,
         )
         if log_times:

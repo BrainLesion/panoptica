@@ -61,6 +61,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
+        label_group=None,  # <-- add label_group argument
         **kwargs,
     ) -> MatchedInstancePair:
         """
@@ -68,6 +69,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            label_group: The label group object for this group (can be LabelPartGroup, LabelMergeGroup, etc.)
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -75,6 +77,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         """
         instance_labelmap = self._match_instances(
             unmatched_instance_pair,
+            label_group=label_group,  # <-- forward label_group
             **kwargs,
         )
         # print("instance_labelmap:", instance_labelmap)
@@ -110,14 +113,14 @@ def map_instance_labels(
     ref_labels = processing_pair.ref_labels
     pred_labels = processing_pair.pred_labels
 
-    ref_matched_labels = []
+    # ref_matched_labels = [] #! Not being used
     label_counter = int(max(ref_labels) + 1)
 
     pred_labelmap = labelmap.get_one_to_one_dictionary()
-    ref_matched_labels = list([r for r in ref_labels if r in pred_labelmap.values()])
+    # ref_matched_labels = list([r for r in ref_labels if r in pred_labelmap.values()]) #! Not being used
 
     # assign missed instances to next unused labels sequentially
-    missed_ref_labels = list([r for r in ref_labels if r not in ref_matched_labels])
+    # missed_ref_labels = list([r for r in ref_labels if r not in ref_matched_labels]) #! Not being used
     missed_pred_labels = list([p for p in pred_labels if p not in pred_labelmap])
     for p in missed_pred_labels:
         pred_labelmap[p] = label_counter
@@ -245,7 +248,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
     Methods:
         __init__(self, matching_metric: Metric = Metric.IOU, matching_threshold: float = 0.5) -> None:
             Initialize the MaxBipartiteMatching instance.
-        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> InstanceLabelMap:
+        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
             Perform one-to-one instance matching based on the maximum bipartite graph matching.
 
     Example:
