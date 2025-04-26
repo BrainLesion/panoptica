@@ -12,6 +12,7 @@ from panoptica.utils.processing_pair import (
     UnmatchedInstancePair,
 )
 from panoptica.utils.config import SupportsConfig
+
 # Add LabelGroup import
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 
@@ -46,7 +47,10 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
 
     @abstractmethod
     def _approximate_instances(
-        self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None, **kwargs
+        self,
+        semantic_pair: SemanticPair,
+        label_group: LabelGroup | None = None,
+        **kwargs,
     ) -> UnmatchedInstancePair | MatchedInstancePair:
         """
         Abstract method to be implemented by subclasses for instance approximation.
@@ -68,7 +72,11 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         return {}
 
     def approximate_instances(
-        self, semantic_pair: SemanticPair, verbose: bool = False, label_group: LabelGroup | None = None, **kwargs
+        self,
+        semantic_pair: SemanticPair,
+        verbose: bool = False,
+        label_group: LabelGroup | None = None,
+        **kwargs,
     ) -> UnmatchedInstancePair | MatchedInstancePair:
         """
         Perform instance approximation on the given SemanticPair.
@@ -95,19 +103,22 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         ref_label_range = (
             (np.min(ref_labels), np.max(ref_labels)) if len(ref_labels) > 0 else (0, 0)
         )
-        #
         min_value = min(np.min(pred_label_range[0]), np.min(ref_label_range[0]))
         assert (
             min_value >= 0
         ), "There are negative values in the semantic maps. This is not allowed!"
-        # Set dtype to smalles fitting uint
-        # max_value = max(np.max(pred_label_range[1]), np.max(ref_label_range[1]))
-        # dtype = _get_smallest_fitting_uint(max_value)
-        # semantic_pair.set_dtype(dtype)
-        # print(f"-- Set dtype to {dtype}") if verbose else None
 
-        # Call algorithm
-        instance_pair = self._approximate_instances(semantic_pair, label_group=label_group, **kwargs)
+        # If label_group is LabelPartGroup, force OneHotConnectedComponentsInstanceApproximator
+        if isinstance(label_group, LabelPartGroup):
+            instance_pair = OneHotConnectedComponentsInstanceApproximator(
+                cca_backend=CCABackend.cc3d
+            )._approximate_instances(semantic_pair, label_group=label_group, **kwargs)
+        else:
+            # Call the instance approximation algorithm
+            instance_pair = self._approximate_instances(
+                semantic_pair, label_group=label_group, **kwargs
+            )
+
         return instance_pair
 
 
@@ -140,24 +151,20 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         self.cca_backend = cca_backend
 
     def _approximate_instances(
-        self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None, **kwargs
+        self, semantic_pair: SemanticPair, **kwargs
     ) -> UnmatchedInstancePair:
         """
         Approximate instances using the connected components algorithm.
 
         Args:
             semantic_pair (SemanticPair): The semantic pair to be approximated.
-            label_group (LabelGroup | None, optional): Information about the label group being processed. Defaults to None. (Currently unused in this implementation)
             **kwargs: Additional keyword arguments.
 
         Returns:
             UnmatchedInstancePair: The result of the instance approximation.
         """
         cca_backend = self.cca_backend
-        # Force cc3d if the label group is LabelPartGroup
-        if label_group is not None and isinstance(label_group, LabelPartGroup):
-            cca_backend = CCABackend.cc3d
-        elif cca_backend is None:
+        if cca_backend is None:
             cca_backend = (
                 CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
             )
@@ -175,6 +182,77 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             if not empty_reference
             else (semantic_pair.reference_arr, 0)
         )
+
+        return UnmatchedInstancePair(
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
+            n_prediction_instance=n_prediction_instance,
+            n_reference_instance=n_reference_instance,
+        )
+
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {"cca_backend": node.cca_backend}
+
+
+class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
+    """
+    Instance approximator that first applies one-hot encoding to the prediction and reference arrays,
+    then runs connected components on each channel and merges the results.
+    """
+
+    def __init__(self, cca_backend: CCABackend | None = None) -> None:
+        self.cca_backend = cca_backend
+
+    def _one_hot(self, arr):
+        n_classes = int(np.max(arr)) + 1
+        arr_shape = arr.shape  # e.g., (H, W) or (D, H, W)
+        one_hot = np.eye(n_classes)[arr.astype(int)]  # shape: (*arr_shape, C)
+        # Move the class axis to the front: (C, *arr_shape)
+        one_hot = np.moveaxis(one_hot, -1, 0)
+        return one_hot, arr_shape
+
+    def _flatten_with_shape(self, one_hot, arr_shape):
+        # Flatten and append the shape at the end
+        return np.concatenate([one_hot.flatten(), np.array(arr_shape)])
+
+    def _approximate_instances(
+        self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None
+    ) -> UnmatchedInstancePair:
+        cca_backend = self.cca_backend
+        if label_group is not None and isinstance(label_group, LabelPartGroup):
+            cca_backend = CCABackend.cc3d
+        elif cca_backend is None:
+            cca_backend = (
+                CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+            )
+        assert cca_backend is not None
+
+        _, n_prediction_instance = _connected_components(
+            semantic_pair.prediction_arr, cca_backend
+        )
+        _, n_reference_instance = _connected_components(
+            semantic_pair.reference_arr, cca_backend
+        )
+
+        # One-hot encode
+        prediction_arr, prediction_arr_shape = self._one_hot(
+            semantic_pair.prediction_arr
+        )
+        reference_arr, reference_arr_shape = self._one_hot(semantic_pair.reference_arr)
+
+        # Run CC per channel and merge
+        for i in range(prediction_arr.shape[0]):
+            prediction_arr[i], _ = _connected_components(prediction_arr[i], cca_backend)
+            reference_arr[i], _ = _connected_components(reference_arr[i], cca_backend)
+
+        # flatten to meet UnmatchedInstancePair requirements
+        prediction_arr = self._flatten_with_shape(prediction_arr, prediction_arr_shape)
+        reference_arr = self._flatten_with_shape(reference_arr, reference_arr_shape)
+
+        # Ensure arrays are integer type
+        prediction_arr = prediction_arr.astype(np.int64)
+        reference_arr = reference_arr.astype(np.int64)
 
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr,
