@@ -12,6 +12,8 @@ from panoptica.utils.processing_pair import (
     UnmatchedInstancePair,
 )
 from panoptica.utils.config import SupportsConfig
+# Add LabelGroup import
+from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 
 
 class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
@@ -44,13 +46,14 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
 
     @abstractmethod
     def _approximate_instances(
-        self, semantic_pair: SemanticPair, **kwargs
+        self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None, **kwargs
     ) -> UnmatchedInstancePair | MatchedInstancePair:
         """
         Abstract method to be implemented by subclasses for instance approximation.
 
         Args:
             semantic_pair (SemanticPair): The semantic pair to be approximated.
+            label_group (LabelGroup | None, optional): Information about the label group being processed. Defaults to None.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -65,13 +68,15 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         return {}
 
     def approximate_instances(
-        self, semantic_pair: SemanticPair, verbose: bool = False, **kwargs
+        self, semantic_pair: SemanticPair, verbose: bool = False, label_group: LabelGroup | None = None, **kwargs
     ) -> UnmatchedInstancePair | MatchedInstancePair:
         """
         Perform instance approximation on the given SemanticPair.
 
         Args:
             semantic_pair (SemanticPair): The semantic pair to be approximated.
+            verbose (bool, optional): If True, prints detailed information. Defaults to False.
+            label_group (LabelGroup | None, optional): Information about the label group being processed. Defaults to None.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -102,7 +107,7 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         # print(f"-- Set dtype to {dtype}") if verbose else None
 
         # Call algorithm
-        instance_pair = self._approximate_instances(semantic_pair, **kwargs)
+        instance_pair = self._approximate_instances(semantic_pair, label_group=label_group, **kwargs)
         return instance_pair
 
 
@@ -135,20 +140,24 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         self.cca_backend = cca_backend
 
     def _approximate_instances(
-        self, semantic_pair: SemanticPair, **kwargs
+        self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None, **kwargs
     ) -> UnmatchedInstancePair:
         """
         Approximate instances using the connected components algorithm.
 
         Args:
             semantic_pair (SemanticPair): The semantic pair to be approximated.
+            label_group (LabelGroup | None, optional): Information about the label group being processed. Defaults to None. (Currently unused in this implementation)
             **kwargs: Additional keyword arguments.
 
         Returns:
             UnmatchedInstancePair: The result of the instance approximation.
         """
         cca_backend = self.cca_backend
-        if cca_backend is None:
+        # Force cc3d if the label group is LabelPartGroup
+        if label_group is not None and isinstance(label_group, LabelPartGroup):
+            cca_backend = CCABackend.cc3d
+        elif cca_backend is None:
             cca_backend = (
                 CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
             )

@@ -280,9 +280,9 @@ def _calc_matching_metric_of_overlapping_partlabels(
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(1, 2)
     ax[0].imshow(reference_arr)
-    ax[0].set_title('Reference')
+    ax[0].set_title('Reference Mask')
     ax[1].imshow(prediction_arr)
-    ax[1].set_title('Prediction')
+    ax[1].set_title('Prediction Mask')
     plt.show()
 
     # Get masks for the reference and prediction regions of interest
@@ -300,10 +300,10 @@ def _calc_matching_metric_of_overlapping_partlabels(
     # Create a combined mask for the region of interest (where to look for parts)
     region_of_interest = ref_mask | pred_mask
 
-    import matplotlib.pyplot as plt
-    plt.imshow(region_of_interest)
-    plt.title('Region of Interest')
-    plt.show()
+    # import matplotlib.pyplot as plt
+    # plt.imshow(region_of_interest)
+    # plt.title('Region of Interest')
+    # plt.show()
     
     # Extract parts only in the region of interest to avoid parts from other things
     part_scores = []
@@ -312,13 +312,13 @@ def _calc_matching_metric_of_overlapping_partlabels(
         ref_part = np.where(reference_arr == part_label, 1, 0) * region_of_interest
         pred_part = np.where(prediction_arr == part_label, 1, 0) * region_of_interest
 
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(1, 2)
-        ax[0].imshow(ref_part)
-        ax[0].set_title('Reference Part')
-        ax[1].imshow(pred_part)
-        ax[1].set_title('Prediction Part')
-        plt.show()
+        # import matplotlib.pyplot as plt
+        # fig, ax = plt.subplots(1, 2)
+        # ax[0].imshow(ref_part)
+        # ax[0].set_title('Reference Part')
+        # ax[1].imshow(pred_part)
+        # ax[1].set_title('Prediction Part')
+        # plt.show()
         
         # Only calculate score if part exists in at least one of them
         if np.any(ref_part) or np.any(pred_part):

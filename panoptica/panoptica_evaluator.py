@@ -138,6 +138,7 @@ class Panoptica_Evaluator(SupportsConfig):
             print(
                 f"Evaluating group {group_name} with labels {label_group}"
             )
+
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
@@ -311,6 +312,7 @@ def panoptic_evaluate(
 
         processing_pair = instance_approximator.approximate_instances(
             processing_pair,
+            label_group=label_group,  # <-- forward label_group
             **kwargs,
         )
 

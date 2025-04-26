@@ -205,32 +205,14 @@ class LabelPartGroup(LabelGroup):
         result[np.isin(result, self.value_labels, invert=True)] = 0
 
         # Get valid regions mask - pass the thing and part labels
-        valid_regions = _remove_isolated_parts(
+        isolated_part_instances = _remove_isolated_parts(
             result,
             self.thing_label,
             self.part_labels
         )
         
-        # Store the thing regions before any modifications
-        thing_regions = (result == self.thing_label)
-        
-        # Important: Create part_regions mask BEFORE zeroing out invalid regions
-        part_regions = np.zeros_like(result, dtype=bool)
-        for part_label in self.part_labels:
-            part_regions |= (result == part_label)
-        
         # Zero out invalid regions
-        result[~valid_regions] = 0
-
-        # Convert all part labels to the thing label if they're in valid regions
-        # This ensures we catch all part labels within valid regions
-        result[part_regions & valid_regions] = self.thing_label
-        
-        # Ensure thing regions are preserved
-        result[thing_regions & valid_regions] = self.thing_label
-        
-        if set_to_binary:
-            result[result != 0] = 1
+        result[~isolated_part_instances] = 0
             
         return result
     
