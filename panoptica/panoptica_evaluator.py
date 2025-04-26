@@ -110,8 +110,8 @@ class Panoptica_Evaluator(SupportsConfig):
             "verbose": node.__verbose,
         }
 
-    @citation_reminder
-    @measure_time
+    # @citation_reminder
+    # @measure_time
     def evaluate(
         self,
         prediction_arr: np.ndarray,
@@ -135,6 +135,9 @@ class Panoptica_Evaluator(SupportsConfig):
 
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
+            print(
+                f"Evaluating group {group_name} with labels {label_group}"
+            )
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
