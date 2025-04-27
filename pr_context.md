@@ -71,15 +71,15 @@ with `class LabelPartGroup(LabelGroup)` (proposed). This would now look like:
 
 Visually for a case: 
 
-![alt text](pr_assests/image-1.png)
+![alt text](./pr_assests/image-1.png)
 
 `LabelMergaGroup` looks like this:
 
-![alt text](pr_assests/image.png)
+![alt text](./pr_assests/image.png)
 
 `LabelPartGroup` looks like this:
 
-![alt text](pr_assests/image-2.png)
+![alt text](./pr_assests/image-2.png)
 
 Notice, binary vs multi label.
 
