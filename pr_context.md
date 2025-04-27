@@ -19,7 +19,7 @@ Note: Although not present in brats, *I am yet to test for multiple parts of dif
 
 # Discussing the current state of the potential PR
 
-Link to repo: https://github.com/aymuos15/panoptica. It will based off of this. Currently, I have kept all print statements uncommented so its easy to immediately gauge whats happening. Find the a visual representation of stuff in "context.ipynb". Most of the viz comes from `_calc_matching_metric_of_overlapping_partlabels` in `panoptica/_functionals.py`
+Link to repo: https://github.com/aymuos15/panoptica. It will based off of this. Currently, I have kept all print statements uncommented so its easy to immediately gauge whats happening. Find the a visual representation of stuff in `context.ipynb`. Most of the viz comes from `_calc_matching_metric_of_overlapping_partlabels` in `panoptica/_functionals.py`
 
 ## TLDR
 
