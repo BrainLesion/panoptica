@@ -81,7 +81,7 @@ Visually for a case:
 
 ![alt text](./pr_assests/image-2.png)
 
-Notice --> binary vs multi label.
+Notice -> binary vs multi label.
 
 ##  Some additional details.
 
