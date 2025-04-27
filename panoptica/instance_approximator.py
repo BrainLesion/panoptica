@@ -212,16 +212,6 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
         one_hot = np.moveaxis(one_hot, -1, 0)
         return one_hot, arr_shape
 
-    def _flatten_with_shape(self, one_hot, arr_shape):
-        # Flatten and append the shape at the end
-        print(arr_shape)
-        return np.concatenate([one_hot.flatten(), np.array(arr_shape)])
-    
-    def _flatten_with_shape(self, one_hot, arr_shape):
-        # Flatten and append the shape at the end
-        print(arr_shape)
-        return one_hot.flatten()
-
     def _approximate_instances(
         self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None
     ) -> UnmatchedInstancePair:
@@ -253,8 +243,8 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
             reference_arr[i], _ = _connected_components(reference_arr[i], cca_backend)
 
         # flatten to meet UnmatchedInstancePair requirements
-        prediction_arr = self._flatten_with_shape(prediction_arr, prediction_arr_shape)
-        reference_arr = self._flatten_with_shape(reference_arr, reference_arr_shape)
+        prediction_arr = prediction_arr.flatten()
+        reference_arr = reference_arr.flatten()
 
         # Ensure arrays are integer type
         prediction_arr = prediction_arr.astype(np.int64)

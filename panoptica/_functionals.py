@@ -216,25 +216,26 @@ def _calc_matching_metric_of_overlapping_partlabels(
     Returns:
         float: The combined matching score for the thing+parts.
     """
-
-    def _get_orig_onehotcc_structure(
-        arr_onehot: np.ndarray
-    ) -> np.ndarray:
-            return arr_onehot.reshape((len(ref_labels) + 1,) + processing_pair_orig_shape)
     
-    prediction_arr = _get_orig_onehotcc_structure(prediction_arr)
-    reference_arr = _get_orig_onehotcc_structure(reference_arr)
-
-    # discard the last value in ref_labels
     ref_labels = list(ref_labels)    
+    prediction_arr = _get_orig_onehotcc_structure(prediction_arr, len(ref_labels), processing_pair_orig_shape)
+    reference_arr = _get_orig_onehotcc_structure(reference_arr, len(ref_labels), processing_pair_orig_shape)
 
-    #1 Perform matching basecon things. The way the LabelPartGroup is defined, there will always be only one thing per class and it will be the first one.
+    #! THIS IS NOT GOOD FOR MULTIPLE PARTS WITHIN A THING
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1, 4)
+    ax[0].imshow(prediction_arr[1])
+    ax[0].set_title(f'Pred Thing')
+    ax[1].imshow(prediction_arr[2])
+    ax[1].set_title(f'Pred Part')
+    ax[2].imshow(reference_arr[1])
+    ax[2].set_title(f'Ref Thing')
+    ax[3].imshow(reference_arr[2])
+    ax[3].set_title(f'Ref Part')
+    plt.suptitle(f'Things and its parts')
+    plt.show()
 
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots(1, 2)
-    # ax[0].imshow(prediction_arr[1])
-    # ax[1].imshow(reference_arr[1])
-    # plt.show()
+    #1 Perform matching based on things. The way the LabelPartGroup is defined, there will always be only one thing per class and it will be the first one.
 
     overlapping_labels = _calc_overlapping_labels(
         prediction_arr=prediction_arr[1],
@@ -242,7 +243,8 @@ def _calc_matching_metric_of_overlapping_partlabels(
         ref_labels=[max(prediction_arr[1].max(), reference_arr[1].max())],
     )
 
-    # print("overlapping_labels", overlapping_labels)
+    print(" We have entered a Part Class!")
+    print("ORIG THING overlapping_labels", overlapping_labels)
 
     mm_pairs = [
         (matching_metric.value(reference_arr, prediction_arr, i[0], i[1]), (i[0], i[1]))
@@ -257,8 +259,8 @@ def _calc_matching_metric_of_overlapping_partlabels(
     sorted_thing_pairs = sorted(
         thing_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
     )
-    # print("sorted_thing_pairs", sorted_thing_pairs)
-    # print()
+    print("ORIG THING sorted_thing_pairs", sorted_thing_pairs)
+    print()
 
     #2 When calculating the metric, we need to take into account the part labels
 
@@ -267,29 +269,17 @@ def _calc_matching_metric_of_overlapping_partlabels(
     #? loop through the overlapping labels and pred, ref pairs
     for i, j in overlapping_labels:
 
-        # print(f'For Pair ({i},{j}):')
+        print(f'For Pair ({i},{j}):')
         #? isolate the matched components for the label in pred an ref
         matched_pred_component = prediction_arr[1] == i
         matched_ref_component = reference_arr[1] == j
 
-        # ? Isolate the part labels for the matched components
-        # Remember there can be multiple part labels for a thing label
+        #? Isolate the part labels for the matched components
+        #! Remember there can be multiple part labels for a thing label
         for part_label in ref_labels[1:]:
-            # print(f'For part Class {part_label}:')
+            print(f'For part Class {part_label}:')
             pred_part_slice = prediction_arr[part_label]
             ref_part_slice = reference_arr[part_label]
-
-            # import matplotlib.pyplot as plt
-            # fig, ax = plt.subplots(1, 4)
-            # ax[0].imshow(matched_pred_component)
-            # ax[0].set_title(f'Pred Component {i}')
-            # ax[1].imshow(matched_ref_component)
-            # ax[1].set_title(f'Ref Component {j}')
-            # ax[2].imshow(pred_part_slice)
-            # ax[2].set_title(f'Pred Part Class {part_label - 1}')
-            # ax[3].imshow(ref_part_slice)
-            # ax[3].set_title(f'Ref Part Class {part_label - 1}')
-            # plt.show()
 
             encompassed_pred_parts = []
             encompassed_ref_parts = []
@@ -297,12 +287,16 @@ def _calc_matching_metric_of_overlapping_partlabels(
             for pred_part_instance, ref_part_instance in zip(np.unique(pred_part_slice), np.unique(ref_part_slice)):
 
                 #? If n parts are within the same thing, they will have the same label
-                # fig, ax = plt.subplots(1, 2)
-                # ax[0].imshow(pred_part_slice == (pred_part_instance  + 1))
-                # ax[0].set_title(f'Pred Part Instance {pred_part_instance + 1}')
-                # ax[1].imshow(ref_part_slice == (ref_part_instance + 1))
-                # ax[1].set_title(f'Ref Part Instance {ref_part_instance + 1}')
-                # plt.show()
+                fig, ax = plt.subplots(1, 4)
+                ax[0].imshow(matched_pred_component)
+                ax[0].set_title('Pred Inst')
+                ax[1].imshow(pred_part_slice == (pred_part_instance + 1))
+                ax[1].set_title(f'Pred Part Inst {pred_part_instance + 1}')
+                ax[2].imshow(matched_ref_component)
+                ax[2].set_title('Ref Inst')
+                ax[3].imshow(ref_part_slice == (ref_part_instance + 1))
+                ax[3].set_title(f'Ref Part Inst {ref_part_instance + 1}')
+                plt.show()
 
                 curr_pred_part_instance = pred_part_slice == (pred_part_instance + 1)
                 curr_ref_part_instance = ref_part_slice == (ref_part_instance + 1)
@@ -321,8 +315,8 @@ def _calc_matching_metric_of_overlapping_partlabels(
                 if flag is True:
                     encompassed_ref_parts.append(ref_part_instance)
 
-            # print(f'Matched Pred Part Instances: {encompassed_pred_parts}')
-            # print(f'Matched Ref Part Instances: {encompassed_ref_parts}')
+            print(f'Matched Pred Part Instances: {encompassed_pred_parts}')
+            print(f'Matched Ref Part Instances: {encompassed_ref_parts}')
 
             if len(encompassed_pred_parts) > 1:
                 #? force them to be the same label, choose the lowest one
@@ -336,26 +330,25 @@ def _calc_matching_metric_of_overlapping_partlabels(
                 highest_label = max(encompassed_ref_parts)
                 ref_part_slice[ref_part_slice == (highest_label + 1)] = lowest_label + 1
             
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots(1, 4)
-        # ax[0].imshow(prediction_arr[1])
-        # ax[0].set_title(f'Pred')
-        # ax[1].imshow(pred_part_slice)
-        # ax[1].set_title(f'Pred Part Class {part_label - 1}')
-        # ax[2].imshow(reference_arr[1])
-        # ax[2].set_title(f'Ref')
-        # ax[3].imshow(ref_part_slice)
-        # ax[3].set_title(f'Ref Part Class {part_label - 1}')
-        # plt.show()
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(1, 4)
+        ax[0].imshow(matched_pred_component)
+        ax[0].set_title(f'Pred Inst {i}')
+        ax[1].imshow(pred_part_slice)
+        ax[1].set_title(f'Pred Part Class {part_label - 1}')
+        ax[2].imshow(matched_ref_component)
+        ax[2].set_title(f'Ref Inst {j}')
+        ax[3].imshow(ref_part_slice)
+        ax[3].set_title(f'Ref Part Class {part_label - 1}')
+        plt.suptitle(f'Pair ({i},{j}) | !! if n parts in 1 thing inst, all same label')
+        plt.show()
 
         ref_unique_labels = [int(label) for label in np.unique(ref_part_slice) if label > 0]
-        part_overlapping_labels = calculate_all_label_pairs(
+        all_part_labels = calculate_all_label_pairs(
             prediction_arr=pred_part_slice,
             reference_arr=ref_part_slice,
             ref_labels=ref_unique_labels,
         )
-
-        # print("part_overlapping_labels", part_overlapping_labels)
 
         curr_part_pairs = [
             (
@@ -364,24 +357,25 @@ def _calc_matching_metric_of_overlapping_partlabels(
                 ),
                 (i[0], i[1]),
             )
-            for i in part_overlapping_labels
+            for i in all_part_labels
         ]
         
-        sorted_part_pairs = sorted(
+        chosen_part_pairs = sorted(
             curr_part_pairs,
             key=lambda x: x[0],
             reverse=not matching_metric.decreasing,
         )
 
         # discard all pairs which are not the pair in cosideration for this loop
-        sorted_part_pairs = [
+        chosen_part_pairs = [
             (score, pair)
-            for score, pair in sorted_part_pairs
+            for score, pair in chosen_part_pairs
             if pair[0] == i and pair[1] == j
         ]
 
-        # print("sorted_part_pairs", sorted_part_pairs)
-        # print()
+        print("all part pairs", all_part_labels) #! Maybe a better approach than calculating everything.
+        print("chosen part pairs", chosen_part_pairs)
+        print()
 
         # add the class values to the thing pairs
         def _update_thing_pairs_with_part_scores(thing_pairs, part_pairs):
@@ -397,8 +391,12 @@ def _calc_matching_metric_of_overlapping_partlabels(
         # Update the thing pairs with the mean of the part pairs
         updated_thing_pairs = _update_thing_pairs_with_part_scores(
             thing_pairs=updated_thing_pairs,
-            part_pairs=sorted_part_pairs,
+            part_pairs=chosen_part_pairs,
         )
+
+    print("PART MATCHING COMPLETED")
+    print("original thing pairs", sorted_thing_pairs)
+    print("updated thing pairs", updated_thing_pairs)
 
     return updated_thing_pairs
 
@@ -430,7 +428,13 @@ def _is_part_encompassed(part_component: np.ndarray, thing_mask: np.ndarray) -> 
 
         # If all boundary pixels are thing pixels, the part is surrounded
         return np.all((boundary & thing_mask) == boundary)
-
+    
+def _get_orig_onehotcc_structure(
+    arr_onehot: np.ndarray,
+    num_ref_labels: int,
+    processing_pair_orig_shape: tuple[int, ...],
+) -> np.ndarray:
+        return arr_onehot.reshape((num_ref_labels + 1,) + processing_pair_orig_shape)
 
 def _remove_isolated_parts(
     array: np.ndarray, thing_label: int, part_labels: list[int]

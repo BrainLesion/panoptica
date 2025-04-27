@@ -14,6 +14,8 @@ from panoptica.metrics import (
 )
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import IntermediateStepsData
+from panoptica.utils.label_group import LabelGroup, LabelPartGroup
+from panoptica._functionals import _get_orig_onehotcc_structure
 
 
 class PanopticaResult(object):
@@ -22,8 +24,11 @@ class PanopticaResult(object):
         self,
         reference_arr: np.ndarray,
         prediction_arr: np.ndarray,
+        processing_pair_orig_shape: tuple[int, int],
         num_pred_instances: int,
         num_ref_instances: int,
+        num_ref_labels: int,
+        label_group: LabelGroup,
         tp: int,
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
@@ -48,6 +53,23 @@ class PanopticaResult(object):
         self._global_metrics: list[Metric] = global_metrics
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
+
+        #! THIS NEEDS TO CHANGE ASAP.
+        #todo: HAVE TO DISCUSS ON HOW TO GO ABOUT THIS. CURRENTLY THE BIARY METRICS BELOW ARE EVALUATING THIS MULTILABEL FLATTENED VALUE
+        if isinstance(label_group, LabelPartGroup):
+            reference_arr = _get_orig_onehotcc_structure(reference_arr, num_ref_labels, processing_pair_orig_shape)
+            reference_arr = reference_arr.flatten()
+            prediction_arr = _get_orig_onehotcc_structure(prediction_arr, num_ref_labels, processing_pair_orig_shape)
+            prediction_arr = prediction_arr.flatten()
+
+        # import matplotlib.pyplot as plt
+        # fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        # ax[0].imshow(reference_arr, cmap='gray')
+        # ax[0].set_title('Reference Array')
+        # ax[1].imshow(prediction_arr, cmap='gray')
+        # ax[1].set_title('Prediction Array')
+        # plt.show()
+
         ######################
         # Evaluation Metrics #
         ######################

@@ -24,7 +24,6 @@ from panoptica.utils.segmentation_class import (
     _NoSegmentationClassGroups,
 )
 
-
 class Panoptica_Evaluator(SupportsConfig):
 
     def __init__(
@@ -292,7 +291,17 @@ def panoptic_evaluate(
     # input_pair.crop_data()
 
 
-    processing_pair_orig_shape = input_pair.prediction_arr.shape #! This is required for the part stuff to work.
+    processing_pair_orig_shape = input_pair.prediction_arr.shape #! This is required for the "Matching" and "Evalutation" to work properly for the part stuff.
+    num_ref_labels = input_pair.reference_arr.max() #! This is required for the "Evalutation" to work properly for the part stuff.
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    ax[0].imshow(input_pair.prediction_arr)
+    ax[1].imshow(input_pair.reference_arr)
+    ax[0].set_title("Prediction")
+    ax[1].set_title("Reference")
+    plt.suptitle("ORIGINAL Input Pair -- THIS HOW STUFF LOOKS BEFORE PHASE 1")
+    plt.show()
 
     processing_pair: (
         SemanticPair
@@ -342,7 +351,6 @@ def panoptic_evaluate(
             instance_matcher is not None
         ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
-        print(processing_pair_orig_shape)
         processing_pair = instance_matcher.match_instances(
             processing_pair,
             label_group=label_group,  # <-- forward label_group
@@ -382,8 +390,11 @@ def panoptic_evaluate(
         processing_pair = PanopticaResult(
             reference_arr=processing_pair.reference_arr,
             prediction_arr=processing_pair.prediction_arr,
+            processing_pair_orig_shape=processing_pair_orig_shape,
             num_pred_instances=processing_pair.num_pred_instances,
             num_ref_instances=processing_pair.num_ref_instances,
+            num_ref_labels=num_ref_labels, # <-- forward num_ref_labels
+            label_group=label_group,  # <-- forward label_group
             tp=processing_pair.tp,
             list_metrics=processing_pair.list_metrics,
             global_metrics=global_metrics,
