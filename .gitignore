@@ -162,7 +162,7 @@ cython_debug/
 .DS_Store
 
 .vscode
-*.png
+# *.png
 *.tsv
 *.csv
 *.nii.gz
