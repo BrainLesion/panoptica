@@ -39,6 +39,16 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots(1, 2)
+    # ax[0].imshow(reference_arr)
+    # ax[0].set_title("Reference")
+    # ax[1].imshow(prediction_arr)
+    # ax[1].set_title("Prediction")
+    # plt.show()
+
+    # print(ref_matched_labels)
+
     metric_dicts: list[dict[Metric, float]] = [
         _evaluate_instance(reference_arr, prediction_arr, ref_idx, eval_metrics)
         for ref_idx in ref_matched_labels
@@ -95,18 +105,29 @@ def _evaluate_instance(
     if ref_arr.sum() == 0 or pred_arr.sum() == 0:
         return {}
 
-    # Crop down for speedup
-    crop = _get_paired_crop(
-        pred_arr,
-        ref_arr,
-    )
+    # # Crop down for speedup
+    # crop = _get_paired_crop(
+    #     pred_arr,
+    #     ref_arr,
+    # )
 
-    ref_arr = ref_arr[crop]
-    pred_arr = pred_arr[crop]
+    # ref_arr = ref_arr[crop]
+    # pred_arr = pred_arr[crop]
+
+    # import matplotlib.pyplot as plt
+    # fig, ax = plt.subplots(1, 2)
+    # ax[0].imshow(ref_arr)
+    # ax[0].set_title("Reference")
+    # ax[1].imshow(pred_arr)
+    # ax[1].set_title("Prediction")
+    # plt.show()
 
     result: dict[Metric, float] = {}
     for metric in eval_metrics:
         metric_value = metric(ref_arr, pred_arr)
+        # print(f"Metric {metric.name}: {metric_value}")
         result[metric] = metric_value
+    # print(f"Result for instance {ref_idx}: {result}")
+    # print()
 
     return result

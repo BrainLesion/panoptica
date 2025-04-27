@@ -189,7 +189,7 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             n_prediction_instance=n_prediction_instance,
             n_reference_instance=n_reference_instance,
         )
-
+        
     @classmethod
     def _yaml_repr(cls, node) -> dict:
         return {"cca_backend": node.cca_backend}
@@ -214,7 +214,13 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
 
     def _flatten_with_shape(self, one_hot, arr_shape):
         # Flatten and append the shape at the end
+        print(arr_shape)
         return np.concatenate([one_hot.flatten(), np.array(arr_shape)])
+    
+    def _flatten_with_shape(self, one_hot, arr_shape):
+        # Flatten and append the shape at the end
+        print(arr_shape)
+        return one_hot.flatten()
 
     def _approximate_instances(
         self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None

@@ -136,6 +136,10 @@ class Panoptica_Evaluator(SupportsConfig):
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
 
+            print(
+                f"Evaluating group {group_name} with labels {label_group}"
+            )
+
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
@@ -285,7 +289,10 @@ def panoptic_evaluate(
     # Setup IntermediateStepsData
     intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
     # Crops away unecessary space of zeroes
-    input_pair.crop_data()
+    # input_pair.crop_data()
+
+
+    processing_pair_orig_shape = input_pair.prediction_arr.shape #! This is required for the part stuff to work.
 
     processing_pair: (
         SemanticPair
@@ -335,9 +342,11 @@ def panoptic_evaluate(
             instance_matcher is not None
         ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
+        print(processing_pair_orig_shape)
         processing_pair = instance_matcher.match_instances(
             processing_pair,
             label_group=label_group,  # <-- forward label_group
+            processing_pair_orig_shape=processing_pair_orig_shape, #! This is required for the part stuff to work.
             **kwargs,
         )
         if log_times:

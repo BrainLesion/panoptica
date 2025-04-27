@@ -64,6 +64,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         label_group=None,  # <-- add label_group argument
+        processing_pair_orig_shape=None,
         **kwargs,
     ) -> MatchedInstancePair:
         """
@@ -72,6 +73,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
             label_group: The label group object for this group (can be LabelPartGroup, LabelMergeGroup, etc.)
+            processing_pair_orig_shape: Original shape of the processing pair, useful for scaling calculations.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -80,6 +82,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         instance_labelmap = self._match_instances(
             unmatched_instance_pair,
             label_group=label_group,  # <-- forward label_group
+            processing_pair_orig_shape=processing_pair_orig_shape,  # <-- forward processing_pair_orig_shape
             **kwargs,
         )
         # print("instance_labelmap:", instance_labelmap)
@@ -294,6 +297,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         label_group=None,  # <-- add label_group argument
+        processing_pair_orig_shape=None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -302,11 +306,13 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
             label_group: Optional label group information.
+            processing_pair_orig_shape: Original shape of the processing pair, useful for scaling calculations.
             **kwargs: Additional keyword arguments.
 
         Returns:
             InstanceLabelMap: The result of the instance matching.
         """
+        
         # Get labels from unmatched instance pair
         ref_labels = unmatched_instance_pair.ref_labels
         pred_labels = unmatched_instance_pair.pred_labels
@@ -327,6 +333,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
             mm_pairs = _calc_matching_metric_of_overlapping_partlabels(
                 pred_arr,
                 ref_arr,
+                processing_pair_orig_shape,
                 ref_labels,
                 matching_metric=self._matching_metric,
             )
