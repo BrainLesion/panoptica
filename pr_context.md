@@ -71,11 +71,11 @@ with `class LabelPartGroup(LabelGroup)` (proposed). This would now look like:
 
 Visually for a case: 
 
-![alt text](./pr_assests/image-1.png)
+![alt text](./pr_assests/image.png)
 
 `LabelMergaGroup` looks like this:
 
-![alt text](./pr_assests/image.png)
+![alt text](./pr_assests/image-1.png)
 
 `LabelPartGroup` looks like this:
 
