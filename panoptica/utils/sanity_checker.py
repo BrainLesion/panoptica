@@ -2,6 +2,66 @@ import SimpleITK as sitk
 import numpy as np
 
 
+def sanity_checker_with_arrays(
+    image_array_baseline: np.ndarray,
+    image_array_compare: np.ndarray,
+) -> bool:
+    """
+    This function performs sanity check on 2 image arrays.
+
+    Args:
+        image_array_baseline (np.ndarray): The first image array to be used as a baseline.
+        image_array_compare (np.ndarray): The second image array for comparison.
+        threshold (float): Threshold for checking image data consistency. This is needed because different packages use different precisions for metadata.
+
+    Returns:
+        bool: True if the images pass the sanity check, False otherwise.
+    """
+    # dimensions need to be exact
+    if image_array_baseline.shape != image_array_compare.shape:
+        return False
+
+    return True
+
+
+def sanity_checker_with_images(
+    image_baseline: sitk.Image, image_compare: sitk.Image, threshold: float = 1e-5
+) -> bool:
+    """
+    This function performs sanity check on 2 SimpleITK images.
+
+    Args:
+        image_baseline (sitk.Image): The first image to be used as a baseline.
+        image_compare (sitk.Image): The second image for comparison.
+
+    Returns:
+        bool: True if the images pass the sanity check, False otherwise.
+    """
+    # start necessary comparisons
+    # dimensions need to be exact
+    if image_baseline.GetDimension() != image_compare.GetDimension():
+        return False
+    # size need to be exact
+    if image_baseline.GetSize() != image_compare.GetSize():
+        return False
+
+    # origin, direction, and spacing need to be similar enough
+    if (
+        np.array(image_baseline.GetOrigin()) - np.array(image_compare.GetOrigin())
+    ).sum() > threshold:
+        return False
+    if (
+        np.array(image_baseline.GetSpacing()) - np.array(image_compare.GetSpacing())
+    ).sum() > threshold:
+        return False
+    if (
+        np.array(image_baseline.GetDirection()) - np.array(image_compare.GetDirection())
+    ).sum() > threshold:
+        return False
+
+    return True
+
+
 def sanity_checker_with_files(
     image_file_baseline: str, image_file_compare: str, threshold: float = 1e-5
 ) -> bool:
@@ -16,38 +76,9 @@ def sanity_checker_with_files(
     Returns:
         bool: True if the images pass the sanity check, False otherwise.
     """
-    # initialize image readers
-    file_reader_baseline = sitk.ImageFileReader()
-    file_reader_baseline.SetFileName(image_file_baseline)
-    file_reader_baseline.ReadImageInformation()
+    image_baseline = sitk.ReadImage(image_file_baseline)
+    image_compare = sitk.ReadImage(image_file_compare)
 
-    file_reader_compare = sitk.ImageFileReader()
-    file_reader_compare.SetFileName(image_file_compare)
-    file_reader_compare.ReadImageInformation()
-
-    # start necessary comparisons
-    # dimensions need to be exact
-    if file_reader_baseline.GetDimension() != file_reader_compare.GetDimension():
-        return False
-    # size need to be exact
-    if file_reader_baseline.GetSize() != file_reader_compare.GetSize():
-        return False
-
-    # origin, direction, and spacing need to be similar enough
-    if (
-        np.array(file_reader_baseline.GetOrigin())
-        - np.array(file_reader_compare.GetOrigin())
-    ).sum() > threshold:
-        return False
-    if (
-        np.array(file_reader_baseline.GetSpacing())
-        - np.array(file_reader_compare.GetSpacing())
-    ).sum() > threshold:
-        return False
-    if (
-        np.array(file_reader_baseline.GetDirection())
-        - np.array(file_reader_compare.GetDirection())
-    ).sum() > threshold:
-        return False
-
-    return True
+    return sanity_checker_with_images(
+        image_baseline, image_compare, threshold=threshold
+    )
