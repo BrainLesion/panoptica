@@ -49,8 +49,11 @@ class ValueSummary:
     def __repr__(self):
         return str(self)
 
-    def __str__(self):
-        return f"[{round(self.min, 3)}, {round(self.max, 3)}], avg = {round(self.avg, 3)} +- {round(self.std, 3)}"
+    def get_string_repr(self, ndigits: int = 3):
+        return f"[{round(self.min, ndigits)}, {round(self.max, ndigits)}], avg = {round(self.avg, ndigits)} +- {round(self.std, ndigits)}"
+
+    def __str__(self, ndigits: int = 3):
+        return self.get_string_repr(ndigits)
 
 
 class Panoptica_Statistic:
@@ -179,6 +182,50 @@ class Panoptica_Statistic:
         if not remove_nones:
             return self.__value_dict[group][metric]
         return [i for i in self.__value_dict[group][metric] if i is not None]
+
+    def get_dict(self, group, metric, remove_nones, sort_ascending: bool = True):
+        values = self.get(group, metric, remove_nones=False)
+        if remove_nones:
+            vdict = {
+                self.__subj_names[i]: values[i]
+                for i in range(len(values))
+                if values[i] is not None
+            }
+        else:
+            vdict = {self.__subj_names[i]: values[i] for i in range(len(values))}
+        vdict = dict(
+            sorted(vdict.items(), key=lambda x: x[1], reverse=not sort_ascending)
+        )
+        return vdict
+
+    def get_best_worst_k_entries(
+        self,
+        groups: list[str] | str | None = None,
+        metrics: list[str] | str | None = None,
+        k: int = 3,
+    ):
+        if groups is None:
+            groups = self.__groupnames
+        if metrics is None:
+            metrics = self.__metricnames
+
+        if isinstance(groups, str):
+            groups = [groups]
+        if isinstance(metrics, str):
+            metrics = [metrics]
+
+        best_dict = {}
+        worst_dict = {}
+
+        for g in groups:
+            self._assertgroup(g)
+            for m in metrics:
+                self._assertmetric(m)
+
+                d = self.get_dict(g, m, remove_nones=True, sort_ascending=False)
+                best_dict[(g, m)] = {k: d[k] for k in list(d.keys())[:k]}
+                worst_dict[(g, m)] = {k: d[k] for k in list(d.keys())[-k:]}
+        return best_dict, worst_dict
 
     def get_one_subject(self, subjectname: str):
         """Gets the values for ONE subject for each group and metric
