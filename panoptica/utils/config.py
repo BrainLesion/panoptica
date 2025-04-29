@@ -2,6 +2,7 @@ from ruamel.yaml import YAML
 from pathlib import Path
 from panoptica.utils.filepath import config_by_name, config_dir_by_name
 from abc import ABC, abstractmethod
+from warnings import warn
 
 supported_helper_classes = []
 
@@ -76,6 +77,27 @@ def _register_class_to_yaml(cls):
     global supported_helper_classes
     if cls not in supported_helper_classes:
         supported_helper_classes.append(cls)
+
+
+def _load_from_config_united(cls, path: str | Path):
+    """Loads an instance of a class from a YAML configuration file.
+
+    Args:
+        cls: The class type to instantiate.
+        path (str | Path): Path to the YAML configuration file.
+
+    Returns:
+        An instance of the specified class, loaded from configuration.
+    """
+    if isinstance(path, str):
+        path = Path(path)
+    path_ = path
+    if not path.exists():
+        path_ = config_by_name(path.name)
+    assert path_.exists(), f"load_from_config: {path} does not exist, neither does {path_}"
+    obj = _load_yaml(path_, registered_class=cls)
+    assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
+    return obj
 
 
 def _load_from_config(cls, path: str | Path):
@@ -173,7 +195,7 @@ class SupportsConfig:
         Returns:
             An instance of the class.
         """
-        obj = _load_from_config(cls, path)
+        obj = _load_from_config_united(cls, path)
         assert isinstance(
             obj, cls
         ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
@@ -189,9 +211,9 @@ class SupportsConfig:
         Returns:
             An instance of the class.
         """
-        obj = _load_from_config_name(cls, name)
-        assert isinstance(obj, cls)
-        return obj
+        # warn(DeprecationWarning("load_from_config_name is deprecated, use load_from_config instead")
+        warn("load_from_config_name is deprecated, use load_from_config instead", DeprecationWarning, stacklevel=3)
+        return cls.load_from_config(name)
 
     def save_to_config(self, path: str | Path):
         """Saves the instance to a YAML configuration file.
