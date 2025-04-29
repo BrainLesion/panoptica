@@ -7,7 +7,6 @@ import SimpleITK as sitk
 
 
 from panoptica import Panoptica_Evaluator
-from panoptica.utils import sanity_checker_with_files
 
 
 def version_callback(value: bool):
@@ -66,11 +65,6 @@ def main(
     # check if files exist
     for file in [reference, prediction, config]:
         assert os.path.exists(file), f"File {file} does not exist."
-
-    # add a basic sanity check to ensure the images are compatible
-    assert sanity_checker_with_files(
-        reference, prediction
-    ), "The reference and prediction images do not match in dimension, size, spacing, origin, or orientation."
 
     ref_masks = sitk.GetArrayFromImage(sitk.ReadImage(reference))
     pred_masks = sitk.GetArrayFromImage(sitk.ReadImage(prediction))
