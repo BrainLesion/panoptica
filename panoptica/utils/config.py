@@ -94,7 +94,9 @@ def _load_from_config_united(cls, path: str | Path):
     path_ = path
     if not path.exists():
         path_ = config_by_name(path.name)
-    assert path_.exists(), f"load_from_config: {path} does not exist, neither does {path_}"
+    assert (
+        path_.exists()
+    ), f"load_from_config: {path} does not exist, neither does {path_}"
     obj = _load_yaml(path_, registered_class=cls)
     assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
     return obj
@@ -212,7 +214,11 @@ class SupportsConfig:
             An instance of the class.
         """
         # warn(DeprecationWarning("load_from_config_name is deprecated, use load_from_config instead")
-        warn("load_from_config_name is deprecated, use load_from_config instead", DeprecationWarning, stacklevel=3)
+        warn(
+            "load_from_config_name is deprecated, use load_from_config instead",
+            DeprecationWarning,
+            stacklevel=3,
+        )
         return cls.load_from_config(name)
 
     def save_to_config(self, path: str | Path):
