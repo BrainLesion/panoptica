@@ -48,9 +48,6 @@ class InstanceLabelMap(object):
         ), "add_labelmap_entry: got no int as pred_label"
         assert np.all([r >= 0 for r in pred_labels]), "add_labelmap_entry: got a non-positive int as pred_label"
         for p in pred_labels:
-            s = p in self
-            s2 = p in self.__labelmap
-            print(s, s2)
             if p in self and self[p] != ref_label:
                 raise Exception(
                     f"You are mapping a prediction label to a reference label that was already assigned differently, got {self.__str__} and you tried {pred_labels}, {ref_label}"
