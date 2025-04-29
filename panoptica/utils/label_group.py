@@ -190,7 +190,7 @@ class LabelPartGroup(LabelGroup):
         array: np.ndarray,
         set_to_binary: bool = False,
     ) -> np.ndarray:
-        """Extracts an array of the labels specific to this part group, zeroing out isolated parts.
+        """Extracts an array of the labels specific to this part group, converting isolated parts to thing label.
 
         Args:
             array (np.ndarray): The array to filter for part group labels.
@@ -198,22 +198,50 @@ class LabelPartGroup(LabelGroup):
 
         Returns:
             np.ndarray: An array with only the valid thing and part labels of this group,
-                    where all part labels are converted to the thing label.
+                    where isolated part labels are converted to the thing label.
         """
-        from panoptica._functionals import _remove_isolated_parts
-
         # Extract all labels from this group
         result = array.copy()
         result[np.isin(result, self.value_labels, invert=True)] = 0
-
-        # Get valid regions mask - pass the thing and part labels
-        isolated_part_instances = _remove_isolated_parts(
-            result, self.thing_label, self.part_labels
-        )
-
-        # Zero out invalid regions
-        result[~isolated_part_instances] = 0
-
+        
+        # Create a mask for all parts
+        parts_mask = np.isin(result, self.part_labels)
+        
+        # Find which parts are isolated (not connected to thing)
+        from scipy import ndimage
+        
+        # Create a binary mask of the thing label
+        thing_mask = result == self.thing_label
+        
+        # For each part label, check if it's connected to the thing
+        connected_parts = np.zeros_like(result, dtype=bool)
+        
+        for part_label in self.part_labels:
+            part_mask = result == part_label
+            if np.any(part_mask):
+                # Label connected components in the combined thing+part mask
+                combined_mask = np.logical_or(thing_mask, part_mask)
+                labeled, _ = ndimage.label(combined_mask)
+                
+                # Find components that contain both thing and part
+                valid_labels = set(labeled[thing_mask])
+                valid_labels.discard(0)  # Remove background
+                
+                # Parts that share a component with thing are connected
+                if valid_labels:
+                    for label in valid_labels:
+                        connected_parts |= (labeled == label) & part_mask
+        
+        # Isolated parts are those that aren't connected
+        isolated_parts = parts_mask & ~connected_parts
+        
+        # Convert isolated parts to thing label
+        if np.any(isolated_parts):
+            result[isolated_parts] = self.thing_label
+            
+        if set_to_binary:
+            result[result != 0] = 1
+            
         return result
 
     def __call__(
