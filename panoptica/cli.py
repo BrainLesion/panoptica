@@ -65,8 +65,8 @@ def main(
 
     # check if files exist
     for file in [reference, prediction, config]:
-        assert os.path.exists(file), f"File {file} does not exist."
-
+        if not os.path.exists(file):
+            raise FileNotFoundError(f"File {file} does not exist.")
     # add a basic sanity check to ensure the images are compatible
     assert sanity_checker_with_files(
         reference, prediction
