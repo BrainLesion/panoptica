@@ -13,7 +13,6 @@ def sanity_checker_with_arrays(
     Args:
         image_array_baseline (np.ndarray): The first image array to be used as a baseline.
         image_array_compare (np.ndarray): The second image array for comparison.
-        threshold (float): Threshold for checking image data consistency. This is needed because different packages use different precisions for metadata.
 
     Returns:
         bool: True if the images pass the sanity check, False otherwise.
