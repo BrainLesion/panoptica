@@ -45,7 +45,8 @@ def sanity_checker_with_images(
     if image_baseline.GetSize() != image_compare.GetSize():
         return False
 
-    # origin, direction, and spacing need to be similar enough
+    # origin, direction, and spacing need to be "similar" enough
+    # this is needed because different packages use different precisions for metadata
     if (
         np.array(image_baseline.GetOrigin()) - np.array(image_compare.GetOrigin())
     ).sum() > threshold:
@@ -57,6 +58,13 @@ def sanity_checker_with_images(
     if (
         np.array(image_baseline.GetDirection()) - np.array(image_compare.GetDirection())
     ).sum() > threshold:
+        return False
+
+    # check if the number of components is the same - this is needed for multi-channel or vector images
+    if (
+        image_baseline.GetNumberOfComponentsPerPixel()
+        != image_compare.GetNumberOfComponentsPerPixel()
+    ):
         return False
 
     return True
@@ -76,8 +84,12 @@ def sanity_checker_with_files(
     Returns:
         bool: True if the images pass the sanity check, False otherwise.
     """
-    image_baseline = sitk.ReadImage(image_file_baseline)
-    image_compare = sitk.ReadImage(image_file_compare)
+    try:
+        image_baseline = sitk.ReadImage(image_file_baseline)
+        image_compare = sitk.ReadImage(image_file_compare)
+    except Exception as e:
+        print(f"Error reading images: {e}")
+        return False
 
     return sanity_checker_with_images(
         image_baseline, image_compare, threshold=threshold
