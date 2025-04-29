@@ -127,19 +127,39 @@ class Test_DSC(unittest.TestCase):
         print(dsc)
         self.assertAlmostEqual(dsc, 0.106583072)
 
-        dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=1, pred_instance_idx=1)
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
         print(dsc)
         self.assertAlmostEqual(dsc, 0.094117647)
 
-        dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=2, pred_instance_idx=2)
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=2,
+            pred_instance_idx=2,
+        )
         print(dsc)
         self.assertAlmostEqual(dsc, 0.068376068)
 
-        dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=1, pred_instance_idx=2)
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=2,
+        )
         print(dsc)
         self.assertAlmostEqual(dsc, 0.15384615)
 
-        dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr, ref_instance_idx=2, pred_instance_idx=1)
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=2,
+            pred_instance_idx=1,
+        )
         print(dsc)
         self.assertEqual(dsc, 0.0)
 
