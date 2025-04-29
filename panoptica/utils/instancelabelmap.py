@@ -46,7 +46,9 @@ class InstanceLabelMap(object):
         assert np.all(
             [isinstance(r, int) for r in pred_labels]
         ), "add_labelmap_entry: got no int as pred_label"
-        assert np.all([r >= 0 for r in pred_labels]), "add_labelmap_entry: got a non-positive int as pred_label"
+        assert np.all(
+            [r >= 0 for r in pred_labels]
+        ), "add_labelmap_entry: got a non-positive int as pred_label"
         for p in pred_labels:
             if p in self and self[p] != ref_label:
                 raise Exception(
@@ -131,7 +133,13 @@ class InstanceLabelMap(object):
         return str(
             list(
                 [
-                    str(tuple(k for k in self.__labelmap.keys() if self.__labelmap[k] == v)) + " -> " + str(v)
+                    str(
+                        tuple(
+                            k for k in self.__labelmap.keys() if self.__labelmap[k] == v
+                        )
+                    )
+                    + " -> "
+                    + str(v)
                     for v in set(self.__labelmap.values())
                 ]
             )
