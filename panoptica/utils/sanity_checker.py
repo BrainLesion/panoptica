@@ -1,3 +1,4 @@
+from typing import Union
 import SimpleITK as sitk
 import numpy as np
 
@@ -94,3 +95,43 @@ def sanity_checker_with_files(
     return sanity_checker_with_images(
         image_baseline, image_compare, threshold=threshold
     )
+
+
+def sanity_checker(
+    reference: Union[str, sitk.Image, np.ndarray],
+    compare: Union[str, sitk.Image, np.ndarray],
+    threshold: float = 1e-5,
+) -> bool:
+    """
+    This function is a wrapper that performs sanity check on 2 images.
+
+    Args:
+        reference (Union[str, sitk.Image, np.ndarray]): The first image to be used as a baseline.
+        compare (Union[str, sitk.Image, np.ndarray]): The second image for comparison.
+        threshold (float): Threshold for checking image data consistency. This is needed because different packages use different precisions for metadata.
+
+    Returns:
+        bool: True if the images pass the sanity check, False otherwise.
+    """
+    if isinstance(reference, str) and isinstance(compare, str):
+        return sanity_checker_with_files(reference, compare, threshold=threshold)
+    elif isinstance(reference, sitk.Image) and isinstance(compare, sitk.Image):
+        return sanity_checker_with_images(reference, compare, threshold=threshold)
+    elif isinstance(reference, sitk.Image) and isinstance(compare, str):
+        try:
+            compare_img = sitk.ReadImage(compare)
+        except Exception as e:
+            print(f"Error reading image: {e}")
+            return False
+        return sanity_checker_with_images(reference, compare_img, threshold=threshold)
+    elif isinstance(reference, str) and isinstance(compare, sitk.Image):
+        try:
+            reference_img = sitk.ReadImage(reference)
+        except Exception as e:
+            print(f"Error reading image: {e}")
+            return False
+        return sanity_checker_with_images(reference_img, compare, threshold=threshold)
+    elif isinstance(reference, np.ndarray) and isinstance(compare, np.ndarray):
+        return sanity_checker_with_arrays(reference, compare)
+    else:
+        raise ValueError("Unsupported input types for reference and compare.")
