@@ -290,6 +290,20 @@ class PanopticaResult(object):
             sq_hd95_std,
             long_name="Segmentation Quality Hausdorff Distance 95 Standard Deviation",
         )
+        self.sq_nsd: float
+        self._add_metric(
+            "sq_nsd",
+            MetricType.INSTANCE,
+            sq_nsd,
+            long_name="Segmentation Quality Normalized Surface Dice",
+        )
+        self.sq_nsd_std: float
+        self._add_metric(
+            "sq_nsd_std",
+            MetricType.INSTANCE,
+            sq_nsd_std,
+            long_name="Segmentation Quality Normalized Surface Dice Standard Deviation",
+        )
         # endregion
 
         # region Global
@@ -303,6 +317,7 @@ class PanopticaResult(object):
         self.global_bin_cedi: float
         self.global_bin_hd: float
         self.global_bin_hd95: float
+        self.global_bin_nsd: float
         # endregion
 
         ##################
@@ -773,6 +788,14 @@ def sq_hd95(res: PanopticaResult):
 
 def sq_hd95_std(res: PanopticaResult):
     return res.get_list_metric(Metric.HD95, mode=MetricMode.STD)
+
+
+def sq_nsd(res: PanopticaResult):
+    return res.get_list_metric(Metric.NSD, mode=MetricMode.AVG)
+
+
+def sq_nsd_std(res: PanopticaResult):
+    return res.get_list_metric(Metric.NSD, mode=MetricMode.STD)
 
 
 # endregion

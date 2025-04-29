@@ -29,6 +29,10 @@ from panoptica.metrics.hausdorff_distance import (
     _compute_instance_hausdorff_distance95,
     _compute_hausdorff_distance95,
 )
+from panoptica.metrics.normalized_surface_dice import (
+    _compute_instance_normalized_surface_dice,
+    _compute_normalized_surface_dice,
+)
 from panoptica.metrics.iou import _compute_instance_iou, _compute_iou
 from panoptica.metrics.metrics import (
     Evaluation_List_Metric,

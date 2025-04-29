@@ -22,10 +22,10 @@ class InstanceLabelMap(object):
         get_one_to_one_dictionary(): Returns the labelmap dictionary for a one-to-one view.
     """
 
-    labelmap: dict[int, int]
+    __labelmap: dict[int, int]
 
     def __init__(self) -> None:
-        self.labelmap = {}
+        self.__labelmap = {}
 
     def add_labelmap_entry(self, pred_labels: list[int] | int, ref_label: int):
         """Adds an entry that maps prediction labels to a single reference label.
@@ -42,15 +42,19 @@ class InstanceLabelMap(object):
         if not isinstance(pred_labels, list):
             pred_labels = [pred_labels]
         assert isinstance(ref_label, int), "add_labelmap_entry: got no int as ref_label"
+        assert ref_label > 0, "add_labelmap_entry: got no positive int as ref_label"
         assert np.all(
             [isinstance(r, int) for r in pred_labels]
         ), "add_labelmap_entry: got no int as pred_label"
+        assert np.all(
+            [r >= 0 for r in pred_labels]
+        ), "add_labelmap_entry: got a non-positive int as pred_label"
         for p in pred_labels:
-            if p in self.labelmap and self.labelmap[p] != ref_label:
+            if p in self and self[p] != ref_label:
                 raise Exception(
                     f"You are mapping a prediction label to a reference label that was already assigned differently, got {self.__str__} and you tried {pred_labels}, {ref_label}"
                 )
-            self.labelmap[p] = ref_label
+            self.__labelmap[p] = ref_label
 
     def get_pred_labels_matched_to_ref(self, ref_label: int):
         """Retrieves all prediction labels that map to a specified reference label.
@@ -61,7 +65,7 @@ class InstanceLabelMap(object):
         Returns:
             list[int]: List of prediction labels mapped to `ref_label`.
         """
-        return [k for k, v in self.labelmap.items() if v == ref_label]
+        return [k for k, v in self.items() if v == ref_label]
 
     def contains_pred(self, pred_label: int):
         """Checks if a prediction label exists in the map.
@@ -72,7 +76,7 @@ class InstanceLabelMap(object):
         Returns:
             bool: True if `pred_label` is in `labelmap`, otherwise False.
         """
-        return pred_label in self.labelmap
+        return pred_label in self
 
     def contains_ref(self, ref_label: int):
         """Checks if a reference label exists in the map.
@@ -83,7 +87,7 @@ class InstanceLabelMap(object):
         Returns:
             bool: True if `ref_label` is in `labelmap` values, otherwise False.
         """
-        return ref_label in self.labelmap.values()
+        return ref_label in self.values()
 
     def contains_and(
         self, pred_label: int | None = None, ref_label: int | None = None
@@ -97,8 +101,8 @@ class InstanceLabelMap(object):
         Returns:
             bool: True if both `pred_label` and `ref_label` are in the map; otherwise, False.
         """
-        pred_in = True if pred_label is None else pred_label in self.labelmap
-        ref_in = True if ref_label is None else ref_label in self.labelmap.values()
+        pred_in = True if pred_label is None else pred_label in self
+        ref_in = True if ref_label is None else ref_label in self.values()
         return pred_in and ref_in
 
     def contains_or(
@@ -113,8 +117,8 @@ class InstanceLabelMap(object):
         Returns:
             bool: True if either `pred_label` or `ref_label` are in the map; otherwise, False.
         """
-        pred_in = True if pred_label is None else pred_label in self.labelmap
-        ref_in = True if ref_label is None else ref_label in self.labelmap.values()
+        pred_in = True if pred_label is None else pred_label in self
+        ref_in = True if ref_label is None else ref_label in self.values()
         return pred_in or ref_in
 
     def get_one_to_one_dictionary(self):
@@ -123,22 +127,50 @@ class InstanceLabelMap(object):
         Returns:
             dict[int, int]: The prediction-to-reference label mapping.
         """
-        return self.labelmap
+        return self.__labelmap.copy()
 
     def __str__(self) -> str:
         return str(
             list(
                 [
-                    str(tuple(k for k in self.labelmap.keys() if self.labelmap[k] == v))
+                    str(
+                        tuple(
+                            k for k in self.__labelmap.keys() if self.__labelmap[k] == v
+                        )
+                    )
                     + " -> "
                     + str(v)
-                    for v in set(self.labelmap.values())
+                    for v in set(self.__labelmap.values())
                 ]
             )
         )
 
     def __repr__(self) -> str:
         return str(self)
+
+    def __contains__(self, key: int) -> bool:
+        return key in self.__labelmap
+
+    def __getitem__(self, key: int) -> int:
+        return self.__labelmap[key]
+
+    def __iter__(self):
+        return iter(self.__labelmap.keys())
+
+    def __setitem__(self, key: int, value: int):
+        raise Exception("Attempting to alter read-only value")
+
+    def __len__(self) -> int:
+        return self.__labelmap.__len__()
+
+    def items(self):
+        return self.__labelmap.items()
+
+    def keys(self) -> list[int]:
+        return list(self.__labelmap.keys())
+
+    def values(self) -> list[int]:
+        return list(self.__labelmap.values())
 
     # Make all variables read-only!
     def __setattr__(self, attr, value):

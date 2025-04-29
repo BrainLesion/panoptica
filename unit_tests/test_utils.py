@@ -19,7 +19,6 @@ class Test_Citation_Reminder(unittest.TestCase):
         return super().setUp()
 
     def test_citation_code(self):
-
         @citation_reminder
         def foo():
             return "bar"

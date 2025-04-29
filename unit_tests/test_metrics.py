@@ -20,6 +20,7 @@ from unit_tests.unit_test_utils import (
     case_simple_shifted,
     case_simple_underpredicted,
     case_simple_overlap_but_large_discrepancy,
+    case_multiple_overlapping_instances,
 )
 
 
@@ -119,6 +120,48 @@ class Test_DSC(unittest.TestCase):
         pred_arr, ref_arr = case_simple_underpredicted()
         dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(dsc, 0.5714285714285714)
+
+    def test_dsc_case_multiple_overlapping_instances(self):
+        pred_arr, ref_arr = case_multiple_overlapping_instances()
+        dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr)
+        print(dsc)
+        self.assertAlmostEqual(dsc, 0.106583072)
+
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        print(dsc)
+        self.assertAlmostEqual(dsc, 0.094117647)
+
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=2,
+            pred_instance_idx=2,
+        )
+        print(dsc)
+        self.assertAlmostEqual(dsc, 0.068376068)
+
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=2,
+        )
+        print(dsc)
+        self.assertAlmostEqual(dsc, 0.15384615)
+
+        dsc = Metric.DSC(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=2,
+            pred_instance_idx=1,
+        )
+        print(dsc)
+        self.assertEqual(dsc, 0.0)
 
 
 class Test_ASSD(unittest.TestCase):
@@ -358,6 +401,43 @@ class Test_HD(unittest.TestCase):
         #
         mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertAlmostEqual(mv, 2.473011636398349)
+
+
+class Test_NSD(unittest.TestCase):
+    # case_simple_nooverlap
+    # case_simple_nooverlap
+    # case_simple_overpredicted
+    # case_simple_underpredicted
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_nsd_case_simple_identical(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.NSD(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        self.assertEqual(mv, 1.0)
+
+    def test_nsd_case_simple_identical_idx(self):
+
+        pred_arr, ref_arr = case_simple_identical()
+        mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr)
+        self.assertEqual(mv, 1.0)
+
+    def test_nsd_case_simple_underpredicted_thresholds(self):
+
+        pred_arr, ref_arr = case_simple_underpredicted()
+        mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=0.5)
+        self.assertEqual(mv, 0.375)
+        #
+        mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=1)
+        self.assertEqual(mv, 1.0)
 
 
 # class Test_ST(unittest.TestCase):

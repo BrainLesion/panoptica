@@ -110,3 +110,18 @@ def case_simple_overlap_but_large_discrepancy():
         ]
     )
     return prediction_arr, reference_arr
+
+
+def case_multiple_overlapping_instances():
+    # Create empty arrays
+    prediction_arr = np.zeros((30, 30), dtype=np.uint8)
+    reference_arr = np.zeros((30, 30), dtype=np.uint8)
+
+    # Ground truth
+    reference_arr[1:10, 1:10] = 1
+    reference_arr[11:20, 11:20] = 2
+
+    # Prediction
+    prediction_arr[1:3, 1:3] = 1
+    prediction_arr[7:13, 7:13] = 2
+    return prediction_arr, reference_arr
