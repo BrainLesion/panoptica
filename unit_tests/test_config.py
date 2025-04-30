@@ -109,12 +109,11 @@ class Test_Datatypes(unittest.TestCase):
         print()
 
         configname = "test_file.yaml"
-        t.save_to_config_by_name(configname)
-        d: SegmentationClassGroups = SegmentationClassGroups.load_from_config_name(
-            configname
-        )
+        t.save_to_config(configname)
+        d: SegmentationClassGroups = SegmentationClassGroups.load_from_config(configname)
 
         testfile_d = config_by_name(configname)
+        print(testfile_d)
         os.remove(testfile_d)
 
         for k, v in d.items():
@@ -127,9 +126,7 @@ class Test_Datatypes(unittest.TestCase):
             print(t)
             print()
             t.save_to_config(test_file)
-            d: ConnectedComponentsInstanceApproximator = (
-                ConnectedComponentsInstanceApproximator.load_from_config(test_file)
-            )
+            d: ConnectedComponentsInstanceApproximator = ConnectedComponentsInstanceApproximator.load_from_config(test_file)
             os.remove(test_file)
 
             self.assertEqual(d.cca_backend, t.cca_backend)
@@ -146,9 +143,7 @@ class Test_Datatypes(unittest.TestCase):
                     print(t)
                     print()
                     t.save_to_config(test_file)
-                    d: NaiveThresholdMatching = NaiveThresholdMatching.load_from_config(
-                        test_file
-                    )
+                    d: NaiveThresholdMatching = NaiveThresholdMatching.load_from_config(test_file)
                     os.remove(test_file)
 
                     self.assertEqual(d._allow_many_to_one, t._allow_many_to_one)
@@ -165,9 +160,7 @@ class Test_Datatypes(unittest.TestCase):
                 print(t)
                 print()
                 t.save_to_config(test_file)
-                d: MaxBipartiteMatching = MaxBipartiteMatching.load_from_config(
-                    test_file
-                )
+                d: MaxBipartiteMatching = MaxBipartiteMatching.load_from_config(test_file)
                 os.remove(test_file)
 
                 self.assertEqual(d._matching_metric, t._matching_metric)
@@ -181,9 +174,7 @@ class Test_Datatypes(unittest.TestCase):
             print(t)
             print()
             t.save_to_config(test_file)
-            d: MetricZeroTPEdgeCaseHandling = (
-                MetricZeroTPEdgeCaseHandling.load_from_config(test_file)
-            )
+            d: MetricZeroTPEdgeCaseHandling = MetricZeroTPEdgeCaseHandling.load_from_config(test_file)
             os.remove(test_file)
 
             for k, v in t._edgecase_dict.items():

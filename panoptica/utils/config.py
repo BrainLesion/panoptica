@@ -93,6 +93,7 @@ def _load_from_config_united(cls, path: str | Path):
         path = Path(path)
     path_ = path
     if not path.exists():
+        # If the path as path does not exist, try using it as name
         path_ = config_by_name(path.name)
     assert path_.exists(), f"load_from_config: {path} does not exist, neither does {path_}"
     obj = _load_yaml(path_, registered_class=cls)
@@ -118,7 +119,7 @@ def _load_from_config(cls, path: str | Path):
     return obj
 
 
-def _load_from_config_name(cls, name: str):
+def _load_from_config_by_name(cls, name: str):
     """Loads an instance of a class from a configuration file identified by name.
 
     Args:
@@ -131,6 +132,22 @@ def _load_from_config_name(cls, name: str):
     path = config_by_name(name)
     assert path.exists(), f"load_from_config: {path} does not exist"
     return _load_from_config(cls, path)
+
+
+def _save_to_config_united(obj, path: str | Path):
+    """Saves an instance of a class to a YAML configuration file.
+
+    Args:
+        obj: The object to save.
+        path (str | Path): The file path to save the configuration.
+    """
+    if isinstance(path, str):
+        path = Path(path)
+    if not path.parent.exists() or path.parent.name == "":
+        dir, name = config_dir_by_name(path.name)
+        path = dir.joinpath(name)
+    assert path.parent.exists(), f"save_to_config: {path} does not exist"
+    _save_yaml(obj, path, registered_class=type(obj))
 
 
 def _save_to_config(obj, path: str | Path):
@@ -196,24 +213,8 @@ class SupportsConfig:
             An instance of the class.
         """
         obj = _load_from_config_united(cls, path)
-        assert isinstance(
-            obj, cls
-        ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
+        assert isinstance(obj, cls), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
         return obj
-
-    @classmethod
-    def load_from_config_name(cls, name: str):
-        """Loads an instance of the class from a configuration file identified by name.
-
-        Args:
-            name (str): The name used to find the configuration file.
-
-        Returns:
-            An instance of the class.
-        """
-        # warn(DeprecationWarning("load_from_config_name is deprecated, use load_from_config instead")
-        warn("load_from_config_name is deprecated, use load_from_config instead", DeprecationWarning, stacklevel=3)
-        return cls.load_from_config(name)
 
     def save_to_config(self, path: str | Path):
         """Saves the instance to a YAML configuration file.
@@ -221,15 +222,9 @@ class SupportsConfig:
         Args:
             path (str | Path): The file path to save the configuration.
         """
-        _save_to_config(self, path)
-
-    def save_to_config_by_name(self, name: str):
-        """Saves the instance to a configuration file identified by name.
-
-        Args:
-            name (str): The name used to determine the configuration file path.
-        """
-        _save_to_config_by_name(self, name)
+        if isinstance(path, str):
+            path = Path(path)
+        _save_to_config_united(self, path)
 
     @classmethod
     def to_yaml(cls, representer, node):
@@ -242,9 +237,7 @@ class SupportsConfig:
         Returns:
             YAML node: YAML-compatible node representation of the object.
         """
-        assert hasattr(
-            cls, "_yaml_repr"
-        ), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
+        assert hasattr(cls, "_yaml_repr"), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
         return representer.represent_mapping("!" + cls.__name__, cls._yaml_repr(node))
 
     @classmethod
