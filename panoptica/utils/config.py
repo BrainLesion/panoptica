@@ -95,7 +95,9 @@ def _load_from_config_united(cls, path: str | Path):
     if not path.exists():
         # If the path as path does not exist, try using it as name
         path_ = config_by_name(path.name)
-    assert path_.exists(), f"load_from_config: {path} does not exist, neither does {path_}"
+    assert (
+        path_.exists()
+    ), f"load_from_config: {path} does not exist, neither does {path_}"
     obj = _load_yaml(path_, registered_class=cls)
     assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
     return obj
@@ -213,7 +215,9 @@ class SupportsConfig:
             An instance of the class.
         """
         obj = _load_from_config_united(cls, path)
-        assert isinstance(obj, cls), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
+        assert isinstance(
+            obj, cls
+        ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
         return obj
 
     def save_to_config(self, path: str | Path):
@@ -237,7 +241,9 @@ class SupportsConfig:
         Returns:
             YAML node: YAML-compatible node representation of the object.
         """
-        assert hasattr(cls, "_yaml_repr"), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
+        assert hasattr(
+            cls, "_yaml_repr"
+        ), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
         return representer.represent_mapping("!" + cls.__name__, cls._yaml_repr(node))
 
     @classmethod
