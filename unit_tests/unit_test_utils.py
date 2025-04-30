@@ -1,4 +1,5 @@
 import numpy as np
+from unittest.mock import patch, PropertyMock
 
 
 def case_simple_identical():
@@ -125,3 +126,10 @@ def case_multiple_overlapping_instances():
     prediction_arr[1:3, 1:3] = 1
     prediction_arr[7:13, 7:13] = 2
     return prediction_arr, reference_arr
+
+
+def patch_property(path, value):
+    patcher = patch(path, new_callable=PropertyMock)
+    mock = patcher.start()
+    mock.return_value = value
+    return patcher
