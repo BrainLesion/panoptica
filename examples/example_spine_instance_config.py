@@ -10,7 +10,7 @@ directory = str(Path(__file__).absolute().parent)
 reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
 prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
-evaluator = Panoptica_Evaluator.load_from_config_name(
+evaluator = Panoptica_Evaluator.load_from_config(
     "panoptica_evaluator_unmatched_instance"
 )
 
