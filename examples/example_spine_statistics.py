@@ -34,9 +34,7 @@ def main(parallel_opt: str = "future"):  # none, pool, joblib, future
     prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
     evaluator = Panoptica_Aggregator(
-        Panoptica_Evaluator.load_from_config_name(
-            "panoptica_evaluator_unmatched_instance"
-        ),
+        Panoptica_Evaluator.load_from_config("panoptica_evaluator_unmatched_instance"),
         Path(__file__).parent.joinpath("spine_example.tsv"),
         log_times=True,
     )

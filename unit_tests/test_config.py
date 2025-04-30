@@ -109,12 +109,13 @@ class Test_Datatypes(unittest.TestCase):
         print()
 
         configname = "test_file.yaml"
-        t.save_to_config_by_name(configname)
-        d: SegmentationClassGroups = SegmentationClassGroups.load_from_config_name(
+        t.save_to_config(configname)
+        d: SegmentationClassGroups = SegmentationClassGroups.load_from_config(
             configname
         )
 
         testfile_d = config_by_name(configname)
+        print(testfile_d)
         os.remove(testfile_d)
 
         for k, v in d.items():
