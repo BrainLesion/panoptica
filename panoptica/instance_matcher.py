@@ -204,7 +204,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         """
         ref_labels = unmatched_instance_pair.ref_labels
 
-        # Initialize variables for True Positives (tp) and False Positives (fp)
+        # Initialize InstanceLabelMap
         labelmap = InstanceLabelMap()
 
         pred_arr, ref_arr = (
@@ -229,7 +229,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
                 pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
             )
 
-        # Loop through matched instances to compute PQ components
+        # Loop through matched instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if (
                 labelmap.contains_or(pred_label, ref_label)
@@ -240,10 +240,8 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             if self._matching_metric.score_beats_threshold(
                 matching_score, self._matching_threshold
             ):
-                # Match found, increment true positive count and collect IoU and Dice values
+                # Match found, add entry to labelmap
                 labelmap.add_labelmap_entry(pred_label, ref_label)
-                # map label ref_idx to pred_idx
-
         return labelmap
 
     @classmethod
@@ -520,15 +518,3 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
             "matching_metric": node._matching_metric,
             "matching_threshold": node._matching_threshold,
         }
-
-
-class MatchUntilConvergenceMatching(InstanceMatchingAlgorithm):
-    # Match like the naive matcher (so each to their best reference) and then again and again until no overlapping labels are left
-    pass
-
-
-class DesperateMarriageMatching(InstanceMatchingAlgorithm):
-    # Match as many predictions to references as possible, doesn't need threshold
-    # Option for many-to-one or one-to-one
-    # https://github.com/koseii2122/The-Stable-Matching-Algorithm
-    pass

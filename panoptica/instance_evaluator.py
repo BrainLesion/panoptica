@@ -43,6 +43,11 @@ def evaluate_matched_instance(
         _evaluate_instance(reference_arr, prediction_arr, ref_idx, eval_metrics)
         for ref_idx in ref_matched_labels
     ]
+    # instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
+    # with Pool() as pool:
+    #    metric_dicts: list[dict[Metric, float]] = pool.starmap(
+    #        _evaluate_instance, instance_pairs
+    #    )
 
     # TODO if instance matcher already gives matching metric, adapt here!
     for metric_dict in metric_dicts:
@@ -89,6 +94,12 @@ def _evaluate_instance(
 
     if ref_arr.sum() == 0 or pred_arr.sum() == 0:
         return {}
+
+    # # Crop down for speedup
+    # crop = _get_paired_crop(
+    #     pred_arr,
+    #     ref_arr,
+    # )
 
     result: dict[Metric, float] = {}
     for metric in eval_metrics:
