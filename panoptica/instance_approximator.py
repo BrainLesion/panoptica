@@ -188,7 +188,7 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             n_prediction_instance=n_prediction_instance,
             n_reference_instance=n_reference_instance,
         )
-        
+
     @classmethod
     def _yaml_repr(cls, node) -> dict:
         return {"cca_backend": node.cca_backend}
@@ -223,7 +223,6 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
             )
         assert cca_backend is not None
 
-
         _, n_prediction_instance = _connected_components(
             semantic_pair.prediction_arr, cca_backend
         )
@@ -236,7 +235,7 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
             semantic_pair.prediction_arr
         )
         reference_arr, reference_arr_shape = self._one_hot(semantic_pair.reference_arr)
-        
+
         for i in range(prediction_arr.shape[0]):
             # If channel 0, inverse it before connected components
             if i == 0:

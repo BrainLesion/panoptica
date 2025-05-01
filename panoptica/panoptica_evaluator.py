@@ -24,6 +24,7 @@ from panoptica.utils.segmentation_class import (
     _NoSegmentationClassGroups,
 )
 
+
 class Panoptica_Evaluator(SupportsConfig):
 
     def __init__(
@@ -109,8 +110,8 @@ class Panoptica_Evaluator(SupportsConfig):
             "verbose": node.__verbose,
         }
 
-    # @citation_reminder
-    # @measure_time
+    @citation_reminder
+    @measure_time
     def evaluate(
         self,
         prediction_arr: np.ndarray,
@@ -286,9 +287,12 @@ def panoptic_evaluate(
     # Crops away unecessary space of zeroes
     # input_pair.crop_data()
 
-
-    processing_pair_orig_shape = input_pair.prediction_arr.shape #! This is required for the "Matching" and "Evalutation" to work properly for the part stuff.
-    num_ref_labels = input_pair.reference_arr.max() #! This is required for the "Evalutation" to work properly for the part stuff.
+    processing_pair_orig_shape = (
+        input_pair.prediction_arr.shape
+    )  #! This is required for the "Matching" and "Evalutation" to work properly for the part stuff.
+    num_ref_labels = (
+        input_pair.reference_arr.max()
+    )  #! This is required for the "Evalutation" to work properly for the part stuff.
 
     processing_pair: (
         SemanticPair
@@ -341,7 +345,7 @@ def panoptic_evaluate(
         processing_pair = instance_matcher.match_instances(
             processing_pair,
             label_group=label_group,  # <-- forward label_group
-            processing_pair_orig_shape=processing_pair_orig_shape, #! This is required for the part stuff to work.
+            processing_pair_orig_shape=processing_pair_orig_shape,  #! This is required for the part stuff to work.
             **kwargs,
         )
         if log_times:
@@ -380,7 +384,7 @@ def panoptic_evaluate(
             processing_pair_orig_shape=processing_pair_orig_shape,
             num_pred_instances=processing_pair.num_pred_instances,
             num_ref_instances=processing_pair.num_ref_instances,
-            num_ref_labels=num_ref_labels, # <-- forward num_ref_labels
+            num_ref_labels=num_ref_labels,  # <-- forward num_ref_labels
             label_group=label_group,  # <-- forward label_group
             tp=processing_pair.tp,
             list_metrics=processing_pair.list_metrics,

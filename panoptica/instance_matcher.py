@@ -312,7 +312,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         Returns:
             InstanceLabelMap: The result of the instance matching.
         """
-        
+
         # Get labels from unmatched instance pair
         ref_labels = unmatched_instance_pair.ref_labels
         pred_labels = unmatched_instance_pair.pred_labels

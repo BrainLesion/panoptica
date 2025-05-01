@@ -56,16 +56,20 @@ class PanopticaResult(object):
 
         if isinstance(label_group, LabelPartGroup):
             # Store the one-hot encoded arrays for both reference and prediction
-            one_hot_ref_array = _get_orig_onehotcc_structure(reference_arr, num_ref_labels, processing_pair_orig_shape)
-            one_hot_pred_array = _get_orig_onehotcc_structure(prediction_arr, num_ref_labels, processing_pair_orig_shape)
-            
+            one_hot_ref_array = _get_orig_onehotcc_structure(
+                reference_arr, num_ref_labels, processing_pair_orig_shape
+            )
+            one_hot_pred_array = _get_orig_onehotcc_structure(
+                prediction_arr, num_ref_labels, processing_pair_orig_shape
+            )
+
             # Store the multi-channel data for later use in global metrics
             self._multi_channel_data = {
-                'ref_channels': one_hot_ref_array,
-                'pred_channels': one_hot_pred_array,
-                'num_channels': one_hot_ref_array.shape[0]
+                "ref_channels": one_hot_ref_array,
+                "pred_channels": one_hot_pred_array,
+                "num_channels": one_hot_ref_array.shape[0],
             }
-            
+
             # For backward compatibility with other metrics, flatten arrays
             reference_arr = one_hot_ref_array.flatten()
             prediction_arr = one_hot_pred_array.flatten()
@@ -432,17 +436,17 @@ class PanopticaResult(object):
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
 
         # Handle multi-channel data from LabelPartGroup
-        if hasattr(self, '_multi_channel_data'):
+        if hasattr(self, "_multi_channel_data"):
             channel_metrics = []
             channel_results = {}
 
             #! Skipping channel 1 because that is not the right part + thing. THat is only thing. We want part + thing evaluated and then the parts.
-            for i in range(self._multi_channel_data['num_channels']):
+            for i in range(self._multi_channel_data["num_channels"]):
                 if i == 1:
                     continue
-                ref_channel = self._multi_channel_data['ref_channels'][i]
-                pred_channel = self._multi_channel_data['pred_channels'][i]
-                
+                ref_channel = self._multi_channel_data["ref_channels"][i]
+                pred_channel = self._multi_channel_data["pred_channels"][i]
+
                 # Skip empty channels (where both reference and prediction are empty)
                 if ref_channel.sum() == 0 and pred_channel.sum() == 0:
                     continue
@@ -473,13 +477,13 @@ class PanopticaResult(object):
 
                 channel_metrics.append(channel_result)
                 channel_results[i] = channel_result
-                    
+
             # Store individual channel metrics for reference
             metric_name = metric.name.lower()
-            if not hasattr(self, '_channel_metrics'):
+            if not hasattr(self, "_channel_metrics"):
                 self._channel_metrics = {}
             self._channel_metrics[metric_name] = channel_results
-            
+
             # Return mean of channel metrics
             if channel_metrics:
                 return np.mean(channel_metrics)
@@ -489,7 +493,7 @@ class PanopticaResult(object):
                     metric, 0, 1, 1
                 )
                 return result
-        
+
         # Original single-channel logic
         if do_binarize:
             pred_binary = prediction_arr.copy()
@@ -729,14 +733,14 @@ class PanopticaResult(object):
     def get_channel_metrics(self, metric_name: str):
         """
         Returns the metrics for each channel when using LabelPartGroup.
-        
+
         Args:
             metric_name (str): Name of the metric (lowercase)
-            
+
         Returns:
             Dictionary of metric values per channel or None if not computed with LabelPartGroup
         """
-        if hasattr(self, '_channel_metrics') and metric_name in self._channel_metrics:
+        if hasattr(self, "_channel_metrics") and metric_name in self._channel_metrics:
             return self._channel_metrics[metric_name]
         return None
 
