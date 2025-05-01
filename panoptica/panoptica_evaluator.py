@@ -135,10 +135,6 @@ class Panoptica_Evaluator(SupportsConfig):
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
 
-            print(
-                f"Evaluating group {group_name} with labels {label_group}"
-            )
-
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
@@ -293,15 +289,6 @@ def panoptic_evaluate(
 
     processing_pair_orig_shape = input_pair.prediction_arr.shape #! This is required for the "Matching" and "Evalutation" to work properly for the part stuff.
     num_ref_labels = input_pair.reference_arr.max() #! This is required for the "Evalutation" to work properly for the part stuff.
-
-    import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-    ax[0].imshow(input_pair.prediction_arr)
-    ax[1].imshow(input_pair.reference_arr)
-    ax[0].set_title("Prediction")
-    ax[1].set_title("Reference")
-    plt.suptitle(f"ORIGINAL Input Pair -- THIS HOW STUFF LOOKS BEFORE PHASE 1 for label {label_group}")
-    plt.show()
 
     processing_pair: (
         SemanticPair

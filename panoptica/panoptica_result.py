@@ -55,18 +55,9 @@ class PanopticaResult(object):
         self.intermediate_steps_data = intermediate_steps_data
 
         if isinstance(label_group, LabelPartGroup):
-            print('Shape of reference_arr:', reference_arr.shape)
             # Store the one-hot encoded arrays for both reference and prediction
             one_hot_ref_array = _get_orig_onehotcc_structure(reference_arr, num_ref_labels, processing_pair_orig_shape)
             one_hot_pred_array = _get_orig_onehotcc_structure(prediction_arr, num_ref_labels, processing_pair_orig_shape)
-            print('Shape of one_hot_ref_array:', one_hot_ref_array.shape)
-            
-            # Store for debugging - can be removed in production
-            # import matplotlib.pyplot as plt
-            # for i in range(one_hot_ref_array.shape[0]):
-            #     plt.imshow(one_hot_ref_array[i], cmap='gray')
-            #     plt.title(f'Channel {i}')
-            #     plt.show()
             
             # Store the multi-channel data for later use in global metrics
             self._multi_channel_data = {
@@ -78,14 +69,6 @@ class PanopticaResult(object):
             # For backward compatibility with other metrics, flatten arrays
             reference_arr = one_hot_ref_array.flatten()
             prediction_arr = one_hot_pred_array.flatten()
-
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-        # ax[0].imshow(reference_arr, cmap='gray')
-        # ax[0].set_title('Reference Array')
-        # ax[1].imshow(prediction_arr, cmap='gray')
-        # ax[1].set_title('Prediction Array')
-        # plt.show()
 
         ######################
         # Evaluation Metrics #
@@ -453,9 +436,6 @@ class PanopticaResult(object):
             channel_metrics = []
             channel_results = {}
 
-            print()
-            print('ENTERING GLOBAL BIN METRICS CALCULATION')
-            
             #! Skipping channel 1 because that is not the right part + thing. THat is only thing. We want part + thing evaluated and then the parts.
             for i in range(self._multi_channel_data['num_channels']):
                 if i == 1:
@@ -467,28 +447,12 @@ class PanopticaResult(object):
                 if ref_channel.sum() == 0 and pred_channel.sum() == 0:
                     continue
 
-                import matplotlib.pyplot as plt
-                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                ax[0].imshow(ref_channel, cmap='gray')
-                ax[0].set_title(f'Reference Channel {i}')
-                ax[1].imshow(pred_channel, cmap='gray')
-                ax[1].set_title(f'Prediction Channel {i}')
-                plt.show()
-                    
                 # Binarize each channel to ensure binary input
                 pred_channel = (pred_channel != 0).astype(np.uint8)
                 ref_channel = (ref_channel != 0).astype(np.uint8)
                 # Handle edge cases for empty reference or prediction
                 prediction_empty = pred_channel.sum() == 0
                 reference_empty = ref_channel.sum() == 0
-
-                import matplotlib.pyplot as plt
-                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
-                ax[0].imshow(ref_channel, cmap='gray')
-                ax[0].set_title(f'Reference Channel {i}')
-                ax[1].imshow(pred_channel, cmap='gray')
-                ax[1].set_title(f'Prediction Channel {i}')
-                plt.show()
 
                 if prediction_empty or reference_empty:
                     is_edgecase, result = self._edge_case_handler.handle_zero_tp(
@@ -506,8 +470,6 @@ class PanopticaResult(object):
                         reference_arr=ref_channel,
                         prediction_arr=pred_channel,
                     )
-
-                print(f"Channel {i} {metric.name}: {channel_result}")
 
                 channel_metrics.append(channel_result)
                 channel_results[i] = channel_result

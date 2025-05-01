@@ -83,7 +83,6 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
 
         Args:
             semantic_pair (SemanticPair): The semantic pair to be approximated.
-            verbose (bool, optional): If True, prints detailed information. Defaults to False.
             label_group (LabelGroup | None, optional): Information about the label group being processed. Defaults to None.
             **kwargs: Additional keyword arguments.
 
@@ -224,8 +223,6 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
             )
         assert cca_backend is not None
 
-        print('YOU HAVE ENTERED A PART GROUP SO ONE HOT ENCODED CC IS BEING DONE')
-        print('WE WILL BE USING CHANNEL 0 AS THAT IS THING + PART AND ALL PART CHANNELS WHICH ARE ALL CHANNELS BAR THE FIRST')
 
         _, n_prediction_instance = _connected_components(
             semantic_pair.prediction_arr, cca_backend
@@ -241,22 +238,12 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
         reference_arr, reference_arr_shape = self._one_hot(semantic_pair.reference_arr)
         
         for i in range(prediction_arr.shape[0]):
-            print(f"Processing channel {i} of {prediction_arr.shape[0]}")
             # If channel 0, inverse it before connected components
             if i == 0:
                 prediction_arr[i] = 1 - prediction_arr[i]
                 reference_arr[i] = 1 - reference_arr[i]
             prediction_arr[i], _ = _connected_components(prediction_arr[i], cca_backend)
             reference_arr[i], _ = _connected_components(reference_arr[i], cca_backend)
-
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots(1, 2)
-            ax[0].imshow(prediction_arr[i], cmap='gray')
-            ax[0].set_title(f"Prediction Channel {i}")
-            ax[1].imshow(reference_arr[i], cmap='gray')
-            ax[1].set_title(f"Reference Channel {i}")
-            plt.suptitle(f"Connected Components for Channel {i}")
-            plt.show()
 
         # flatten to meet UnmatchedInstancePair requirements
         prediction_arr = prediction_arr.flatten()
