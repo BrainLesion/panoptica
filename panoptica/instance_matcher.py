@@ -215,7 +215,6 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         is_part_group = label_group is not None and hasattr(label_group, "part_labels")
 
         # Calculate matching metric pairs based on whether it's a part group
-        is_part_group = label_group is not None and hasattr(label_group, "part_labels")
         if is_part_group:
             mm_pairs = _calc_matching_metric_of_overlapping_partlabels(
                 pred_arr,
