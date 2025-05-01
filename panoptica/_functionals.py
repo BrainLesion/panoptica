@@ -224,11 +224,11 @@ def _calc_matching_metric_of_overlapping_partlabels(
     #! THIS IS NOT GOOD FOR MULTIPLE PARTS WITHIN A THING
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(1, 4)
-    ax[0].imshow(prediction_arr[1])
+    ax[0].imshow(prediction_arr[0])
     ax[0].set_title(f'Pred Thing')
     ax[1].imshow(prediction_arr[2])
     ax[1].set_title(f'Pred Part')
-    ax[2].imshow(reference_arr[1])
+    ax[2].imshow(reference_arr[0])
     ax[2].set_title(f'Ref Thing')
     ax[3].imshow(reference_arr[2])
     ax[3].set_title(f'Ref Part')
@@ -238,21 +238,21 @@ def _calc_matching_metric_of_overlapping_partlabels(
     #1 Perform matching based on things. The way the LabelPartGroup is defined, there will always be only one thing per class and it will be the first one.
 
     overlapping_labels = _calc_overlapping_labels(
-        prediction_arr=prediction_arr[1],
-        reference_arr=reference_arr[1],
-        ref_labels=[max(prediction_arr[1].max(), reference_arr[1].max())],
+        prediction_arr=prediction_arr[0],
+        reference_arr=reference_arr[0],
+        ref_labels=[max(prediction_arr[0].max(), reference_arr[0].max())],
     )
 
     print(" We have entered a Part Class!")
     print("ORIG THING overlapping_labels", overlapping_labels)
 
     mm_pairs = [
-        (matching_metric.value(reference_arr, prediction_arr, i[0], i[1]), (i[0], i[1]))
+        (matching_metric.value(reference_arr[0], prediction_arr[0], i[0], i[1]), (i[0], i[1]))
         for i in overlapping_labels
     ]
 
     thing_pairs = [
-        (matching_metric.value(reference_arr[1], prediction_arr[1], i[0], i[1]), (i[0], i[1]))
+        (matching_metric.value(reference_arr[0], prediction_arr[0], i[0], i[1]), (i[0], i[1]))
         for i in overlapping_labels
     ]
 
@@ -270,9 +270,10 @@ def _calc_matching_metric_of_overlapping_partlabels(
     for i, j in overlapping_labels:
 
         print(f'For Pair ({i},{j}):')
-        #? isolate the matched components for the label in pred an ref
-        matched_pred_component = prediction_arr[1] == i
-        matched_ref_component = reference_arr[1] == j
+
+        # isolate the matched components for the label in pred and ref
+        matched_ref_component = (reference_arr[0] == i)
+        matched_pred_component = (prediction_arr[0] == j)
 
         #? Isolate the part labels for the matched components
         #! Remember there can be multiple part labels for a thing label
@@ -283,65 +284,65 @@ def _calc_matching_metric_of_overlapping_partlabels(
 
             encompassed_pred_parts = []
             encompassed_ref_parts = []
+
             #? isolate the part labels for the matched components
-            for pred_part_instance, ref_part_instance in zip(np.unique(pred_part_slice), np.unique(ref_part_slice)):
-
-                #? If n parts are within the same thing, they will have the same label
-                fig, ax = plt.subplots(1, 4)
-                ax[0].imshow(matched_pred_component)
-                ax[0].set_title('Pred Inst')
-                ax[1].imshow(pred_part_slice == (pred_part_instance + 1))
-                ax[1].set_title(f'Pred Part Inst {pred_part_instance + 1}')
-                ax[2].imshow(matched_ref_component)
-                ax[2].set_title('Ref Inst')
-                ax[3].imshow(ref_part_slice == (ref_part_instance + 1))
-                ax[3].set_title(f'Ref Part Inst {ref_part_instance + 1}')
-                plt.show()
-
-                curr_pred_part_instance = pred_part_slice == (pred_part_instance + 1)
-                curr_ref_part_instance = ref_part_slice == (ref_part_instance + 1)
-                
+            # Loop over unique predicted part instances (excluding 0)
+            for pred_part_instance in np.unique(pred_part_slice):
+                if pred_part_instance == 0:
+                    continue
+                curr_pred_part_instance = pred_part_slice == (pred_part_instance)
                 flag = _is_part_encompassed(
                     part_component=curr_pred_part_instance,
                     thing_mask=matched_pred_component,
                 )
                 if flag:
                     encompassed_pred_parts.append(pred_part_instance)
-                
+
+            # Loop over unique reference part instances (excluding 0)
+            for ref_part_instance in np.unique(ref_part_slice):
+                if ref_part_instance == 0:
+                    continue
+                curr_ref_part_instance = ref_part_slice == (ref_part_instance)
                 flag = _is_part_encompassed(
                     part_component=curr_ref_part_instance,
                     thing_mask=matched_ref_component,
                 )
-                if flag is True:
+                if flag:
                     encompassed_ref_parts.append(ref_part_instance)
 
-            print(f'Matched Pred Part Instances: {encompassed_pred_parts}')
-            print(f'Matched Ref Part Instances: {encompassed_ref_parts}')
+            print(f'encompassed Pred Part Instances: {encompassed_pred_parts}')
+            print(f'encompassed Ref Part Instances: {encompassed_ref_parts}')
 
+            print('unique pred part labels', np.unique(pred_part_slice))
+            print('unique ref part labels', np.unique(ref_part_slice))
+
+            # If there are multiple encompassed predicted parts, relabel all encompassed parts to the lowest label
             if len(encompassed_pred_parts) > 1:
-                #? force them to be the same label, choose the lowest one
                 lowest_label = min(encompassed_pred_parts)
-                highest_label = max(encompassed_pred_parts)
-                pred_part_slice[pred_part_slice == (highest_label + 1)] = lowest_label + 1
-            
+                for label in encompassed_pred_parts:
+                    pred_part_slice[pred_part_slice == (label)] = lowest_label
+
+            # If there are multiple encompassed reference parts, relabel all encompassed parts to the lowest label
             if len(encompassed_ref_parts) > 1:
-                #? force them to be the same label, choose the lowest one
                 lowest_label = min(encompassed_ref_parts)
-                highest_label = max(encompassed_ref_parts)
-                ref_part_slice[ref_part_slice == (highest_label + 1)] = lowest_label + 1
+                for label in encompassed_ref_parts:
+                    ref_part_slice[ref_part_slice == (label)] = lowest_label
+
+            print('unique pred part labels', np.unique(pred_part_slice))
+            print('unique ref part labels', np.unique(ref_part_slice))
             
-        import matplotlib.pyplot as plt
-        fig, ax = plt.subplots(1, 4)
-        ax[0].imshow(matched_pred_component)
-        ax[0].set_title(f'Pred Inst {i}')
-        ax[1].imshow(pred_part_slice)
-        ax[1].set_title(f'Pred Part Class {part_label - 1}')
-        ax[2].imshow(matched_ref_component)
-        ax[2].set_title(f'Ref Inst {j}')
-        ax[3].imshow(ref_part_slice)
-        ax[3].set_title(f'Ref Part Class {part_label - 1}')
-        plt.suptitle(f'Pair ({i},{j}) | !! if n parts in 1 thing inst, all same label')
-        plt.show()
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(1, 4)
+            ax[0].imshow(matched_pred_component)
+            ax[0].set_title(f'Pred Inst {j}')
+            ax[1].imshow(pred_part_slice)
+            ax[1].set_title(f'Pred Part Class {part_label - 1}')
+            ax[2].imshow(matched_ref_component)
+            ax[2].set_title(f'Ref Inst {i}')
+            ax[3].imshow(ref_part_slice)
+            ax[3].set_title(f'Ref Part Class {part_label - 1}')
+            plt.suptitle(f'Pair ({i},{j}) | !! if n parts in 1 thing inst, all same label')
+            plt.show()
 
         ref_unique_labels = [int(label) for label in np.unique(ref_part_slice) if label > 0]
         all_part_labels = calculate_all_label_pairs(

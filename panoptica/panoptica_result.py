@@ -54,13 +54,33 @@ class PanopticaResult(object):
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
 
+
         #! THIS NEEDS TO CHANGE ASAP.
         #todo: HAVE TO DISCUSS ON HOW TO GO ABOUT THIS. CURRENTLY THE BIARY METRICS BELOW ARE EVALUATING THIS MULTILABEL FLATTENED VALUE
         if isinstance(label_group, LabelPartGroup):
-            reference_arr = _get_orig_onehotcc_structure(reference_arr, num_ref_labels, processing_pair_orig_shape)
-            reference_arr = reference_arr.flatten()
-            prediction_arr = _get_orig_onehotcc_structure(prediction_arr, num_ref_labels, processing_pair_orig_shape)
-            prediction_arr = prediction_arr.flatten()
+            print('Shape of reference_arr:', reference_arr.shape)
+            # Store the one-hot encoded arrays for both reference and prediction
+            one_hot_ref_array = _get_orig_onehotcc_structure(reference_arr, num_ref_labels, processing_pair_orig_shape)
+            one_hot_pred_array = _get_orig_onehotcc_structure(prediction_arr, num_ref_labels, processing_pair_orig_shape)
+            print('Shape of one_hot_ref_array:', one_hot_ref_array.shape)
+            
+            # Store for debugging - can be removed in production
+            # import matplotlib.pyplot as plt
+            # for i in range(one_hot_ref_array.shape[0]):
+            #     plt.imshow(one_hot_ref_array[i], cmap='gray')
+            #     plt.title(f'Channel {i}')
+            #     plt.show()
+            
+            # Store the multi-channel data for later use in global metrics
+            self._multi_channel_data = {
+                'ref_channels': one_hot_ref_array,
+                'pred_channels': one_hot_pred_array,
+                'num_channels': one_hot_ref_array.shape[0]
+            }
+            
+            # For backward compatibility with other metrics, flatten arrays
+            reference_arr = one_hot_ref_array.flatten()
+            prediction_arr = one_hot_pred_array.flatten()
 
         # import matplotlib.pyplot as plt
         # fig, ax = plt.subplots(1, 2, figsize=(10, 5))
@@ -414,6 +434,7 @@ class PanopticaResult(object):
     ):
         """
         Calculates a global binary metric based on predictions and references.
+        For multi-channel data (LabelPartGroup), computes metrics per channel and averages.
 
         Args:
             metric (Metric): The metric to compute.
@@ -422,7 +443,7 @@ class PanopticaResult(object):
             do_binarize (bool): Whether to binarize the input arrays. Defaults to True.
 
         Returns:
-            The calculated metric value.
+            The calculated metric value or mean of channel metrics for multi-channel data.
 
         Raises:
             MetricCouldNotBeComputedException: If the specified metric is not set.
@@ -430,6 +451,82 @@ class PanopticaResult(object):
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
 
+        # Handle multi-channel data from LabelPartGroup
+        if hasattr(self, '_multi_channel_data'):
+            channel_metrics = []
+            channel_results = {}
+            
+            # Skip background (channel 0) and compute metrics for each class channel
+            for i in range(1, self._multi_channel_data['num_channels']):
+                ref_channel = self._multi_channel_data['ref_channels'][i]
+                pred_channel = self._multi_channel_data['pred_channels'][i]
+                
+                # Skip empty channels (where both reference and prediction are empty)
+                if ref_channel.sum() == 0 and pred_channel.sum() == 0:
+                    continue
+
+                import matplotlib.pyplot as plt
+                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+                ax[0].imshow(ref_channel, cmap='gray')
+                ax[0].set_title(f'Reference Channel {i}')
+                ax[1].imshow(pred_channel, cmap='gray')
+                ax[1].set_title(f'Prediction Channel {i}')
+                plt.show()
+                    
+                # Binarize each channel to ensure binary input
+                pred_channel = (pred_channel != 0).astype(np.uint8)
+                ref_channel = (ref_channel != 0).astype(np.uint8)
+                # Handle edge cases for empty reference or prediction
+                prediction_empty = pred_channel.sum() == 0
+                reference_empty = ref_channel.sum() == 0
+
+                import matplotlib.pyplot as plt
+                fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+                ax[0].imshow(ref_channel, cmap='gray')
+                ax[0].set_title(f'Reference Channel {i}')
+                ax[1].imshow(pred_channel, cmap='gray')
+                ax[1].set_title(f'Prediction Channel {i}')
+                plt.show()
+
+                if prediction_empty or reference_empty:
+                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                        metric, 0, int(prediction_empty), int(reference_empty)
+                    )
+                    if is_edgecase:
+                        channel_result = result
+                    else:
+                        channel_result = metric(
+                            reference_arr=ref_channel,
+                            prediction_arr=pred_channel,
+                        )
+                else:
+                    channel_result = metric(
+                        reference_arr=ref_channel,
+                        prediction_arr=pred_channel,
+                    )
+
+                print(f"Channel {i} {metric.name}: {channel_result}")
+
+                channel_metrics.append(channel_result)
+                channel_results[i] = channel_result
+                    
+            # Store individual channel metrics for reference
+            metric_name = metric.name.lower()
+            if not hasattr(self, '_channel_metrics'):
+                self._channel_metrics = {}
+            self._channel_metrics[metric_name] = channel_results
+            
+            # Return mean of channel metrics
+            if channel_metrics:
+                return np.mean(channel_metrics)
+            else:
+                # Handle case where no valid metrics could be computed
+                is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                    metric, 0, 1, 1
+                )
+                return result
+        
+        # Original single-channel logic
         if do_binarize:
             pred_binary = prediction_arr.copy()
             ref_binary = reference_arr.copy()
@@ -664,6 +761,20 @@ class PanopticaResult(object):
                         raise value
                     return value
         return attr
+
+    def get_channel_metrics(self, metric_name: str):
+        """
+        Returns the metrics for each channel when using LabelPartGroup.
+        
+        Args:
+            metric_name (str): Name of the metric (lowercase)
+            
+        Returns:
+            Dictionary of metric values per channel or None if not computed with LabelPartGroup
+        """
+        if hasattr(self, '_channel_metrics') and metric_name in self._channel_metrics:
+            return self._channel_metrics[metric_name]
+        return None
 
 
 #########################

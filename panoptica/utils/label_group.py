@@ -200,19 +200,10 @@ class LabelPartGroup(LabelGroup):
             np.ndarray: An array with only the valid thing and part labels of this group,
                     where all part labels are converted to the thing label.
         """
-        from panoptica._functionals import _remove_isolated_parts
-
+        
         # Extract all labels from this group
         result = array.copy()
         result[np.isin(result, self.value_labels, invert=True)] = 0
-
-        # Get valid regions mask - pass the thing and part labels
-        isolated_part_instances = _remove_isolated_parts(
-            result, self.thing_label, self.part_labels
-        )
-
-        # Zero out invalid regions
-        result[~isolated_part_instances] = 0
 
         return result
 

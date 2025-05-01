@@ -236,11 +236,28 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
             semantic_pair.prediction_arr
         )
         reference_arr, reference_arr_shape = self._one_hot(semantic_pair.reference_arr)
+        
+        print(
+            f"Prediction shape: {prediction_arr_shape}, Reference shape: {reference_arr_shape}"
+        )
 
-        # Run CC per channel and merge
         for i in range(prediction_arr.shape[0]):
+            print(f"Processing channel {i} of {prediction_arr.shape[0]}")
+            # If channel 0, inverse it before connected components
+            if i == 0:
+                prediction_arr[i] = 1 - prediction_arr[i]
+                reference_arr[i] = 1 - reference_arr[i]
             prediction_arr[i], _ = _connected_components(prediction_arr[i], cca_backend)
             reference_arr[i], _ = _connected_components(reference_arr[i], cca_backend)
+
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(1, 2)
+            ax[0].imshow(prediction_arr[i], cmap='gray')
+            ax[0].set_title(f"Prediction Channel {i}")
+            ax[1].imshow(reference_arr[i], cmap='gray')
+            ax[1].set_title(f"Reference Channel {i}")
+            plt.suptitle(f"Connected Components for Channel {i}")
+            plt.show()
 
         # flatten to meet UnmatchedInstancePair requirements
         prediction_arr = prediction_arr.flatten()
