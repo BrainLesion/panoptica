@@ -224,6 +224,9 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
             )
         assert cca_backend is not None
 
+        print('YOU HAVE ENTERED A PART GROUP SO ONE HOT ENCODED CC IS BEING DONE')
+        print('WE WILL BE USING CHANNEL 0 AS THAT IS THING + PART AND ALL PART CHANNELS WHICH ARE ALL CHANNELS BAR THE FIRST')
+
         _, n_prediction_instance = _connected_components(
             semantic_pair.prediction_arr, cca_backend
         )
@@ -237,10 +240,6 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
         )
         reference_arr, reference_arr_shape = self._one_hot(semantic_pair.reference_arr)
         
-        print(
-            f"Prediction shape: {prediction_arr_shape}, Reference shape: {reference_arr_shape}"
-        )
-
         for i in range(prediction_arr.shape[0]):
             print(f"Processing channel {i} of {prediction_arr.shape[0]}")
             # If channel 0, inverse it before connected components

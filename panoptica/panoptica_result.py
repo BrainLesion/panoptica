@@ -54,9 +54,6 @@ class PanopticaResult(object):
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
 
-
-        #! THIS NEEDS TO CHANGE ASAP.
-        #todo: HAVE TO DISCUSS ON HOW TO GO ABOUT THIS. CURRENTLY THE BIARY METRICS BELOW ARE EVALUATING THIS MULTILABEL FLATTENED VALUE
         if isinstance(label_group, LabelPartGroup):
             print('Shape of reference_arr:', reference_arr.shape)
             # Store the one-hot encoded arrays for both reference and prediction
@@ -455,9 +452,14 @@ class PanopticaResult(object):
         if hasattr(self, '_multi_channel_data'):
             channel_metrics = []
             channel_results = {}
+
+            print()
+            print('ENTERING GLOBAL BIN METRICS CALCULATION')
             
-            # Skip background (channel 0) and compute metrics for each class channel
-            for i in range(1, self._multi_channel_data['num_channels']):
+            #! Skipping channel 1 because that is not the right part + thing. THat is only thing. We want part + thing evaluated and then the parts.
+            for i in range(self._multi_channel_data['num_channels']):
+                if i == 1:
+                    continue
                 ref_channel = self._multi_channel_data['ref_channels'][i]
                 pred_channel = self._multi_channel_data['pred_channels'][i]
                 

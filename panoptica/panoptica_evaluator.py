@@ -300,7 +300,7 @@ def panoptic_evaluate(
     ax[1].imshow(input_pair.reference_arr)
     ax[0].set_title("Prediction")
     ax[1].set_title("Reference")
-    plt.suptitle("ORIGINAL Input Pair -- THIS HOW STUFF LOOKS BEFORE PHASE 1")
+    plt.suptitle(f"ORIGINAL Input Pair -- THIS HOW STUFF LOOKS BEFORE PHASE 1 for label {label_group}")
     plt.show()
 
     processing_pair: (

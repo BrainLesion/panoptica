@@ -243,8 +243,8 @@ def _calc_matching_metric_of_overlapping_partlabels(
         ref_labels=[max(prediction_arr[0].max(), reference_arr[0].max())],
     )
 
-    print(" We have entered a Part Class!")
-    print("ORIG THING overlapping_labels", overlapping_labels)
+    print("ORIG (THING + PART) overlapping_labels", overlapping_labels)
+    #! Why? Think of a human. Body + limbs (limbs is parts). You want to match with the whole body including the linbs right? 
 
     mm_pairs = [
         (matching_metric.value(reference_arr[0], prediction_arr[0], i[0], i[1]), (i[0], i[1]))
@@ -259,10 +259,14 @@ def _calc_matching_metric_of_overlapping_partlabels(
     sorted_thing_pairs = sorted(
         thing_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
     )
-    print("ORIG THING sorted_thing_pairs", sorted_thing_pairs)
+    print("ORIG (THING + PART) sorted_thing_pairs", sorted_thing_pairs)
+    print()
     print()
 
     #2 When calculating the metric, we need to take into account the part labels
+
+
+    print("NOW WE BEGIN PART MATCHING")
 
     updated_thing_pairs = sorted_thing_pairs.copy()
 
