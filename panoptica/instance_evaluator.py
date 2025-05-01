@@ -95,11 +95,11 @@ def _evaluate_instance(
     if ref_arr.sum() == 0 or pred_arr.sum() == 0:
         return {}
 
-    # # Crop down for speedup
-    # crop = _get_paired_crop(
-    #     pred_arr,
-    #     ref_arr,
-    # )
+    # Crop down for speedup
+    crop = _get_paired_crop(
+        pred_arr,
+        ref_arr,
+    )
 
     result: dict[Metric, float] = {}
     for metric in eval_metrics:
