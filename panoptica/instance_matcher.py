@@ -5,7 +5,6 @@ import numpy as np
 from panoptica._functionals import (
     _calc_matching_metric_of_overlapping_labels,
     _calc_matching_metric_of_overlapping_partlabels,
-    # _calc_overlapping_labels,  # <-- Add import
     _map_labels,
 )
 from panoptica.metrics import Metric
