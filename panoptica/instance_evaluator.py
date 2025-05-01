@@ -101,6 +101,9 @@ def _evaluate_instance(
         ref_arr,
     )
 
+    ref_arr = ref_arr[crop]
+    pred_arr = pred_arr[crop]
+
     result: dict[Metric, float] = {}
     for metric in eval_metrics:
         metric_value = metric(ref_arr, pred_arr)
