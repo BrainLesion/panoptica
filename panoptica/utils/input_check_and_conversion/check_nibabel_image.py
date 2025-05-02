@@ -26,11 +26,12 @@ def sanity_checker_nibabel_image(
     This function performs sanity check on 2 SimpleITK images.
 
     Args:
-        image_baseline (sitk.Image): The first image to be used as a baseline.
-        image_compare (sitk.Image): The second image for comparison.
+        prediction_image (nib.Nifti1Image): The prediction_image to be used as a baseline.
+        reference_image (nib.Nifti1Image): The reference_image for comparison.
+        threshold (float): The threshold for comparing the images. Default is 1e-5.
 
     Returns:
-        bool: True if the images pass the sanity check, False otherwise.
+        tuple[bool, tuple[np.ndarray, np.ndarray] | str]: A tuple where the first element is a boolean indicating if the images pass the sanity check, and the second element is either the numpy arrays of the images or an error message.
     """
     # load if necessary
     if isinstance(prediction_image, (str, Path)):
@@ -45,23 +46,13 @@ def sanity_checker_nibabel_image(
     # start necessary comparisons
     # dimensions need to be exact
     if prediction_image.shape != reference_image.shape:
-        return False, "Dimension Mismatch: {} vs {}".format(
-            prediction_image.shape, reference_image.shape
-        )
+        return False, "Dimension Mismatch: {} vs {}".format(prediction_image.shape, reference_image.shape)
 
     # check if the affine matrices are similar
-    if (
-        np.array(prediction_image.affine) - np.array(reference_image.affine)
-    ).sum() > threshold:
-        return False, "Affine Mismatch: {} vs {}".format(
-            prediction_image.affine, reference_image.affine
-        )
+    if (np.array(prediction_image.affine) - np.array(reference_image.affine)).sum() > threshold:
+        return False, "Affine Mismatch: {} vs {}".format(prediction_image.affine, reference_image.affine)
 
     return True, (
-        np.asanyarray(
-            prediction_image.dataobj, dtype=prediction_image.dataobj.dtype
-        ).copy(),
-        np.asanyarray(
-            reference_image.dataobj, dtype=reference_image.dataobj.dtype
-        ).copy(),
+        np.asanyarray(prediction_image.dataobj, dtype=prediction_image.dataobj.dtype).copy(),
+        np.asanyarray(reference_image.dataobj, dtype=reference_image.dataobj.dtype).copy(),
     )

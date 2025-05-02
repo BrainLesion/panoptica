@@ -10,11 +10,11 @@ def sanity_checker_numpy_array(
     This function performs sanity check on 2 image arrays.
 
     Args:
-        image_array_baseline (np.ndarray): The first image array to be used as a baseline.
-        image_array_compare (np.ndarray): The second image array for comparison.
+        prediction_arr (np.ndarray): The prediction_array to be used as a baseline.
+        reference_arr (np.ndarray): The reference_array for comparison.
 
     Returns:
-        bool: True if the images pass the sanity check, False otherwise.
+        tuple[bool, tuple[np.ndarray, np.ndarray] | str]: A tuple where the first element is a boolean indicating if the images pass the sanity check, and the second element is either the numpy arrays of the images or an error message.
     """
     # load if necessary
     if isinstance(prediction_arr, (str, Path)):
@@ -29,8 +29,6 @@ def sanity_checker_numpy_array(
 
     # dimensions need to be exact
     if prediction_arr.shape != reference_arr.shape:
-        return False, "Dimension Mismatch: {} vs {}".format(
-            prediction_arr.shape, reference_arr.shape
-        )
+        return False, "Dimension Mismatch: {} vs {}".format(prediction_arr.shape, reference_arr.shape)
 
     return True, (prediction_arr, reference_arr)

@@ -32,11 +32,11 @@ def sanity_checker_torch_image(
     This function performs sanity check on 2 Torch tensors by converting them to numpy arrays and using that check.
 
     Args:
-        image_baseline (sitk.Image): The first image to be used as a baseline.
-        image_compare (sitk.Image): The second image for comparison.
+        prediction_image (torch.Tensor): The prediction_image.
+        reference_image (torch.Tensor): The reference_image.
 
     Returns:
-        bool: True if the images pass the sanity check, False otherwise.
+        tuple[bool, tuple[np.ndarray, np.ndarray] | str]: A tuple where the first element is a boolean indicating if the images pass the sanity check, and the second element is either the numpy arrays of the images or an error message.
     """
     # load if necessary
     if isinstance(prediction_image, (str, Path)):
