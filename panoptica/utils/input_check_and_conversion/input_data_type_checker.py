@@ -35,7 +35,12 @@ class _InputDataTypeChecker:
     __supported_file_endings: list[str] = []
     __sanity_check_handler: callable = None
 
-    def __init__(self, supported_file_endings: list[str], required_package_names: list[str], sanity_check_handler: callable):
+    def __init__(
+        self,
+        supported_file_endings: list[str],
+        required_package_names: list[str],
+        sanity_check_handler: callable,
+    ):
         self.__supported_file_endings = supported_file_endings
         self.__sanity_check_handler = sanity_check_handler
         self.__missing_packages = []

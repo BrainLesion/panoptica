@@ -45,13 +45,23 @@ def sanity_checker_nibabel_image(
     # start necessary comparisons
     # dimensions need to be exact
     if prediction_image.shape != reference_image.shape:
-        return False, "Dimension Mismatch: {} vs {}".format(prediction_image.shape, reference_image.shape)
+        return False, "Dimension Mismatch: {} vs {}".format(
+            prediction_image.shape, reference_image.shape
+        )
 
     # check if the affine matrices are similar
-    if (np.array(prediction_image.affine) - np.array(reference_image.affine)).sum() > threshold:
-        return False, "Affine Mismatch: {} vs {}".format(prediction_image.affine, reference_image.affine)
+    if (
+        np.array(prediction_image.affine) - np.array(reference_image.affine)
+    ).sum() > threshold:
+        return False, "Affine Mismatch: {} vs {}".format(
+            prediction_image.affine, reference_image.affine
+        )
 
     return True, (
-        np.asanyarray(prediction_image.dataobj, dtype=prediction_image.dataobj.dtype).copy(),
-        np.asanyarray(reference_image.dataobj, dtype=reference_image.dataobj.dtype).copy(),
+        np.asanyarray(
+            prediction_image.dataobj, dtype=prediction_image.dataobj.dtype
+        ).copy(),
+        np.asanyarray(
+            reference_image.dataobj, dtype=reference_image.dataobj.dtype
+        ).copy(),
     )

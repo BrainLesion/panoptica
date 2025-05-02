@@ -1,7 +1,9 @@
 import numpy as np
 from importlib.util import find_spec
 from pathlib import Path
-from panoptica.utils.input_check_and_conversion.check_numpy_array import sanity_checker_numpy_array
+from panoptica.utils.input_check_and_conversion.check_numpy_array import (
+    sanity_checker_numpy_array,
+)
 
 # Optional sitk import
 _spec = find_spec("torch")

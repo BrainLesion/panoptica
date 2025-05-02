@@ -17,7 +17,9 @@ from panoptica.utils.processing_pair import (
     EvaluateInstancePair,
     IntermediateStepsData,
 )
-from panoptica.utils.input_check_and_conversion.sanity_checker import sanity_check_and_convert_to_array
+from panoptica.utils.input_check_and_conversion.sanity_checker import (
+    sanity_check_and_convert_to_array,
+)
 import numpy as np
 from panoptica.utils.config import SupportsConfig
 from panoptica.utils.segmentation_class import (
@@ -84,9 +86,13 @@ class Panoptica_Evaluator(SupportsConfig):
             segmentation_class_groups = _NoSegmentationClassGroups()
         self.__segmentation_class_groups = segmentation_class_groups
 
-        self.__edge_case_handler = edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
+        self.__edge_case_handler = (
+            edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
+        )
         if self.__decision_metric is not None:
-            assert self.__decision_threshold is not None, "decision metric set but no decision threshold for it"
+            assert (
+                self.__decision_threshold is not None
+            ), "decision metric set but no decision threshold for it"
         #
         self.__log_times = log_times
         self.__verbose = verbose
@@ -120,13 +126,21 @@ class Panoptica_Evaluator(SupportsConfig):
         verbose: bool | None = None,
     ) -> dict[str, PanopticaResult]:
         # Sanity check input and convert to numpy arrays
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(prediction_arr, reference_arr)
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+            prediction_arr, reference_arr
+        )
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
-        assert isinstance(processing_pair, self.__expected_input.value), f"input not of expected type {self.__expected_input}"
+        assert isinstance(
+            processing_pair, self.__expected_input.value
+        ), f"input not of expected type {self.__expected_input}"
 
-        self.__segmentation_class_groups.has_defined_labels_for(processing_pair.prediction_arr, raise_error=True)
-        self.__segmentation_class_groups.has_defined_labels_for(processing_pair.reference_arr, raise_error=True)
+        self.__segmentation_class_groups.has_defined_labels_for(
+            processing_pair.prediction_arr, raise_error=True
+        )
+        self.__segmentation_class_groups.has_defined_labels_for(
+            processing_pair.reference_arr, raise_error=True
+        )
 
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
@@ -135,7 +149,11 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group,
                 processing_pair,
                 result_all,
-                save_group_times=(self.__save_group_times if save_group_times is None else save_group_times),
+                save_group_times=(
+                    self.__save_group_times
+                    if save_group_times is None
+                    else save_group_times
+                ),
                 log_times=log_times,
                 verbose=verbose,
             )
@@ -157,7 +175,9 @@ class Panoptica_Evaluator(SupportsConfig):
     @property
     def resulting_metric_keys(self) -> list[str]:
         if self.__resulting_metric_keys is None:
-            dummy_input = MatchedInstancePair(np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8))
+            dummy_input = MatchedInstancePair(
+                np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8)
+            )
             res = self._evaluate_group(
                 group_name="",
                 label_group=LabelGroup(1, single_instance=False),
@@ -191,7 +211,9 @@ class Panoptica_Evaluator(SupportsConfig):
         single_instance_mode = label_group.single_instance
         processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
         decision_threshold = self.__decision_threshold
-        if single_instance_mode and not isinstance(processing_pair, MatchedInstancePair):
+        if single_instance_mode and not isinstance(
+            processing_pair, MatchedInstancePair
+        ):
             processing_pair_grouped = MatchedInstancePair(
                 prediction_arr=processing_pair_grouped.prediction_arr,
                 reference_arr=processing_pair_grouped.reference_arr,
@@ -271,12 +293,22 @@ def panoptic_evaluate(
     # Crops away unecessary space of zeroes
     input_pair.crop_data()
 
-    processing_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair | EvaluateInstancePair | PanopticaResult = input_pair.copy()
+    processing_pair: (
+        SemanticPair
+        | UnmatchedInstancePair
+        | MatchedInstancePair
+        | EvaluateInstancePair
+        | PanopticaResult
+    ) = input_pair.copy()
 
     # First Phase: Instance Approximation
     if isinstance(processing_pair, SemanticPair):
-        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.SEMANTIC)
-        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
+        intermediate_steps_data.add_intermediate_arr_data(
+            processing_pair.copy(), InputType.SEMANTIC
+        )
+        assert (
+            instance_approximator is not None
+        ), "Got SemanticPair but not InstanceApproximator"
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
@@ -291,7 +323,9 @@ def panoptic_evaluate(
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.UNMATCHED_INSTANCE)
+        intermediate_steps_data.add_intermediate_arr_data(
+            processing_pair.copy(), InputType.UNMATCHED_INSTANCE
+        )
         processing_pair = _handle_zero_instances_cases(
             processing_pair,
             eval_metrics=instance_metrics,
@@ -302,7 +336,9 @@ def panoptic_evaluate(
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
             print("-- Got UnmatchedInstancePair, will match instances")
-        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        assert (
+            instance_matcher is not None
+        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
@@ -313,7 +349,9 @@ def panoptic_evaluate(
 
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.MATCHED_INSTANCE)
+        intermediate_steps_data.add_intermediate_arr_data(
+            processing_pair.copy(), InputType.MATCHED_INSTANCE
+        )
         processing_pair = _handle_zero_instances_cases(
             processing_pair,
             eval_metrics=instance_metrics,
