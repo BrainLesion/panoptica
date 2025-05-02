@@ -8,9 +8,6 @@ import numpy as np
 from pathlib import Path
 import SimpleITK as sitk
 from unittest import mock
-from unit_test_utils import patch_property
-from unittest import mock
-from unittest.mock import MagicMock, PropertyMock
 import nibabel as nib
 import torch
 
@@ -38,26 +35,20 @@ class Test_Input_Sanity_Checker_Numpy(unittest.TestCase):
 
         with self.assertWarns(UserWarning):
             # Test the sanity checker
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr1, arr2)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
             self.assertEqual(checker, INPUTDTYPE.NUMPY)
             # self.assertTrue(result)
         with self.assertWarns(UserWarning):
             # Modify one array and test again
             arr2[0, 0] += 1e-6
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr1, arr2)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
             self.assertEqual(checker, INPUTDTYPE.NUMPY)
 
         arr1 = np.zeros((10, 10), dtype=np.uint8)
         arr2 = np.zeros((10, 10), dtype=np.uint8)
         arr2[0, 0] = 1
         # Test the sanity checker
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            arr1, arr2
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
         self.assertEqual(checker, INPUTDTYPE.NUMPY)
 
     def test_sanity_checker_shapemismatch(self):
@@ -67,15 +58,11 @@ class Test_Input_Sanity_Checker_Numpy(unittest.TestCase):
 
         # Test the sanity checker
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr1, arr2)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
             self.assertEqual(checker, INPUTDTYPE.NUMPY)
 
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr2, arr1)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr2, arr1)
             self.assertEqual(checker, INPUTDTYPE.NUMPY)
 
     def test_sanity_checker_as_file(self):
@@ -84,14 +71,10 @@ class Test_Input_Sanity_Checker_Numpy(unittest.TestCase):
         np.save(test_npy_file, arr1)
 
         # Test the sanity checker with Path
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            test_npy_file, test_npy_file
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_npy_file, test_npy_file)
         self.assertEqual(checker, INPUTDTYPE.NUMPY)
         # Test the sanity checker with str
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            str(test_npy_file), str(test_npy_file)
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_npy_file), str(test_npy_file))
         self.assertEqual(checker, INPUTDTYPE.NUMPY)
         os.remove(test_npy_file)
 
@@ -108,10 +91,8 @@ class Test_Input_Sanity_Checker_Sitk(unittest.TestCase):
 
         with self.assertWarns(UserWarning):
             # Test the sanity checker
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    sitk.GetImageFromArray(arr1), sitk.GetImageFromArray(arr2)
-                )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+                sitk.GetImageFromArray(arr1), sitk.GetImageFromArray(arr2)
             )
             self.assertEqual(checker, INPUTDTYPE.SITK)
 
@@ -131,18 +112,14 @@ class Test_Input_Sanity_Checker_Sitk(unittest.TestCase):
 
         # Test the sanity checker
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    sitk.GetImageFromArray(arr1), sitk.GetImageFromArray(arr2)
-                )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+                sitk.GetImageFromArray(arr1), sitk.GetImageFromArray(arr2)
             )
             self.assertEqual(checker, INPUTDTYPE.SITK)
 
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    sitk.GetImageFromArray(arr2), sitk.GetImageFromArray(arr1)
-                )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+                sitk.GetImageFromArray(arr2), sitk.GetImageFromArray(arr1)
             )
             self.assertEqual(checker, INPUTDTYPE.SITK)
 
@@ -154,23 +131,15 @@ class Test_Input_Sanity_Checker_Sitk(unittest.TestCase):
         sitk.WriteImage(sitkimage, test_nii_file)
 
         # Test the sanity checker with Path
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            test_nii_file, test_nii_file
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_nii_file, test_nii_file)
         self.assertEqual(checker, INPUTDTYPE.SITK)
         # Test the sanity checker with str
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            str(test_nii_file), str(test_nii_file)
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_nii_file), str(test_nii_file))
         self.assertEqual(checker, INPUTDTYPE.SITK)
         os.remove(test_nii_file)
 
-    @mock.patch.object(
-        INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False
-    )
-    @mock.patch.object(
-        INPUTDTYPE.NIBABEL.value, "are_requirements_fulfilled", return_value=False
-    )
+    @mock.patch.object(INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False)
+    @mock.patch.object(INPUTDTYPE.NIBABEL.value, "are_requirements_fulfilled", return_value=False)
     def test_sanity_checker_without_package(self, *args):
         # Create two identical numpy arrays
         arr1 = np.zeros((10, 10), dtype=np.uint8)
@@ -183,17 +152,11 @@ class Test_Input_Sanity_Checker_Sitk(unittest.TestCase):
 
         with self.assertRaises(ImportError):
             # Test the sanity checker with Path
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(test_nii_file, test_nii_file)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_nii_file, test_nii_file)
             print(checker)
         with self.assertRaises(ImportError):
             # Test the sanity checker with str
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    str(test_nii_file), str(test_nii_file)
-                )
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_nii_file), str(test_nii_file))
             print(checker)
         os.remove(test_nii_file)
 
@@ -212,11 +175,9 @@ class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
 
         with self.assertWarns(UserWarning):
             # Test the sanity checker
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    nib.Nifti1Image(arr1, affine=np.eye(4)),
-                    nib.Nifti1Image(arr2, affine=np.eye(4)),
-                )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+                nib.Nifti1Image(arr1, affine=np.eye(4)),
+                nib.Nifti1Image(arr2, affine=np.eye(4)),
             )
             self.assertEqual(checker, INPUTDTYPE.NIBABEL)
 
@@ -237,20 +198,16 @@ class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
 
         # Test the sanity checker
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    nib.Nifti1Image(arr1, affine=np.eye(4)),
-                    nib.Nifti1Image(arr2, affine=np.eye(4)),
-                )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+                nib.Nifti1Image(arr1, affine=np.eye(4)),
+                nib.Nifti1Image(arr2, affine=np.eye(4)),
             )
             self.assertEqual(checker, INPUTDTYPE.NIBABEL)
 
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    nib.Nifti1Image(arr2, affine=np.eye(4)),
-                    nib.Nifti1Image(arr1, affine=np.eye(4)),
-                )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+                nib.Nifti1Image(arr2, affine=np.eye(4)),
+                nib.Nifti1Image(arr1, affine=np.eye(4)),
             )
             self.assertEqual(checker, INPUTDTYPE.NIBABEL)
 
@@ -262,20 +219,14 @@ class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
         nib_image.to_filename(test_nii_file)
 
         # Test the sanity checker with Path
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            test_nii_file, test_nii_file
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_nii_file, test_nii_file)
         self.assertEqual(checker, INPUTDTYPE.SITK)
         # Test the sanity checker with str
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            str(test_nii_file), str(test_nii_file)
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_nii_file), str(test_nii_file))
         self.assertEqual(checker, INPUTDTYPE.SITK)
         os.remove(test_nii_file)
 
-    @mock.patch.object(
-        INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False
-    )
+    @mock.patch.object(INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False)
     def test_sanity_checker_as_file_wo_sitk(self, *args):
         # Create two identical numpy arrays
         arr1 = np.zeros((10, 10), dtype=np.uint8)
@@ -284,23 +235,15 @@ class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
         nib_image.to_filename(test_nii_file)
 
         # Test the sanity checker with Path
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            test_nii_file, test_nii_file
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_nii_file, test_nii_file)
         self.assertEqual(checker, INPUTDTYPE.NIBABEL)
         # Test the sanity checker with str
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            str(test_nii_file), str(test_nii_file)
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_nii_file), str(test_nii_file))
         self.assertEqual(checker, INPUTDTYPE.NIBABEL)
         os.remove(test_nii_file)
 
-    @mock.patch.object(
-        INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False
-    )
-    @mock.patch.object(
-        INPUTDTYPE.NIBABEL.value, "are_requirements_fulfilled", return_value=False
-    )
+    @mock.patch.object(INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False)
+    @mock.patch.object(INPUTDTYPE.NIBABEL.value, "are_requirements_fulfilled", return_value=False)
     def test_sanity_checker_without_package(self, *args):
         # Create two identical numpy arrays
         arr1 = np.zeros((10, 10), dtype=np.uint8)
@@ -313,16 +256,10 @@ class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
 
         with self.assertRaises(ImportError):
             # Test the sanity checker with Path
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(test_nii_file, test_nii_file)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_nii_file, test_nii_file)
         with self.assertRaises(ImportError):
             # Test the sanity checker with str
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(
-                    str(test_nii_file), str(test_nii_file)
-                )
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_nii_file), str(test_nii_file))
         os.remove(test_nii_file)
 
 
@@ -338,26 +275,20 @@ class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
 
         with self.assertWarns(UserWarning):
             # Test the sanity checker
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr1, arr2)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
             self.assertEqual(checker, INPUTDTYPE.TORCH)
             # self.assertTrue(result)
         with self.assertWarns(UserWarning):
             # Modify one array and test again
             arr2[0, 0] += 1e-6
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr1, arr2)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
             self.assertEqual(checker, INPUTDTYPE.TORCH)
 
         arr1 = torch.zeros((10, 10), dtype=torch.uint8)
         arr2 = torch.zeros((10, 10), dtype=torch.uint8)
         arr2[0, 0] = 1
         # Test the sanity checker
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            arr1, arr2
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
         self.assertEqual(checker, INPUTDTYPE.TORCH)
 
     def test_sanity_checker_shapemismatch(self):
@@ -367,15 +298,11 @@ class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
 
         # Test the sanity checker
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr1, arr2)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr1, arr2)
             self.assertEqual(checker, INPUTDTYPE.TORCH)
 
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = (
-                sanity_check_and_convert_to_array(arr2, arr1)
-            )
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(arr2, arr1)
             self.assertEqual(checker, INPUTDTYPE.TORCH)
 
     def test_sanity_checker_as_file(self):
@@ -384,13 +311,9 @@ class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
         torch.save(arr1, test_torch_file)
 
         # Test the sanity checker with Path
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            test_torch_file, test_torch_file
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_torch_file, test_torch_file)
         self.assertEqual(checker, INPUTDTYPE.TORCH)
         # Test the sanity checker with str
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            str(test_torch_file), str(test_torch_file)
-        )
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_torch_file), str(test_torch_file))
         self.assertEqual(checker, INPUTDTYPE.TORCH)
         os.remove(test_torch_file)
