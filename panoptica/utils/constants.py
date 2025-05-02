@@ -1,8 +1,8 @@
 from enum import Enum, auto
 from panoptica.utils.config import (
     _register_class_to_yaml,
-    _load_from_config_united,
-    _save_to_config_united,
+    _load_from_config,
+    _save_to_config,
 )
 from pathlib import Path
 import numpy as np
@@ -62,10 +62,10 @@ class _Enum_Compare(Enum):
 
     @classmethod
     def load_from_config(cls, path: str | Path):
-        return _load_from_config_united(cls, path)
+        return _load_from_config(cls, path)
 
     def save_to_config(self, path: str | Path):
-        _save_to_config_united(self, path)
+        _save_to_config(self, path)
 
     @classmethod
     def to_yaml(cls, representer, node):
