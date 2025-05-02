@@ -29,6 +29,8 @@ def sanity_checker_numpy_array(
 
     # dimensions need to be exact
     if prediction_arr.shape != reference_arr.shape:
-        return False, "Dimension Mismatch: {} vs {}".format(prediction_arr.shape, reference_arr.shape)
+        return False, "Dimension Mismatch: {} vs {}".format(
+            prediction_arr.shape, reference_arr.shape
+        )
 
     return True, (prediction_arr, reference_arr)
