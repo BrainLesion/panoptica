@@ -43,8 +43,9 @@ def sanity_checker_torch_image(
         reference_image = load_torch_image(reference_image)
 
     # assert correct datatype
-    if not isinstance(prediction_image, torch.Tensor) or not isinstance(reference_image, torch.Tensor):
-        return False, "Input images must be of type torch.Tensor"
+    assert isinstance(prediction_image, torch.Tensor) and isinstance(
+        reference_image, torch.Tensor
+    ), "Input images must be of type torch.Tensor"
 
     return sanity_checker_numpy_array(
         prediction_image.numpy(),

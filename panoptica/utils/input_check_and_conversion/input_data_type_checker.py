@@ -65,8 +65,7 @@ class _InputDataTypeChecker:
         """
         return self.__supported_file_endings
 
-    @property
-    def requirements_fulfilled(self) -> bool:
+    def are_requirements_fulfilled(self) -> bool:
         """
         Check if all required packages are available.
 

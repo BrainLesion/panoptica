@@ -35,10 +35,18 @@ class INPUTDTYPE(_Enum_Compare):
     )
 
 
-def sanity_checker(
+def print_available_package_to_input_handlers():
+    for d in INPUTDTYPE:
+        if d.value.are_requirements_fulfilled():
+            print(f"{d.name} is available for input handling.")
+        else:
+            print(f"{d.name} is not available for input handling. Missing packages: {d.value.missing_packages}")
+
+
+def sanity_check_and_convert_to_array(
     prediction: Any,
     reference: Any,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[tuple[np.ndarray, np.ndarray], INPUTDTYPE]:
     """
     This function is a wrapper that performs sanity check on 2 images.
 
@@ -66,21 +74,21 @@ def sanity_checker(
 
     for inputdtype in INPUTDTYPE:
         checker = inputdtype.value
-        if checker.requirements_fulfilled:
+        if checker.are_requirements_fulfilled():
             if is_path and file_ending in checker.supported_file_endings:
                 r, s = checker(prediction, reference)
                 if not r:
                     raise ValueError(f"Sanity check failed for {inputdtype.name}: {s}. Please check the input files.")
-                return post_check(s)
-            else:
+                return post_check(s), inputdtype
+            elif not is_path:
                 try:
                     r, s = checker(prediction, reference)
-                except Exception as e:
+                except AssertionError as e:
                     continue
                 if not r:
                     raise ValueError(f"Sanity check failed for {inputdtype.name}: {s}. Please check the input files.")
                 else:
-                    return post_check(s)
+                    return post_check(s), inputdtype
         elif is_path and file_ending in checker.supported_file_endings:
             missing_package_for_this.append(checker)
     if len(missing_package_for_this) > 0:
@@ -110,9 +118,6 @@ def post_check(prediction_reference_array_pair: tuple[np.ndarray, np.ndarray]) -
     assert isinstance(prediction_reference_array_pair[0], np.ndarray) and isinstance(
         prediction_reference_array_pair[1], np.ndarray
     ), f"prediction_reference_array_pair must be a tuple of 2 numpy arrays. Got {type(prediction_reference_array_pair[0]), type(prediction_reference_array_pair[0])}"
-
-    # TODO make here warning if its float dtype and conversion to uint if possible
-    # then I can remove the checks or rather make it asserts later in the pipeline to ensure nothing gets broken
 
     min_value = min(prediction_reference_array_pair[0].min(), prediction_reference_array_pair[1].min())
     assert min_value >= 0, "There are negative values in the segmentation maps. This is not allowed!"

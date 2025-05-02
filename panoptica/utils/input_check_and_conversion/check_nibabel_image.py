@@ -39,16 +39,13 @@ def sanity_checker_nibabel_image(
         reference_image = load_nibabel_image(reference_image)
 
     # assert correct datatype
-    if not isinstance(prediction_image, nib.Nifti1Image) or not isinstance(reference_image, nib.Nifti1Image):
-        return False, "Input images must be of type nibabel.Nifti1Image"
+    assert isinstance(prediction_image, nib.Nifti1Image) and isinstance(
+        reference_image, nib.Nifti1Image
+    ), "Input images must be of type nibabel.Nifti1Image"
     # start necessary comparisons
     # dimensions need to be exact
     if prediction_image.shape != reference_image.shape:
         return False, "Dimension Mismatch: {} vs {}".format(prediction_image.shape, reference_image.shape)
-
-    # Header must be similar
-    if (np.array(prediction_image.header) - np.array(reference_image.header)).sum() > threshold:
-        return False, "Header Mismatch: {} vs {}".format(prediction_image.header, reference_image.header)
 
     # check if the affine matrices are similar
     if (np.array(prediction_image.affine) - np.array(reference_image.affine)).sum() > threshold:

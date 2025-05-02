@@ -23,8 +23,9 @@ def sanity_checker_numpy_array(
         reference_arr = np.load(reference_arr)
 
     # assert correct datatype
-    if not isinstance(prediction_arr, np.ndarray) or not isinstance(reference_arr, np.ndarray):
-        return False, "Input images must be of type np.ndarray"
+    assert isinstance(prediction_arr, np.ndarray) and isinstance(
+        reference_arr, np.ndarray
+    ), "prediction and reference must be of type np.ndarray."
 
     # dimensions need to be exact
     if prediction_arr.shape != reference_arr.shape:

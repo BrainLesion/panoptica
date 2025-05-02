@@ -39,13 +39,12 @@ def sanity_checker_sitk_image(
         reference_image = load_sitk_image(reference_image)
 
     # assert correct datatype
-    if not isinstance(prediction_image, sitk.Image) or not isinstance(reference_image, sitk.Image):
-        return False, "Input images must be of type sitk.Image"
+    assert isinstance(prediction_image, sitk.Image) and isinstance(reference_image, sitk.Image), "Input images must be of type sitk.Image"
 
-    # start necessary comparisons
     # dimensions need to be exact
     if prediction_image.GetDimension() != reference_image.GetDimension():
         return False, "Dimension Mismatch: {} vs {}".format(prediction_image.GetDimension(), reference_image.GetDimension())
+
     # size need to be exact
     if prediction_image.GetSize() != reference_image.GetSize():
         return False, "Size Mismatch: {} vs {}".format(prediction_image.GetSize(), reference_image.GetSize())
@@ -54,8 +53,10 @@ def sanity_checker_sitk_image(
     # this is needed because different packages use different precisions for metadata
     if (np.array(prediction_image.GetOrigin()) - np.array(reference_image.GetOrigin())).sum() > threshold:
         return False, "Origin Mismatch: {} vs {}".format(prediction_image.GetOrigin(), reference_image.GetOrigin())
+
     if (np.array(prediction_image.GetSpacing()) - np.array(reference_image.GetSpacing())).sum() > threshold:
         return False, "Spacing Mismatch: {} vs {}".format(prediction_image.GetSpacing(), reference_image.GetSpacing())
+
     if (np.array(prediction_image.GetDirection()) - np.array(reference_image.GetDirection())).sum() > threshold:
         return False, "Direction Mismatch: {} vs {}".format(prediction_image.GetDirection(), reference_image.GetDirection())
 

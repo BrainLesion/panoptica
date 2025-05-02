@@ -17,7 +17,7 @@ from panoptica.utils.processing_pair import (
     EvaluateInstancePair,
     IntermediateStepsData,
 )
-from panoptica.utils.input_check_and_conversion.sanity_checker import sanity_checker
+from panoptica.utils.input_check_and_conversion.sanity_checker import sanity_check_and_convert_to_array
 import numpy as np
 from panoptica.utils.config import SupportsConfig
 from panoptica.utils.segmentation_class import (
@@ -120,7 +120,7 @@ class Panoptica_Evaluator(SupportsConfig):
         verbose: bool | None = None,
     ) -> dict[str, PanopticaResult]:
         # Sanity check input and convert to numpy arrays
-        prediction_arr, reference_arr = sanity_checker(prediction_arr, reference_arr)
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(prediction_arr, reference_arr)
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
         assert isinstance(processing_pair, self.__expected_input.value), f"input not of expected type {self.__expected_input}"
