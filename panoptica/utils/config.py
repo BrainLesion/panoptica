@@ -79,7 +79,7 @@ def _register_class_to_yaml(cls):
         supported_helper_classes.append(cls)
 
 
-def _load_from_config_united(cls, path: str | Path):
+def _load_from_config(cls, path: str | Path):
     """Loads an instance of a class from a YAML configuration file.
 
     Args:
@@ -103,7 +103,7 @@ def _load_from_config_united(cls, path: str | Path):
     return obj
 
 
-def _load_from_config(cls, path: str | Path):
+def _load_from_config_by_path(cls, path: str | Path):
     """Loads an instance of a class from a YAML configuration file.
 
     Args:
@@ -133,10 +133,10 @@ def _load_from_config_by_name(cls, name: str):
     """
     path = config_by_name(name)
     assert path.exists(), f"load_from_config: {path} does not exist"
-    return _load_from_config(cls, path)
+    return _load_from_config_by_path(cls, path)
 
 
-def _save_to_config_united(obj, path: str | Path):
+def _save_to_config(obj, path: str | Path):
     """Saves an instance of a class to a YAML configuration file.
 
     Args:
@@ -152,7 +152,7 @@ def _save_to_config_united(obj, path: str | Path):
     _save_yaml(obj, path, registered_class=type(obj))
 
 
-def _save_to_config(obj, path: str | Path):
+def _save_to_config_by_path(obj, path: str | Path):
     """Saves an instance of a class to a YAML configuration file.
 
     Args:
@@ -172,7 +172,7 @@ def _save_to_config_by_name(obj, name: str):
         name (str): The name used to determine the configuration file path.
     """
     dir, name = config_dir_by_name(name)
-    _save_to_config(obj, dir.joinpath(name))
+    _save_to_config_by_path(obj, dir.joinpath(name))
 
 
 class SupportsConfig:
@@ -214,7 +214,7 @@ class SupportsConfig:
         Returns:
             An instance of the class.
         """
-        obj = _load_from_config_united(cls, path)
+        obj = _load_from_config(cls, path)
         assert isinstance(
             obj, cls
         ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
@@ -228,7 +228,7 @@ class SupportsConfig:
         """
         if isinstance(path, str):
             path = Path(path)
-        _save_to_config_united(self, path)
+        _save_to_config(self, path)
 
     @classmethod
     def to_yaml(cls, representer, node):
