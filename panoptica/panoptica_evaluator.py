@@ -1,5 +1,6 @@
 from time import perf_counter
-from typing import Any
+from typing import Union
+from typing import TYPE_CHECKING
 
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
@@ -27,6 +28,11 @@ from panoptica.utils.segmentation_class import (
     LabelGroup,
     _NoSegmentationClassGroups,
 )
+
+if TYPE_CHECKING:
+    import torch
+    import SimpleITK as sitk
+    import nibabel as nib
 
 
 class Panoptica_Evaluator(SupportsConfig):
@@ -118,8 +124,8 @@ class Panoptica_Evaluator(SupportsConfig):
     @measure_time
     def evaluate(
         self,
-        prediction_arr: Any,
-        reference_arr: Any,
+        prediction_arr: Union[np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
+        reference_arr: Union[np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
         result_all: bool = True,
         save_group_times: bool | None = None,
         log_times: bool | None = None,
