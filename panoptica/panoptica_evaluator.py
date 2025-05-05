@@ -123,8 +123,12 @@ class Panoptica_Evaluator(SupportsConfig):
     @measure_time
     def evaluate(
         self,
-        prediction_arr: Union[np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
-        reference_arr: Union[np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
+        prediction_arr: Union[
+            np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"
+        ],
+        reference_arr: Union[
+            np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"
+        ],
         result_all: bool = True,
         save_group_times: bool | None = None,
         log_times: bool | None = None,

@@ -29,7 +29,12 @@ class NRRDImage:
                 self.__space_directions,
             )
         if self.__space_origin.shape != (ndim,):
-            raise ValueError("Expected 'space origin' to be a n-element vector. n = ", ndim, "is not", self.__space_origin.shape)
+            raise ValueError(
+                "Expected 'space origin' to be a n-element vector. n = ",
+                ndim,
+                "is not",
+                self.__space_origin.shape,
+            )
         affine = np.eye(ndim + 1)  # Initialize 4x4 identity matrix
         affine[:ndim, :ndim] = self.__space_directions  # Set rotation and scaling
         affine[:ndim, ndim] = self.__space_origin  # Set translation
@@ -92,17 +97,27 @@ def sanity_checker_nrrd_image(
         reference_image = load_nrrd_image(reference_image)
 
     # assert correct datatype
-    assert isinstance(prediction_image, NRRDImage) and isinstance(reference_image, NRRDImage), "Input images must be of type NRRD_IMAGE"
+    assert isinstance(prediction_image, NRRDImage) and isinstance(
+        reference_image, NRRDImage
+    ), "Input images must be of type NRRD_IMAGE"
     # start necessary comparisons
     # dimensions need to be exact
     if prediction_image.shape != reference_image.shape:
-        return False, "Dimension Mismatch: {} vs {}".format(prediction_image.shape, reference_image.shape)
+        return False, "Dimension Mismatch: {} vs {}".format(
+            prediction_image.shape, reference_image.shape
+        )
 
     # check if the affine matrices are similar
-    if (np.array(prediction_image.affine) - np.array(reference_image.affine)).sum() > threshold:
-        return False, "Affine Mismatch: {} vs {}".format(prediction_image.affine, reference_image.affine)
+    if (
+        np.array(prediction_image.affine) - np.array(reference_image.affine)
+    ).sum() > threshold:
+        return False, "Affine Mismatch: {} vs {}".format(
+            prediction_image.affine, reference_image.affine
+        )
 
     return True, (
-        np.asanyarray(prediction_image.array, dtype=prediction_image.array.dtype).copy(),
+        np.asanyarray(
+            prediction_image.array, dtype=prediction_image.array.dtype
+        ).copy(),
         np.asanyarray(reference_image.array, dtype=reference_image.array.dtype).copy(),
     )

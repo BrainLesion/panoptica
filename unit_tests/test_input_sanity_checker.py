@@ -402,19 +402,44 @@ class Test_Input_Sanity_Checker_Nrrd(unittest.TestCase):
         arr1 = np.random.rand(10, 10)
         arr2 = np.copy(arr1)
 
-        nrrd1 = NRRDImage(arr1, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
-        nrrd2 = NRRDImage(arr2, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
+        nrrd1 = NRRDImage(
+            arr1,
+            header={
+                "space origin": [0, 0],
+                "space directions": [[1, 0], [1, 0]],
+                "dimension": 2,
+            },
+        )
+        nrrd2 = NRRDImage(
+            arr2,
+            header={
+                "space origin": [0, 0],
+                "space directions": [[1, 0], [1, 0]],
+                "dimension": 2,
+            },
+        )
 
         with self.assertWarns(UserWarning):
             # Test the sanity checker
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            )
             self.assertEqual(checker, INPUTDTYPE.NRRD)
             # self.assertTrue(result)
         with self.assertWarns(UserWarning):
             # Modify one array and test again
             arr2[0, 0] += 1e-6
-            nrrd2 = NRRDImage(arr2, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            nrrd2 = NRRDImage(
+                arr2,
+                header={
+                    "space origin": [0, 0],
+                    "space directions": [[1, 0], [1, 0]],
+                    "dimension": 2,
+                },
+            )
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            )
             self.assertEqual(checker, INPUTDTYPE.NRRD)
 
     def test_sanity_checker_shapemismatch(self):
@@ -422,15 +447,33 @@ class Test_Input_Sanity_Checker_Nrrd(unittest.TestCase):
         arr1 = np.random.rand(10, 10)
         arr2 = np.random.rand(10, 11)
 
-        nrrd1 = NRRDImage(arr1, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
-        nrrd2 = NRRDImage(arr2, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
+        nrrd1 = NRRDImage(
+            arr1,
+            header={
+                "space origin": [0, 0],
+                "space directions": [[1, 0], [1, 0]],
+                "dimension": 2,
+            },
+        )
+        nrrd2 = NRRDImage(
+            arr2,
+            header={
+                "space origin": [0, 0],
+                "space directions": [[1, 0], [1, 0]],
+                "dimension": 2,
+            },
+        )
 
         # Test the sanity checker
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            )
 
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd2, nrrd1)
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array(nrrd2, nrrd1)
+            )
 
     def test_sanity_checker_as_file(self):
         # Create two identical numpy arrays
@@ -455,10 +498,14 @@ class Test_Input_Sanity_Checker_Nrrd(unittest.TestCase):
         )
 
         # Test the sanity checker with Path
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_nrrd_file, test_nrrd_file)
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+            test_nrrd_file, test_nrrd_file
+        )
         self.assertEqual(checker, INPUTDTYPE.NRRD)
         # Test the sanity checker with str
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_nrrd_file), str(test_nrrd_file))
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+            str(test_nrrd_file), str(test_nrrd_file)
+        )
         self.assertEqual(checker, INPUTDTYPE.NRRD)
         os.remove(test_nrrd_file)
 
@@ -471,19 +518,27 @@ class Test_Input_Sanity_Checker_Misc(unittest.TestCase):
     def test_sanity_checker_unsupported_datatype(self):
         # List
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array([0, 1, 2], [0, 1, 2])
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array([0, 1, 2], [0, 1, 2])
+            )
 
         # Tuple
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array((0, 1, 2), (0, 1, 2))
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array((0, 1, 2), (0, 1, 2))
+            )
 
         # Dict
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array({0: 1, 1: 2}, {0: 1, 1: 2})
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array({0: 1, 1: 2}, {0: 1, 1: 2})
+            )
 
         # str
         with self.assertRaises(ValueError):
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array("(0, 1, 2)", "(0, 1, 2)")
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array("(0, 1, 2)", "(0, 1, 2)")
+            )
 
     def test_sanity_checker_unsupported_file_ending(self):
         # Create two identical numpy arrays
@@ -492,8 +547,14 @@ class Test_Input_Sanity_Checker_Misc(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             # Test the sanity checker with Path
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_abc_file, test_abc_file)
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array(test_abc_file, test_abc_file)
+            )
         with self.assertRaises(ValueError):
             # Test the sanity checker with str
-            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_abc_file), str(test_abc_file))
+            (prediction_arr, reference_arr), checker = (
+                sanity_check_and_convert_to_array(
+                    str(test_abc_file), str(test_abc_file)
+                )
+            )
         os.remove(test_abc_file)

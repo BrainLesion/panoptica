@@ -79,9 +79,15 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertEqual(result.pq, 0.75)
         self.assertAlmostEqual(result.global_bin_dsc, 0.8571428571428571)
 
-    @mock.patch.object(INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False)
-    @mock.patch.object(INPUTDTYPE.NIBABEL.value, "are_requirements_fulfilled", return_value=False)
-    @mock.patch.object(INPUTDTYPE.TORCH.value, "are_requirements_fulfilled", return_value=False)
+    @mock.patch.object(
+        INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False
+    )
+    @mock.patch.object(
+        INPUTDTYPE.NIBABEL.value, "are_requirements_fulfilled", return_value=False
+    )
+    @mock.patch.object(
+        INPUTDTYPE.TORCH.value, "are_requirements_fulfilled", return_value=False
+    )
     def test_simple_evaluation_without_inputpackages(self, *args):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
