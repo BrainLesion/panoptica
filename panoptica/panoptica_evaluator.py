@@ -26,7 +26,6 @@ from panoptica.utils.segmentation_class import (
 
 
 class Panoptica_Evaluator(SupportsConfig):
-
     def __init__(
         self,
         expected_input: InputType = InputType.MATCHED_INSTANCE,
