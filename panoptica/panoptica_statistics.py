@@ -57,7 +57,6 @@ class ValueSummary:
 
 
 class Panoptica_Statistic:
-
     def __init__(
         self,
         subj_names: list[str],

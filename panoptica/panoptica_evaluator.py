@@ -36,7 +36,6 @@ if TYPE_CHECKING:
 
 
 class Panoptica_Evaluator(SupportsConfig):
-
     def __init__(
         self,
         expected_input: InputType = InputType.MATCHED_INSTANCE,
