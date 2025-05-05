@@ -69,7 +69,7 @@ def main(
     ref_masks = sitk.GetArrayFromImage(sitk.ReadImage(reference))
     pred_masks = sitk.GetArrayFromImage(sitk.ReadImage(prediction))
 
-    evaluator = Panoptica_Evaluator.load_from_config_name(config)
+    evaluator = Panoptica_Evaluator.load_from_config(config)
 
     print(evaluator.evaluate(pred_masks, ref_masks)["ungrouped"])
 
