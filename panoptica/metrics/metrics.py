@@ -312,7 +312,6 @@ class Evaluation_Metric:
         was_calculated: bool = False,
         error: bool = False,
     ):
-
         self.id = name_id
         self.metric_type = metric_type
         self._calc_func = calc_func

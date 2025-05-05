@@ -77,7 +77,6 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         self.assertEqual(len(group1_arr_ind), 0)
 
     def test_wrong_labelgroup_definitions(self):
-
         with self.assertRaises(AssertionError):
             group1 = LabelGroup([1, 2, 3, 4, 5], single_instance=True)
 
@@ -117,7 +116,6 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
             self.assertTrue(isinstance(lg, LabelGroup))
 
     def test_wrong_classgroup_definitions(self):
-
         classgroups = SegmentationClassGroups(
             groups={
                 "vertebra": LabelGroup([100, 101, 102]),

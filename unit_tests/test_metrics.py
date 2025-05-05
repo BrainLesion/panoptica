@@ -35,7 +35,6 @@ class Test_RVD(unittest.TestCase):
         return super().setUp()
 
     def test_rvd_case_simple_identical(self):
-
         pred_arr, ref_arr = case_simple_identical()
         rvd = Metric.RVD(
             reference_arr=ref_arr,
@@ -46,25 +45,21 @@ class Test_RVD(unittest.TestCase):
         self.assertEqual(rvd, 0.0)
 
     def test_rvd_case_simple_identical_idx(self):
-
         pred_arr, ref_arr = case_simple_identical()
         rvd = Metric.RVD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, 0.0)
 
     def test_rvd_case_simple_nooverlap(self):
-
         pred_arr, ref_arr = case_simple_nooverlap()
         rvd = Metric.RVD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, -0.4)
 
     def test_rvd_case_simple_overpredicted(self):
-
         pred_arr, ref_arr = case_simple_overpredicted()
         rvd = Metric.RVD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, 1.5)
 
     def test_rvd_case_simple_underpredicted(self):
-
         pred_arr, ref_arr = case_simple_underpredicted()
         rvd = Metric.RVD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, -0.6)
@@ -76,13 +71,11 @@ class Test_DSC(unittest.TestCase):
         return super().setUp()
 
     def test_dsc_case_simple_identical(self):
-
         pred_arr, ref_arr = case_simple_identical()
         dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(dsc, 1.0)
 
     def test_dsc_case_simple_identical_idx(self):
-
         pred_arr, ref_arr = case_simple_identical()
         dsc = Metric.DSC(
             reference_arr=ref_arr,
@@ -93,7 +86,6 @@ class Test_DSC(unittest.TestCase):
         self.assertEqual(dsc, 1.0)
 
     def test_dsc_case_simple_identical_wrong_idx(self):
-
         pred_arr, ref_arr = case_simple_identical()
         dsc = Metric.DSC(
             reference_arr=ref_arr,
@@ -104,19 +96,16 @@ class Test_DSC(unittest.TestCase):
         self.assertEqual(dsc, 0.0)
 
     def test_dsc_case_simple_nooverlap(self):
-
         pred_arr, ref_arr = case_simple_nooverlap()
         dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(dsc, 0.0)
 
     def test_dsc_case_simple_overpredicted(self):
-
         pred_arr, ref_arr = case_simple_overpredicted()
         dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(dsc, 0.5714285714285714)
 
     def test_dsc_case_simple_underpredicted(self):
-
         pred_arr, ref_arr = case_simple_underpredicted()
         dsc = Metric.DSC(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(dsc, 0.5714285714285714)
@@ -247,7 +236,6 @@ class Test_RVAE(unittest.TestCase):
         return super().setUp()
 
     def test_rvae_case_simple_identical(self):
-
         pred_arr, ref_arr = case_simple_identical()
         rvd = Metric.RVAE(
             reference_arr=ref_arr,
@@ -258,25 +246,21 @@ class Test_RVAE(unittest.TestCase):
         self.assertEqual(rvd, 0.0)
 
     def test_rvae_case_simple_identical_idx(self):
-
         pred_arr, ref_arr = case_simple_identical()
         rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, 0.0)
 
     def test_rvae_case_simple_nooverlap(self):
-
         pred_arr, ref_arr = case_simple_nooverlap()
         rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, 0.4)
 
     def test_rvae_case_simple_overpredicted(self):
-
         pred_arr, ref_arr = case_simple_overpredicted()
         rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, 1.5)
 
     def test_rvae_case_simple_underpredicted(self):
-
         pred_arr, ref_arr = case_simple_underpredicted()
         rvd = Metric.RVAE(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(rvd, 0.6)
@@ -293,7 +277,6 @@ class Test_CEDI(unittest.TestCase):
         return super().setUp()
 
     def test_cedi_case_simple_identical(self):
-
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.CEDI(
             reference_arr=ref_arr,
@@ -304,25 +287,21 @@ class Test_CEDI(unittest.TestCase):
         self.assertEqual(mv, 0.0)
 
     def test_cedi_case_simple_identical_idx(self):
-
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 0.0)
 
     def test_cedi_case_simple_shifted(self):
-
         pred_arr, ref_arr = case_simple_shifted()
         mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 1.0)
 
     def test_cedi_case_simple_overpredicted(self):
-
         pred_arr, ref_arr = case_simple_overpredicted()
         mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertAlmostEqual(mv, 0.22360679774997896)
 
     def test_cedi_case_simple_underpredicted(self):
-
         pred_arr, ref_arr = case_simple_underpredicted()
         mv = Metric.CEDI(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 0.22360679774997896)
@@ -339,7 +318,6 @@ class Test_HD(unittest.TestCase):
         return super().setUp()
 
     def test_hd_case_simple_identical(self):
-
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.HD(
             reference_arr=ref_arr,
@@ -358,7 +336,6 @@ class Test_HD(unittest.TestCase):
         self.assertEqual(mv, 0.0)
 
     def test_hd_case_simple_identical_idx(self):
-
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 0.0)
@@ -367,7 +344,6 @@ class Test_HD(unittest.TestCase):
         self.assertEqual(mv, 0.0)
 
     def test_hd_case_simple_shifted(self):
-
         pred_arr, ref_arr = case_simple_shifted()
         mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 1.0)
@@ -376,7 +352,6 @@ class Test_HD(unittest.TestCase):
         self.assertEqual(mv, 1.0)
 
     def test_hd_case_simple_overpredicted(self):
-
         pred_arr, ref_arr = case_simple_overpredicted()
         mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 1.0)
@@ -385,7 +360,6 @@ class Test_HD(unittest.TestCase):
         self.assertEqual(mv, 1.0)
 
     def test_hd_case_simple_underpredicted(self):
-
         pred_arr, ref_arr = case_simple_underpredicted()
         mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 1.0)
@@ -394,7 +368,6 @@ class Test_HD(unittest.TestCase):
         self.assertEqual(mv, 1.0)
 
     def test_hd_case_overlap_but_large_discrepancy(self):
-
         pred_arr, ref_arr = case_simple_overlap_but_large_discrepancy()
         mv = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertAlmostEqual(mv, 2.82842712474619)
@@ -414,7 +387,6 @@ class Test_NSD(unittest.TestCase):
         return super().setUp()
 
     def test_nsd_case_simple_identical(self):
-
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.NSD(
             reference_arr=ref_arr,
@@ -425,13 +397,11 @@ class Test_NSD(unittest.TestCase):
         self.assertEqual(mv, 1.0)
 
     def test_nsd_case_simple_identical_idx(self):
-
         pred_arr, ref_arr = case_simple_identical()
         mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 1.0)
 
     def test_nsd_case_simple_underpredicted_thresholds(self):
-
         pred_arr, ref_arr = case_simple_underpredicted()
         mv = Metric.NSD(reference_arr=ref_arr, prediction_arr=pred_arr, threshold=0.5)
         self.assertEqual(mv, 0.375)
