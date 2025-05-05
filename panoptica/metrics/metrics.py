@@ -312,7 +312,6 @@ class Evaluation_Metric:
         was_calculated: bool = False,
         error: bool = False,
     ):
-
         self.id = name_id
         self.metric_type = metric_type
         self._calc_func = calc_func
@@ -412,7 +411,9 @@ class Evaluation_List_Metric:
         self.STD = (
             None
             if self.ALL is None
-            else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+            else empty_list_std
+            if len(self.ALL) == 0
+            else np.std(self.ALL)
         )
 
     def __getitem__(self, mode: MetricMode | str):

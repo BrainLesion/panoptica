@@ -65,7 +65,9 @@ def main(
     # check if files exist
     for file in [reference, prediction, config]:
         if not os.path.exists(file):
-            raise typer.BadParameter(f"Error: The file '{file}' does not exist. Please provide a valid path.")
+            raise typer.BadParameter(
+                f"Error: The file '{file}' does not exist. Please provide a valid path."
+            )
 
     ref_masks = sitk.GetArrayFromImage(sitk.ReadImage(reference))
     pred_masks = sitk.GetArrayFromImage(sitk.ReadImage(prediction))

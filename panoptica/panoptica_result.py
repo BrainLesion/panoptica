@@ -17,7 +17,6 @@ from panoptica.utils.processing_pair import IntermediateStepsData
 
 
 class PanopticaResult(object):
-
     def __init__(
         self,
         reference_arr: np.ndarray,
@@ -357,13 +356,14 @@ class PanopticaResult(object):
                 combi[combi != 0] = 1
                 is_edge_case = combi.sum() == 0
                 if is_edge_case:
-                    is_edge_case, edge_case_result = (
-                        self._edge_case_handler.handle_zero_tp(
-                            metric=m,
-                            tp=0,
-                            num_pred_instances=self.num_pred_instances,
-                            num_ref_instances=self.num_ref_instances,
-                        )
+                    (
+                        is_edge_case,
+                        edge_case_result,
+                    ) = self._edge_case_handler.handle_zero_tp(
+                        metric=m,
+                        tp=0,
+                        num_pred_instances=self.num_pred_instances,
+                        num_ref_instances=self.num_ref_instances,
                     )
                     default_value = edge_case_result
                 else:
