@@ -24,22 +24,57 @@ from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
 class INPUTDTYPE(_Enum_Compare):
     NUMPY = _InputDataTypeChecker(
-        supported_file_endings=[".npy", ".npz"],
+        supported_file_endings=[
+            ".npy",
+            ".npz",
+        ],
         required_package_names=["numpy"],
         sanity_check_handler=sanity_checker_numpy_array,
     )
     SITK = _InputDataTypeChecker(
-        supported_file_endings=[".nii", ".nii.gz", ".mha", ".mhd", ".dcm"],
+        supported_file_endings=[
+            ".nii",
+            ".nii.gz",
+            ".mha",
+            ".mhd",
+            ".dcm",
+            ".bmp",
+            ".pic",
+            ".gipl",
+            ".gipl.gz",
+            ".jpg",
+            ".JPG",
+            ".jpeg",
+            ".JPEG",
+            ".png",
+            ".PNG",
+            ".tiff",
+            ".TIFF",
+            ".tif",
+            ".TIF",
+            ".hdr",
+            ".mnc",
+            ".MNC",
+            ".img",
+            ".img.gz",
+            ".vtk",
+        ],
         required_package_names=["SimpleITK"],
         sanity_check_handler=sanity_checker_sitk_image,
     )
     TORCH = _InputDataTypeChecker(
-        supported_file_endings=[".pt", ".pth"],
+        supported_file_endings=[
+            ".pt",
+            ".pth",
+        ],
         required_package_names=["torch"],
         sanity_check_handler=sanity_checker_torch_image,
     )
     NIBABEL = _InputDataTypeChecker(
-        supported_file_endings=[".nii", ".nii.gz"],
+        supported_file_endings=[
+            ".nii",
+            ".nii.gz",
+        ],
         required_package_names=["nibabel"],
         sanity_check_handler=sanity_checker_nibabel_image,
     )
