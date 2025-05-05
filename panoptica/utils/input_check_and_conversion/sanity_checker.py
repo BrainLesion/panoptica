@@ -154,8 +154,12 @@ def sanity_check_and_convert_to_array(
             f"Missing packages for the given file ending {file_ending}: Any of these sets of packages is missing: {missing_package_names}. Please install the required packages."
         )
 
+    if is_path:
+        raise ValueError(
+            f"Unsupported file ending {file_ending} for reference and compare. Either panoptica is not supporting it, otherwise maybe a package is missing to handle these?"
+        )
     raise ValueError(
-        f"Unsupported input types {type(prediction), prediction} for reference and compare. Maybe a package is missing to handle these?"
+        f"Unsupported input types {type(prediction), prediction} for reference and compare. Either panoptica is not supporting it, otherwise maybe a package is missing to handle these?"
     )
 
 

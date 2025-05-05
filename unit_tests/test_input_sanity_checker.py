@@ -21,6 +21,7 @@ from panoptica.utils.input_check_and_conversion.sanity_checker import (
 test_npy_file = Path(__file__).parent.joinpath("test.npy")
 test_torch_file = Path(__file__).parent.joinpath("test.pt")
 test_nii_file = Path(__file__).parent.joinpath("test.nii.gz")
+test_abc_file = Path(__file__).parent.joinpath("test.abc.npy")
 
 
 class Test_Input_Sanity_Checker_Numpy(unittest.TestCase):
@@ -383,3 +384,39 @@ class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
         )
         self.assertEqual(checker, INPUTDTYPE.TORCH)
         os.remove(test_torch_file)
+
+
+class Test_Input_Sanity_Checker_Misc(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_sanity_checker_unsupported_datatype(self):
+        # List
+        with self.assertRaises(ValueError):
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array([0, 1, 2], [0, 1, 2])
+
+        # Tuple
+        with self.assertRaises(ValueError):
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array((0, 1, 2), (0, 1, 2))
+
+        # Dict
+        with self.assertRaises(ValueError):
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array({0: 1, 1: 2}, {0: 1, 1: 2})
+
+        # str
+        with self.assertRaises(ValueError):
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array("(0, 1, 2)", "(0, 1, 2)")
+
+    def test_sanity_checker_unsupported_file_ending(self):
+        # Create two identical numpy arrays
+        arr1 = np.random.rand(10, 10)
+        np.save(test_abc_file, arr1)
+
+        with self.assertRaises(ValueError):
+            # Test the sanity checker with Path
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_abc_file, test_abc_file)
+        with self.assertRaises(ValueError):
+            # Test the sanity checker with str
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_abc_file), str(test_abc_file))
+        os.remove(test_abc_file)
