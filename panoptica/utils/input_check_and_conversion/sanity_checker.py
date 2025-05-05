@@ -19,6 +19,9 @@ from panoptica.utils.input_check_and_conversion.check_torch_image import (
 from panoptica.utils.input_check_and_conversion.check_nibabel_image import (
     sanity_checker_nibabel_image,
 )
+from panoptica.utils.input_check_and_conversion.check_nrrd_image import (
+    sanity_checker_nrrd_image,
+)
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
 
@@ -77,6 +80,13 @@ class INPUTDTYPE(_Enum_Compare):
         ],
         required_package_names=["nibabel"],
         sanity_check_handler=sanity_checker_nibabel_image,
+    )
+    NRRD = _InputDataTypeChecker(
+        supported_file_endings=[
+            ".nrrd",
+        ],
+        required_package_names=["nrrd"],
+        sanity_check_handler=sanity_checker_nrrd_image,
     )
 
 

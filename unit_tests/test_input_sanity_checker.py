@@ -10,6 +10,7 @@ import SimpleITK as sitk
 from unittest import mock
 import nibabel as nib
 import torch
+import nrrd
 
 from panoptica.utils.input_check_and_conversion.sanity_checker import (
     sanity_check_and_convert_to_array,
@@ -17,10 +18,15 @@ from panoptica.utils.input_check_and_conversion.sanity_checker import (
     _InputDataTypeChecker,
     print_available_package_to_input_handlers,
 )
+from panoptica.utils.input_check_and_conversion.check_nrrd_image import (
+    NRRDImage,
+)
 
 test_npy_file = Path(__file__).parent.joinpath("test.npy")
 test_torch_file = Path(__file__).parent.joinpath("test.pt")
 test_nii_file = Path(__file__).parent.joinpath("test.nii.gz")
+test_nrrd_file = Path(__file__).parent.joinpath("test.nrrd")
+#
 test_abc_file = Path(__file__).parent.joinpath("test.abc.npy")
 
 
@@ -384,6 +390,77 @@ class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
         )
         self.assertEqual(checker, INPUTDTYPE.TORCH)
         os.remove(test_torch_file)
+
+
+class Test_Input_Sanity_Checker_Nrrd(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_sanity_checker(self):
+        # Create two identical numpy arrays
+        arr1 = np.random.rand(10, 10)
+        arr2 = np.copy(arr1)
+
+        nrrd1 = NRRDImage(arr1, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
+        nrrd2 = NRRDImage(arr2, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
+
+        with self.assertWarns(UserWarning):
+            # Test the sanity checker
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            self.assertEqual(checker, INPUTDTYPE.NRRD)
+            # self.assertTrue(result)
+        with self.assertWarns(UserWarning):
+            # Modify one array and test again
+            arr2[0, 0] += 1e-6
+            nrrd2 = NRRDImage(arr2, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd1, nrrd2)
+            self.assertEqual(checker, INPUTDTYPE.NRRD)
+
+    def test_sanity_checker_shapemismatch(self):
+        # Create two identical numpy arrays
+        arr1 = np.random.rand(10, 10)
+        arr2 = np.random.rand(10, 11)
+
+        nrrd1 = NRRDImage(arr1, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
+        nrrd2 = NRRDImage(arr2, header={"space origin": [0, 0], "space directions": [[1, 0], [1, 0]], "dimension": 2})
+
+        # Test the sanity checker
+        with self.assertRaises(ValueError):
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd1, nrrd2)
+
+        with self.assertRaises(ValueError):
+            (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(nrrd2, nrrd1)
+
+    def test_sanity_checker_as_file(self):
+        # Create two identical numpy arrays
+        arr1 = np.random.rand(10, 10)
+        affine = np.eye(3, 3)
+        n = affine.shape[0] - 1
+        space_directions = affine[:n, :n]
+        space_origin = affine[:n, n]
+        header = {
+            "type": str(arr1.dtype),
+            "dimension": n,
+            "sizes": arr1.shape,  # (data.shape[1],data.shape[0],data.shape[2]),
+            "space directions": space_directions.tolist(),
+            "space origin": space_origin,
+            "endian": "little",
+            "encoding": "gzip",
+        }
+        nrrd.write(
+            str(test_nrrd_file),
+            arr1,
+            header=header,
+        )
+
+        # Test the sanity checker with Path
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(test_nrrd_file, test_nrrd_file)
+        self.assertEqual(checker, INPUTDTYPE.NRRD)
+        # Test the sanity checker with str
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(str(test_nrrd_file), str(test_nrrd_file))
+        self.assertEqual(checker, INPUTDTYPE.NRRD)
+        os.remove(test_nrrd_file)
 
 
 class Test_Input_Sanity_Checker_Misc(unittest.TestCase):
