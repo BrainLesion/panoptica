@@ -173,7 +173,9 @@ def sanity_check_and_convert_to_array(
     )
 
 
-def post_check(prediction_reference_array_pair: tuple[np.ndarray, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
+def post_check(
+    prediction_reference_array_pair: tuple[np.ndarray, np.ndarray],
+) -> tuple[np.ndarray, np.ndarray]:
     """
     This function performs a post check on the sanity check result.
 
