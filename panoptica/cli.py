@@ -5,7 +5,7 @@ from typing_extensions import Annotated
 from importlib.metadata import version
 import SimpleITK as sitk
 from pathlib import Path
-
+from warnings import warn
 
 from panoptica import Panoptica_Evaluator
 
@@ -67,6 +67,10 @@ def cli_main(reference: str | Path, prediction: str | Path, config: str | Path |
     Generate the panoptica evaluation report for the given reference and prediction images.
     """
     if config is None:
+        warn(
+            "No config file provided. Using default config. For specific projects, please provided a config. Otherwise this might not calculate what you desire.",
+            UserWarning,
+        )
         # default config
         config = "panoptica/configs/panoptica_evaluator_default.yaml"
     # check if files exist
