@@ -28,6 +28,7 @@ from panoptica.utils.segmentation_class import (
     LabelGroup,
     _NoSegmentationClassGroups,
 )
+from pathlib import Path
 
 if TYPE_CHECKING:
     import torch
@@ -124,10 +125,20 @@ class Panoptica_Evaluator(SupportsConfig):
     def evaluate(
         self,
         prediction_arr: Union[
-            np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
         ],
         reference_arr: Union[
-            np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
         ],
         result_all: bool = True,
         save_group_times: bool | None = None,
