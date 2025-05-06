@@ -4,6 +4,7 @@ import typer
 from typing_extensions import Annotated
 from importlib.metadata import version
 import SimpleITK as sitk
+from pathlib import Path
 
 
 from panoptica import Panoptica_Evaluator
@@ -40,7 +41,7 @@ def main(
         ),
     ],
     config: Annotated[
-        str,
+        Optional[str],
         typer.Option(
             "-c",
             "--config",
@@ -61,10 +62,13 @@ def main(
     cli_main(reference, prediction, config)
 
 
-def cli_main(reference: str, prediction: str, config: str):
+def cli_main(reference: str | Path, prediction: str | Path, config: str | Path | None):
     """
     Generate the panoptica evaluation report for the given reference and prediction images.
     """
+    if config is None:
+        # default config
+        config = "panoptica/configs/panoptica_evaluator_default.yaml"
     # check if files exist
     for file in [reference, prediction, config]:
         if not os.path.exists(file):
@@ -80,6 +84,8 @@ def cli_main(reference: str, prediction: str, config: str):
     for group, result in group2result.items():
         print(f"Group: {group}")
         print(f"Result: {result}")
+
+    return group2result
 
 
 if __name__ == "__main__":

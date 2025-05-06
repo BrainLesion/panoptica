@@ -29,6 +29,7 @@ scikit-image = "^0.22.0"
 "ruamel.yaml" = "^0.18.6"
 plotly = "^5.16.1"
 pandas = "^2.1.0"
+typer = "^0.15.0"
 
 [tool.poetry.dev-dependencies]
 pytest = ">=8.1.1"
@@ -52,3 +53,6 @@ Sphinx = ">=7.0.0"
 sphinx-copybutton = ">=0.5.2"
 furo = ">=2024.8.6"
 myst-parser = ">=2.0.0"
+
+[tool.poetry.scripts]
+panopticacli = "panoptica.cli:app"
