@@ -4,6 +4,7 @@ import numpy as np
 
 from panoptica._functionals import (
     _calc_matching_metric_of_overlapping_labels,
+    _calc_matching_metric_of_overlapping_partlabels,
     _map_labels,
 )
 from panoptica.metrics import Metric
@@ -61,6 +62,8 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
+        label_group=None,  # <-- add label_group argument
+        processing_pair_orig_shape=None,
         **kwargs,
     ) -> MatchedInstancePair:
         """
@@ -68,6 +71,8 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            label_group: The label group object for this group (can be LabelPartGroup, LabelMergeGroup, etc.)
+            processing_pair_orig_shape: Original shape of the processing pair, useful for scaling calculations.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -75,6 +80,8 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         """
         instance_labelmap = self._match_instances(
             unmatched_instance_pair,
+            label_group=label_group,  # <-- forward label_group
+            processing_pair_orig_shape=processing_pair_orig_shape,  # <-- forward processing_pair_orig_shape
             **kwargs,
         )
         # print("instance_labelmap:", instance_labelmap)
@@ -110,14 +117,14 @@ def map_instance_labels(
     ref_labels = processing_pair.ref_labels
     pred_labels = processing_pair.pred_labels
 
-    ref_matched_labels = []
+    # ref_matched_labels = [] #! Not being used
     label_counter = int(max(ref_labels) + 1)
 
     pred_labelmap = labelmap.get_one_to_one_dictionary()
-    ref_matched_labels = list([r for r in ref_labels if r in pred_labelmap.values()])
+    # ref_matched_labels = list([r for r in ref_labels if r in pred_labelmap.values()]) #! Not being used
 
     # assign missed instances to next unused labels sequentially
-    missed_ref_labels = list([r for r in ref_labels if r not in ref_matched_labels])
+    # missed_ref_labels = list([r for r in ref_labels if r not in ref_matched_labels]) #! Not being used
     missed_pred_labels = list([p for p in pred_labels if p not in pred_labelmap])
     for p in missed_pred_labels:
         pred_labelmap[p] = label_counter
@@ -180,6 +187,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
+        label_group=None,  # <-- add label_group argument
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -187,6 +195,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            label_group: Optional label group information.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -201,10 +210,22 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             unmatched_instance_pair.prediction_arr,
             unmatched_instance_pair.reference_arr,
         )
-        # Calculate the matching metric for all overlapping label pairs
-        mm_pairs = _calc_matching_metric_of_overlapping_labels(
-            pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
-        )
+
+        # Calculate matching metric pairs based on whether it's a part group
+        is_part_group = label_group is not None and hasattr(label_group, "part_labels")
+
+        # Calculate matching metric pairs based on whether it's a part group
+        if is_part_group:
+            mm_pairs = _calc_matching_metric_of_overlapping_partlabels(
+                pred_arr,
+                ref_arr,
+                ref_labels,
+                matching_metric=self._matching_metric,
+            )
+        else:
+            mm_pairs = _calc_matching_metric_of_overlapping_labels(
+                pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
+            )
 
         # Loop through matched instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
@@ -244,7 +265,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
     Methods:
         __init__(self, matching_metric: Metric = Metric.IOU, matching_threshold: float = 0.5) -> None:
             Initialize the MaxBipartiteMatching instance.
-        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> InstanceLabelMap:
+        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
             Perform one-to-one instance matching based on the maximum bipartite graph matching.
 
     Example:
@@ -271,6 +292,8 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
+        label_group=None,  # <-- add label_group argument
+        processing_pair_orig_shape=None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -278,11 +301,14 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            label_group: Optional label group information.
+            processing_pair_orig_shape: Original shape of the processing pair, useful for scaling calculations.
             **kwargs: Additional keyword arguments.
 
         Returns:
             InstanceLabelMap: The result of the instance matching.
         """
+
         # Get labels from unmatched instance pair
         ref_labels = unmatched_instance_pair.ref_labels
         pred_labels = unmatched_instance_pair.pred_labels
@@ -296,10 +322,21 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
             unmatched_instance_pair.reference_arr,
         )
 
-        # Calculate matching metrics for all overlapping label pairs
-        mm_pairs = _calc_matching_metric_of_overlapping_labels(
-            pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
-        )
+        # Calculate matching metric pairs based on whether it's a part group
+        is_part_group = label_group is not None and hasattr(label_group, "part_labels")
+
+        if is_part_group:
+            mm_pairs = _calc_matching_metric_of_overlapping_partlabels(
+                pred_arr,
+                ref_arr,
+                processing_pair_orig_shape,
+                ref_labels,
+                matching_metric=self._matching_metric,
+            )
+        else:
+            mm_pairs = _calc_matching_metric_of_overlapping_labels(
+                pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
+            )
 
         # Create a cost matrix for the maximum bipartite graph matching
         # Each entry (i,j) represents the cost of matching reference i to prediction j
@@ -393,6 +430,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
+        label_group=None,  # <-- add label_group argument
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -400,6 +438,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            label_group: Optional label group information.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -416,12 +455,21 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
             unmatched_instance_pair.prediction_arr,
             unmatched_instance_pair.reference_arr,
         )
-        mm_pairs = _calc_matching_metric_of_overlapping_labels(
-            prediction_arr=pred_arr,
-            reference_arr=ref_arr,
-            ref_labels=ref_labels,
-            matching_metric=self._matching_metric,
-        )
+
+        # Calculate matching metric pairs based on whether it's a part group
+        is_part_group = label_group is not None and hasattr(label_group, "part_labels")
+
+        if is_part_group:
+            mm_pairs = _calc_matching_metric_of_overlapping_partlabels(
+                pred_arr,
+                ref_arr,
+                ref_labels,
+                matching_metric=self._matching_metric,
+            )
+        else:
+            mm_pairs = _calc_matching_metric_of_overlapping_labels(
+                pred_arr, ref_arr, ref_labels, matching_metric=self._matching_metric
+            )
 
         # Loop through matched instances to compute PQ components
         for matching_score, (ref_label, pred_label) in mm_pairs:
@@ -430,6 +478,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
                 continue
             if labelmap.contains_ref(ref_label):
                 pred_labels_ = labelmap.get_pred_labels_matched_to_ref(ref_label)
+                # Note: new_combination_score might need adjustment if part logic affects merging score calculation
                 new_score = self.new_combination_score(
                     pred_labels_, pred_label, ref_label, unmatched_instance_pair
                 )

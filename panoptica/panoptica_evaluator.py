@@ -164,6 +164,7 @@ class Panoptica_Evaluator(SupportsConfig):
 
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
+
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
@@ -253,6 +254,7 @@ class Panoptica_Evaluator(SupportsConfig):
             log_times=self.__log_times if log_times is None else log_times,
             verbose=True if verbose is None else verbose,
             verbose_calc=self.__verbose if verbose is None else verbose,
+            label_group=label_group,  # <-- pass label_group
         )
         if self.__save_group_times or save_group_times:
             duration = perf_counter() - start_time
@@ -273,6 +275,7 @@ def panoptic_evaluate(
     result_all: bool = True,
     verbose=False,
     verbose_calc=False,
+    label_group=None,  # <-- add label_group argument
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -313,6 +316,13 @@ def panoptic_evaluate(
     # Crops away unecessary space of zeroes
     input_pair.crop_data()
 
+    processing_pair_orig_shape = (
+        input_pair.prediction_arr.shape
+    )  #! This is required for the "Matching" and "Evalutation" to work properly for the part stuff.
+    num_ref_labels = (
+        input_pair.reference_arr.max()
+    )  #! This is required for the "Evalutation" to work properly for the part stuff.
+
     processing_pair: (
         SemanticPair
         | UnmatchedInstancePair
@@ -335,6 +345,7 @@ def panoptic_evaluate(
 
         processing_pair = instance_approximator.approximate_instances(
             processing_pair,
+            label_group=label_group,  # <-- forward label_group
             **kwargs,
         )
 
@@ -362,6 +373,8 @@ def panoptic_evaluate(
         start = perf_counter()
         processing_pair = instance_matcher.match_instances(
             processing_pair,
+            label_group=label_group,  # <-- forward label_group
+            processing_pair_orig_shape=processing_pair_orig_shape,  #! This is required for the part stuff to work.
             **kwargs,
         )
         if log_times:
@@ -397,8 +410,11 @@ def panoptic_evaluate(
         processing_pair = PanopticaResult(
             reference_arr=processing_pair.reference_arr,
             prediction_arr=processing_pair.prediction_arr,
+            processing_pair_orig_shape=processing_pair_orig_shape,
             num_pred_instances=processing_pair.num_pred_instances,
             num_ref_instances=processing_pair.num_ref_instances,
+            num_ref_labels=num_ref_labels,  # <-- forward num_ref_labels
+            label_group=label_group,  # <-- forward label_group
             tp=processing_pair.tp,
             list_metrics=processing_pair.list_metrics,
             global_metrics=global_metrics,
