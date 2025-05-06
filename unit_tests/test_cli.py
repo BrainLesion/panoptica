@@ -5,7 +5,11 @@
 import os
 import unittest
 from panoptica.cli import cli_main
-from unit_test_utils import case_multiple_overlapping_instances, case_simple_identical, case_simple_overlap_but_large_discrepancy
+from unit_test_utils import (
+    case_multiple_overlapping_instances,
+    case_simple_identical,
+    case_simple_overlap_but_large_discrepancy,
+)
 from pathlib import Path
 import numpy as np
 
