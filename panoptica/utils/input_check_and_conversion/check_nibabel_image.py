@@ -23,7 +23,7 @@ def sanity_checker_nibabel_image(
     threshold: float = 1e-5,
 ) -> tuple[bool, tuple[np.ndarray, np.ndarray] | str]:
     """
-    This function performs sanity check on 2 SimpleITK images.
+    This function performs sanity check on 2 Nibabel Nifti1Image objects.
 
     Args:
         prediction_image (nib.Nifti1Image): The prediction_image to be used as a baseline.

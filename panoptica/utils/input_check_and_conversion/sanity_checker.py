@@ -169,11 +169,11 @@ def sanity_check_and_convert_to_array(
             f"Unsupported file ending {file_ending} for reference and compare. Either panoptica is not supporting it, otherwise maybe a package is missing to handle these?"
         )
     raise ValueError(
-        f"Unsupported input types {type(prediction), prediction} for reference and compare. Either panoptica is not supporting it, otherwise maybe a package is missing to handle these?"
+        f"Unsupported input types {type(prediction), prediction} for reference and compare. Either panoptica is not supporting it, otherwise maybe a package is missing to handle these? You can always pass as numpy arrays directly."
     )
 
 
-def post_check(prediction_reference_array_pair: tuple[np.ndarray, np.ndarray]) -> bool:
+def post_check(prediction_reference_array_pair: tuple[np.ndarray, np.ndarray]) -> tuple[np.ndarray, np.ndarray]:
     """
     This function performs a post check on the sanity check result.
 
