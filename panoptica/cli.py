@@ -58,10 +58,13 @@ def main(
         ),
     ] = None,
 ):
+    cli_main(reference, prediction, config)
+
+
+def cli_main(reference: str, prediction: str, config: str):
     """
     Generate the panoptica evaluation report for the given reference and prediction images.
     """
-
     # check if files exist
     for file in [reference, prediction, config]:
         if not os.path.exists(file):
@@ -69,12 +72,14 @@ def main(
                 f"Error: The file '{file}' does not exist. Please provide a valid path."
             )
 
-    ref_masks = sitk.GetArrayFromImage(sitk.ReadImage(reference))
-    pred_masks = sitk.GetArrayFromImage(sitk.ReadImage(prediction))
-
+    # Load the Panoptica Evaluator object from config
     evaluator = Panoptica_Evaluator.load_from_config(config)
 
-    print(evaluator.evaluate(pred_masks, ref_masks)["ungrouped"])
+    # Call the evaluate function
+    group2result = evaluator.evaluate(prediction, reference)
+    for group, result in group2result.items():
+        print(f"Group: {group}")
+        print(f"Result: {result}")
 
 
 if __name__ == "__main__":
