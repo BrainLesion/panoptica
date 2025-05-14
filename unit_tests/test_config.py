@@ -26,6 +26,7 @@ from panoptica import (
     NaiveThresholdMatching,
     MaxBipartiteMatching,
     Panoptica_Evaluator,
+    RegionMatching,
 )
 from pathlib import Path
 import numpy as np
@@ -169,6 +170,22 @@ class Test_Datatypes(unittest.TestCase):
                 d: MaxBipartiteMatching = MaxBipartiteMatching.load_from_config(
                     test_file
                 )
+                os.remove(test_file)
+
+                self.assertEqual(d._matching_metric, t._matching_metric)
+                self.assertEqual(d._matching_threshold, t._matching_threshold)
+
+    def test_RegionMatching_config(self):
+        for mm in [Metric.DSC, Metric.IOU, Metric.ASSD]:
+            for mt in [0.1, 0.4, 0.5, 0.8, 1.0]:
+                t = RegionMatching(
+                    matching_metric=mm,
+                    matching_threshold=mt,
+                )
+                print(t)
+                print()
+                t.save_to_config(test_file)
+                d: RegionMatching = RegionMatching.load_from_config(test_file)
                 os.remove(test_file)
 
                 self.assertEqual(d._matching_metric, t._matching_metric)
