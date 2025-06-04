@@ -405,48 +405,7 @@ def _get_orig_onehotcc_structure(
     return arr_onehot.reshape((num_ref_labels + 1,) + processing_pair_orig_shape)
 
 
-def _remove_isolated_parts(
-    array: np.ndarray, thing_label: int, part_labels: list[int]
-) -> np.ndarray:
-    """Checks if part labels are connected to thing labels and creates a mask for valid parts.
-
-    Args:
-        array (np.ndarray): The array containing thing and part labels.
-        thing_label (int): The label representing the thing/semantic class.
-        part_labels (list[int]): The labels representing the part classes.
-
-    Returns:
-        np.ndarray: A binary mask where True indicates valid regions (thing and valid parts)
-                   and False indicates regions to be zeroed out.
-    """
-    from scipy import ndimage
-
-    # Create a mask for the thing
-    thing_mask = array == thing_label
-
-    # Create a mask for all parts
-    parts_mask = np.zeros_like(array, dtype=bool)
-    for part_label in part_labels:
-        parts_mask[array == part_label] = True
-
-    # Label the connected components in the parts mask
-    labeled_parts, num_parts = ndimage.label(parts_mask)
-
-    # For each connected component in the parts mask, check if it's encompassed
-    encompassed_parts = np.zeros_like(parts_mask)
-    for i in range(1, num_parts + 1):
-        part_component = labeled_parts == i
-
-        # Check if the part is encompassed
-        if _is_part_encompassed(part_component, thing_mask):
-            encompassed_parts |= part_component
-
-    # Final encompassed regions are the thing plus encompassed parts
-    encompassed_regions = thing_mask | encompassed_parts
-
-    return encompassed_regions
-
-
+# The `_remove_isolated_parts` function has been removed as it is unused.
 def calculate_all_label_pairs(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
