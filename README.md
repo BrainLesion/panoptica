@@ -163,6 +163,8 @@ Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., 
 
 We welcome all kinds of contributions from the community!
 
+Some guides on extending panoptica can be found in [panoptica/extending_panoptica.md](https://github.com/BrainLesion/panoptica/tree/main/extending_panoptica.md)
+
 ### Reporting Bugs, Feature Requests and Questions
 
 Please open a new issue [here](https://github.com/BrainLesion/panoptica/issues).

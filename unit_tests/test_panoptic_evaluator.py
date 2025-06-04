@@ -18,6 +18,14 @@ from panoptica.utils.segmentation_class import SegmentationClassGroups
 import sys
 from pathlib import Path
 
+from unittest import mock
+from panoptica.utils.input_check_and_conversion.sanity_checker import (
+    sanity_check_and_convert_to_array,
+    INPUTDTYPE,
+    _InputDataTypeChecker,
+    print_available_package_to_input_handlers,
+)
+
 
 class Test_Example_Scripts(unittest.TestCase):
     def setUp(self) -> None:
@@ -52,6 +60,35 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         return super().setUp()
 
     def test_simple_evaluation(self):
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy().astype(a.dtype)
+        a[20:40, 10:20] = 1
+        b[20:35, 10:20] = 2
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+
+        result = evaluator.evaluate(b, a)["ungrouped"]
+        print(result)
+        self.assertEqual(result.tp, 1)
+        self.assertEqual(result.fp, 0)
+        self.assertEqual(result.sq, 0.75)
+        self.assertEqual(result.pq, 0.75)
+        self.assertAlmostEqual(result.global_bin_dsc, 0.8571428571428571)
+
+    @mock.patch.object(
+        INPUTDTYPE.SITK.value, "are_requirements_fulfilled", return_value=False
+    )
+    @mock.patch.object(
+        INPUTDTYPE.NIBABEL.value, "are_requirements_fulfilled", return_value=False
+    )
+    @mock.patch.object(
+        INPUTDTYPE.TORCH.value, "are_requirements_fulfilled", return_value=False
+    )
+    def test_simple_evaluation_without_inputpackages(self, *args):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
         a[20:40, 10:20] = 1

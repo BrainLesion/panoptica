@@ -1,4 +1,6 @@
 from time import perf_counter
+from typing import Union
+from typing import TYPE_CHECKING
 
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
@@ -16,6 +18,9 @@ from panoptica.utils.processing_pair import (
     EvaluateInstancePair,
     IntermediateStepsData,
 )
+from panoptica.utils.input_check_and_conversion.sanity_checker import (
+    sanity_check_and_convert_to_array,
+)
 import numpy as np
 from panoptica.utils.config import SupportsConfig
 from panoptica.utils.segmentation_class import (
@@ -23,6 +28,12 @@ from panoptica.utils.segmentation_class import (
     LabelGroup,
     _NoSegmentationClassGroups,
 )
+from pathlib import Path
+
+if TYPE_CHECKING:
+    import torch
+    import SimpleITK as sitk
+    import nibabel as nib
 
 
 class Panoptica_Evaluator(SupportsConfig):
@@ -113,13 +124,32 @@ class Panoptica_Evaluator(SupportsConfig):
     @measure_time
     def evaluate(
         self,
-        prediction_arr: np.ndarray,
-        reference_arr: np.ndarray,
+        prediction_arr: Union[
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
+        ],
+        reference_arr: Union[
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
+        ],
         result_all: bool = True,
         save_group_times: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
     ) -> dict[str, PanopticaResult]:
+        # Sanity check input and convert to numpy arrays
+        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
+            prediction_arr, reference_arr
+        )
+        # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
         assert isinstance(
             processing_pair, self.__expected_input.value

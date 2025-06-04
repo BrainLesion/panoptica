@@ -105,16 +105,3 @@ $$
 $$
 
 Combines the F1-score of instances with the Segmentation Quality.
-
-
-<br/>
-<br/>
-
-# Extending Metrics
-
-In order to implement a new metric to panoptica, you have to perform the following steps:
-
-1. under panoptica/metrics, create a new python file for your metrics, add an implementation similar to the other metrics (e.g. panoptica/metrics/dice.py)
-2. In panoptica/metrics.metrics.py: Import your new metric function, add a new entry to the Metric Enum
-3. In panoptica/panoptica_result.py: Depending on whether the metric can be reported as segmentation quality (average over only TP), add a new region by naming it and then adding it with the self._add_metric() call. Additionally, if it can be globally reported, add the corresponding self.global_bin_metric entry.
-4. In panoptica/utils.edge_case_handling.py: Add default edge case handling for your new metric.
