@@ -205,11 +205,9 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
 
     def _one_hot(self, arr):
         n_classes = int(np.max(arr)) + 1
-        arr_shape = arr.shape  # e.g., (H, W) or (D, H, W)
-        one_hot = np.eye(n_classes)[arr.astype(int)]  # shape: (*arr_shape, C)
+        one_hot = np.eye(n_classes)[arr.astype(int)]
         # Move the class axis to the front: (C, *arr_shape)
-        one_hot = np.moveaxis(one_hot, -1, 0)
-        return one_hot, arr_shape
+        return np.moveaxis(one_hot, -1, 0)
 
     def _approximate_instances(
         self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None
@@ -221,40 +219,50 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
             cca_backend = (
                 CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
             )
-        assert cca_backend is not None
+
+        # binarize values before count collections
+        binarized_prediction = semantic_pair.prediction_arr > 0
+        binarized_reference = semantic_pair.reference_arr > 0
 
         _, n_prediction_instance = _connected_components(
-            semantic_pair.prediction_arr, cca_backend
+            binarized_prediction, cca_backend
         )
         _, n_reference_instance = _connected_components(
-            semantic_pair.reference_arr, cca_backend
+            binarized_reference, cca_backend
         )
 
         # One-hot encode
-        prediction_arr, prediction_arr_shape = self._one_hot(
-            semantic_pair.prediction_arr
-        )
-        reference_arr, reference_arr_shape = self._one_hot(semantic_pair.reference_arr)
+        prediction_arr = self._one_hot(semantic_pair.prediction_arr)
+        reference_arr = self._one_hot(semantic_pair.reference_arr)
 
-        for i in range(prediction_arr.shape[0]):
-            # If channel 0, inverse it before connected components
+        # Get the maximum number of classes between both arrays
+        max_classes = max(prediction_arr.shape[0], reference_arr.shape[0])
+
+        # Pad arrays to have the same number of classes if needed
+        if prediction_arr.shape[0] < max_classes:
+            pad_width = ((0, max_classes - prediction_arr.shape[0]),) + tuple(
+                (0, 0) for _ in range(prediction_arr.ndim - 1)
+            )
+            prediction_arr = np.pad(prediction_arr, pad_width, mode="constant")
+
+        if reference_arr.shape[0] < max_classes:
+            pad_width = ((0, max_classes - reference_arr.shape[0]),) + tuple(
+                (0, 0) for _ in range(reference_arr.ndim - 1)
+            )
+            reference_arr = np.pad(reference_arr, pad_width, mode="constant")
+
+        for i in range(max_classes):
+            # Invert background channel (channel 0)
             if i == 0:
                 prediction_arr[i] = 1 - prediction_arr[i]
                 reference_arr[i] = 1 - reference_arr[i]
+
             prediction_arr[i], _ = _connected_components(prediction_arr[i], cca_backend)
             reference_arr[i], _ = _connected_components(reference_arr[i], cca_backend)
 
-        # flatten to meet UnmatchedInstancePair requirements
-        prediction_arr = prediction_arr.flatten()
-        reference_arr = reference_arr.flatten()
-
-        # Ensure arrays are integer type
-        prediction_arr = prediction_arr.astype(np.int64)
-        reference_arr = reference_arr.astype(np.int64)
-
         return UnmatchedInstancePair(
-            prediction_arr=prediction_arr,
-            reference_arr=reference_arr,
+            prediction_arr=prediction_arr.flatten().astype(np.int64),
+            reference_arr=reference_arr.flatten().astype(np.int64),
             n_prediction_instance=n_prediction_instance,
             n_reference_instance=n_reference_instance,
         )

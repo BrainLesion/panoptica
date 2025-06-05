@@ -144,46 +144,60 @@ class LabelMergeGroup(LabelGroup):
 class LabelPartGroup(LabelGroup):
     """Defines a group of labels representing a thing object and its parts.
 
-    The order of labels is significant - the first label is the thing/semantic class,
-    and subsequent labels represent part classes. Isolated part classes (parts without
+    The thing_labels represent the panoptic/semantic classes, and part_labels
+    represent the part classes. Isolated part classes (parts without
     a thing) are zeroed out during extraction.
 
     Attributes:
-        value_labels (list[int]): Ordered list of integer labels, with thing label first.
+        thing_labels (list[int]): List of integer labels for thing/semantic classes.
+        part_labels (list[int]): List of integer labels for part classes.
+        value_labels (list[int]): Combined list of all labels (thing + part).
         single_instance (bool): If True, the group represents a single instance.
     """
 
     def __init__(
         self,
-        value_labels: list[int] | int,
+        thing_labels: list[int] | int,
+        part_labels: list[int] | int,
         single_instance: bool = False,
     ) -> None:
-        """Initializes a LabelPartGroup with thing and part labels.
+        """Initializes a LabelPartGroup with separate thing and part labels.
 
         Args:
-            value_labels (list[int] | int): Ordered labels, with thing label first.
+            thing_labels (list[int] | int): Labels for thing/semantic classes.
+            part_labels (list[int] | int): Labels for part classes.
             single_instance (bool, optional): If True, ignores matching threshold. Defaults to False.
 
         Raises:
-            AssertionError: If `value_labels` is empty, not positive integers, or if incompatible with single_instance.
-            ValueError: If fewer than two labels are provided (need at least one thing and one part).
+            AssertionError: If labels are empty, not positive integers, or if incompatible with single_instance.
+            ValueError: If no thing or part labels are provided.
         """
-        super().__init__(value_labels, single_instance)
-        # Ensure we have at least one thing and one part
-        if len(self.value_labels) < 2:
-            raise ValueError(
-                "LabelPartGroup requires at least two labels: one thing and one or more parts"
-            )
+        # Convert single integers to lists
+        if isinstance(thing_labels, int):
+            thing_labels = [thing_labels]
+        if isinstance(part_labels, int):
+            part_labels = [part_labels]
+
+        # Validate inputs
+        if not thing_labels:
+            raise ValueError("At least one thing label must be provided")
+        if not part_labels:
+            raise ValueError("At least one part label must be provided")
+
+        # Store separate label lists
+        self.thing_labels = thing_labels
+        self.part_labels = part_labels
+
+        # Create combined list for parent class compatibility
+        combined_labels = thing_labels + part_labels
+
+        # Call parent constructor with combined labels
+        super().__init__(combined_labels, single_instance)
 
     @property
     def thing_label(self) -> int:
-        """The thing/semantic class label (first in the list)."""
-        return self.value_labels[0]
-
-    @property
-    def part_labels(self) -> list[int]:
-        """The part class labels (all except the first)."""
-        return self.value_labels[1:]
+        """The first thing/semantic class label (for backward compatibility)."""
+        return self.thing_labels[0]
 
     def extract_label(
         self,
@@ -200,7 +214,6 @@ class LabelPartGroup(LabelGroup):
             np.ndarray: An array with only the valid thing and part labels of this group,
                     where all part labels are converted to the thing label.
         """
-
         # Extract all labels from this group
         result = array.copy()
         result[np.isin(result, self.value_labels, invert=True)] = 0
@@ -222,7 +235,7 @@ class LabelPartGroup(LabelGroup):
         return self.extract_label(array, set_to_binary=False)
 
     def __str__(self) -> str:
-        return f"LabelPartGroup Thing: {self.thing_label}, Parts: {self.part_labels}, single_instance={self.single_instance}"
+        return f"LabelPartGroup Things: {self.thing_labels}, Parts: {self.part_labels}, single_instance={self.single_instance}"
 
 
 class _LabelGroupAny(LabelGroup):
