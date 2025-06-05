@@ -381,10 +381,14 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
 
 class MaximizeMergeMatching(InstanceMatchingAlgorithm):
     """
-    Instance matching algorithm that performs many-to-one matching.
+    Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one. Only matches if at least a single instance exceeds the threshold
 
-    Will merge if combined instance metric is greater than individual one.
-    Only matches if at least a single instance exceeds the threshold.
+
+    Methods:
+        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
+
+    Raises:
+        AssertionError: If the specified IoU threshold is not within the valid range.
     """
 
     def __init__(
@@ -396,8 +400,11 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         Initialize the MaximizeMergeMatching instance.
 
         Args:
-            matching_metric (Metric): The metric to be used for matching.
-            matching_threshold (float): The metric threshold for matching instances.
+            matching_metric (_MatchingMetric): The metric to be used for matching.
+            matching_threshold (float, optional): The metric threshold for matching instances. Defaults to 0.5.
+
+        Raises:
+            AssertionError: If the specified IoU threshold is not within the valid range.
         """
         self._matching_metric = matching_metric
         self._matching_threshold = matching_threshold
@@ -409,32 +416,41 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         **kwargs,
     ) -> InstanceLabelMap:
         """
-        Perform many-to-one instance matching with merge optimization.
+        Perform one-to-one instance matching based on IoU values.
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
-            context (MatchingContext): The matching context.
             **kwargs: Additional keyword arguments.
 
         Returns:
-            InstanceLabelMap: The result of the instance matching.
+            Instance_Label_Map: The result of the instance matching.
         """
+        ref_labels = unmatched_instance_pair.ref_labels
+        # pred_labels = unmatched_instance_pair._pred_labels
+
+        # Initialize variables for True Positives (tp) and False Positives (fp)
         labelmap = InstanceLabelMap()
         score_ref: dict[int, float] = {}
 
-        mm_pairs = self._calculate_matching_metric_pairs(
-            unmatched_instance_pair, context, self._matching_metric
+        pred_arr, ref_arr = (
+            unmatched_instance_pair.prediction_arr,
+            unmatched_instance_pair.reference_arr,
+        )
+        mm_pairs = _calc_matching_metric_of_overlapping_labels(
+            prediction_arr=pred_arr,
+            reference_arr=ref_arr,
+            ref_labels=ref_labels,
+            matching_metric=self._matching_metric,
         )
 
-        # Loop through matched instances to compute optimal merging
+        # Loop through matched instances to compute PQ components
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if labelmap.contains_pred(pred_label=pred_label):
-                continue  # skip if prediction label is already matched
-
+                # skip if prediction label is already matched
+                continue
             if labelmap.contains_ref(ref_label):
-                # Check if merging improves the score
                 pred_labels_ = labelmap.get_pred_labels_matched_to_ref(ref_label)
-                new_score = self._calculate_combination_score(
+                new_score = self.new_combination_score(
                     pred_labels_, pred_label, ref_label, unmatched_instance_pair
                 )
                 if new_score > score_ref[ref_label]:
@@ -443,26 +459,25 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
             elif self._matching_metric.score_beats_threshold(
                 matching_score, self._matching_threshold
             ):
-                # New match found
+                # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 score_ref[ref_label] = matching_score
-
+                # map label ref_idx to pred_idx
         return labelmap
 
-    def _calculate_combination_score(
+    def new_combination_score(
         self,
-        pred_labels: List[int],
+        pred_labels: list[int],
         new_pred_label: int,
         ref_label: int,
         unmatched_instance_pair: UnmatchedInstancePair,
-    ) -> float:
-        """Calculate the score for combining prediction labels."""
-        combined_pred_labels = pred_labels + [new_pred_label]
+    ):
+        pred_labels.append(new_pred_label)
         score = self._matching_metric(
             unmatched_instance_pair.reference_arr,
             prediction_arr=unmatched_instance_pair.prediction_arr,
             ref_instance_idx=ref_label,
-            pred_instance_idx=combined_pred_labels,
+            pred_instance_idx=pred_labels,
         )
         return score
 

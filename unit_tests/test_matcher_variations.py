@@ -126,7 +126,7 @@ class Test_Naive_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            NaiveThresholdMatching(),
+            NaiveThresholdMatching(matching_threshold=0.0),
             setup_perfect_overlap,
             setup_perfect_overlap,
             expected_results,
@@ -153,7 +153,7 @@ class Test_Naive_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            NaiveThresholdMatching(),
+            NaiveThresholdMatching(matching_threshold=0.0),
             setup_pred_no_overlap,
             setup_ref_no_overlap,
             expected_results,
@@ -180,7 +180,7 @@ class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_perfect_overlap,
             setup_perfect_overlap,
             expected_results,
@@ -209,7 +209,7 @@ class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
         # Note: Original code used NaiveThresholdMatching here, which seems like a bug
         # Changed to MaxBipartiteMatching to match the class name
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_no_overlap,
             setup_ref_no_overlap,
             expected_results,
@@ -293,7 +293,7 @@ class Test_Part_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_partial,
             setup_ref_partial,
             expected_results,
@@ -336,7 +336,7 @@ class Test_Part_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_isolation,
             setup_ref_isolation,
             expected_results,
@@ -383,7 +383,7 @@ class Test_Part_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_uneven,
             setup_ref_uneven,
             expected_results,
@@ -428,7 +428,7 @@ class Test_Part_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_uneven_class,
             setup_ref_uneven_class,
             expected_results,
@@ -475,7 +475,7 @@ class Test_MultiPart_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_perfect_overlap,
             setup_perfect_overlap,
             expected_results,
@@ -518,7 +518,7 @@ class Test_MultiPart_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_partial,
             setup_ref_partial,
             expected_results,
@@ -560,7 +560,7 @@ class Test_MultiPart_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_uneven_classes,
             setup_ref_uneven_classes,
             expected_results,
@@ -599,7 +599,7 @@ class Test_MultiPart_Matcher_Variations(BaseMatcherTest):
         }
 
         self.run_overlap_scenario(
-            MaxBipartiteMatching(),
+            MaxBipartiteMatching(matching_threshold=0.0),
             setup_pred_no_parts,
             setup_ref_no_parts,
             expected_results,
