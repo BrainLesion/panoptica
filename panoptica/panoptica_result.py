@@ -440,7 +440,7 @@ class PanopticaResult(object):
             channel_metrics = []
             channel_results = {}
 
-            #! Skipping channel 1 because that is not the right part + thing. THat is only thing. We want part + thing evaluated and then the parts.
+            #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
             for i in range(self._multi_channel_data["num_channels"]):
                 if i == 1:
                     continue
