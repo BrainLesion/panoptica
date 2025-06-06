@@ -464,14 +464,16 @@ def panoptic_evaluate(
         has_many_to_one_mappings = (
             processing_pair.num_pred_instances < instance_metadata.original_num_preds
         )
-        
+
         # Use effective counts if many-to-one mappings were detected, otherwise use original counts
         final_num_pred_instances = (
-            processing_pair.num_pred_instances if has_many_to_one_mappings
+            processing_pair.num_pred_instances
+            if has_many_to_one_mappings
             else instance_metadata.original_num_preds
         )
         final_num_ref_instances = (
-            processing_pair.num_ref_instances if has_many_to_one_mappings
+            processing_pair.num_ref_instances
+            if has_many_to_one_mappings
             else instance_metadata.original_num_refs
         )
 

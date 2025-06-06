@@ -204,7 +204,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     def __init__(
         self,
         matching_metric: Metric = Metric.IOU,
-        matching_threshold: float = 0.0,
+        matching_threshold: float = 0.5,
         allow_many_to_one: bool = False,
     ) -> None:
         """
@@ -277,7 +277,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
     def __init__(
         self,
         matching_metric: Metric = Metric.IOU,
-        matching_threshold: float = 0.0,
+        matching_threshold: float = 0.5,
     ) -> None:
         """
         Initialize the MaxBipartiteMatching instance.

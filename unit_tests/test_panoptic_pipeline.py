@@ -155,7 +155,6 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-
             labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(labelmap[1] == 1)
