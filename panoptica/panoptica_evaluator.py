@@ -459,12 +459,28 @@ def panoptic_evaluate(
         ):
             instance_metadata.original_num_refs = processing_pair.n_reference_instance
 
+        # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
+        # This happens when the effective number of prediction instances is less than original
+        has_many_to_one_mappings = (
+            processing_pair.num_pred_instances < instance_metadata.original_num_preds
+        )
+        
+        # Use effective counts if many-to-one mappings were detected, otherwise use original counts
+        final_num_pred_instances = (
+            processing_pair.num_pred_instances if has_many_to_one_mappings
+            else instance_metadata.original_num_preds
+        )
+        final_num_ref_instances = (
+            processing_pair.num_ref_instances if has_many_to_one_mappings
+            else instance_metadata.original_num_refs
+        )
+
         processing_pair = PanopticaResult(
             reference_arr=processing_pair.reference_arr,
             prediction_arr=processing_pair.prediction_arr,
             processing_pair_orig_shape=instance_metadata.original_shape,
-            num_pred_instances=instance_metadata.original_num_preds,
-            num_ref_instances=instance_metadata.original_num_refs,
+            num_pred_instances=final_num_pred_instances,
+            num_ref_instances=final_num_ref_instances,
             num_ref_labels=instance_metadata.num_ref_labels,
             label_group=label_group,
             tp=processing_pair.tp,

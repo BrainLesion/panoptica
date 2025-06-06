@@ -381,14 +381,11 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
 
 class MaximizeMergeMatching(InstanceMatchingAlgorithm):
     """
-    Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one. Only matches if at least a single instance exceeds the threshold
+    Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one. Only matches if at least a single instance exceeds the threshold.
 
-
-    Methods:
-        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> Instance_Label_Map:
-
-    Raises:
-        AssertionError: If the specified IoU threshold is not within the valid range.
+    Attributes:
+        matching_metric (Metric): The metric to be used for matching.
+        matching_threshold (float): The threshold for matching instances.
     """
 
     def __init__(
@@ -400,11 +397,8 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         Initialize the MaximizeMergeMatching instance.
 
         Args:
-            matching_metric (_MatchingMetric): The metric to be used for matching.
-            matching_threshold (float, optional): The metric threshold for matching instances. Defaults to 0.5.
-
-        Raises:
-            AssertionError: If the specified IoU threshold is not within the valid range.
+            matching_metric (Metric): The metric to be used for matching.
+            matching_threshold (float): The threshold for matching instances.
         """
         self._matching_metric = matching_metric
         self._matching_threshold = matching_threshold
@@ -416,14 +410,15 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         **kwargs,
     ) -> InstanceLabelMap:
         """
-        Perform one-to-one instance matching based on IoU values.
+        Perform many-to-one instance matching based on metric values.
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            context (MatchingContext): The matching context.
             **kwargs: Additional keyword arguments.
 
         Returns:
-            Instance_Label_Map: The result of the instance matching.
+            InstanceLabelMap: The result of the instance matching.
         """
         ref_labels = unmatched_instance_pair.ref_labels
         # pred_labels = unmatched_instance_pair._pred_labels
