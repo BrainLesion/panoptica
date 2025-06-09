@@ -207,7 +207,9 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         self.assertEqual(group.thing_labels, [1])
         self.assertEqual(group.part_labels, [10])
         self.assertEqual(group.value_labels, [1, 10])
-        self.assertEqual(str(group), "LabelPartGroup Things: [1], Parts: [10], single_instance=False")
+        self.assertEqual(
+            str(group), "LabelPartGroup Things: [1], Parts: [10], single_instance=False"
+        )
 
         # Test with multiple thing and part labels
         group = LabelPartGroup(thing_labels=[1, 2], part_labels=[10, 11, 12])
@@ -219,15 +221,15 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         """Test label extraction functionality."""
         # Create a part group with thing label 1 and part labels 10, 11
         group = LabelPartGroup(thing_labels=1, part_labels=[10, 11])
-        
+
         # Test array with thing, parts, and other labels
         arr = np.array([0, 1, 2, 10, 11, 12, 1, 10, 20])
-        
+
         # Extract labels - should keep only thing and part labels
         result = group.extract_label(arr)
         expected = np.array([0, 1, 0, 10, 11, 0, 1, 10, 0])
         np.testing.assert_array_equal(result, expected)
-        
+
         # Test binary extraction - part labels should be converted to 1
         binary_result = group.extract_label(arr, set_to_binary=True)
         binary_expected = np.array([0, 1, 0, 10, 11, 0, 1, 10, 0])
@@ -237,7 +239,7 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         """Test the __call__ method which uses extract_label."""
         group = LabelPartGroup(thing_labels=[1, 2], part_labels=[10, 11])
         arr = np.array([0, 1, 2, 10, 11, 12, 1, 10, 20])
-        
+
         # Calling the instance should be the same as calling extract_label with default args
         call_result = group(arr)
         extract_result = group.extract_label(arr, set_to_binary=False)
@@ -248,11 +250,11 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         # Empty thing labels
         with self.assertRaises(ValueError):
             LabelPartGroup(thing_labels=[], part_labels=[10])
-            
+
         # Empty part labels
         with self.assertRaises(ValueError):
             LabelPartGroup(thing_labels=[1], part_labels=[])
-            
+
         # Single instance with multiple thing labels
         with self.assertRaises(AssertionError):
             LabelPartGroup(thing_labels=[1, 2], part_labels=[10], single_instance=True)
@@ -262,9 +264,11 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         # Single instance with single thing label should work
         # Note: single_instance=True requires exactly one label in the group
         # For LabelPartGroup, we need to ensure we only have one thing label
-        group = LabelPartGroup(thing_labels=1, part_labels=[10, 11], single_instance=False)
+        group = LabelPartGroup(
+            thing_labels=1, part_labels=[10, 11], single_instance=False
+        )
         self.assertFalse(group.single_instance)
-        
+
         # Test extraction preserves labels
         arr = np.array([0, 1, 10, 11, 2])
         result = group(arr)
@@ -275,7 +279,7 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         """Test the thing_label property for backward compatibility."""
         group = LabelPartGroup(thing_labels=[5], part_labels=[10])
         self.assertEqual(group.thing_label, 5)
-        
+
         # Should return first thing label when multiple exist
         group = LabelPartGroup(thing_labels=[5, 6, 7], part_labels=[10])
         self.assertEqual(group.thing_label, 5)
@@ -285,9 +289,9 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         group1 = LabelMergeGroup([1, 2], single_instance=False)
         group2 = LabelMergeGroup([2, 3], single_instance=False)
         group3 = LabelMergeGroup([1, 3], single_instance=False)
-        
+
         arr = np.array([0, 1, 2, 3, 1, 2, 2, 7, 3, 3, 3, 10])
-        
+
         classgroups = SegmentationClassGroups(
             groups={
                 "border": group1,
@@ -295,7 +299,7 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
                 "core": group3,
             }
         )
-        
+
         for group_name, label_group in classgroups.items():
             arr_grouped = label_group(arr)
             labels = label_group.value_labels
