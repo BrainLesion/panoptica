@@ -1,4 +1,4 @@
-from auxiliary.nifti.io import read_nifti
+from auxiliary.io import read_image
 from auxiliary.turbopath import turbopath
 
 from panoptica import (
@@ -30,8 +30,8 @@ def main(parallel_opt: str = "future"):  # none, pool, joblib, future
 
     directory = turbopath(__file__).parent
 
-    reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
-    prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
+    reference_mask = read_image(directory + "/spine_seg/matched_instance/ref.nii.gz")
+    prediction_mask = read_image(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
     evaluator = Panoptica_Aggregator(
         Panoptica_Evaluator.load_from_config("panoptica_evaluator_unmatched_instance"),
