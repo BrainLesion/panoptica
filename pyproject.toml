@@ -9,7 +9,10 @@ enable = true
 name = "panoptica"
 version = "0.0.0"
 description = "Panoptic Quality (PQ) computation for binary masks."
-authors = ["Hendrik Möller <hendrik.moeller@tum.de>", "Florian Kofler <florian.kofler@tum.de>"]
+authors = [
+    "Hendrik Möller <hendrik.moeller@tum.de>",
+    "Florian Kofler <florian.kofler@tum.de>",
+]
 repository = "https://github.com/BrainLesion/panoptica"
 homepage = "https://github.com/BrainLesion/panoptica"
 documentation = "https://panoptica.readthedocs.io/"
@@ -31,7 +34,7 @@ plotly = "^5.16.1"
 pandas = "^2.1.0"
 typer = ">=0.15.0, <1.0.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 pytest = ">=8.1.1"
 coverage = ">=7.0.1"
 pytest-mock = "^3.6.0"
