@@ -11,7 +11,7 @@ except ImportError:
 def _get_skeleton(array: np.ndarray) -> np.ndarray:
     """
     Get skeleton for 2D or 3D array.
-    
+
     Args:
         array (np.ndarray): Input array (2D or 3D).
     """
@@ -26,6 +26,7 @@ def _get_skeleton(array: np.ndarray) -> np.ndarray:
             return skeletonize(array)
     else:
         raise ValueError(f"Unsupported array dimension: {array.ndim}")
+
 
 def cl_score(volume: np.ndarray, skeleton: np.ndarray):
     """Computes the skeleton volume overlap
