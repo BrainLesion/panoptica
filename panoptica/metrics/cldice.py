@@ -14,6 +14,9 @@ def _get_skeleton(array: np.ndarray) -> np.ndarray:
 
     Args:
         array (np.ndarray): Input array (2D or 3D).
+
+    Returns:
+        np.ndarray: Skeletonized array.
     """
     if array.ndim == 2:
         return skeletonize(array)
