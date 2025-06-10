@@ -1,6 +1,6 @@
 import cProfile
 
-from auxiliary.nifti.io import read_nifti
+from auxiliary.io import read_image
 from pathlib import Path
 
 from panoptica import (
@@ -12,8 +12,8 @@ from panoptica import (
 
 directory = str(Path(__file__).absolute().parent)
 
-reference_mask = read_nifti(directory + "/spine_seg/semantic/ref.nii.gz")
-prediction_mask = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
+reference_mask = read_image(directory + "/spine_seg/semantic/ref.nii.gz")
+prediction_mask = read_image(directory + "/spine_seg/semantic/pred.nii.gz")
 
 
 evaluator = Panoptica_Evaluator(

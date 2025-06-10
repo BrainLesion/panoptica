@@ -1,6 +1,6 @@
 import cProfile
 
-from auxiliary.nifti.io import read_nifti
+from auxiliary.io import read_image
 from pathlib import Path
 
 from panoptica import Panoptica_Evaluator, InputType
@@ -9,8 +9,8 @@ from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGrou
 
 directory = str(Path(__file__).absolute().parent)
 
-reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
-prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
+reference_mask = read_image(directory + "/spine_seg/matched_instance/ref.nii.gz")
+prediction_mask = read_image(directory + "/spine_seg/matched_instance/pred.nii.gz")
 
 evaluator = Panoptica_Evaluator(
     expected_input=InputType.MATCHED_INSTANCE,
