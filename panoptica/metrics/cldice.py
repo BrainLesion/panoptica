@@ -1,6 +1,31 @@
 import numpy as np
-from skimage.morphology import skeletonize, skeletonize_3d
+from skimage.morphology import skeletonize
 
+try:
+    from skimage.morphology import skeletonize_3d
+except ImportError:
+    # In newer skimage versions (0.23+), skeletonize handles both 2D and 3D
+    skeletonize_3d = None
+
+
+def _get_skeleton(array: np.ndarray) -> np.ndarray:
+    """
+    Get skeleton for 2D or 3D array.
+    
+    Args:
+        array (np.ndarray): Input array (2D or 3D).
+    """
+    if array.ndim == 2:
+        return skeletonize(array)
+    elif array.ndim == 3:
+        if skeletonize_3d is not None:
+            # Older versions: use dedicated 3D function
+            return skeletonize_3d(array)
+        else:
+            # Newer versions: skeletonize handles 3D automatically
+            return skeletonize(array)
+    else:
+        raise ValueError(f"Unsupported array dimension: {array.ndim}")
 
 def cl_score(volume: np.ndarray, skeleton: np.ndarray):
     """Computes the skeleton volume overlap
@@ -52,11 +77,7 @@ def _compute_centerline_dice_coefficient(
 ) -> float:
     ndim = reference.ndim
     assert 2 <= ndim <= 3, "clDice only implemented for 2D or 3D"
-    if ndim == 2:
-        tprec = cl_score(prediction, skeletonize(reference))
-        tsens = cl_score(reference, skeletonize(prediction))
-    elif ndim == 3:
-        tprec = cl_score(prediction, skeletonize_3d(reference))
-        tsens = cl_score(reference, skeletonize_3d(prediction))
+    tprec = cl_score(prediction, _get_skeleton(reference))
+    tsens = cl_score(reference, _get_skeleton(prediction))
 
     return 2 * tprec * tsens / (tprec + tsens)
