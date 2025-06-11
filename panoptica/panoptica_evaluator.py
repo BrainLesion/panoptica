@@ -37,49 +37,6 @@ if TYPE_CHECKING:
     import nibabel as nib
 
 
-@dataclass
-class InstanceMetadata:
-    """Holds metadata about instances needed for evaluation."""
-
-    original_shape: tuple
-    num_ref_labels: int
-    num_pred_labels: int
-    original_num_preds: int
-    original_num_refs: int
-
-    @classmethod
-    def from_processing_pair(cls, processing_pair):
-        """Create metadata from a processing pair."""
-        max_ref = processing_pair.reference_arr.max()
-        max_pred = processing_pair.prediction_arr.max()
-
-        # Ensure we have enough labels for uneven classes
-        max_labels = max(max_ref, max_pred)
-
-        # Handle different types of processing pairs
-        from panoptica.utils.processing_pair import (
-            UnmatchedInstancePair,
-            MatchedInstancePair,
-        )
-
-        if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
-            num_preds = processing_pair.n_prediction_instance
-            num_refs = processing_pair.n_reference_instance
-        else:
-            # For SemanticPair, we don't have instance information yet
-            # Will be populated later in the pipeline
-            num_preds = 0
-            num_refs = 0
-
-        return cls(
-            original_shape=processing_pair.prediction_arr.shape,
-            num_ref_labels=max_labels,
-            num_pred_labels=max_labels,
-            original_num_preds=num_preds,
-            original_num_refs=num_refs,
-        )
-
-
 class Panoptica_Evaluator(SupportsConfig):
     def __init__(
         self,
@@ -359,7 +316,8 @@ def panoptic_evaluate(
     input_pair.crop_data()
 
     # Create initial metadata for parts handling
-    instance_metadata = InstanceMetadata.from_processing_pair(input_pair)
+    # Get metadata directly from the processing pair as a dictionary
+    instance_metadata = input_pair.get_metadata()
 
     processing_pair = input_pair.copy()
 
@@ -386,8 +344,12 @@ def panoptic_evaluate(
 
         # Update instance metadata after approximation
         if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
-            instance_metadata.original_num_preds = processing_pair.n_prediction_instance
-            instance_metadata.original_num_refs = processing_pair.n_reference_instance
+            instance_metadata["original_num_preds"] = (
+                processing_pair.n_prediction_instance
+            )
+            instance_metadata["original_num_refs"] = (
+                processing_pair.n_reference_instance
+            )
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
@@ -412,8 +374,8 @@ def panoptic_evaluate(
         processing_pair = instance_matcher.match_instances(
             processing_pair,
             label_group=label_group,
-            num_ref_labels=instance_metadata.num_ref_labels,
-            processing_pair_orig_shape=instance_metadata.original_shape,
+            num_ref_labels=instance_metadata["num_ref_labels"],
+            processing_pair_orig_shape=instance_metadata["original_shape"],
             **kwargs,
         )
         if log_times:
@@ -449,40 +411,44 @@ def panoptic_evaluate(
         # Update instance counts from the processed pair if available
         if (
             hasattr(processing_pair, "n_prediction_instance")
-            and instance_metadata.original_num_preds == 0
+            and instance_metadata["original_num_preds"] == 0
         ):
-            instance_metadata.original_num_preds = processing_pair.n_prediction_instance
+            instance_metadata["original_num_preds"] = (
+                processing_pair.n_prediction_instance
+            )
         if (
             hasattr(processing_pair, "n_reference_instance")
-            and instance_metadata.original_num_refs == 0
+            and instance_metadata["original_num_refs"] == 0
         ):
-            instance_metadata.original_num_refs = processing_pair.n_reference_instance
+            instance_metadata["original_num_refs"] = (
+                processing_pair.n_reference_instance
+            )
 
         # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
         # This happens when the effective number of prediction instances is less than original
         has_many_to_one_mappings = (
-            processing_pair.num_pred_instances < instance_metadata.original_num_preds
+            processing_pair.num_pred_instances < instance_metadata["original_num_preds"]
         )
 
         # Use effective counts if many-to-one mappings were detected, otherwise use original counts
         final_num_pred_instances = (
             processing_pair.num_pred_instances
             if has_many_to_one_mappings
-            else instance_metadata.original_num_preds
+            else instance_metadata["original_num_preds"]
         )
         final_num_ref_instances = (
             processing_pair.num_ref_instances
             if has_many_to_one_mappings
-            else instance_metadata.original_num_refs
+            else instance_metadata["original_num_refs"]
         )
 
         processing_pair = PanopticaResult(
             reference_arr=processing_pair.reference_arr,
             prediction_arr=processing_pair.prediction_arr,
-            processing_pair_orig_shape=instance_metadata.original_shape,
+            processing_pair_orig_shape=instance_metadata["original_shape"],
             num_pred_instances=final_num_pred_instances,
             num_ref_instances=final_num_ref_instances,
-            num_ref_labels=instance_metadata.num_ref_labels,
+            num_ref_labels=instance_metadata["num_ref_labels"],
             label_group=label_group,
             tp=processing_pair.tp,
             list_metrics=processing_pair.list_metrics,
