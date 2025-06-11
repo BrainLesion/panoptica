@@ -210,15 +210,15 @@ class LabelPartGroup(LabelGroup):
         array: np.ndarray,
         set_to_binary: bool = False,  # ? There is no purpose for anyone to do this. This should be done through LabelMergeGroup.
     ) -> np.ndarray:
-        """Extracts an array of the labels specific to this part group, zeroing out isolated parts.
+        """Extracts an array of the labels specific to this part group.
 
         Args:
             array (np.ndarray): The array to filter for part group labels.
             set_to_binary (bool, optional): If True, outputs a binary array. Defaults to False.
 
         Returns:
-            np.ndarray: An array with only the valid thing and part labels of this group,
-                    where all part labels are converted to the thing label.
+            np.ndarray: An array with only the labels from this group (both thing and part labels),
+                    with all other labels set to 0. Note: Part labels are NOT converted to thing labels.
         """
         # Extract all labels from this group
         result = array.copy()
