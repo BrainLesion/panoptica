@@ -140,6 +140,34 @@ class _ProcessingPair(ABC):
     def n_dim(self):
         return self.__n_dim
 
+    @property
+    def _original_num_preds(self) -> int:
+        """Override in subclasses for actual counts."""
+        return 0
+
+    @property
+    def _original_num_refs(self) -> int:
+        """Override in subclasses for actual counts."""
+        return 0
+
+    def get_metadata(self) -> dict:
+        """Get metadata about this processing pair.
+
+        Returns:
+            dict: Dictionary containing metadata about the processing pair
+        """
+        max_ref = self.reference_arr.max()
+        max_pred = self.prediction_arr.max()
+        max_labels = max(max_ref, max_pred)
+
+        return {
+            "original_shape": self.prediction_arr.shape,
+            "num_ref_labels": max_labels,
+            "num_pred_labels": max_labels,
+            "original_num_preds": self._original_num_preds,
+            "original_num_refs": self._original_num_refs,
+        }
+
     def copy(self):
         """
         Creates an exact copy of this object
@@ -162,6 +190,14 @@ class _ProcessingPairInstanced(_ProcessingPair):
 
     n_prediction_instance: int
     n_reference_instance: int
+
+    @property
+    def _original_num_preds(self) -> int:
+        return self.n_prediction_instance
+
+    @property
+    def _original_num_refs(self) -> int:
+        return self.n_reference_instance
 
     def __init__(
         self,

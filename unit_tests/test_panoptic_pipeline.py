@@ -17,6 +17,7 @@ from panoptica.instance_matcher import (
     NaiveThresholdMatching,
     MaxBipartiteMatching,
     InstanceLabelMap,
+    MatchingContext,
 )
 from panoptica.metrics import Metric
 from panoptica.instance_evaluator import (
@@ -109,6 +110,7 @@ class Test_Panoptica_InstanceLabelMap(unittest.TestCase):
 class Test_Panoptica_Instance_Matching(unittest.TestCase):
     def test_naive_threshold_matching_zerofive(self):
         a = NaiveThresholdMatching(matching_metric=Metric.DSC, matching_threshold=0.5)
+        context = MatchingContext()
 
         for c in [
             case_simple_identical,
@@ -120,7 +122,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(labelmap[1] == 1)
             self.assertTrue(len(labelmap) == 1)
@@ -134,12 +136,13 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(len(labelmap) == 0)
 
     def test_naive_threshold_matching_zero(self):
         a = NaiveThresholdMatching(matching_metric=Metric.DSC, matching_threshold=0.0)
+        context = MatchingContext()
 
         for c in [
             case_simple_identical,
@@ -152,7 +155,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(labelmap[1] == 1)
             self.assertTrue(len(labelmap) == 1)
@@ -164,7 +167,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(len(labelmap) == 0)
 
@@ -175,13 +178,14 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(len(labelmap) == 1)
             self.assertTrue(labelmap[1] == 2)
 
     def test_MaxBipartiteMatching_zerofive(self):
         a = MaxBipartiteMatching(matching_metric=Metric.DSC, matching_threshold=0.5)
+        context = MatchingContext()
 
         for c in [
             case_simple_identical,
@@ -193,7 +197,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(labelmap[1] == 1)
             self.assertTrue(len(labelmap) == 1)
@@ -207,12 +211,13 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(len(labelmap) == 0)
 
     def test_MaxBipartiteMatching_zero(self):
         a = MaxBipartiteMatching(matching_metric=Metric.DSC, matching_threshold=0.0)
+        context = MatchingContext()
 
         for c in [
             case_simple_identical,
@@ -225,7 +230,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(labelmap[1] == 1)
             self.assertTrue(len(labelmap) == 1)
@@ -237,7 +242,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(len(labelmap) == 0)
 
@@ -248,7 +253,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b)
+            labelmap = a._match_instances(b, context=context)
             print(labelmap)
             self.assertTrue(labelmap[1] == 1)
             self.assertTrue(labelmap[2] == 2)
