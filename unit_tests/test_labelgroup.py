@@ -284,6 +284,11 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         group = LabelPartGroup(thing_labels=[5, 6, 7], part_labels=[10])
         self.assertEqual(group.thing_label, 5)
 
+    def test_labelpartgroup_disjoint(self):
+        """Test that thing_labels and part_labels must be disjoint."""
+        with self.assertRaises(ValueError):
+            LabelPartGroup(thing_labels=[1, 2], part_labels=[2, 3])
+
     def test_segmentationclassgroup_regions_assertions(self):
         """Test assertions in the regions test case."""
         group1 = LabelMergeGroup([1, 2], single_instance=False)

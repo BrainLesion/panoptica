@@ -58,7 +58,6 @@ class InstanceMetadata:
 
         # Handle different types of processing pairs
         from panoptica.utils.processing_pair import (
-            SemanticPair,
             UnmatchedInstancePair,
             MatchedInstancePair,
         )
@@ -355,7 +354,7 @@ def panoptic_evaluate(
         edge_case_handler = EdgeCaseHandler()
 
     # Setup IntermediateStepsData
-    intermediate_steps_data = IntermediateStepsData(input_pair)
+    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
     # Crops away unnecessary space of zeroes
     input_pair.crop_data()
 

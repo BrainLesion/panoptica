@@ -188,6 +188,12 @@ class LabelPartGroup(LabelGroup):
         self.thing_labels = thing_labels
         self.part_labels = part_labels
 
+        # Ensure thing_labels and part_labels are disjoint
+        if set(self.thing_labels) & set(self.part_labels):
+            raise ValueError(
+                f"thing_labels and part_labels must be disjoint, but got overlap: {set(self.thing_labels) & set(self.part_labels)}"
+            )
+
         # Create combined list for parent class compatibility
         combined_labels = thing_labels + part_labels
 

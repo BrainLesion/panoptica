@@ -16,20 +16,21 @@ from panoptica.utils.processing_pair import (
 )
 from panoptica.utils.instancelabelmap import InstanceLabelMap
 from panoptica.utils.config import SupportsConfig
+from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 
 
 @dataclass
 class MatchingContext:
     """Encapsulates context information needed for matching operations."""
 
-    label_group: Optional[object] = None
+    label_group: Optional[LabelGroup] = None
     num_ref_labels: Optional[int] = None
     processing_pair_orig_shape: Optional[Tuple] = None
 
     @property
     def is_part_group(self) -> bool:
         """Check if this context represents a part group."""
-        return self.label_group is not None and hasattr(self.label_group, "part_labels")
+        return isinstance(self.label_group, LabelPartGroup)
 
 
 class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
@@ -37,7 +38,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     Abstract base class for instance matching algorithms in panoptic segmentation evaluation.
 
     Methods:
-        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, context: MatchingContext, **kwargs) -> InstanceLabelMap:
+        _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, context: MatchingContext = None, **kwargs) -> InstanceLabelMap:
             Abstract method to be implemented by subclasses for instance matching.
 
         match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, **kwargs) -> MatchedInstancePair:
@@ -45,7 +46,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
 
     Example:
     >>> class CustomInstanceMatcher(InstanceMatchingAlgorithm):
-    ...     def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, context: MatchingContext, **kwargs) -> InstanceLabelMap:
+    ...     def _match_instances(self, unmatched_instance_pair: UnmatchedInstancePair, context: MatchingContext = None, **kwargs) -> InstanceLabelMap:
     ...         # Implementation of instance matching algorithm
     ...         pass
     ...
@@ -58,7 +59,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: MatchingContext,
+        context: Optional[MatchingContext] = None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -66,7 +67,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
-            context (MatchingContext): Context information for matching.
+            context (Optional[MatchingContext]): Context information for matching. If None, a default context will be created.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -95,11 +96,18 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         Returns:
             MatchedInstancePair: The result of the instance matching.
         """
-        context = MatchingContext(
-            label_group=label_group,
-            num_ref_labels=num_ref_labels,
-            processing_pair_orig_shape=processing_pair_orig_shape,
-        )
+        # Create context only if any context information is provided
+        context = None
+        if (
+            label_group is not None
+            or num_ref_labels is not None
+            or processing_pair_orig_shape is not None
+        ):
+            context = MatchingContext(
+                label_group=label_group,
+                num_ref_labels=num_ref_labels,
+                processing_pair_orig_shape=processing_pair_orig_shape,
+            )
 
         instance_labelmap = self._match_instances(
             unmatched_instance_pair,
@@ -112,7 +120,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def _calculate_matching_metric_pairs(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: MatchingContext,
+        context: Optional[MatchingContext],
         matching_metric: Metric,
     ) -> List[Tuple[float, Tuple[int, int]]]:
         """
@@ -120,7 +128,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
 
         Args:
             unmatched_instance_pair: The unmatched instance pair.
-            context: The matching context.
+            context: The matching context. If None, defaults to non-part group behavior.
             matching_metric: The metric to use for matching.
 
         Returns:
@@ -132,7 +140,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         )
         ref_labels = unmatched_instance_pair.ref_labels
 
-        if context.is_part_group:
+        if context and context.is_part_group:
             return _calc_matching_metric_of_overlapping_partlabels(
                 pred_arr,
                 ref_arr,
@@ -222,7 +230,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: MatchingContext,
+        context: Optional[MatchingContext] = None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -230,7 +238,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
-            context (MatchingContext): The matching context.
+            context (Optional[MatchingContext]): The matching context.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -292,7 +300,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: MatchingContext,
+        context: Optional[MatchingContext] = None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -300,7 +308,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
-            context (MatchingContext): The matching context.
+            context (Optional[MatchingContext]): The matching context.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -406,7 +414,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: MatchingContext,
+        context: Optional[MatchingContext] = None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -414,7 +422,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
-            context (MatchingContext): The matching context.
+            context (Optional[MatchingContext]): The matching context.
             **kwargs: Additional keyword arguments.
 
         Returns:
