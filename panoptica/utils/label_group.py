@@ -208,7 +208,7 @@ class LabelPartGroup(LabelGroup):
     def extract_label(
         self,
         array: np.ndarray,
-        set_to_binary: bool = False,
+        set_to_binary: bool = False,  # ? There is no purpose for anyone to do this. This should be done through LabelMergeGroup.
     ) -> np.ndarray:
         """Extracts an array of the labels specific to this part group, zeroing out isolated parts.
 
