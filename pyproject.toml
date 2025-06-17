@@ -18,13 +18,13 @@ homepage = "https://github.com/BrainLesion/panoptica"
 documentation = "https://panoptica.readthedocs.io/"
 readme = "README.md"
 
-
 # Add the exclude field directly under [tool.poetry]
 exclude = ["examples", "benchmark"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-numpy = "^2.3.0"
+# Relaxed numpy version to be compatible with CuPy
+numpy = ">=1.22,<2.3"
 connected-components-3d = "^3.12.3"
 scipy = "^1.7.0"
 rich = "^13.6.0"
@@ -33,6 +33,15 @@ scikit-image = ">=0.22.0, <1.0.0"
 plotly = "^5.16.1"
 pandas = "^2.1.0"
 typer = ">=0.15.0, <1.0.0"
+
+# Optional GPU dependencies - use precompiled wheels
+cupy-cuda11x = {version = "^13.0.0", optional = true}
+cupy-cuda12x = {version = "^13.0.0", optional = true}
+
+[tool.poetry.extras]
+gpu-cuda11 = ["cupy-cuda11x"]
+gpu-cuda12 = ["cupy-cuda12x"]
+gpu = ["cupy-cuda11x"]  # Default to CUDA 11.x
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.1.1"
