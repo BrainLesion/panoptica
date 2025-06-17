@@ -11,6 +11,7 @@ from scipy import ndimage
 try:
     import cupy as cp
     from cupyx.scipy import ndimage as cp_ndimage
+
     CUPY_AVAILABLE = True
 except ImportError:
     CUPY_AVAILABLE = False
@@ -85,25 +86,25 @@ def benchmark_cupy(mask: np.ndarray):
     """
     if not CUPY_AVAILABLE:
         return None
-    
+
     # Transfer data to GPU
     mask_gpu = cp.asarray(mask)
-    
+
     # Warmup phase
     for _ in range(3):
         cp_ndimage.label(mask_gpu)
         cp.cuda.Stream.null.synchronize()
-    
+
     def label_cupy():
         cp_ndimage.label(mask_gpu)
         cp.cuda.Stream.null.synchronize()  # Ensure GPU computation is complete
-    
+
     cupy_time = timeit.timeit(label_cupy, number=10)
-    
+
     # Clean up GPU memory
     del mask_gpu
     cp.get_default_memory_pool().free_all_blocks()
-    
+
     return cupy_time
 
 
