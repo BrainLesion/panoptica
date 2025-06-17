@@ -7,6 +7,15 @@ import numpy as np
 # scipy needs to be installed to run this benchmark, we use cc3d as it is quicker for 3D data
 from scipy import ndimage
 
+# Try to import cupy for GPU acceleration
+try:
+    import cupy as cp
+    from cupyx.scipy import ndimage as cp_ndimage
+    CUPY_AVAILABLE = True
+except ImportError:
+    CUPY_AVAILABLE = False
+    print("CuPy not available. GPU benchmarks will be skipped.")
+
 
 def generate_random_binary_mask(size: Tuple[int, int, Union[int, None]]) -> np.ndarray:
     """
@@ -64,6 +73,40 @@ def benchmark_cc3d(mask: np.ndarray):
     return cc3d_time
 
 
+def benchmark_cupy(mask: np.ndarray):
+    """
+    Benchmark the performance of cupy.ndimage.label for connected component labeling on GPU.
+
+    Args:
+        mask (np.ndarray): Binary mask to label.
+
+    Returns:
+        float: Time taken to label the mask in seconds, or None if CuPy is not available.
+    """
+    if not CUPY_AVAILABLE:
+        return None
+    
+    # Transfer data to GPU
+    mask_gpu = cp.asarray(mask)
+    
+    # Warmup phase
+    for _ in range(3):
+        cp_ndimage.label(mask_gpu)
+        cp.cuda.Stream.null.synchronize()
+    
+    def label_cupy():
+        cp_ndimage.label(mask_gpu)
+        cp.cuda.Stream.null.synchronize()  # Ensure GPU computation is complete
+    
+    cupy_time = timeit.timeit(label_cupy, number=10)
+    
+    # Clean up GPU memory
+    del mask_gpu
+    cp.get_default_memory_pool().free_all_blocks()
+    
+    return cupy_time
+
+
 def run_benchmarks(volume_sizes: Tuple[Tuple[int, int, Union[int, None]]]) -> None:
     """
     Run benchmark tests for connected component labeling with different volume sizes.
@@ -80,10 +123,15 @@ def run_benchmarks(volume_sizes: Tuple[Tuple[int, int, Union[int, None]]]) -> No
 
         scipy_time = benchmark_scipy(mask)
         cc3d_time = benchmark_cc3d(mask)
+        cupy_time = benchmark_cupy(mask)
 
         print(f"Volume Size: {size}")
         print(f"Scipy Time: {scipy_time:.4f} seconds")
         print(f"CC3D Time: {cc3d_time:.4f} seconds")
+        if cupy_time is not None:
+            print(f"CuPy Time: {cupy_time:.4f} seconds")
+        else:
+            print("CuPy Time: Not available")
         print()
 
 
