@@ -43,8 +43,12 @@ class InstanceLabelMap(object):
             pred_labels = [pred_labels]
         assert isinstance(ref_label, int), "add_labelmap_entry: got no int as ref_label"
         assert ref_label > 0, "add_labelmap_entry: got no positive int as ref_label"
-        assert np.all([isinstance(r, int) for r in pred_labels]), "add_labelmap_entry: got no int as pred_label"
-        assert np.all([r >= 0 for r in pred_labels]), "add_labelmap_entry: got a non-positive int as pred_label"
+        assert np.all(
+            [isinstance(r, int) for r in pred_labels]
+        ), "add_labelmap_entry: got no int as pred_label"
+        assert np.all(
+            [r >= 0 for r in pred_labels]
+        ), "add_labelmap_entry: got a non-positive int as pred_label"
         for p in pred_labels:
             if p in self and self[p] != ref_label:
                 raise Exception(
@@ -85,7 +89,9 @@ class InstanceLabelMap(object):
         """
         return ref_label in self.values()
 
-    def contains_and(self, pred_label: int | None = None, ref_label: int | None = None) -> bool:
+    def contains_and(
+        self, pred_label: int | None = None, ref_label: int | None = None
+    ) -> bool:
         """Checks if both a prediction and a reference label are in the map.
 
         Args:
@@ -99,7 +105,9 @@ class InstanceLabelMap(object):
         ref_in = True if ref_label is None else ref_label in self.values()
         return pred_in and ref_in
 
-    def contains_or(self, pred_label: int | None = None, ref_label: int | None = None) -> bool:
+    def contains_or(
+        self, pred_label: int | None = None, ref_label: int | None = None
+    ) -> bool:
         """Checks if either a prediction or reference label is in the map.
 
         Args:
@@ -125,7 +133,13 @@ class InstanceLabelMap(object):
         return str(
             list(
                 [
-                    str(tuple(k for k in self.__labelmap.keys() if self.__labelmap[k] == v)) + " -> " + str(v)
+                    str(
+                        tuple(
+                            k for k in self.__labelmap.keys() if self.__labelmap[k] == v
+                        )
+                    )
+                    + " -> "
+                    + str(v)
                     for v in set(self.__labelmap.values())
                 ]
             )
