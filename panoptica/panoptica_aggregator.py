@@ -110,6 +110,7 @@ class Panoptica_Aggregator:
             if len(header_list) == 0:
                 # empty file
                 print("Output file given is empty, will start with header")
+                _write_content(output_file, [header])
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file

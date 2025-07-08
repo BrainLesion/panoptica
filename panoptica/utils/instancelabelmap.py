@@ -52,7 +52,7 @@ class InstanceLabelMap(object):
         for p in pred_labels:
             if p in self and self[p] != ref_label:
                 raise Exception(
-                    f"You are mapping a prediction label to a reference label that was already assigned differently, got {self.__str__} and you tried {pred_labels}, {ref_label}"
+                    f"You are mapping a prediction label to a reference label that was already assigned differently, got {str(self)} and you tried {pred_labels}, {ref_label}. The prediction label {p} is already mapped to {self[p]}."
                 )
             self.__labelmap[p] = ref_label
 
