@@ -328,6 +328,7 @@ class Panoptica_Statistic:
     def get_summary_figure(
         self,
         metric: str,
+        groups: list[str] | str | None = None,
         manual_metric_range: None | tuple[float, float] = None,
         name_method: str = "Structure",
         horizontal: bool = True,
@@ -343,9 +344,12 @@ class Panoptica_Statistic:
         Returns:
             _type_: _description_
         """
+        if groups is None:
+            groups = self.__groupnames
+        if isinstance(groups, str):
+            groups = [groups]
         data_plot = {
-            g: np.asarray(self.get(g, metric, remove_nones=True))
-            for g in self.__groupnames
+            g: np.asarray(self.get(g, metric, remove_nones=True)) for g in groups
         }
         if manual_metric_range is not None:
             assert manual_metric_range[0] < manual_metric_range[1], manual_metric_range

@@ -93,6 +93,8 @@ def _map_labels(
     Returns:
         np.ndarray: Returns a copy of the remapped array
     """
+    if len(label_map) == 0:
+        return arr.copy()
     k = np.array(list(label_map.keys()), dtype=arr.dtype)
     v = np.array(list(label_map.values()), dtype=arr.dtype)
 

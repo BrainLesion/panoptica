@@ -208,6 +208,9 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
 
         # Loop through matched instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
+            if pred_label in labelmap:
+                # skip if prediction label is already matched
+                continue
             if (
                 labelmap.contains_or(pred_label, ref_label)
                 and not self._allow_many_to_one
