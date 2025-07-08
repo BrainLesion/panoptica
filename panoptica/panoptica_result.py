@@ -306,6 +306,24 @@ class PanopticaResult(object):
         # endregion
 
         # region Global
+        self.global_bin_volume_pred = np.count_nonzero(prediction_arr)
+        self._add_metric(
+            "global_bin_volume_pred",
+            MetricType.NO_PRINT,
+            None,
+            long_name="Global Binary Prediction Volume",
+            default_value=self.global_bin_volume_pred,
+            was_calculated=True,
+        )
+        self.global_bin_volume_ref = np.count_nonzero(reference_arr)
+        self._add_metric(
+            "global_bin_volume_ref",
+            MetricType.NO_PRINT,
+            None,
+            long_name="Global Binary Reference Volume",
+            default_value=self.global_bin_volume_ref,
+            was_calculated=True,
+        )
         # Just for autocomplete
         self.global_bin_dsc: float
         self.global_bin_iou: float
