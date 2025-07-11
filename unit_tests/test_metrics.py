@@ -178,6 +178,11 @@ class Test_ASSD(unittest.TestCase):
         st = Metric.ASSD(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(st, 1.05)
 
+    def test_st_case_simple_nooverlap_voxelspacing(self):
+        pred_arr, ref_arr = case_simple_nooverlap()
+        st = Metric.ASSD(reference_arr=ref_arr, prediction_arr=pred_arr, voxelspacing=(20.0, 20.0))
+        self.assertEqual(st, 21.0)
+
     def test_st_case_simple_overpredicted(self):
         pred_arr, ref_arr = case_simple_overpredicted()
         st = Metric.ASSD(reference_arr=ref_arr, prediction_arr=pred_arr)
@@ -350,6 +355,11 @@ class Test_HD(unittest.TestCase):
         #
         mv = Metric.HD95(reference_arr=ref_arr, prediction_arr=pred_arr)
         self.assertEqual(mv, 1.0)
+
+    def test_hd_case_simple_nooverlap_voxelspacing(self):
+        pred_arr, ref_arr = case_simple_nooverlap()
+        st = Metric.HD(reference_arr=ref_arr, prediction_arr=pred_arr, voxelspacing=(20.0, 20.0))
+        self.assertEqual(st, 40.0)
 
     def test_hd_case_simple_overpredicted(self):
         pred_arr, ref_arr = case_simple_overpredicted()

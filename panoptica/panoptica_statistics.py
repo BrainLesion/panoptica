@@ -46,6 +46,12 @@ class ValueSummary:
     def max(self) -> float:
         return self.__max
 
+    def z_score(self, value: float) -> float:
+        """Calculates the z-score of a value based on the summary statistics."""
+        if self.std == 0:
+            return 0.0
+        return (value - self.avg) / self.std
+
     def __repr__(self):
         return str(self)
 
@@ -105,9 +111,7 @@ class Panoptica_Statistic:
             rows = [row for row in rd]
 
         header = rows[0]
-        assert (
-            header[0] == "subject_name"
-        ), "First column is not subject_names, something wrong with the file?"
+        assert header[0] == "subject_name", "First column is not subject_names, something wrong with the file?"
 
         keys_in_order = list([tuple(c.split("-")) for c in header[1:]])
         metric_names = []
@@ -148,19 +152,13 @@ class Panoptica_Statistic:
         return Panoptica_Statistic(subj_names=subj_names, value_dict=value_dict)
 
     def _assertgroup(self, group):
-        assert (
-            group in self.__groupnames
-        ), f"group {group} not existent, only got groups {self.__groupnames}"
+        assert group in self.__groupnames, f"group {group} not existent, only got groups {self.__groupnames}"
 
     def _assertmetric(self, metric):
-        assert (
-            metric in self.__metricnames
-        ), f"metric {metric} not existent, only got metrics {self.__metricnames}"
+        assert metric in self.__metricnames, f"metric {metric} not existent, only got metrics {self.__metricnames}"
 
     def _assertsubject(self, subjectname):
-        assert (
-            subjectname in self.__subj_names
-        ), f"subject {subjectname} not in list of subjects, got {self.__subj_names}"
+        assert subjectname in self.__subj_names, f"subject {subjectname} not in list of subjects, got {self.__subj_names}"
 
     def get(self, group, metric, remove_nones: bool = False) -> list[float]:
         """Returns the list of values for given group and metric
@@ -185,16 +183,10 @@ class Panoptica_Statistic:
     def get_dict(self, group, metric, remove_nones, sort_ascending: bool = True):
         values = self.get(group, metric, remove_nones=False)
         if remove_nones:
-            vdict = {
-                self.__subj_names[i]: values[i]
-                for i in range(len(values))
-                if values[i] is not None
-            }
+            vdict = {self.__subj_names[i]: values[i] for i in range(len(values)) if values[i] is not None}
         else:
             vdict = {self.__subj_names[i]: values[i] for i in range(len(values))}
-        vdict = dict(
-            sorted(vdict.items(), key=lambda x: x[1], reverse=not sort_ascending)
-        )
+        vdict = dict(sorted(vdict.items(), key=lambda x: x[1], reverse=not sort_ascending))
         return vdict
 
     def get_best_worst_k_entries(
@@ -237,10 +229,7 @@ class Panoptica_Statistic:
         """
         self._assertsubject(subjectname)
         sidx = self.__subj_names.index(subjectname)
-        return {
-            g: {m: self.get(g, m)[sidx] for m in self.__metricnames}
-            for g in self.__groupnames
-        }
+        return {g: {m: self.get(g, m)[sidx] for m in self.__metricnames} for g in self.__groupnames}
 
     def get_one_metric(self, metricname: str):
         """Gets the dictionary mapping the group to the metrics specified
@@ -293,13 +282,8 @@ class Panoptica_Statistic:
             summary_dict[m] = ValueSummary(value_list)
         return summary_dict
 
-    def get_summary_dict(
-        self, include_across_group: bool = True
-    ) -> dict[str, dict[str, ValueSummary]]:
-        summary_dict = {
-            g: {m: self.get_summary(g, m) for m in self.__metricnames}
-            for g in self.__groupnames
-        }
+    def get_summary_dict(self, include_across_group: bool = True) -> dict[str, dict[str, ValueSummary]]:
+        summary_dict = {g: {m: self.get_summary(g, m) for m in self.__metricnames} for g in self.__groupnames}
         if include_across_group:
             summary_dict["across_groups"] = self.get_summary_across_groups()
         return summary_dict
@@ -348,9 +332,7 @@ class Panoptica_Statistic:
             groups = self.__groupnames
         if isinstance(groups, str):
             groups = [groups]
-        data_plot = {
-            g: np.asarray(self.get(g, metric, remove_nones=True)) for g in groups
-        }
+        data_plot = {g: np.asarray(self.get(g, metric, remove_nones=True)) for g in groups}
         if manual_metric_range is not None:
             assert manual_metric_range[0] < manual_metric_range[1], manual_metric_range
             change = (manual_metric_range[1] - manual_metric_range[0]) / 100
@@ -402,14 +384,10 @@ def make_curve_over_setups(
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
 
-    assert (
-        plot_as_barchart or len(groups) == 1
-    ), "When plotting without barcharts, you cannot plot more than one group at the same time"
+    assert plot_as_barchart or len(groups) == 1, "When plotting without barcharts, you cannot plot more than one group at the same time"
     #
     for setupname, stat in statistics_dict.items():
-        assert (
-            metric in stat.metricnames
-        ), f"metric {metric} not in statistic obj {setupname}"
+        assert metric in stat.metricnames, f"metric {metric} not in statistic obj {setupname}"
 
     setupnames = list(statistics_dict.keys())
     convert_x_to_digit = True
@@ -429,25 +407,17 @@ def make_curve_over_setups(
 
     # Y values are average metric values in that group and metric
     for idx, g in enumerate(groups):
-        Y = [
-            ValueSummary(stat.get(g, metric, remove_nones=True)).avg
-            for stat in statistics_dict.values()
-        ]
+        Y = [ValueSummary(stat.get(g, metric, remove_nones=True)).avg for stat in statistics_dict.values()]
 
         name = g if alternate_groupnames is None else alternate_groupnames[idx]
 
         if plot_std:
-            Ystd = [
-                ValueSummary(stat.get(g, metric, remove_nones=True)).std
-                for stat in statistics_dict.values()
-            ]
+            Ystd = [ValueSummary(stat.get(g, metric, remove_nones=True)).std for stat in statistics_dict.values()]
         else:
             Ystd = None
 
         if plot_as_barchart:
-            fig.add_trace(
-                go.Bar(name=name, x=X, y=Y, error_y=dict(type="data", array=Ystd))
-            )
+            fig.add_trace(go.Bar(name=name, x=X, y=Y, error_y=dict(type="data", array=Ystd)))
         else:
             # lineplot
             fig.add_trace(
@@ -467,9 +437,7 @@ def make_curve_over_setups(
         height=height,
         showlegend=True,
         yaxis_title=metric if yaxis_title is None else yaxis_title,
-        xaxis_title=(
-            "Different setups and groups" if xaxis_title is None else xaxis_title
-        ),
+        xaxis_title=("Different setups and groups" if xaxis_title is None else xaxis_title),
         font={"family": "Arial"},
         title=figure_title,
     )
@@ -511,9 +479,7 @@ def plot_box(
     if sort:
         df_by_spec_count = df_data.groupby(name_method).mean()
         df_by_spec_count = dict(df_by_spec_count[name_metric].items())
-        df_data["mean"] = df_data[name_method].apply(
-            lambda x: df_by_spec_count[x] * (1 if orientation_horizontal else -1)
-        )
+        df_data["mean"] = df_data[name_method].apply(lambda x: df_by_spec_count[x] * (1 if orientation_horizontal else -1))
         df_data = df_data.sort_values(by="mean")
     if not orientation_horizontal:
         fig = px.strip(

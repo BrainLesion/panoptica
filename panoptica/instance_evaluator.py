@@ -11,6 +11,7 @@ def evaluate_matched_instance(
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
     decision_metric: Metric | None = Metric.IOU,
     decision_threshold: float | None = None,
+    voxelspacing: tuple[float, ...] | None = None,
     **kwargs,
 ) -> EvaluateInstancePair:
     """
@@ -25,9 +26,7 @@ def evaluate_matched_instance(
 
     """
     if decision_metric is not None:
-        assert decision_metric.name in [
-            v.name for v in eval_metrics
-        ], "decision metric not contained in eval_metrics"
+        assert decision_metric.name in [v.name for v in eval_metrics], "decision metric not contained in eval_metrics"
         assert decision_threshold is not None, "decision metric set but no threshold"
     # Initialize variables for True Positives (tp)
     tp = len(matched_instance_pair.matched_instances)
@@ -40,8 +39,7 @@ def evaluate_matched_instance(
     ref_matched_labels = matched_instance_pair.matched_instances
 
     metric_dicts: list[dict[Metric, float]] = [
-        _evaluate_instance(reference_arr, prediction_arr, ref_idx, eval_metrics)
-        for ref_idx in ref_matched_labels
+        _evaluate_instance(reference_arr, prediction_arr, ref_idx, eval_metrics, voxelspacing) for ref_idx in ref_matched_labels
     ]
     # instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
     # with Pool() as pool:
@@ -52,10 +50,7 @@ def evaluate_matched_instance(
     # TODO if instance matcher already gives matching metric, adapt here!
     for metric_dict in metric_dicts:
         if decision_metric is None or (
-            decision_threshold is not None
-            and decision_metric.score_beats_threshold(
-                metric_dict[decision_metric], decision_threshold
-            )
+            decision_threshold is not None and decision_metric.score_beats_threshold(metric_dict[decision_metric], decision_threshold)
         ):
             for k, v in metric_dict.items():
                 score_dict[k].append(v)
@@ -76,6 +71,7 @@ def _evaluate_instance(
     prediction_arr: np.ndarray,
     ref_idx: int,
     eval_metrics: list[Metric],
+    voxelspacing: tuple[float, ...] | None = None,
 ) -> dict[Metric, float]:
     """
     Evaluate a single instance.
@@ -92,6 +88,8 @@ def _evaluate_instance(
     ref_arr = reference_arr == ref_idx
     pred_arr = prediction_arr == ref_idx
 
+    voxelspacing = (1.0,) * len(reference_arr.shape) if voxelspacing is None else voxelspacing
+
     if ref_arr.sum() == 0 or pred_arr.sum() == 0:
         return {}
 
@@ -106,7 +104,7 @@ def _evaluate_instance(
 
     result: dict[Metric, float] = {}
     for metric in eval_metrics:
-        metric_value = metric(ref_arr, pred_arr)
+        metric_value = metric(ref_arr, pred_arr, voxelspacing=voxelspacing)
         result[metric] = metric_value
 
     return result

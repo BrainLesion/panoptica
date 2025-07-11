@@ -68,9 +68,7 @@ class Panoptica_Aggregator:
         if isinstance(output_file, str):
             output_file = Path(output_file)
         # uses tsv
-        assert (
-            output_file.parent.exists()
-        ), f"Directory {str(output_file.parent)} does not exist"
+        assert output_file.parent.exists(), f"Directory {str(output_file.parent)} does not exist"
 
         out_file_path = str(output_file)
 
@@ -87,19 +85,13 @@ class Panoptica_Aggregator:
         # buffer_file = tempfile.NamedTemporaryFile()
         # out_buffer_file: Path = Path(out_file_path).parent.joinpath("panoptica_aggregator_tmp.tsv")
         # self.tmpfile =
-        self.__output_buffer_file = tempfile.NamedTemporaryFile(
-            delete=False
-        ).name  # out_buffer_file
+        self.__output_buffer_file = tempfile.NamedTemporaryFile(delete=False).name  # out_buffer_file
         # print(self.__output_buffer_file)
 
         Path(out_file_path).parent.mkdir(parents=False, exist_ok=True)
         self.__output_file = out_file_path
 
-        header = ["subject_name"] + [
-            f"{g}-{m}"
-            for g in self.__class_group_names
-            for m in self.__evaluation_metrics
-        ]
+        header = ["subject_name"] + [f"{g}-{m}" for g in self.__class_group_names for m in self.__evaluation_metrics]
         header_hash = hash("+".join(header))
 
         if not output_file.exists():
@@ -114,9 +106,7 @@ class Panoptica_Aggregator:
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-                assert header_hash == hash(
-                    "+".join(header_list)
-                ), "Hash of header not the same! You are using a different setup!"
+                assert header_hash == hash("+".join(header_list)), "Hash of header not the same! You are using a different setup!"
 
         if continue_file:
             with inevalfilelock:
@@ -146,6 +136,8 @@ class Panoptica_Aggregator:
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
         subject_name: str,
+        voxelspacing: tuple[float, ...] | None = None,
+        **kwargs,
     ):
         """Evaluates a single case using the provided prediction and reference arrays.
 
@@ -179,6 +171,8 @@ class Panoptica_Aggregator:
             verbose=False,
             log_times=False,
             save_group_times=self.__log_times,
+            voxelspacing=voxelspacing,
+            **kwargs,
         )
 
         # Add to file

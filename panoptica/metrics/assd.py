@@ -10,6 +10,8 @@ def _compute_instance_average_symmetric_surface_distance(
     pred_instance_idx: int | None = None,
     voxelspacing=None,
     connectivity=1,
+    *args,
+    **kwargs,
 ):
     if ref_instance_idx is None and pred_instance_idx is None:
         return _average_symmetric_surface_distance(
@@ -34,6 +36,7 @@ def _average_symmetric_surface_distance(
     voxelspacing=None,
     connectivity=1,
     *args,
+    **kwargs,
 ) -> float:
     """ASSD is computed by computing the average of the bidrectionally computed ASD."""
     assd = np.mean(
@@ -85,17 +88,13 @@ def __surface_distances(reference, prediction, voxelspacing=None, connectivity=1
     #    raise RuntimeError("The second supplied array does not contain any binary object.")
 
     # extract only 1-pixel border line of objects
-    result_border = prediction ^ binary_erosion(
-        prediction, structure=footprint, iterations=1
-    )
-    reference_border = reference ^ binary_erosion(
-        reference, structure=footprint, iterations=1
-    )
+    result_border = prediction ^ binary_erosion(prediction, structure=footprint, iterations=1)
+    reference_border = reference ^ binary_erosion(reference, structure=footprint, iterations=1)
 
     # compute average surface distance
     # Note: scipys distance transform is calculated only inside the borders of the
     #       foreground objects, therefore the input has to be reversed
-    dt = _distance_transform_edt(~reference_border, sampling=None)
+    dt = _distance_transform_edt(~reference_border, sampling=voxelspacing)
     sds = dt[result_border]
 
     return sds
@@ -145,9 +144,9 @@ def _distance_transform_edt(
     if return_distances:
         dt = ft - np.indices(input_array.shape, dtype=ft.dtype)
         dt = dt.astype(np.float64)
-        # if sampling is not None:
-        #    for ii in range(len(sampling)):
-        #        dt[ii, ...] *= sampling[ii]
+        if sampling is not None:
+            for ii in range(len(sampling)):
+                dt[ii, ...] *= sampling[ii]
         np.multiply(dt, dt, dt)
 
         dt = np.add.reduce(dt, axis=0)
