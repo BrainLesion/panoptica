@@ -78,7 +78,9 @@ def _compute_center_distance(
     # Calculate metric
     diff_vector = np.subtract(pred_com, ref_com)
     if voxelspacing is not None:
-        assert len(voxelspacing) == len(pred_com), "Voxelspacing must have same dimensionality than the input"
+        assert len(voxelspacing) == len(
+            pred_com
+        ), "Voxelspacing must have same dimensionality than the input"
         diff_vector = np.multiply(diff_vector, voxelspacing)
     center_distance = float(np.linalg.norm(diff_vector))
     return center_distance

@@ -38,7 +38,9 @@ def _compute_normalized_surface_dice(
     if threshold is None:
         threshold = min(voxelspacing) if voxelspacing is not None else 0.5
     if threshold == 0.5:
-        warnings.warn("The threshold is set to 0.5, which is the default value, which may not be appropriate for your data.")
+        warnings.warn(
+            "The threshold is set to 0.5, which is the default value, which may not be appropriate for your data."
+        )
 
     if isinstance(a_to_b, int):
         return 0
