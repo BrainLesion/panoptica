@@ -487,7 +487,6 @@ def _calc_matching_metric_of_overlapping_partlabels(
         reference_arr: Array containing reference labels
         processing_pair_orig_shape: Original shape for processing
         num_ref_labels: Number of reference labels
-        ref_labels: Reference labels to consider
         matching_metric: Metric to use for evaluation
 
     Returns:
