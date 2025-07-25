@@ -352,7 +352,7 @@ class PanopticaResult(object):
         # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
 
         arrays_present = False
-        # TODO move this after m is in global metrics otherwise this is unecessarily computed
+        # TODO move this after m is in global metrics otherwise this is unnecessarily computed
         if prediction_arr is not None and reference_arr is not None:
             pred_binary = prediction_arr.copy()
             ref_binary = reference_arr.copy()

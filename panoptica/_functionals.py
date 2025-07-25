@@ -285,8 +285,7 @@ def _consolidate_multiple_parts(
     """
     if len(encompassed_parts) > 1:
         lowest_label = min(encompassed_parts)
-        for label in encompassed_parts:
-            part_slice[part_slice == label] = lowest_label
+        part_slice[np.isin(part_slice, encompassed_parts)] = lowest_label
     return part_slice
 
 
