@@ -452,15 +452,18 @@ class PanopticaResult(object):
         """
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
+        
+        # Set THING_CHANNEL so it can be avoided during the part calculation
+        #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
+        THING_CHANNEL = 1
 
         # Handle multi-channel data from LabelPartGroup
         if hasattr(self, "_multi_channel_data"):
             channel_metrics = []
             channel_results = {}
 
-            #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
             for i in range(self._multi_channel_data["num_channels"]):
-                if i == 1:
+                if i == THING_CHANNEL:
                     continue
                 ref_channel = self._multi_channel_data["ref_channels"][i]
                 pred_channel = self._multi_channel_data["pred_channels"][i]
