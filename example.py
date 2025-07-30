@@ -8,8 +8,12 @@ from panoptica.utils.label_group import LabelPartGroup, LabelMergeGroup
 
 import nibabel as nib
 
-ref_mask = nib.load("/home/localssk23/backup/soumya/BraTS-2023-Metrics/dataset/ASNR-MICCAI-BraTS2023-MET-Challenge-TestingData/BraTS-MET-00001-000/BraTS-MET-00001-000-seg.nii.gz").get_fdata()
-pred_mask = nib.load("/home/localssk23/backup/soumya/BraTS-2023-Metrics/dataset/BratSMets_PredictedSegs/PredictedSegs/NVAUTO/BraTS-MET-00001-000.nii.gz").get_fdata()
+ref_mask = nib.load(
+    "/home/localssk23/backup/soumya/BraTS-2023-Metrics/dataset/ASNR-MICCAI-BraTS2023-MET-Challenge-TestingData/BraTS-MET-00001-000/BraTS-MET-00001-000-seg.nii.gz"
+).get_fdata()
+pred_mask = nib.load(
+    "/home/localssk23/backup/soumya/BraTS-2023-Metrics/dataset/BratSMets_PredictedSegs/PredictedSegs/NVAUTO/BraTS-MET-00001-000.nii.gz"
+).get_fdata()
 
 groups = {
     "NETC": (1, False),
@@ -24,10 +28,10 @@ pred_mask = pred_mask.astype(np.int32)
 ref_mask = ref_mask.astype(np.int32)
 
 evaluator = Panoptica_Evaluator(
-expected_input=InputType.SEMANTIC,
-instance_approximator=ConnectedComponentsInstanceApproximator(),
-instance_matcher=MaxBipartiteMatching(),
-segmentation_class_groups=class_groups,
+    expected_input=InputType.SEMANTIC,
+    instance_approximator=ConnectedComponentsInstanceApproximator(),
+    instance_matcher=MaxBipartiteMatching(),
+    segmentation_class_groups=class_groups,
 )
 
 results = evaluator.evaluate(pred_mask, ref_mask, verbose=False)
@@ -37,25 +41,25 @@ print(results.items())
 for class_name, result in results.items():
     if class_name == "tc" or class_name == "wt":
 
-            print(f"\n--- {class_name} ---")
-            result_dict = result.to_dict()
-            # Filter the dictionary to show only the most important metrics
-            important_metrics = [
-                "tp",
-                "fp",
-                "fn",
-                "sq",
-                "rq",
-                "pq",
-                "sq_dsc",
-                "global_bin_dsc",
-            ]
-            filtered_dict = {
-                k: round(v, 4) if isinstance(v, float) else v
-                for k, v in result_dict.items()
-                if k in important_metrics
-            }
-            print(filtered_dict)
+        print(f"\n--- {class_name} ---")
+        result_dict = result.to_dict()
+        # Filter the dictionary to show only the most important metrics
+        important_metrics = [
+            "tp",
+            "fp",
+            "fn",
+            "sq",
+            "rq",
+            "pq",
+            "sq_dsc",
+            "global_bin_dsc",
+        ]
+        filtered_dict = {
+            k: round(v, 4) if isinstance(v, float) else v
+            for k, v in result_dict.items()
+            if k in important_metrics
+        }
+        print(filtered_dict)
 
 from pathlib import Path
 from tqdm import tqdm
@@ -75,7 +79,7 @@ if num_cases is not None:
 for case_dir in tqdm(case_dirs):
     case_name = case_dir.name
     gt_file = case_dir / f"{case_name}-seg.nii.gz"
-    
+
     for team in teams:
         pred_file = pred_path / team / f"{case_name}.nii.gz"
 

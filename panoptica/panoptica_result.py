@@ -452,7 +452,7 @@ class PanopticaResult(object):
         """
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
-        
+
         # Set THING_CHANNEL so it can be avoided during the part calculation
         #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
         THING_CHANNEL = 1
