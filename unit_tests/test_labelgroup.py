@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 
 from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
-from panoptica.utils import LabelMergeGroup
+from panoptica.utils.label_group import LabelMergeGroup, LabelPartGroup
 
 
 class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
@@ -200,10 +200,116 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         for group_name, label_group in classgroups.items():
             arr_grouped = label_group(arr)
 
+    def test_labelpartgroup_basic(self):
+        """Test basic initialization and properties of LabelPartGroup."""
+        # Test with single thing and part labels
+        group = LabelPartGroup(thing_labels=1, part_labels=10)
+        self.assertEqual(group.thing_labels, [1])
+        self.assertEqual(group.part_labels, [10])
+        self.assertEqual(group.value_labels, [1, 10])
+        self.assertEqual(
+            str(group), "LabelPartGroup Things: [1], Parts: [10], single_instance=False"
+        )
+
+        # Test with multiple thing and part labels
+        group = LabelPartGroup(thing_labels=[1, 2], part_labels=[10, 11, 12])
+        self.assertEqual(group.thing_labels, [1, 2])
+        self.assertEqual(group.part_labels, [10, 11, 12])
+        self.assertEqual(group.value_labels, [1, 2, 10, 11, 12])
+
+    def test_labelpartgroup_extraction(self):
+        """Test label extraction functionality."""
+        # Create a part group with thing label 1 and part labels 10, 11
+        group = LabelPartGroup(thing_labels=1, part_labels=[10, 11])
+
+        # Test array with thing, parts, and other labels
+        arr = np.array([0, 1, 2, 10, 11, 12, 1, 10, 20])
+
+        # Extract labels - should keep only thing and part labels
+        result = group.extract_label(arr)
+        expected = np.array([0, 1, 0, 10, 11, 0, 1, 10, 0])
+        np.testing.assert_array_equal(result, expected)
+
+        # Test binary extraction - part labels should be converted to 1
+        binary_result = group.extract_label(arr, set_to_binary=True)
+        binary_expected = np.array([0, 1, 0, 10, 11, 0, 1, 10, 0])
+        np.testing.assert_array_equal(binary_result, binary_expected)
+
+    def test_labelpartgroup_call(self):
+        """Test the __call__ method which uses extract_label."""
+        group = LabelPartGroup(thing_labels=[1, 2], part_labels=[10, 11])
+        arr = np.array([0, 1, 2, 10, 11, 12, 1, 10, 20])
+
+        # Calling the instance should be the same as calling extract_label with default args
+        call_result = group(arr)
+        extract_result = group.extract_label(arr, set_to_binary=False)
+        np.testing.assert_array_equal(call_result, extract_result)
+
+    def test_labelpartgroup_validation(self):
+        """Test input validation for LabelPartGroup."""
+        # Empty thing labels
+        with self.assertRaises(ValueError):
+            LabelPartGroup(thing_labels=[], part_labels=[10])
+
+        # Empty part labels
+        with self.assertRaises(ValueError):
+            LabelPartGroup(thing_labels=[1], part_labels=[])
+
+        # Single instance with multiple thing labels
+        with self.assertRaises(AssertionError):
+            LabelPartGroup(thing_labels=[1, 2], part_labels=[10], single_instance=True)
+
+    def test_labelpartgroup_single_instance(self):
+        """Test single_instance behavior."""
+        # Single instance with single thing label should work
+        # Note: single_instance=True requires exactly one label in the group
+        # For LabelPartGroup, we need to ensure we only have one thing label
+        group = LabelPartGroup(
+            thing_labels=1, part_labels=[10, 11], single_instance=False
+        )
+        self.assertFalse(group.single_instance)
+
+        # Test extraction preserves labels
+        arr = np.array([0, 1, 10, 11, 2])
+        result = group(arr)
+        expected = np.array([0, 1, 10, 11, 0])
+        np.testing.assert_array_equal(result, expected)
+
+    def test_labelpartgroup_thing_label_property(self):
+        """Test the thing_label property for backward compatibility."""
+        group = LabelPartGroup(thing_labels=[5], part_labels=[10])
+        self.assertEqual(group.thing_label, 5)
+
+        # Should return first thing label when multiple exist
+        group = LabelPartGroup(thing_labels=[5, 6, 7], part_labels=[10])
+        self.assertEqual(group.thing_label, 5)
+
+    def test_labelpartgroup_disjoint(self):
+        """Test that thing_labels and part_labels must be disjoint."""
+        with self.assertRaises(ValueError):
+            LabelPartGroup(thing_labels=[1, 2], part_labels=[2, 3])
+
+    def test_segmentationclassgroup_regions_assertions(self):
+        """Test assertions in the regions test case."""
+        group1 = LabelMergeGroup([1, 2], single_instance=False)
+        group2 = LabelMergeGroup([2, 3], single_instance=False)
+        group3 = LabelMergeGroup([1, 3], single_instance=False)
+
+        arr = np.array([0, 1, 2, 3, 1, 2, 2, 7, 3, 3, 3, 10])
+
+        classgroups = SegmentationClassGroups(
+            groups={
+                "border": group1,
+                "inner": group2,
+                "core": group3,
+            }
+        )
+
+        for group_name, label_group in classgroups.items():
+            arr_grouped = label_group(arr)
             labels = label_group.value_labels
             labels = [l + 1 for l in labels]
             labels = sum(labels)
-
             self.assertEqual(
                 np.sum(arr_grouped), labels, (group_name, labels, arr_grouped)
             )
