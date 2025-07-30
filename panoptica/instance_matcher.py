@@ -140,7 +140,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         )
         ref_labels = unmatched_instance_pair.ref_labels
 
-        if context and context.is_part_group:
+        if context is not None and context.is_part_group:
             return _calc_matching_metric_of_overlapping_partlabels(
                 pred_arr,
                 ref_arr,
