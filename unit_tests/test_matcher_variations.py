@@ -9,8 +9,16 @@ import warnings
 import sys
 from pathlib import Path
 
-# Add the parent directory to the sys.path to import panoptica
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+import unittest
+import numpy as np
+
+from panoptica.instance_approximator import InstanceApproximator
+from panoptica.instance_matcher import InstanceMatchingAlgorithm
+from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.panoptica_result import PanopticaResult
+from panoptica.utils.edge_case_handling import (
+    EdgeCaseHandler,
+)
 
 # Suppress SWIG-related deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPy.*")
