@@ -108,6 +108,30 @@ def benchmark_cupy(mask: np.ndarray):
     return cupy_time
 
 
+def benchmark_panoptica_cupy(mask: np.ndarray):
+    """
+    Benchmark the performance of panoptica's CuPy backend for connected component labeling.
+
+    Args:
+        mask (np.ndarray): Binary mask to label.
+
+    Returns:
+        float: Time taken to label the mask in seconds, or None if CuPy is not available.
+    """
+    if not CUPY_AVAILABLE:
+        return None
+
+    from panoptica._functionals import _connected_components
+    from panoptica.utils.constants import CCABackend
+
+    def label_panoptica_cupy():
+        _connected_components(mask, CCABackend.cupy)
+
+    panoptica_cupy_time = timeit.timeit(label_panoptica_cupy, number=10)
+
+    return panoptica_cupy_time
+
+
 def run_benchmarks(volume_sizes: Tuple[Tuple[int, int, Union[int, None]]]) -> None:
     """
     Run benchmark tests for connected component labeling with different volume sizes.

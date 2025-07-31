@@ -63,6 +63,19 @@ def _connected_components(
         from scipy.ndimage import label
 
         cc_arr, n_instances = label(array)
+    elif cca_backend == CCABackend.cupy:
+        try:
+            import cupy as cp
+            from cupyx.scipy.ndimage import label as cp_label
+
+            array_gpu = cp.asarray(array)
+            cc_arr, n_instances = cp_label(array_gpu)
+            cc_arr = cp.asnumpy(cc_arr)
+        except ImportError:
+            raise ImportError(
+                "CuPy is not installed. Please install CuPy to use the GPU backend. "
+                "You can install it using: pip install cupy-cuda11x or cupy-cuda12x depending on your CUDA version."
+            )
     else:
         raise NotImplementedError(cca_backend)
 
