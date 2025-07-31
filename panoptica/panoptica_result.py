@@ -14,6 +14,8 @@ from panoptica.metrics import (
 )
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import IntermediateStepsData
+from panoptica.utils.label_group import LabelGroup, LabelPartGroup
+from panoptica._functionals import _get_orig_onehotcc_structure
 
 
 class PanopticaResult(object):
@@ -27,6 +29,9 @@ class PanopticaResult(object):
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
         global_metrics: list[Metric] = [],
+        processing_pair_orig_shape: tuple[int, int] | None = None,
+        num_ref_labels: int | None = None,
+        label_group: LabelGroup | None = None,
         intermediate_steps_data: IntermediateStepsData | None = None,
         computation_time: float | None = None,
     ):
@@ -47,6 +52,27 @@ class PanopticaResult(object):
         self._global_metrics: list[Metric] = global_metrics
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
+
+        if isinstance(label_group, LabelPartGroup):
+            # Store the one-hot encoded arrays for both reference and prediction
+            one_hot_ref_array = _get_orig_onehotcc_structure(
+                reference_arr, num_ref_labels, processing_pair_orig_shape
+            )
+            one_hot_pred_array = _get_orig_onehotcc_structure(
+                prediction_arr, num_ref_labels, processing_pair_orig_shape
+            )
+
+            # Store the multi-channel data for later use in global metrics
+            self._multi_channel_data = {
+                "ref_channels": one_hot_ref_array,
+                "pred_channels": one_hot_pred_array,
+                "num_channels": one_hot_ref_array.shape[0],
+            }
+
+            # For backward compatibility with other metrics, flatten arrays
+            reference_arr = one_hot_ref_array.flatten()
+            prediction_arr = one_hot_pred_array.flatten()
+
         ######################
         # Evaluation Metrics #
         ######################
@@ -344,7 +370,7 @@ class PanopticaResult(object):
         # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
 
         arrays_present = False
-        # TODO move this after m is in global metrics otherwise this is unecessarily computed
+        # TODO move this after m is in global metrics otherwise this is unnecessarily computed
         if prediction_arr is not None and reference_arr is not None:
             pred_binary = prediction_arr.copy()
             ref_binary = reference_arr.copy()
@@ -410,6 +436,7 @@ class PanopticaResult(object):
     ):
         """
         Calculates a global binary metric based on predictions and references.
+        For multi-channel data (LabelPartGroup), computes metrics per channel and averages.
 
         Args:
             metric (Metric): The metric to compute.
@@ -418,7 +445,7 @@ class PanopticaResult(object):
             do_binarize (bool): Whether to binarize the input arrays. Defaults to True.
 
         Returns:
-            The calculated metric value.
+            The calculated metric value or mean of channel metrics for multi-channel data.
 
         Raises:
             MetricCouldNotBeComputedException: If the specified metric is not set.
@@ -426,6 +453,69 @@ class PanopticaResult(object):
         if metric not in self._global_metrics:
             raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
 
+        # Set THING_CHANNEL so it can be avoided during the part calculation
+        #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
+        THING_CHANNEL = 1
+
+        # Handle multi-channel data from LabelPartGroup
+        if hasattr(self, "_multi_channel_data"):
+            channel_metrics = []
+            channel_results = {}
+
+            for i in range(self._multi_channel_data["num_channels"]):
+                if i == THING_CHANNEL:
+                    continue
+                ref_channel = self._multi_channel_data["ref_channels"][i]
+                pred_channel = self._multi_channel_data["pred_channels"][i]
+
+                # Skip empty channels (where both reference and prediction are empty)
+                if ref_channel.sum() == 0 and pred_channel.sum() == 0:
+                    continue
+
+                # Binarize each channel to ensure binary input
+                pred_channel = (pred_channel != 0).astype(np.uint8)
+                ref_channel = (ref_channel != 0).astype(np.uint8)
+                # Handle edge cases for empty reference or prediction
+                prediction_empty = pred_channel.sum() == 0
+                reference_empty = ref_channel.sum() == 0
+
+                if prediction_empty or reference_empty:
+                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                        metric, 0, int(prediction_empty), int(reference_empty)
+                    )
+                    if is_edgecase:
+                        channel_result = result
+                    else:
+                        channel_result = metric(
+                            reference_arr=ref_channel,
+                            prediction_arr=pred_channel,
+                        )
+                else:
+                    channel_result = metric(
+                        reference_arr=ref_channel,
+                        prediction_arr=pred_channel,
+                    )
+
+                channel_metrics.append(channel_result)
+                channel_results[i] = channel_result
+
+            # Store individual channel metrics for reference
+            metric_name = metric.name.lower()
+            if not hasattr(self, "_channel_metrics"):
+                self._channel_metrics = {}
+            self._channel_metrics[metric_name] = channel_results
+
+            # Return mean of channel metrics
+            if channel_metrics:
+                return np.mean(channel_metrics)
+            else:
+                # Handle case where no valid metrics could be computed
+                is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                    metric, 0, 1, 1
+                )
+                return result
+
+        # Original single-channel logic
         if do_binarize:
             pred_binary = prediction_arr.copy()
             ref_binary = reference_arr.copy()
@@ -660,6 +750,20 @@ class PanopticaResult(object):
                         raise value
                     return value
         return attr
+
+    def get_channel_metrics(self, metric_name: str):
+        """
+        Returns the metrics for each channel when using LabelPartGroup.
+
+        Args:
+            metric_name (str): Name of the metric (lowercase)
+
+        Returns:
+            Dictionary of metric values per channel or None if not computed with LabelPartGroup
+        """
+        if hasattr(self, "_channel_metrics") and metric_name in self._channel_metrics:
+            return self._channel_metrics[metric_name]
+        return None
 
 
 #########################
