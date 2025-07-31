@@ -49,6 +49,8 @@ def _compute_centerline_dice(
     pred_labels: np.ndarray,
     ref_instance_idx: int | None = None,
     pred_instance_idx: int | None = None,
+    *args,
+    **kwargs,
 ) -> float:
     """Compute the centerline Dice (clDice) coefficient between a specific pair of instances.
 
@@ -78,6 +80,7 @@ def _compute_centerline_dice_coefficient(
     reference: np.ndarray,
     prediction: np.ndarray,
     *args,
+    **kwargs,
 ) -> float:
     ndim = reference.ndim
     assert 2 <= ndim <= 3, "clDice only implemented for 2D or 3D"

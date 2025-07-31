@@ -142,14 +142,31 @@ class Panoptica_Evaluator(SupportsConfig):
             "sitk.Image",
         ],
         result_all: bool = True,
+        voxelspacing: tuple[float, ...] | None = None,
         save_group_times: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
     ) -> dict[str, PanopticaResult]:
+        """Runs the panoptica evaluation pipeline on the given prediction and reference arrays.
+
+        Args:
+            prediction_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Prediction array or file path.
+            reference_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Reference array or file path.
+            result_all (bool, optional): If True, will calculate all metrics and return a PanopticaResult object. If False, will only return the metrics that were requested. Defaults to True.
+            voxelspacing (tuple[float, ...] | None, optional): Voxel spacing for the evaluation. If None, will use default spacing of (1.0, 1.0, 1.0). Defaults to None.
+            save_group_times (bool | None, optional): If None, will use the value set in the constructor. If True, will save the computation time of each sample and put that into the result object. Defaults to None.
+            log_times (bool | None, optional): If None, will use the value set in the constructor. If True, will print the times for the different phases of the pipeline. Defaults to None.
+            verbose (bool | None, optional): If None, will use the value set in the constructor. If True, will spit out more details than you want. Defaults to None.
+
+        Returns:
+            dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
+        """
         # Sanity check input and convert to numpy arrays
         (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
             prediction_arr, reference_arr
         )
+        # TODO get voxelspacing from checker if available
+        #
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
         assert isinstance(
@@ -171,6 +188,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group,
                 processing_pair,
                 result_all,
+                voxelspacing,
                 save_group_times=(
                     self.__save_group_times
                     if save_group_times is None
@@ -205,6 +223,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group=LabelGroup(1, single_instance=False),
                 processing_pair=dummy_input,
                 result_all=True,
+                voxelspacing=(1.0, 1.0, 1.0),
                 save_group_times=False,
                 log_times=False,
                 verbose=False,
@@ -219,6 +238,7 @@ class Panoptica_Evaluator(SupportsConfig):
         label_group: LabelGroup,
         processing_pair,
         result_all: bool = True,
+        voxelspacing: tuple[float, ...] | None = None,
         verbose: bool | None = None,
         log_times: bool | None = None,
         save_group_times: bool = False,
@@ -252,6 +272,7 @@ class Panoptica_Evaluator(SupportsConfig):
             decision_metric=self.__decision_metric,
             decision_threshold=decision_threshold,
             result_all=result_all,
+            voxelspacing=voxelspacing,
             log_times=self.__log_times if log_times is None else log_times,
             verbose=True if verbose is None else verbose,
             verbose_calc=self.__verbose if verbose is None else verbose,
@@ -269,6 +290,7 @@ def panoptic_evaluate(
     instance_matcher: InstanceMatchingAlgorithm | None = None,
     instance_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
     global_metrics: list[Metric] = [Metric.DSC],
+    voxelspacing: tuple[float, ...] | None = None,
     decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
@@ -309,6 +331,9 @@ def panoptic_evaluate(
         print("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
+
+    if voxelspacing is None:
+        voxelspacing = (1.0,) * input_pair.reference_arr.ndim
 
     # Setup IntermediateStepsData
     intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
@@ -402,6 +427,7 @@ def panoptic_evaluate(
             eval_metrics=instance_metrics,
             decision_metric=decision_metric,
             decision_threshold=decision_threshold,
+            voxelspacing=voxelspacing,
             **kwargs,
         )
         if log_times:

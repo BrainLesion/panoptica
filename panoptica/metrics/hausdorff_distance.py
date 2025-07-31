@@ -10,6 +10,8 @@ def _compute_instance_hausdorff_distance(
     pred_instance_idx: int | None = None,
     voxelspacing=None,
     connectivity=1,
+    *args,
+    **kwargs,
 ):
     """Computes the hausdroff distance between two instances.
 
@@ -47,6 +49,7 @@ def _compute_hausdorff_distance(
     voxelspacing=None,
     connectivity=1,
     *args,
+    **kwargs,
 ) -> float:
     """Computes the hausdroff distance between two instances.
 
@@ -72,6 +75,8 @@ def _compute_instance_hausdorff_distance95(
     pred_instance_idx: int | None = None,
     voxelspacing=None,
     connectivity=1,
+    *args,
+    **kwargs,
 ):
     """Computes the hausdroff distance between two instances.
 
@@ -109,6 +114,7 @@ def _compute_hausdorff_distance95(
     voxelspacing=None,
     connectivity=1,
     *args,
+    **kwargs,
 ) -> float:
     """Computes the hausdroff distance 95 between two instances.
 

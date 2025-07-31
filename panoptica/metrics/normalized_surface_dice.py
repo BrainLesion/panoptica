@@ -10,6 +10,7 @@ def _compute_normalized_surface_dice(
     connectivity=1,
     threshold=None,
     *args,
+    **kwargs,
 ) -> float:
     """
     Computes the normalized surface dice between two instances.
@@ -64,6 +65,7 @@ def _compute_instance_normalized_surface_dice(
     connectivity=1,
     threshold=None,
     *args,
+    **kwargs,
 ):
     """Computes the instance-wise normalized surface dice between two instances.
 
