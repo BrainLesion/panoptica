@@ -89,10 +89,13 @@ class CCABackend(_Enum_Compare):
           [CC3D Website](https://github.com/seung-lab/connected-components-3d)
         - scipy: Represents the SciPy backend for CCA.
           [SciPy Website](https://www.scipy.org/)
+        - cupy: Represents the CuPy backend for GPU-accelerated CCA.
+          [CuPy Website](https://cupy.dev/)
     """
 
     cc3d = auto()
     scipy = auto()
+    cupy = auto()
 
 
 if __name__ == "__main__":

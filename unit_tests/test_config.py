@@ -123,7 +123,7 @@ class Test_Datatypes(unittest.TestCase):
             self.assertEqual(len(t[k].value_labels), len(v.value_labels))
 
     def test_InstanceApproximator_config(self):
-        for backend in [None, CCABackend.cc3d, CCABackend.scipy]:
+        for backend in [None, CCABackend.cc3d, CCABackend.scipy, CCABackend.cupy]:
             t = ConnectedComponentsInstanceApproximator(cca_backend=backend)
             print(t)
             print()
