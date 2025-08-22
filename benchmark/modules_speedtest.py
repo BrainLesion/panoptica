@@ -79,7 +79,7 @@ def evaluate_nparray(array, return_as_dict=False, verbose=False):
 
 
 def test_input(processing_pair: SemanticPair):
-    # Crops away unecessary space of zeroes
+    # Crops away unnecessary space of zeroes
     processing_pair = processing_pair.copy()
     processing_pair.crop_data()
     #
