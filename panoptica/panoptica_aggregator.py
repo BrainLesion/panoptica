@@ -146,6 +146,8 @@ class Panoptica_Aggregator:
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
         subject_name: str,
+        voxelspacing: tuple[float, ...] | None = None,
+        **kwargs,
     ):
         """Evaluates a single case using the provided prediction and reference arrays.
 
@@ -179,6 +181,8 @@ class Panoptica_Aggregator:
             verbose=False,
             log_times=False,
             save_group_times=self.__log_times,
+            voxelspacing=voxelspacing,
+            **kwargs,
         )
 
         # Add to file

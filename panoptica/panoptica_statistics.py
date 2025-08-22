@@ -46,6 +46,12 @@ class ValueSummary:
     def max(self) -> float:
         return self.__max
 
+    def z_score(self, value: float) -> float:
+        """Calculates the z-score of a value based on the summary statistics."""
+        if self.std == 0:
+            return 0.0
+        return (value - self.avg) / self.std
+
     def __repr__(self):
         return str(self)
 

@@ -6,6 +6,8 @@ def _compute_instance_relative_volume_error(
     pred_labels: np.ndarray,
     ref_instance_idx: int | None = None,
     pred_instance_idx: int | None = None,
+    *args,
+    **kwargs,
 ) -> float:
     """
     Compute the Dice coefficient between a specific pair of instances.
@@ -42,6 +44,7 @@ def _compute_relative_volume_error(
     reference: np.ndarray,
     prediction: np.ndarray,
     *args,
+    **kwargs,
 ) -> float:
     """
     Compute the relative volume difference between two binary masks.
