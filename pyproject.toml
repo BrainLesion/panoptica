@@ -66,6 +66,9 @@ docs = [
     "furo>=2024.8.6",
     "myst-parser>=2.0.0",
 ]
+gpu = [
+    "cupy>=12.0.0",
+]
 
 [tool.poetry.scripts]
 panopticacli = "panoptica.cli:app"
