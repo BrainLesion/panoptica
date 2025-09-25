@@ -377,6 +377,26 @@ files = [
 toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
 [[package]]
+name = "cupy"
+version = "13.6.0"
+description = "CuPy: NumPy & SciPy for GPU"
+optional = true
+python-versions = ">=3.9"
+groups = ["main"]
+markers = "extra == \"gpu\""
+files = [
+    {file = "cupy-13.6.0.tar.gz", hash = "sha256:3cba30ae3dd32b5d5c6536e710cb98015227cd4ba83c46b3f1825a7ae55b6667"},
+]
+
+[package.dependencies]
+fastrlock = ">=0.5"
+numpy = ">=1.22,<2.6"
+
+[package.extras]
+all = ["Cython (>=3)", "optuna (>=2.0)", "scipy (>=1.7,<1.17)"]
+test = ["hypothesis (>=6.37.2,<6.55.0)", "mpmath", "packaging", "pytest (>=7.2)"]
+
+[[package]]
 name = "docutils"
 version = "0.21.2"
 description = "Docutils -- Python Documentation Utilities"
@@ -407,6 +427,86 @@ typing-extensions = {version = ">=4.6.0", markers = "python_version < \"3.13\""}
 
 [package.extras]
 test = ["pytest (>=6)"]
+
+[[package]]
+name = "fastrlock"
+version = "0.8.3"
+description = "Fast, re-entrant optimistic lock implemented in Cython"
+optional = true
+python-versions = "*"
+groups = ["main"]
+markers = "extra == \"gpu\""
+files = [
+    {file = "fastrlock-0.8.3-cp27-cp27m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:bbbe31cb60ec32672969651bf68333680dacaebe1a1ec7952b8f5e6e23a70aa5"},
+    {file = "fastrlock-0.8.3-cp27-cp27m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:45055702fe9bff719cdc62caa849aa7dbe9e3968306025f639ec62ef03c65e88"},
+    {file = "fastrlock-0.8.3-cp27-cp27mu-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:ac4fcc9b43160f7f64b49bd7ecfd129faf0793c1c8c6f0f56788c3bacae7f54a"},
+    {file = "fastrlock-0.8.3-cp27-cp27mu-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:d3ebb29de71bf9e330c2769c34a6b5e69d560126f02994e6c09635a2784f6de3"},
+    {file = "fastrlock-0.8.3-cp310-cp310-macosx_11_0_universal2.whl", hash = "sha256:cc5fa9166e05409f64a804d5b6d01af670979cdb12cd2594f555cb33cdc155bd"},
+    {file = "fastrlock-0.8.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:7a77ebb0a24535ef4f167da2c5ee35d9be1e96ae192137e9dc3ff75b8dfc08a5"},
+    {file = "fastrlock-0.8.3-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_24_i686.whl", hash = "sha256:d51f7fb0db8dab341b7f03a39a3031678cf4a98b18533b176c533c122bfce47d"},
+    {file = "fastrlock-0.8.3-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:767ec79b7f6ed9b9a00eb9ff62f2a51f56fdb221c5092ab2dadec34a9ccbfc6e"},
+    {file = "fastrlock-0.8.3-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0d6a77b3f396f7d41094ef09606f65ae57feeb713f4285e8e417f4021617ca62"},
+    {file = "fastrlock-0.8.3-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:92577ff82ef4a94c5667d6d2841f017820932bc59f31ffd83e4a2c56c1738f90"},
+    {file = "fastrlock-0.8.3-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:3df8514086e16bb7c66169156a8066dc152f3be892c7817e85bf09a27fa2ada2"},
+    {file = "fastrlock-0.8.3-cp310-cp310-win_amd64.whl", hash = "sha256:001fd86bcac78c79658bac496e8a17472d64d558cd2227fdc768aa77f877fe40"},
+    {file = "fastrlock-0.8.3-cp311-cp311-macosx_11_0_universal2.whl", hash = "sha256:f68c551cf8a34b6460a3a0eba44bd7897ebfc820854e19970c52a76bf064a59f"},
+    {file = "fastrlock-0.8.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:55d42f6286b9d867370af4c27bc70d04ce2d342fe450c4a4fcce14440514e695"},
+    {file = "fastrlock-0.8.3-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_24_i686.whl", hash = "sha256:bbc3bf96dcbd68392366c477f78c9d5c47e5d9290cb115feea19f20a43ef6d05"},
+    {file = "fastrlock-0.8.3-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:77ab8a98417a1f467dafcd2226718f7ca0cf18d4b64732f838b8c2b3e4b55cb5"},
+    {file = "fastrlock-0.8.3-cp311-cp311-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:04bb5eef8f460d13b8c0084ea5a9d3aab2c0573991c880c0a34a56bb14951d30"},
+    {file = "fastrlock-0.8.3-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:8c9d459ce344c21ff03268212a1845aa37feab634d242131bc16c2a2355d5f65"},
+    {file = "fastrlock-0.8.3-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:33e6fa4af4f3af3e9c747ec72d1eadc0b7ba2035456c2afb51c24d9e8a56f8fd"},
+    {file = "fastrlock-0.8.3-cp311-cp311-win_amd64.whl", hash = "sha256:5e5f1665d8e70f4c5b4a67f2db202f354abc80a321ce5a26ac1493f055e3ae2c"},
+    {file = "fastrlock-0.8.3-cp312-cp312-macosx_11_0_universal2.whl", hash = "sha256:8cb2cf04352ea8575d496f31b3b88c42c7976e8e58cdd7d1550dfba80ca039da"},
+    {file = "fastrlock-0.8.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:85a49a1f1e020097d087e1963e42cea6f307897d5ebe2cb6daf4af47ffdd3eed"},
+    {file = "fastrlock-0.8.3-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5f13ec08f1adb1aa916c384b05ecb7dbebb8df9ea81abd045f60941c6283a670"},
+    {file = "fastrlock-0.8.3-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:0ea4e53a04980d646def0f5e4b5e8bd8c7884288464acab0b37ca0c65c482bfe"},
+    {file = "fastrlock-0.8.3-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:38340f6635bd4ee2a4fb02a3a725759fe921f2ca846cb9ca44531ba739cc17b4"},
+    {file = "fastrlock-0.8.3-cp312-cp312-win_amd64.whl", hash = "sha256:da06d43e1625e2ffddd303edcd6d2cd068e1c486f5fd0102b3f079c44eb13e2c"},
+    {file = "fastrlock-0.8.3-cp313-cp313-macosx_11_0_universal2.whl", hash = "sha256:5264088185ca8e6bc83181dff521eee94d078c269c7d557cc8d9ed5952b7be45"},
+    {file = "fastrlock-0.8.3-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:4a98ba46b3e14927550c4baa36b752d0d2f7387b8534864a8767f83cce75c160"},
+    {file = "fastrlock-0.8.3-cp313-cp313-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:dbdea6deeccea1917c6017d353987231c4e46c93d5338ca3e66d6cd88fbce259"},
+    {file = "fastrlock-0.8.3-cp313-cp313-musllinux_1_1_aarch64.whl", hash = "sha256:c6e5bfecbc0d72ff07e43fed81671747914d6794e0926700677ed26d894d4f4f"},
+    {file = "fastrlock-0.8.3-cp313-cp313-musllinux_1_1_x86_64.whl", hash = "sha256:2a83d558470c520ed21462d304e77a12639859b205759221c8144dd2896b958a"},
+    {file = "fastrlock-0.8.3-cp313-cp313-win_amd64.whl", hash = "sha256:8d1d6a28291b4ace2a66bd7b49a9ed9c762467617febdd9ab356b867ed901af8"},
+    {file = "fastrlock-0.8.3-cp35-cp35m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:a0eadc772353cfa464b34c814b2a97c4f3c0ba0ed7b8e1c2e0ad3ebba84bf8e0"},
+    {file = "fastrlock-0.8.3-cp35-cp35m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:350f517a7d22d383f8ef76652b0609dc79de6693880a99bafc8a05c100e8c5e7"},
+    {file = "fastrlock-0.8.3-cp36-cp36m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_24_i686.whl", hash = "sha256:924abbf21eba69c1b35c04278f3ca081e8de1ef5933355756e86e05499123238"},
+    {file = "fastrlock-0.8.3-cp36-cp36m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:a8fd6727c1e0952ba93fdc5975753781039772be6c1a3911a3afc87b53460dc0"},
+    {file = "fastrlock-0.8.3-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:9c2c24856d2adc60ab398780f7b7cd8a091e4bd0c0e3bb3e67f12bef2800f377"},
+    {file = "fastrlock-0.8.3-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:f2b84b2fe858e64946e54e0e918b8a0e77fc7b09ca960ae1e50a130e8fbc9af8"},
+    {file = "fastrlock-0.8.3-cp36-cp36m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:963123bafc41c9fba72e57145917a3f23086b5d631b6cda9cf858c428a606ff9"},
+    {file = "fastrlock-0.8.3-cp36-cp36m-musllinux_1_1_x86_64.whl", hash = "sha256:314e787532ce555a7362d3c438f0a680cd88a82c69b655e7181a4dd5e67712f5"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:494fc374afd0b6c7281c87f2ded9607c2731fc0057ec63bd3ba4451e7b7cb642"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_24_i686.whl", hash = "sha256:da53350b90a67d5431df726816b041f1f96fd558ad6e2fc64948e13be3c7c29a"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:cdee8c02c20a0b17dbc52f54c48ede3bd421985e5d9cef5cd2136b14da967996"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:558b538221e9c5502bb8725a1f51157ec38467a20498212838e385807e4d1b89"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b6ac082d670e195ad53ec8d0c5d2e87648f8838b0d48f7d44a6e696b8a9528e2"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:d7edaf0071a6a98340fc2ec45b0ba37b7a16ed7761479aab577e41e09b3565e1"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-musllinux_1_1_aarch64.whl", hash = "sha256:9c4068f21fddc47393a3526ce95b180a2f4e1ac286db8d9e59e56771da50c815"},
+    {file = "fastrlock-0.8.3-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:d7f359bb989c01a5875e8dbde9acab37b9da0943b60ef97ba9887c4598eb3009"},
+    {file = "fastrlock-0.8.3-cp38-cp38-macosx_11_0_universal2.whl", hash = "sha256:239e85cbebda16f14be92468ce648d0bc25e2442a3d11818deca59a7c43a4416"},
+    {file = "fastrlock-0.8.3-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:5eef1d32d7614e0ceb6db198cf53df2a5830685cccbcf141a3e116faca967384"},
+    {file = "fastrlock-0.8.3-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_24_i686.whl", hash = "sha256:80876d9e04e8e35abbdb3e1a81a56558f4d5cf90c8592e428d4d12efce048347"},
+    {file = "fastrlock-0.8.3-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:24522689f4b5311afad0c8f998daec84a3dbe3a70cf821a615a763f843903030"},
+    {file = "fastrlock-0.8.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:de8c90c1a23fbe929d8a9628a6c1f0f1d8af6019e786354a682a26fa22ea21be"},
+    {file = "fastrlock-0.8.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e0ceefadde046a5f6a261bfeaf25de9e0eba3ee790a9795b1fa9634111d3220e"},
+    {file = "fastrlock-0.8.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:1dd7f1520f7424793c812e1a4090570f8ff312725dbaf10a925b688aef7425f1"},
+    {file = "fastrlock-0.8.3-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:15e13a8b01a3bbf25f1615a6ac1d6ed40ad3bcb8db134ee5ffa7360214a8bc5c"},
+    {file = "fastrlock-0.8.3-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:fcb50e195ec981c92d0211a201704aecbd9e4f9451aea3a6f71ac5b1ec2c98cf"},
+    {file = "fastrlock-0.8.3-cp38-cp38-win_amd64.whl", hash = "sha256:3e77a3d0ca5b29695d86b7d03ea88029c0ed8905cfee658eb36052df3861855a"},
+    {file = "fastrlock-0.8.3-cp39-cp39-macosx_11_0_universal2.whl", hash = "sha256:668fad1c8322badbc8543673892f80ee563f3da9113e60e256ae9ddd5b23daa4"},
+    {file = "fastrlock-0.8.3-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.manylinux_2_24_aarch64.whl", hash = "sha256:40b328369005a0b32de14b699192aed32f549c2d2b27a5e1f614fb7ac4cec4e9"},
+    {file = "fastrlock-0.8.3-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_24_i686.whl", hash = "sha256:6cbfb6f7731b5a280851c93883624424068fa5b22c2f546d8ae6f1fd9311e36d"},
+    {file = "fastrlock-0.8.3-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:1fced4cb0b3f1616be68092b70a56e9173713a4a943d02e90eb9c7897a7b5e07"},
+    {file = "fastrlock-0.8.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_24_x86_64.whl", hash = "sha256:387b2ac642938a20170a50f528817026c561882ea33306c5cbe750ae10d0a7c2"},
+    {file = "fastrlock-0.8.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5a0d31840a28d66573047d2df410eb971135a2461fb952894bf51c9533cbfea5"},
+    {file = "fastrlock-0.8.3-cp39-cp39-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:0a9dc6fa73174f974dfb22778d05a44445b611a41d5d3776b0d5daa9e50225c6"},
+    {file = "fastrlock-0.8.3-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:9842b7722e4923fe76b08d8c58a9415a9a50d4c29b80673cffeae4874ea6626a"},
+    {file = "fastrlock-0.8.3-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:05029d7080c0c61a81d5fee78e842c9a1bf22552cd56129451a252655290dcef"},
+    {file = "fastrlock-0.8.3-cp39-cp39-win_amd64.whl", hash = "sha256:accd897ab2799024bb87b489c0f087d6000b89af1f184a66e996d3d96a025a3b"},
+    {file = "fastrlock-0.8.3.tar.gz", hash = "sha256:4af6734d92eaa3ab4373e6c9a1dd0d5ad1304e172b1521733c6c3b3d73c8fa5d"},
+]
 
 [[package]]
 name = "filelock"
@@ -2958,9 +3058,10 @@ dev = ["black (>=19.3b0) ; python_version >= \"3.6\"", "pytest (>=4.6.2)"]
 
 [extras]
 docs = ["Sphinx", "furo", "myst-parser", "sphinx-copybutton"]
+gpu = ["cupy"]
 test = ["SimpleITK", "auxiliary", "joblib", "nibabel", "pynrrd", "pytest", "tqdm"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "4b2a71b9581a96388dd1be8f262b0a415a842b95308e7b51d4c8ebd44e755008"
+content-hash = "8726eb553a9a36550a67ac718bddee671f650bb25d685fa69295edbf7c45ea07"
