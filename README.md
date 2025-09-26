@@ -54,10 +54,8 @@ A minimal example of using panoptica could look e.g. like this (here with Matche
 from panoptica import InputType, Panoptica_Evaluator
 from panoptica.metrics import Metric
 
-from auxiliary.io import read_image # feel free to use any other way to read nifti files
-
-ref_masks = read_image("reference.nii.gz")
-pred_masks = read_image("prediction.nii.gz")
+ref_masks = "<path-to-your>/reference.nii.gz"
+pred_masks = "<path-to-your>/prediction.nii.gz"
 
 evaluator = Panoptica_Evaluator(
     expected_input=InputType.MATCHED_INSTANCE,

@@ -1,9 +1,7 @@
-from auxiliary.io import read_image
-from auxiliary.turbopath import turbopath
 import os
 import cpuinfo
 import json
-
+from pathlib import Path
 
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
@@ -22,10 +20,10 @@ import csv
 
 import pandas as pd
 
-directory = turbopath(__file__).parent.parent
+directory = Path(__file__).parent.parent
 
-ref_masks = read_image(directory + "/examples/spine_seg/semantic/ref.nii.gz")
-pred_masks = read_image(directory + "/examples/spine_seg/semantic/pred.nii.gz")
+ref_masks = directory + "/examples/spine_seg/semantic/ref.nii.gz"
+pred_masks = directory + "/examples/spine_seg/semantic/pred.nii.gz"
 
 platform_name = "ryzen9_new"
 

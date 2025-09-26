@@ -1,7 +1,7 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from auxiliary.turbopath import turbopath
+from pathlib import Path
 
 # List of CSV files
 csv_list = [
@@ -86,7 +86,7 @@ for i, condition in enumerate(unique_conditions):
     # Save each subplot individually
 
     file_name = f"{condition.replace(' ', '_').lower()}_comparison.png"
-    file_name = turbopath(__file__).parent + "/" + file_name
+    file_name = Path(__file__).parent / file_name
     plt.savefig(file_name, bbox_inches="tight")
     plt.close()  # Close the current figure to release resources
 

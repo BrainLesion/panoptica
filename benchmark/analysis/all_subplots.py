@@ -1,7 +1,7 @@
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from auxiliary.turbopath import turbopath
+from pathlib import Path
 
 # List of CSV files
 csv_list = [
@@ -85,7 +85,7 @@ for i, condition in enumerate(unique_conditions):
 
 # Save the entire figure after all subplots have been created
 plt.tight_layout()
-file_name = turbopath(__file__).parent + "/boxplot_times"
+file_name = Path(__file__).parent + "/boxplot_times"
 
 # Save with separate SVG formatter to include colors
 fig.savefig(file_name + ".png", format="png", bbox_inches="tight")
