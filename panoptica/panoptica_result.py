@@ -19,6 +19,7 @@ from panoptica._functionals import _get_orig_onehotcc_structure
 
 
 class PanopticaResult(object):
+
     def __init__(
         self,
         reference_arr: np.ndarray,
@@ -34,6 +35,7 @@ class PanopticaResult(object):
         label_group: LabelGroup | None = None,
         intermediate_steps_data: IntermediateStepsData | None = None,
         computation_time: float | None = None,
+        **kwargs,
     ):
         """Result object for Panoptica, contains all calculatable metrics
 
@@ -52,6 +54,7 @@ class PanopticaResult(object):
         self._global_metrics: list[Metric] = global_metrics
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
+        self.metadata: dict[str, Any] = kwargs
 
         if isinstance(label_group, LabelPartGroup):
             # Store the one-hot encoded arrays for both reference and prediction

@@ -6,6 +6,8 @@ def _compute_instance_iou(
     prediction_arr: np.ndarray,
     ref_instance_idx: int | None = None,
     pred_instance_idx: int | None = None,
+    *args,
+    **kwargs,
 ) -> float:
     """
     Compute Intersection over Union (IoU) between a specific pair of reference and prediction instances.
@@ -33,6 +35,7 @@ def _compute_iou(
     reference_arr: np.ndarray,
     prediction_arr: np.ndarray,
     *args,
+    **kwargs,
 ) -> float:
     """
     Compute Intersection over Union (IoU) between two masks.

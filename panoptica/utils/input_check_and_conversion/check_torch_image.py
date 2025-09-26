@@ -1,55 +1,73 @@
 import numpy as np
 from importlib.util import find_spec
 from pathlib import Path
+from typing import TYPE_CHECKING, Union
 from panoptica.utils.input_check_and_conversion.check_numpy_array import (
-    sanity_checker_numpy_array,
+    _sanity_check_images,
+)
+from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
+    _InputDataTypeChecker,
 )
 
-# Optional sitk import
+# Optional torch import
 _spec = find_spec("torch")
 if _spec is not None:
     import torch
+else:
+    torch = None
+
+if TYPE_CHECKING:
+    import torch
 
 
-def load_torch_image(image_path: str | Path) -> torch.Tensor:
-    try:
-        image = torch.load(
-            image_path,
-            weights_only=True,
-            map_location="cpu",
+class TorchImageChecker(_InputDataTypeChecker):
+    def __init__(self):
+        super().__init__(
+            supported_file_endings=[
+                ".pt",
+                ".pth",
+            ],
+            required_package_names=["torch"],
         )
-    except Exception as e:
-        print(f"Error reading images: {e}")
-        return None
-    return image
 
+    def load_image_from_path(
+        self, image_path: Union[str, Path]
+    ) -> Union["torch.Tensor", None]:
+        try:
+            image = torch.load(
+                image_path,
+                weights_only=True,
+                map_location="cpu",
+            )
+        except Exception as e:
+            print(f"Error reading images: {e}")
+            return None
+        return image
 
-def sanity_checker_torch_image(
-    prediction_image: torch.Tensor | str | Path,
-    reference_image: torch.Tensor | str | Path,
-) -> tuple[bool, tuple[np.ndarray, np.ndarray] | str]:
-    """
-    This function performs sanity check on 2 Torch tensors by converting them to numpy arrays and using that check.
+    def sanity_check_images(
+        self,
+        prediction_image: "torch.Tensor",
+        reference_image: "torch.Tensor",
+        *args,
+        **kwargs,
+    ) -> tuple[bool, str]:
+        # assert correct datatype
+        assert isinstance(prediction_image, torch.Tensor) and isinstance(
+            reference_image, torch.Tensor
+        ), "Input images must be of type torch.Tensor"
 
-    Args:
-        prediction_image (torch.Tensor): The prediction_image.
-        reference_image (torch.Tensor): The reference_image.
+        return _sanity_check_images(
+            prediction_image.numpy(),
+            reference_image.numpy(),
+        )
 
-    Returns:
-        tuple[bool, tuple[np.ndarray, np.ndarray] | str]: A tuple where the first element is a boolean indicating if the images pass the sanity check, and the second element is either the numpy arrays of the images or an error message.
-    """
-    # load if necessary
-    if isinstance(prediction_image, (str, Path)):
-        prediction_image = load_torch_image(prediction_image)
-    if isinstance(reference_image, (str, Path)):
-        reference_image = load_torch_image(reference_image)
+    def convert_to_numpy_array(self, image: "torch.Tensor") -> np.ndarray:
+        return image.numpy()
 
-    # assert correct datatype
-    assert isinstance(prediction_image, torch.Tensor) and isinstance(
-        reference_image, torch.Tensor
-    ), "Input images must be of type torch.Tensor"
-
-    return sanity_checker_numpy_array(
-        prediction_image.numpy(),
-        reference_image.numpy(),
-    )
+    def extract_metadata_from_image(self, image: "torch.Tensor") -> dict:
+        """
+        Extracts metadata from a torch.Tensor image.
+        Returns a dictionary.
+        If no further metadata is available, this is documented here.
+        """
+        return {}

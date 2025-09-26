@@ -9,8 +9,18 @@ from pathlib import Path
 import SimpleITK as sitk
 from unittest import mock
 import nibabel as nib
-import torch
 import nrrd
+
+# Optional torch import
+from importlib.util import find_spec
+
+_spec = find_spec("torch")
+if _spec is not None:
+    import torch
+
+    HAS_TORCH = True
+else:
+    HAS_TORCH = False
 
 from panoptica.utils.input_check_and_conversion.sanity_checker import (
     sanity_check_and_convert_to_array,
@@ -324,6 +334,7 @@ class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
         os.remove(test_nii_file)
 
 
+@unittest.skipUnless(HAS_TORCH, "torch not available")
 class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"

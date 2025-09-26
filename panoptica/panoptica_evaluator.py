@@ -142,14 +142,32 @@ class Panoptica_Evaluator(SupportsConfig):
             "sitk.Image",
         ],
         result_all: bool = True,
+        voxelspacing: tuple[float, ...] | None = None,
         save_group_times: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
     ) -> dict[str, PanopticaResult]:
+        """Runs the panoptica evaluation pipeline on the given prediction and reference arrays.
+
+        Args:
+            prediction_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Prediction array or file path.
+            reference_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Reference array or file path.
+            result_all (bool, optional): If True, will calculate all metrics and return a PanopticaResult object. If False, will only return the metrics that were requested. Defaults to True.
+            voxelspacing (tuple[float, ...] | None, optional): Voxel spacing for the evaluation. If None, will use default spacing of (1.0, 1.0, 1.0). Defaults to None.
+            save_group_times (bool | None, optional): If None, will use the value set in the constructor. If True, will save the computation time of each sample and put that into the result object. Defaults to None.
+            log_times (bool | None, optional): If None, will use the value set in the constructor. If True, will print the times for the different phases of the pipeline. Defaults to None.
+            verbose (bool | None, optional): If None, will use the value set in the constructor. If True, will spit out more details than you want. Defaults to None.
+
+        Returns:
+            dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
+        """
         # Sanity check input and convert to numpy arrays
-        (prediction_arr, reference_arr), checker = sanity_check_and_convert_to_array(
-            prediction_arr, reference_arr
+        ((prediction_arr, reference_arr), metadata), checker = (
+            sanity_check_and_convert_to_array(prediction_arr, reference_arr)
         )
+        if voxelspacing is not None:
+            metadata["voxelspacing"] = voxelspacing
+        #
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
         assert isinstance(
@@ -178,6 +196,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 ),
                 log_times=log_times,
                 verbose=verbose,
+                **metadata,
             )
         return result_grouped
 
@@ -205,6 +224,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group=LabelGroup(1, single_instance=False),
                 processing_pair=dummy_input,
                 result_all=True,
+                voxelspacing=(1.0, 1.0, 1.0),
                 save_group_times=False,
                 log_times=False,
                 verbose=False,
@@ -222,6 +242,7 @@ class Panoptica_Evaluator(SupportsConfig):
         verbose: bool | None = None,
         log_times: bool | None = None,
         save_group_times: bool = False,
+        **kwargs,
     ) -> PanopticaResult:
         assert isinstance(label_group, LabelGroup)
         if self.__save_group_times or save_group_times:
@@ -256,6 +277,7 @@ class Panoptica_Evaluator(SupportsConfig):
             verbose=True if verbose is None else verbose,
             verbose_calc=self.__verbose if verbose is None else verbose,
             label_group=label_group,
+            **kwargs,
         )
         if self.__save_group_times or save_group_times:
             duration = perf_counter() - start_time
@@ -310,6 +332,9 @@ def panoptic_evaluate(
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
 
+    if "voxelspacing" not in kwargs:
+        kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
+
     # Setup IntermediateStepsData
     intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
     # Crops away unnecessary space of zeroes
@@ -336,7 +361,6 @@ def panoptic_evaluate(
         processing_pair = instance_approximator.approximate_instances(
             processing_pair,
             label_group=label_group,
-            **kwargs,
         )
 
         if log_times:
@@ -402,6 +426,8 @@ def panoptic_evaluate(
             eval_metrics=instance_metrics,
             decision_metric=decision_metric,
             decision_threshold=decision_threshold,
+            processing_pair_orig_shape=instance_metadata["original_shape"],
+            num_ref_labels=instance_metadata["num_ref_labels"],
             **kwargs,
         )
         if log_times:
@@ -410,19 +436,15 @@ def panoptic_evaluate(
     if isinstance(processing_pair, EvaluateInstancePair):
         # Update instance counts from the processed pair if available
         if (
-            hasattr(processing_pair, "n_prediction_instance")
+            hasattr(processing_pair, "num_pred_instances")
             and instance_metadata["original_num_preds"] == 0
         ):
-            instance_metadata["original_num_preds"] = (
-                processing_pair.n_prediction_instance
-            )
+            instance_metadata["original_num_preds"] = processing_pair.num_pred_instances
         if (
-            hasattr(processing_pair, "n_reference_instance")
+            hasattr(processing_pair, "num_ref_instances")
             and instance_metadata["original_num_refs"] == 0
         ):
-            instance_metadata["original_num_refs"] = (
-                processing_pair.n_reference_instance
-            )
+            instance_metadata["original_num_refs"] = processing_pair.num_ref_instances
 
         # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
         # This happens when the effective number of prediction instances is less than original
@@ -455,6 +477,7 @@ def panoptic_evaluate(
             global_metrics=global_metrics,
             edge_case_handler=edge_case_handler,
             intermediate_steps_data=intermediate_steps_data,
+            **kwargs,
         )
 
     if isinstance(processing_pair, PanopticaResult):
