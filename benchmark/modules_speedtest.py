@@ -27,8 +27,6 @@ pred_masks = directory.joinpath("examples", "spine_seg", "semantic", "pred.nii.g
 
 platform_name = "ryzen9_new"
 
-csv_out = directory.joinpath("benchmark", "results", platform_name, "performance_")
-
 
 def evaluate_nparray(array, return_as_dict=False, verbose=False):
     if verbose:
@@ -189,7 +187,9 @@ if __name__ == "__main__":
         print()
         print()
         print(sample_name)
-        csv_name = csv_out + sample_name + ".csv"
+        csv_name = directory.joinpath(
+            "benchmark", "results", platform_name, f"performance_{sample_name}.csv"
+        )
         with open(csv_name, "w", newline="") as csvfile:
             spamwriter = csv.writer(
                 csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL

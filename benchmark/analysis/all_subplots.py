@@ -88,8 +88,8 @@ plt.tight_layout()
 file_name = Path(__file__).parent.joinpath("boxplot_times")
 
 # Save with separate SVG formatter to include colors
-fig.savefig(file_name + ".png", format="png", bbox_inches="tight")
-fig.savefig(file_name + ".eps", format="eps", bbox_inches="tight")
+fig.savefig(file_name.with_suffix(".png"), format="png", bbox_inches="tight")
+fig.savefig(file_name.with_suffix(".eps"), format="eps", bbox_inches="tight")
 plt.close()
 
 print("Plots saved successfully as EPS.")
