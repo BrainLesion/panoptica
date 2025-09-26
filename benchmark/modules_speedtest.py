@@ -22,12 +22,12 @@ import pandas as pd
 
 directory = Path(__file__).parent.parent
 
-ref_masks = directory + "/examples/spine_seg/semantic/ref.nii.gz"
-pred_masks = directory + "/examples/spine_seg/semantic/pred.nii.gz"
+ref_masks = directory.joinpath("examples", "spine_seg", "semantic", "ref.nii.gz")
+pred_masks = directory.joinpath("examples", "spine_seg", "semantic", "pred.nii.gz")
 
 platform_name = "ryzen9_new"
 
-csv_out = directory + "/benchmark/results/" + platform_name + "/performance_"
+csv_out = directory.joinpath("benchmark", "results", platform_name, "performance_")
 
 
 def evaluate_nparray(array, return_as_dict=False, verbose=False):
@@ -82,15 +82,11 @@ def test_input(processing_pair: SemanticPair):
     processing_pair.crop_data()
     #
     start1 = perf_counter()
-    unmatched_instance_pair = instance_approximator.approximate_instances(
-        semantic_pair=processing_pair
-    )
+    unmatched_instance_pair = instance_approximator.approximate_instances(semantic_pair=processing_pair)
     time1 = perf_counter() - start1
     #
     start2 = perf_counter()
-    matched_instance_pair = instance_matcher.match_instances(
-        unmatched_instance_pair=unmatched_instance_pair
-    )
+    matched_instance_pair = instance_matcher.match_instances(unmatched_instance_pair=unmatched_instance_pair)
     time2 = perf_counter() - start2
     #
     start3 = perf_counter()
@@ -191,9 +187,7 @@ if __name__ == "__main__":
         print(sample_name)
         csv_name = csv_out + sample_name + ".csv"
         with open(csv_name, "w", newline="") as csvfile:
-            spamwriter = csv.writer(
-                csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL
-            )
+            spamwriter = csv.writer(csvfile, delimiter=";", quotechar="|", quoting=csv.QUOTE_MINIMAL)
             spamwriter.writerow(timing_dict[1])
             spamwriter.writerow(timing_dict[2])
             spamwriter.writerow(timing_dict[3])
