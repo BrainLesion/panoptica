@@ -1,8 +1,27 @@
-# Extending Panoptica
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+# Contributing to Panoptica
+
+First off, thanks for taking the time to contribute! 🎉
+
+
+## Setup and requirements
+
+**Setup:**
+- We use [poetry](https://python-poetry.org/), make sure it is installed: `pip install poetry`
+- Install dependencies by running: `poetry install --with dev`
+
+**Requirements:**
+- Our project follows the [black code style](https://github.com/psf/black). Make sure your code is formatted accordingly.
+- Please add _meaningful_ docstring for your functions and annotate types
+- Please add _meaningful_ tests for your contribution in `/unit_tests` and make sure _all_ tests are passing by running `python -m pytest`
+
+
+## Guidelines
 Here are a couple of guides on how to implement new modules into panoptica
 
-## Metrics
+### Metrics
 
 
 In order to implement a new metric to panoptica, you have to perform the following steps:
@@ -19,7 +38,7 @@ class Metric(_Enum_Compare):
 4. In panoptica/utils.edge_case_handling.py: Add default edge case handling for your new metric.
 
 
-## Input Data Type
+### Input Data Type
 
 To make panoptica support a new input data type, perform the following steps:
 
@@ -60,6 +79,6 @@ def evaluate(
     ) -> dict[str, PanopticaResult]:
 ```
 
-## Instance Matching Algorithm
+### Instance Matching Algorithm
 
 To add a new Instance matching algorithm, simply head to panoptica/instance_matcher.py, copy one of the existing algorithms and make your corresponding changes.

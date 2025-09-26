@@ -50,7 +50,7 @@ nifti = [
     "SimpleITK>=2.2.2,<3.0.0",
 ]
 test = [
-    {include-group = "nifti"},
+    { include-group = "nifti" },
     "pytest>=8.1.1",
     "joblib>=1.3.2,<2.0.0",
     "coverage>=7.0.1",
@@ -65,8 +65,8 @@ docs = [
     "myst-parser>=2.0.0",
 ]
 dev = [
-    {include-group = "test"},
-    {include-group = "docs"},
+    { include-group = "test" },
+    { include-group = "docs" },
     "pre-commit>=2.20.0,<3.0.0",
     "torch>=2.1.0,<3.0.0",
     "cupy>=12.0.0",
@@ -86,10 +86,7 @@ optional = true
 
 
 [project.optional-dependencies]
-gpu = [
-    "torch>=2.1.0,<3.0.0",
-    "cupy>=12.0.0",
-]
+gpu = ["torch>=2.1.0,<3.0.0", "cupy>=12.0.0"]
 
 [tool.poetry.scripts]
 panopticacli = "panoptica.cli:app"

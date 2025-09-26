@@ -30,7 +30,11 @@ With a Python 3.10+ environment, you can install panoptica from [pypi.org](https
 
 ```sh
 pip install panoptica
+
+# or with optional GPU capabilities 
+pip install panoptica[gpu]
 ```
+
 
 Or, alternatively, from [conda](https://anaconda.org/conda-forge/panoptica):
 
@@ -161,8 +165,11 @@ Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., 
 
 We welcome all kinds of contributions from the community!
 
-Some guides on extending panoptica can be found in [panoptica/extending_panoptica.md](https://github.com/BrainLesion/panoptica/tree/main/extending_panoptica.md)
-
 ### Reporting Bugs, Feature Requests and Questions
 
 Please open a new issue [here](https://github.com/BrainLesion/panoptica/issues).
+
+### Code contributions
+
+Nice to have you on board! Please have a look at our [CONTRIBUTING.md](https://github.com/BrainLesion/panoptica/tree/main/CONTRIBUTING.md) file.
+
