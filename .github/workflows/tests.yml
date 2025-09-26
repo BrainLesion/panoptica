@@ -32,7 +32,7 @@ jobs:
           python -m pip install poetry
       - name: Install dependencies
         run: |
-          python -m poetry install --extras test
+          python -m poetry install --with test
       - name: Test with pytest and create coverage report
         run: |
           python -m poetry run coverage run --source=panoptica -m pytest
