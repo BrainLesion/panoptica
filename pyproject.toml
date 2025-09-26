@@ -65,7 +65,6 @@ docs = [
     "myst-parser>=2.0.0",
 ]
 dev = [
-    {include-group = "nifti"},
     {include-group = "test"},
     {include-group = "docs"},
     "pre-commit>=2.20.0,<3.0.0",
