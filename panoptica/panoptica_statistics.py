@@ -27,7 +27,9 @@ class ValueDistribution:
             self.__max = max(value_list)
 
     def __getitem__(self, key):
-        assert isinstance(key, int), "Only integer indexing supported for ValueDistribution"
+        assert isinstance(
+            key, int
+        ), "Only integer indexing supported for ValueDistribution"
         return self.__value_list[key]
 
     def __setitem__(self, key, value):
