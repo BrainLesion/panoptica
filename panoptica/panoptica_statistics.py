@@ -343,9 +343,8 @@ class Panoptica_Statistic:
             val_self = self.get(group, metric)[sidx_self]
             val_other = other.get(group, metric)[sidx_other]
 
-            if val_self is not None and val_other is not None:
-                self_values.append(val_self)
-                other_values.append(val_other)
+            self_values.append(val_self)
+            other_values.append(val_other)
         return self.__subj_names, self_values, other_values
 
     def get_subject_wise_difference_to(self, other: "Panoptica_Statistic", group: str, metric: str) -> dict[str, float]:
