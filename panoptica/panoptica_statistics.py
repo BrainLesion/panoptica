@@ -5,7 +5,6 @@ import numpy as np
 
 try:
     import pandas as pd
-    import matplotlib.pyplot as plt
     import plotly.express as px
     import plotly.graph_objects as go
 except Exception as e:
@@ -16,10 +15,16 @@ except Exception as e:
 class ValueSummary:
     def __init__(self, value_list: list[float]) -> None:
         self.__value_list = value_list
-        self.__avg = float(np.average(value_list))
-        self.__std = float(np.std(value_list))
-        self.__min = min(value_list)
-        self.__max = max(value_list)
+        if len(value_list) == 0:
+            self.__avg = np.nan
+            self.__std = np.nan
+            self.__min = np.nan
+            self.__max = np.nan
+        else:
+            self.__avg = float(np.average(value_list))
+            self.__std = float(np.std(value_list))
+            self.__min = min(value_list)
+            self.__max = max(value_list)
 
     @property
     def values(self) -> list[float]:
@@ -41,14 +46,34 @@ class ValueSummary:
     def max(self) -> float:
         return self.__max
 
+    def z_score(self, value: float) -> float:
+        """Calculates the z-score of a value based on the summary statistics."""
+        if self.std == 0:
+            return 0.0
+        return (value - self.avg) / self.std
+
+    def __repr__(self):
+        return str(self)
+
+    def get_string_repr(self, ndigits: int = 3):
+        return f"[{round(self.min, ndigits)}, {round(self.max, ndigits)}], avg = {round(self.avg, ndigits)} +- {round(self.std, ndigits)}"
+
+    def __str__(self, ndigits: int = 3):
+        return self.get_string_repr(ndigits)
+
 
 class Panoptica_Statistic:
-
     def __init__(
         self,
         subj_names: list[str],
         value_dict: dict[str, dict[str, list[float]]],
     ) -> None:
+        """_summary_
+
+        Args:
+            subj_names (list[str]): List of subject names in the same order as the list of values passed in value_dict
+            value_dict (dict[str, dict[str, list[float]]]): Mapping Group to Metric to list of values
+        """
         self.__subj_names = subj_names
         self.__value_dict = value_dict
 
@@ -163,6 +188,50 @@ class Panoptica_Statistic:
             return self.__value_dict[group][metric]
         return [i for i in self.__value_dict[group][metric] if i is not None]
 
+    def get_dict(self, group, metric, remove_nones, sort_ascending: bool = True):
+        values = self.get(group, metric, remove_nones=False)
+        if remove_nones:
+            vdict = {
+                self.__subj_names[i]: values[i]
+                for i in range(len(values))
+                if values[i] is not None
+            }
+        else:
+            vdict = {self.__subj_names[i]: values[i] for i in range(len(values))}
+        vdict = dict(
+            sorted(vdict.items(), key=lambda x: x[1], reverse=not sort_ascending)
+        )
+        return vdict
+
+    def get_best_worst_k_entries(
+        self,
+        groups: list[str] | str | None = None,
+        metrics: list[str] | str | None = None,
+        k: int = 3,
+    ):
+        if groups is None:
+            groups = self.__groupnames
+        if metrics is None:
+            metrics = self.__metricnames
+
+        if isinstance(groups, str):
+            groups = [groups]
+        if isinstance(metrics, str):
+            metrics = [metrics]
+
+        best_dict = {}
+        worst_dict = {}
+
+        for g in groups:
+            self._assertgroup(g)
+            for m in metrics:
+                self._assertmetric(m)
+
+                d = self.get_dict(g, m, remove_nones=True, sort_ascending=False)
+                best_dict[(g, m)] = {k: d[k] for k in list(d.keys())[:k]}
+                worst_dict[(g, m)] = {k: d[k] for k in list(d.keys())[-k:]}
+        return best_dict, worst_dict
+
     def get_one_subject(self, subjectname: str):
         """Gets the values for ONE subject for each group and metric
 
@@ -178,6 +247,30 @@ class Panoptica_Statistic:
             g: {m: self.get(g, m)[sidx] for m in self.__metricnames}
             for g in self.__groupnames
         }
+
+    def get_one_metric(self, metricname: str):
+        """Gets the dictionary mapping the group to the metrics specified
+
+        Args:
+            metricname (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        self._assertmetric(metricname)
+        return {g: self.get(g, metricname) for g in self.__groupnames}
+
+    def get_one_group(self, groupname: str):
+        """Gets the dictionary mapping metric to values for ONE group
+
+        Args:
+            groupname (str): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        self._assertgroup(groupname)
+        return {m: self.get(groupname, m) for m in self.__metricnames}
 
     def get_across_groups(self, metric) -> list[float]:
         """Given metric, gives list of all values (even across groups!) Treat with care!
@@ -241,6 +334,7 @@ class Panoptica_Statistic:
     def get_summary_figure(
         self,
         metric: str,
+        groups: list[str] | str | None = None,
         manual_metric_range: None | tuple[float, float] = None,
         name_method: str = "Structure",
         horizontal: bool = True,
@@ -256,10 +350,12 @@ class Panoptica_Statistic:
         Returns:
             _type_: _description_
         """
-        orientation = "h" if horizontal else "v"
+        if groups is None:
+            groups = self.__groupnames
+        if isinstance(groups, str):
+            groups = [groups]
         data_plot = {
-            g: np.asarray(self.get(g, metric, remove_nones=True))
-            for g in self.__groupnames
+            g: np.asarray(self.get(g, metric, remove_nones=True)) for g in groups
         }
         if manual_metric_range is not None:
             assert manual_metric_range[0] < manual_metric_range[1], manual_metric_range
@@ -270,7 +366,7 @@ class Panoptica_Statistic:
             )
         return plot_box(
             data=data_plot,
-            orientation=orientation,
+            orientation_horizontal=horizontal,
             name_method=name_method,
             name_metric=metric,
             sort=sort,
@@ -278,11 +374,14 @@ class Panoptica_Statistic:
             manual_metric_range=manual_metric_range,
         )
 
-    # groupwise or in total
-    # Mean over instances
-    # mean over subjects
-    # give below/above percentile of metric (the names)
-    # make auc curve as plot
+
+def make_autc_plots(
+    statistics_dict: dict[str | int | float, Panoptica_Statistic],
+    metric: str,
+    groups: list[str] | str | None = None,
+    alternate_groupnames: list[str] | str | None = None,
+):
+    raise NotImplementedError("AUTC plots currently in works")
 
 
 def make_curve_over_setups(
@@ -290,11 +389,17 @@ def make_curve_over_setups(
     metric: str,
     groups: list[str] | str | None = None,
     alternate_groupnames: list[str] | str | None = None,
-    fig: None = None,
-    plot_dotsize: int | None = None,
-    plot_lines: bool = True,
-    plot_std: bool = False,
+    fig: go.Figure | None = None,
+    plot_as_barchart=True,
+    plot_std: bool = True,
+    figure_title: str = "",
+    width: int = 850,
+    height: int = 1200,
+    xaxis_title: str | None = None,
+    yaxis_title: str | None = None,
+    manual_metric_range: None | tuple[float, float] = None,
 ):
+    # TODO make this flexibel whether the second grouping are the groups or metrics?
     if groups is None:
         groups = list(statistics_dict.values())[0].groupnames
     #
@@ -302,6 +407,10 @@ def make_curve_over_setups(
         groups = [groups]
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
+
+    assert (
+        plot_as_barchart or len(groups) == 1
+    ), "When plotting without barcharts, you cannot plot more than one group at the same time"
     #
     for setupname, stat in statistics_dict.items():
         assert (
@@ -319,47 +428,60 @@ def make_curve_over_setups(
     if convert_x_to_digit:
         X = [float(s) for s in setupnames]
     else:
-        X = range(len(setupnames))
+        X = setupnames
 
     if fig is None:
-        fig = plt.figure()
+        fig = go.Figure()
 
-    if not convert_x_to_digit:
-        plt.xticks(X, setupnames)
-
-    plt.ylabel("Average " + metric)
-    plt.grid("major")
     # Y values are average metric values in that group and metric
     for idx, g in enumerate(groups):
         Y = [
             ValueSummary(stat.get(g, metric, remove_nones=True)).avg
             for stat in statistics_dict.values()
         ]
-        Ystd = [
-            ValueSummary(stat.get(g, metric, remove_nones=True)).std
-            for stat in statistics_dict.values()
-        ]
 
-        if plot_lines:
-            p = plt.plot(
-                X,
-                Y,
-                label=g if alternate_groupnames is None else alternate_groupnames[idx],
+        name = g if alternate_groupnames is None else alternate_groupnames[idx]
+
+        if plot_std:
+            Ystd = [
+                ValueSummary(stat.get(g, metric, remove_nones=True)).std
+                for stat in statistics_dict.values()
+            ]
+        else:
+            Ystd = None
+
+        if plot_as_barchart:
+            fig.add_trace(
+                go.Bar(name=name, x=X, y=Y, error_y=dict(type="data", array=Ystd))
+            )
+        else:
+            # lineplot
+            fig.add_trace(
+                go.Scatter(
+                    x=X,
+                    y=Y,
+                    mode="lines+markers",
+                    name="lines+markers",
+                    error_y=dict(type="data", array=Ystd),
+                )
             )
 
-            if plot_std:
-                plt.fill_between(
-                    X,
-                    np.subtract(Y, Ystd),
-                    np.add(Y, Ystd),
-                    alpha=0.25,
-                    edgecolor=p[-1].get_color(),
-                )
-
-        if plot_dotsize is not None:
-            plt.scatter(X, Y, s=plot_dotsize)
-
-    plt.legend()
+    fig.update_layout(
+        autosize=False,
+        barmode="group",
+        width=width,
+        height=height,
+        showlegend=True,
+        yaxis_title=metric if yaxis_title is None else yaxis_title,
+        xaxis_title=(
+            "Different setups and groups" if xaxis_title is None else xaxis_title
+        ),
+        font={"family": "Arial"},
+        title=figure_title,
+    )
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
+    if manual_metric_range is not None:
+        fig.update_yaxes(range=[manual_metric_range[0], manual_metric_range[1]])
     return fig
 
 
@@ -373,7 +495,7 @@ def _flatten_extend(matrix):
 def plot_box(
     data: dict[str, np.ndarray],
     sort=True,
-    orientation="h",
+    orientation_horizontal: bool = True,  # "h"
     name_method: str = "Structure",
     name_metric: str = "Dice-Score",
     figure_title: str = "",
@@ -381,8 +503,9 @@ def plot_box(
     height=1200,
     manual_metric_range: None | tuple[float, float] = None,
 ):
-    xaxis_title = name_metric if orientation == "h" else name_method
-    yaxis_title = name_metric if orientation != "h" else name_method
+    xaxis_title = name_metric if orientation_horizontal else name_method
+    yaxis_title = name_metric if not orientation_horizontal else name_method
+    orientation = "h" if orientation_horizontal else "v"
 
     data = {e.replace("_", " "): v for e, v in data.items()}
     df_data = pd.DataFrame(
@@ -395,10 +518,10 @@ def plot_box(
         df_by_spec_count = df_data.groupby(name_method).mean()
         df_by_spec_count = dict(df_by_spec_count[name_metric].items())
         df_data["mean"] = df_data[name_method].apply(
-            lambda x: df_by_spec_count[x] * (1 if orientation == "h" else -1)
+            lambda x: df_by_spec_count[x] * (1 if orientation_horizontal else -1)
         )
         df_data = df_data.sort_values(by="mean")
-    if orientation == "v":
+    if not orientation_horizontal:
         fig = px.strip(
             df_data,
             x=name_method,

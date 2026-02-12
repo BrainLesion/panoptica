@@ -10,7 +10,13 @@ from panoptica.metrics import (
     _compute_instance_volumetric_dice,
     _compute_instance_iou,
     _compute_instance_relative_volume_difference,
+    _compute_instance_relative_volume_error,
+    _compute_instance_center_distance,
+    _compute_instance_hausdorff_distance,
+    _compute_instance_hausdorff_distance95,
     # _compute_instance_segmentation_tendency,
+    _compute_instance_normalized_surface_dice,
+    _compute_normalized_surface_dice,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -30,11 +36,12 @@ class _Metric:
         name (str): Short name of the metric.
         long_name (str): Full descriptive name of the metric.
         decreasing (bool): If True, lower metric values are better; otherwise, higher values are preferred.
+        requires_spatial (bool): If True, the metric requires spatial structure for meaningful computation.
         _metric_function (Callable): A callable function that computes the metric
             between two input arrays.
 
     Example:
-        >>> my_metric = _Metric(name="accuracy", long_name="Accuracy", decreasing=False, _metric_function=accuracy_function)
+        >>> my_metric = _Metric(name="accuracy", long_name="Accuracy", decreasing=False, requires_spatial=False, _metric_function=accuracy_function)
         >>> score = my_metric(reference_array, prediction_array)
         >>> print(score)
 
@@ -43,6 +50,7 @@ class _Metric:
     name: str
     long_name: str
     decreasing: bool
+    requires_spatial: bool
     _metric_function: Callable
 
     def __call__(
@@ -144,22 +152,58 @@ class Metric(_Enum_Compare):
         _type_: _description_
     """
 
-    DSC = _Metric("DSC", "Dice", False, _compute_instance_volumetric_dice)
-    IOU = _Metric("IOU", "Intersection over Union", False, _compute_instance_iou)
+    DSC = _Metric("DSC", "Dice", False, False, _compute_instance_volumetric_dice)
+    IOU = _Metric("IOU", "Intersection over Union", False, False, _compute_instance_iou)
     ASSD = _Metric(
         "ASSD",
         "Average Symmetric Surface Distance",
         True,
+        True,
         _compute_instance_average_symmetric_surface_distance,
     )
-    clDSC = _Metric("clDSC", "Centerline Dice", False, _compute_centerline_dice)
+    clDSC = _Metric("clDSC", "Centerline Dice", False, False, _compute_centerline_dice)
     RVD = _Metric(
         "RVD",
         "Relative Volume Difference",
         True,
+        False,
         _compute_instance_relative_volume_difference,
     )
-    # ST = _Metric("ST", False, _compute_instance_segmentation_tendency)
+    RVAE = _Metric(
+        "RVAE",
+        "Relative Volume Absolute Error",
+        True,
+        False,
+        _compute_instance_relative_volume_error,
+    )
+    CEDI = _Metric(
+        "CEDI",
+        "Center Distance",
+        True,
+        True,
+        _compute_instance_center_distance,
+    )
+    HD = _Metric(
+        "HD",
+        "Hausdorff Distance",
+        True,
+        True,
+        _compute_instance_hausdorff_distance,
+    )
+    HD95 = _Metric(
+        "HD95",
+        "Hausdorff Distance 95",
+        True,
+        True,
+        _compute_instance_hausdorff_distance95,
+    )
+    NSD = _Metric(
+        "NSD",
+        "Normalized Surface Dice",
+        True,
+        True,
+        _compute_instance_normalized_surface_dice,
+    )
 
     def __call__(
         self,
@@ -217,6 +261,10 @@ class Metric(_Enum_Compare):
     @property
     def increasing(self):
         return self.value.increasing
+
+    @property
+    def requires_spatial(self):
+        return self.value.requires_spatial
 
     def __hash__(self) -> int:
         return abs(hash(self.name)) % (10**8)
@@ -277,7 +325,6 @@ class Evaluation_Metric:
         was_calculated: bool = False,
         error: bool = False,
     ):
-
         self.id = name_id
         self.metric_type = metric_type
         self._calc_func = calc_func
@@ -361,8 +408,12 @@ class Evaluation_List_Metric:
             self.MIN: None | float = edge_case_result
             self.MAX: None | float = edge_case_result
         else:
-            self.AVG = None if self.ALL is None else np.average(self.ALL)
-            self.SUM = None if self.ALL is None else np.sum(self.ALL)
+            self.AVG = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.average(self.ALL)
+            )
+            self.SUM = (
+                None if self.ALL is None or len(self.ALL) == 0 else np.sum(self.ALL)
+            )
             self.MIN = (
                 None if self.ALL is None or len(self.ALL) == 0 else np.min(self.ALL)
             )

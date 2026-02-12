@@ -8,6 +8,7 @@ import csv
 import os
 import atexit
 import warnings
+import tempfile
 
 # Set start method based on the operating system
 try:
@@ -59,8 +60,9 @@ class Panoptica_Aggregator:
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
         self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
+        self.__log_times = log_times
 
-        if log_times:
+        if log_times and COMPUTATION_TIME_KEY not in self.__evaluation_metrics:
             self.__evaluation_metrics.append(COMPUTATION_TIME_KEY)
 
         if isinstance(output_file, str):
@@ -82,12 +84,15 @@ class Panoptica_Aggregator:
         else:
             out_file_path += ".tsv"  # add extension
 
-        out_buffer_file: Path = Path(out_file_path).parent.joinpath(
-            "panoptica_aggregator_tmp.tsv"
-        )
-        self.__output_buffer_file = out_buffer_file
+        # buffer_file = tempfile.NamedTemporaryFile()
+        # out_buffer_file: Path = Path(out_file_path).parent.joinpath("panoptica_aggregator_tmp.tsv")
+        # self.tmpfile =
+        self.__output_buffer_file = tempfile.NamedTemporaryFile(
+            delete=False
+        ).name  # out_buffer_file
+        # print(self.__output_buffer_file)
 
-        Path(out_file_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(out_file_path).parent.mkdir(parents=False, exist_ok=True)
         self.__output_file = out_file_path
 
         header = ["subject_name"] + [
@@ -105,16 +110,13 @@ class Panoptica_Aggregator:
             if len(header_list) == 0:
                 # empty file
                 print("Output file given is empty, will start with header")
+                _write_content(output_file, [header])
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
                 assert header_hash == hash(
                     "+".join(header_list)
                 ), "Hash of header not the same! You are using a different setup!"
-
-        if out_buffer_file.exists():
-            os.remove(out_buffer_file)
-        open(out_buffer_file, "a").close()
 
         if continue_file:
             with inevalfilelock:
@@ -126,7 +128,7 @@ class Panoptica_Aggregator:
 
     def __exist_handler(self):
         """Handles cleanup upon program exit by removing the temporary output buffer file."""
-        if self.__output_buffer_file is not None and self.__output_buffer_file.exists():
+        if Path(self.__output_buffer_file).exists():
             os.remove(str(self.__output_buffer_file))
 
     def make_statistic(self) -> Panoptica_Statistic:
@@ -144,6 +146,8 @@ class Panoptica_Aggregator:
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
         subject_name: str,
+        voxelspacing: tuple[float, ...] | None = None,
+        **kwargs,
     ):
         """Evaluates a single case using the provided prediction and reference arrays.
 
@@ -176,6 +180,9 @@ class Panoptica_Aggregator:
             result_all=True,
             verbose=False,
             log_times=False,
+            save_group_times=self.__log_times,
+            voxelspacing=voxelspacing,
+            **kwargs,
         )
 
         # Add to file
@@ -192,7 +199,7 @@ class Panoptica_Aggregator:
             #
             content = [subject_name]
             for groupname in self.__class_group_names:
-                result: PanopticaResult = result_grouped[groupname][0]
+                result: PanopticaResult = result_grouped[groupname]
                 result_dict = result.to_dict()
                 if result.computation_time is not None:
                     result_dict[COMPUTATION_TIME_KEY] = result.computation_time
@@ -207,6 +214,10 @@ class Panoptica_Aggregator:
     @property
     def panoptica_evaluator(self):
         return self.__panoptica_evaluator
+
+    @property
+    def evaluation_metrics(self):
+        return self.__evaluation_metrics
 
 
 def _read_first_row(file: str | Path):

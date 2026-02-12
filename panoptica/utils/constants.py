@@ -2,7 +2,6 @@ from enum import Enum, auto
 from panoptica.utils.config import (
     _register_class_to_yaml,
     _load_from_config,
-    _load_from_config_name,
     _save_to_config,
 )
 from pathlib import Path
@@ -64,10 +63,6 @@ class _Enum_Compare(Enum):
     @classmethod
     def load_from_config(cls, path: str | Path):
         return _load_from_config(cls, path)
-
-    @classmethod
-    def load_from_config_name(cls, name: str):
-        return _load_from_config_name(cls, name)
 
     def save_to_config(self, path: str | Path):
         _save_to_config(self, path)

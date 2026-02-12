@@ -9,8 +9,9 @@ NO_GROUP_KEY = "ungrouped"
 class SegmentationClassGroups(SupportsConfig):
     """Represents a collection of segmentation class groups.
 
-    This class manages groups of labels used in segmentation tasks, ensuring that each label is defined
-    exactly once across all groups. It supports both list and dictionary formats for group initialization.
+    This class manages groups of labels used in segmentation tasks. It supports both list and dictionary formats for group initialization.
+    SegmentationClassGroups are a collection of LabelGroups with names. So it maps a group name (str) to a LabelGroup.
+    A LabelGroup defines a collection of labels that belong to the same structure / region of interest.
 
     Attributes:
         __group_dictionary (dict[str, LabelGroup]): A dictionary mapping group names to their respective LabelGroup instances.
@@ -20,9 +21,6 @@ class SegmentationClassGroups(SupportsConfig):
         groups (list[LabelGroup] | dict[str, LabelGroup | tuple[list[int] | int, bool]]):
             A list of `LabelGroup` instances or a dictionary where keys are group names (str) and values are either
             `LabelGroup` instances or tuples containing a list of label values and a boolean.
-
-    Raises:
-        AssertionError: If the same label is assigned to multiple groups.
     """
 
     def __init__(

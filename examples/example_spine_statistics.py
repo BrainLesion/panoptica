@@ -1,5 +1,4 @@
-from auxiliary.nifti.io import read_nifti
-from auxiliary.turbopath import turbopath
+from pathlib import Path
 
 from panoptica import (
     Panoptica_Evaluator,
@@ -28,15 +27,13 @@ def main(parallel_opt: str = "future"):  # none, pool, joblib, future
     except:
         pass
 
-    directory = turbopath(__file__).parent
+    directory = Path(__file__).parent
 
-    reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
-    prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
+    reference_mask = directory / "spine_seg/matched_instance/ref.nii.gz"
+    prediction_mask = directory / "spine_seg/matched_instance/pred.nii.gz"
 
     evaluator = Panoptica_Aggregator(
-        Panoptica_Evaluator.load_from_config_name(
-            "panoptica_evaluator_unmatched_instance"
-        ),
+        Panoptica_Evaluator.load_from_config("panoptica_evaluator_unmatched_instance"),
         Path(__file__).parent.joinpath("spine_example.tsv"),
         log_times=True,
     )

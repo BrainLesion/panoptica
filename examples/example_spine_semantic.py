@@ -1,6 +1,5 @@
 import cProfile
 
-from auxiliary.nifti.io import read_nifti
 from pathlib import Path
 
 from panoptica import (
@@ -12,8 +11,8 @@ from panoptica import (
 
 directory = str(Path(__file__).absolute().parent)
 
-reference_mask = read_nifti(directory + "/spine_seg/semantic/ref.nii.gz")
-prediction_mask = read_nifti(directory + "/spine_seg/semantic/pred.nii.gz")
+reference_mask = directory + "/spine_seg/semantic/ref.nii.gz"
+prediction_mask = directory + "/spine_seg/semantic/pred.nii.gz"
 
 
 evaluator = Panoptica_Evaluator(
@@ -27,13 +26,13 @@ evaluator = Panoptica_Evaluator(
 
 def main():
     with cProfile.Profile() as pr:
-        result, intermediate_steps_data = evaluator.evaluate(
-            prediction_mask, reference_mask
-        )["ungrouped"]
+        result = evaluator.evaluate(prediction_mask, reference_mask)["ungrouped"]
 
         # To print the results, just call print
         print(result)
 
+        intermediate_steps_data = result.intermediate_steps_data
+        assert intermediate_steps_data is not None
         # To get the different intermediate arrays, just use the second returned object
         intermediate_steps_data.original_prediction_arr  # Input prediction array, untouched
         intermediate_steps_data.original_reference_arr  # Input reference array, untouched

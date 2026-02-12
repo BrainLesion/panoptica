@@ -1,11 +1,16 @@
 # Metrics
 
-A details list of all metrics currently supported by Panoptica.
-- DICE (DSC)
-- Intersection over Union (IoU)
-- Centerline Dice (clDSC)
-- Average Symmetric Surface Distance (ASSD)
-- Relative Volume Difference (RVD)
+A list of all metrics currently supported by Panoptica.
+- DSC: Dice Similarity Coefficient
+- IoU: Intersection over Union
+- clDSC: Centerline Dice
+- ASSD: Average Symmetric Surface Distance
+- RVD: Relative Volume Difference
+- RVAE: Relative Absolute Volume Error
+- HD: Hausdorff Distance
+- HD95: Hausdorff Distance 95 Percentile
+- CEDI: Center Distance
+
 
 For instance-wise metrics:
 - True Positives (tp)
@@ -21,7 +26,7 @@ These three original come from [arXiv: Panoptic Segmentation](https://arxiv.org/
 
 
 ---
-### Missing a metric? Write us an [github: issue](https://github.com/BrainLesion/panoptica/issues/new?assignees=&labels=&projects=&template=feature_request.md&title=New_Metric:)
+### Missing a metric? Write us an BLINDED
 Be sure to use the "metric" label.
 
 <br/>
@@ -34,7 +39,7 @@ Formulas to calculate the different metrics
 ## Dice
 
 $$
-\text{DSC}(X,Y) = \frac{2 | X \cap Y | }{ |X| + |Y|} \in [0,1]
+\text{DSC}(X,Y) = \frac{2 |X \cap Y|}{|X| + |Y|} \in [0,1]
 $$
 Represents an overlap score.
 
@@ -56,7 +61,11 @@ Represents an topology-preserving overlap score. Can be used as loss. Uses skele
 $$
 \text{ASSD}(X,Y) = \frac{\text{asd}(A,B) + \text{asd}(B,A)}{ |X| + |Y|} \in [0,\infty]
 $$
-with $\text{asd}(A, B)$ being the average surface distance from the border of $A$ to $B$.
+with $\text{asd}(A, B)$ being the average surface distance from the border of $A$ to $B$:
+$$
+\text{asd}(A,B) = \sum_{a \in A}\min_{b \in B}\text{d}(a, b) \in [0,\infty]
+$$
+d(a,b) is the distance between both points.
 
 ASSD is a typically good metric to report, as it shows whether errors are local or if the prediction has widespread noise voxels not even close to the reference.
 
@@ -81,12 +90,18 @@ It is the F1-score basically. Represents how well your instances match the refer
 
 The segmentation quality is the average of all true positive metrics. So for sq_dsc, this is the average of all dice scores among the true positives in this prediction/reference pair.
 
-As this metric is linked to another metric, we support all combinations of it. You can calculate the segmentation quality with IoU, DSC, clDSC, ASSD, and even RVD.
+As this metric is linked to another metric, we support all combinations of it. You can calculate the segmentation quality with IoU, DSC, clDSC, ASSD, and even RVD. 
+
+For a metric $f$, we derive the Segmentation Quality (SQ):
+
+$$
+\text{SQ}_f(\text{TP}) = \sum_{(i_{\text{ref}}, i_{\text{pred}}) \in TP} \frac{f(i_{\text{ref}}, i_{\text{pred}})}{|TP|}
+$$
 
 ## Panoptic Quality
 
 $$
-\text{PQ}(X,Y) = \text{SQ} \cdot \text{RQ} \in [0,1]
+\text{PQ}_f(X,Y) = \text{SQ}_f \cdot \text{RQ} \in [0,1]
 $$
 
 Combines the F1-score of instances with the Segmentation Quality.

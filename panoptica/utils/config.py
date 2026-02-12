@@ -2,6 +2,7 @@ from ruamel.yaml import YAML
 from pathlib import Path
 from panoptica.utils.filepath import config_by_name, config_dir_by_name
 from abc import ABC, abstractmethod
+from warnings import warn
 
 supported_helper_classes = []
 
@@ -90,13 +91,37 @@ def _load_from_config(cls, path: str | Path):
     """
     if isinstance(path, str):
         path = Path(path)
+    path_ = path
+    if not path.exists():
+        # If the path as path does not exist, try using it as name
+        path_ = config_by_name(path.name)
+    assert (
+        path_.exists()
+    ), f"load_from_config: {path} does not exist, neither does {path_}"
+    obj = _load_yaml(path_, registered_class=cls)
+    assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
+    return obj
+
+
+def _load_from_config_by_path(cls, path: str | Path):
+    """Loads an instance of a class from a YAML configuration file.
+
+    Args:
+        cls: The class type to instantiate.
+        path (str | Path): Path to the YAML configuration file.
+
+    Returns:
+        An instance of the specified class, loaded from configuration.
+    """
+    if isinstance(path, str):
+        path = Path(path)
     assert path.exists(), f"load_from_config: {path} does not exist"
     obj = _load_yaml(path, registered_class=cls)
     assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
     return obj
 
 
-def _load_from_config_name(cls, name: str):
+def _load_from_config_by_name(cls, name: str):
     """Loads an instance of a class from a configuration file identified by name.
 
     Args:
@@ -108,10 +133,26 @@ def _load_from_config_name(cls, name: str):
     """
     path = config_by_name(name)
     assert path.exists(), f"load_from_config: {path} does not exist"
-    return _load_from_config(cls, path)
+    return _load_from_config_by_path(cls, path)
 
 
 def _save_to_config(obj, path: str | Path):
+    """Saves an instance of a class to a YAML configuration file.
+
+    Args:
+        obj: The object to save.
+        path (str | Path): The file path to save the configuration.
+    """
+    if isinstance(path, str):
+        path = Path(path)
+    if not path.parent.exists() or path.parent.name == "":
+        dir, name = config_dir_by_name(path.name)
+        path = dir.joinpath(name)
+    assert path.parent.exists(), f"save_to_config: {path} does not exist"
+    _save_yaml(obj, path, registered_class=type(obj))
+
+
+def _save_to_config_by_path(obj, path: str | Path):
     """Saves an instance of a class to a YAML configuration file.
 
     Args:
@@ -131,7 +172,7 @@ def _save_to_config_by_name(obj, name: str):
         name (str): The name used to determine the configuration file path.
     """
     dir, name = config_dir_by_name(name)
-    _save_to_config(obj, dir.joinpath(name))
+    _save_to_config_by_path(obj, dir.joinpath(name))
 
 
 class SupportsConfig:
@@ -179,35 +220,15 @@ class SupportsConfig:
         ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
         return obj
 
-    @classmethod
-    def load_from_config_name(cls, name: str):
-        """Loads an instance of the class from a configuration file identified by name.
-
-        Args:
-            name (str): The name used to find the configuration file.
-
-        Returns:
-            An instance of the class.
-        """
-        obj = _load_from_config_name(cls, name)
-        assert isinstance(obj, cls)
-        return obj
-
     def save_to_config(self, path: str | Path):
         """Saves the instance to a YAML configuration file.
 
         Args:
             path (str | Path): The file path to save the configuration.
         """
+        if isinstance(path, str):
+            path = Path(path)
         _save_to_config(self, path)
-
-    def save_to_config_by_name(self, name: str):
-        """Saves the instance to a configuration file identified by name.
-
-        Args:
-            name (str): The name used to determine the configuration file path.
-        """
-        _save_to_config_by_name(self, name)
 
     @classmethod
     def to_yaml(cls, representer, node):

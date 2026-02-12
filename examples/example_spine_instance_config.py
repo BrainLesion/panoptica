@@ -1,16 +1,15 @@
 import cProfile
 
-from auxiliary.nifti.io import read_nifti
 from pathlib import Path
 
 from panoptica import Panoptica_Evaluator
 
 directory = str(Path(__file__).absolute().parent)
 
-reference_mask = read_nifti(directory + "/spine_seg/matched_instance/ref.nii.gz")
-prediction_mask = read_nifti(directory + "/spine_seg/matched_instance/pred.nii.gz")
+reference_mask = directory + "/spine_seg/matched_instance/ref.nii.gz"
+prediction_mask = directory + "/spine_seg/matched_instance/pred.nii.gz"
 
-evaluator = Panoptica_Evaluator.load_from_config_name(
+evaluator = Panoptica_Evaluator.load_from_config(
     "panoptica_evaluator_unmatched_instance"
 )
 
@@ -18,7 +17,7 @@ evaluator = Panoptica_Evaluator.load_from_config_name(
 def main():
     with cProfile.Profile() as pr:
         results = evaluator.evaluate(prediction_mask, reference_mask, verbose=False)
-        for groupname, (result, intermediate_steps_data) in results.items():
+        for groupname, result in results.items():
             print()
             print("### Group", groupname)
             print(result)

@@ -23,6 +23,16 @@ With a Python 3.10+ environment, you can install panoptica from <b>blinded pypi 
 
 ```sh
 pip install panoptica
+
+# or with optional GPU capabilities 
+pip install panoptica[gpu]
+```
+
+
+Or, alternatively, from [conda](https://anaconda.org/conda-forge/panoptica):
+
+```sh
+conda install -c conda-forge panoptica
 ```
 
 ## Available Metrics
@@ -41,10 +51,8 @@ A minimal example of using panoptica could look e.g. like this (here with Matche
 from panoptica import InputType, Panoptica_Evaluator
 from panoptica.metrics import Metric
 
-from auxiliary.nifti.io import read_nifti # feel free to use any other way to read nifti files
-
-ref_masks = read_nifti("reference.nii.gz")
-pred_masks = read_nifti("prediction.nii.gz")
+ref_masks = "<path-to-your>/reference.nii.gz"
+pred_masks = "<path-to-your>/prediction.nii.gz"
 
 evaluator = Panoptica_Evaluator(
     expected_input=InputType.MATCHED_INSTANCE,
@@ -52,7 +60,7 @@ evaluator = Panoptica_Evaluator(
     decision_threshold=0.5,
 )
 
-result, intermediate_steps_data = evaluator.evaluate(pred_masks, ref_masks)["ungrouped"]
+result = evaluator.evaluate(pred_masks, ref_masks)["ungrouped"]
 ```
 
 
@@ -121,6 +129,14 @@ It uses ruamel.yaml in a readable way.
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
+
+### Using Panoptica Aggregator
+
+Using our Panoptica Aggregator, you can evaluate your data while the Aggregator takes care of writing the results into a .tsv file (threading-safe). This allows you to focus only on the important part, that is loading and iterating over your data.
+From the aggregator, you can immediately get a Panoptica Statistics object that yield you the statistics over your metrics as well as create nice figures for you.
+
+Tutorial: BLINDED
+
 ## Documentation
 
 We provide a readthedocs documentation of our codebase <b>blinded link</b>
@@ -130,4 +146,22 @@ We provide a readthedocs documentation of our codebase <b>blinded link</b>
 > [!IMPORTANT]
 > If you use panoptica in your research, please cite it to support the development!
 
-<b>Blinded Citation</b>
+BLINDED
+
+```
+@misc{BLINDED
+}
+```
+
+## Contributing
+
+We welcome all kinds of contributions from the community!
+
+### Reporting Bugs, Feature Requests and Questions
+
+Please open a new issue BLINDED.
+
+### Code contributions
+
+Nice to have you on board! Please have a look at our BLINDED file.
+

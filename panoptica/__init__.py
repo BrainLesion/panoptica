@@ -2,7 +2,7 @@ from panoptica.instance_approximator import (
     ConnectedComponentsInstanceApproximator,
     CCABackend,
 )
-from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
 from panoptica.panoptica_statistics import Panoptica_Statistic, ValueSummary
 from panoptica.panoptica_aggregator import Panoptica_Aggregator
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
