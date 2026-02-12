@@ -7,7 +7,7 @@ import unittest
 
 import numpy as np
 
-from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic, ValueSummary
+from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic, ValueDistribution
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
 from panoptica.metrics import Metric
@@ -55,8 +55,8 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         tp_values = statistic_obj.get("ungrouped", "tp")
         sq_values = statistic_obj.get("ungrouped", "sq")
-        self.assertEqual(ValueSummary(tp_values).avg, 1.0)
-        self.assertEqual(ValueSummary(sq_values).avg, 0.75)
+        self.assertEqual(ValueDistribution(tp_values).avg, 1.0)
+        self.assertEqual(ValueDistribution(sq_values).avg, 0.75)
 
         os.remove(str(output_test_dir))
 
@@ -84,11 +84,11 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         statistic_obj.print_summary()
 
-        self.assertEqual(ValueSummary(statistic_obj.get("ungrouped", "tp")).avg, 1.0)
-        self.assertEqual(ValueSummary(statistic_obj.get("ungrouped", "sq")).avg, 0.875)
-        self.assertEqual(ValueSummary(statistic_obj.get("ungrouped", "fn")).avg, 0.5)
-        self.assertEqual(ValueSummary(statistic_obj.get("ungrouped", "rec")).avg, 0.75)
-        self.assertEqual(ValueSummary(statistic_obj.get("ungrouped", "rec")).std, 0.25)
+        self.assertEqual(ValueDistribution(statistic_obj.get("ungrouped", "tp")).avg, 1.0)
+        self.assertEqual(ValueDistribution(statistic_obj.get("ungrouped", "sq")).avg, 0.875)
+        self.assertEqual(ValueDistribution(statistic_obj.get("ungrouped", "fn")).avg, 0.5)
+        self.assertEqual(ValueDistribution(statistic_obj.get("ungrouped", "rec")).avg, 0.75)
+        self.assertEqual(ValueDistribution(statistic_obj.get("ungrouped", "rec")).std, 0.25)
 
         os.remove(str(output_test_dir))
 

@@ -12,7 +12,7 @@ except Exception as e:
     print("OPTIONAL PACKAGE MISSING")
 
 
-class ValueSummary:
+class ValueDistribution:
     def __init__(self, value_list: list[float]) -> None:
         self.__value_list = value_list
         if len(value_list) == 0:
@@ -25,6 +25,13 @@ class ValueSummary:
             self.__std = float(np.std(value_list))
             self.__min = min(value_list)
             self.__max = max(value_list)
+
+    def __getitem__(self, key):
+        assert isinstance(key, int), "Only integer indexing supported for ValueSummary"
+        return self.__value_list[key]
+
+    def __setitem__(self, key, value):
+        raise UserWarning("ValueSummary is immutable, cannot set item")
 
     @property
     def values(self) -> list[float]:
@@ -60,6 +67,9 @@ class ValueSummary:
 
     def __str__(self, ndigits: int = 3):
         return self.get_string_repr(ndigits)
+
+
+ValueSummary = ValueDistribution  # for backward compatibility, but ValueDistribution is a better name, since it is not only a summary but also holds the values themselves
 
 
 class Panoptica_Statistic:
@@ -357,7 +367,7 @@ class Panoptica_Statistic:
                 diff_dict[subj] = None
         return diff_dict
 
-    def get_summary_across_groups(self) -> dict[str, ValueSummary]:
+    def get_summary_across_groups(self) -> dict[str, ValueDistribution]:
         """Calculates the average and std over all groups (so group-wise avg first, then average over those)
 
         Returns:
@@ -367,18 +377,18 @@ class Panoptica_Statistic:
         for m in self.__metricnames:
             value_list = [self.get_summary(g, m).avg for g in self.__groupnames]
             assert len(value_list) == len(self.__groupnames)
-            summary_dict[m] = ValueSummary(value_list)
+            summary_dict[m] = ValueDistribution(value_list)
         return summary_dict
 
-    def get_summary_dict(self, include_across_group: bool = True) -> dict[str, dict[str, ValueSummary]]:
+    def get_summary_dict(self, include_across_group: bool = True) -> dict[str, dict[str, ValueDistribution]]:
         summary_dict = {g: {m: self.get_summary(g, m) for m in self.__metricnames} for g in self.__groupnames}
         if include_across_group:
             summary_dict["across_groups"] = self.get_summary_across_groups()
         return summary_dict
 
-    def get_summary(self, group, metric) -> ValueSummary:
+    def get_summary(self, group, metric) -> ValueDistribution:
         values = self.get(group, metric, remove_nones=True)
-        return ValueSummary(values)
+        return ValueDistribution(values)
 
     def print_summary(
         self,
@@ -495,12 +505,12 @@ def make_curve_over_setups(
 
     # Y values are average metric values in that group and metric
     for idx, g in enumerate(groups):
-        Y = [ValueSummary(stat.get(g, metric, remove_nones=True)).avg for stat in statistics_dict.values()]
+        Y = [ValueDistribution(stat.get(g, metric, remove_nones=True)).avg for stat in statistics_dict.values()]
 
         name = g if alternate_groupnames is None else alternate_groupnames[idx]
 
         if plot_std:
-            Ystd = [ValueSummary(stat.get(g, metric, remove_nones=True)).std for stat in statistics_dict.values()]
+            Ystd = [ValueDistribution(stat.get(g, metric, remove_nones=True)).std for stat in statistics_dict.values()]
         else:
             Ystd = None
 
