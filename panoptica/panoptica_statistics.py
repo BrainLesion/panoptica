@@ -27,11 +27,11 @@ class ValueDistribution:
             self.__max = max(value_list)
 
     def __getitem__(self, key):
-        assert isinstance(key, int), "Only integer indexing supported for ValueSummary"
+        assert isinstance(key, int), "Only integer indexing supported for ValueDistribution"
         return self.__value_list[key]
 
     def __setitem__(self, key, value):
-        raise UserWarning("ValueSummary is immutable, cannot set item")
+        raise TypeError("ValueDistribution is immutable, cannot set item")
 
     @property
     def values(self) -> list[float]:
