@@ -3,13 +3,12 @@ from dataclasses import dataclass
 from typing import Optional, Tuple, List
 
 import numpy as np
-from scipy.ndimage import distance_transform_edt
 
 from panoptica._functionals import (
     _calc_matching_metric_of_overlapping_labels,
     _calc_matching_metric_of_overlapping_partlabels,
     _map_labels,
-    _connected_components,
+    _get_voronoi_regions,
 )
 from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import (
@@ -156,11 +155,10 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
                 pred_arr, ref_arr, ref_labels, matching_metric=matching_metric
             )
 
+    @classmethod
+    @abstractmethod
     def _yaml_repr(cls, node) -> dict:
-        raise NotImplementedError(
-            f"Tried to get yaml representation of abstract class {cls.__name__}"
-        )
-        return {}
+        raise NotImplementedError(f"Tried to get yaml representation of abstract class {cls.__name__}")
 
 
 def map_instance_labels(
@@ -515,7 +513,7 @@ class RegionBasedMatching(InstanceMatchingAlgorithm):
 
     def __init__(
         self,
-        cca_backend: CCABackend = CCABackend.scipy,
+        cca_backend: CCABackend | None = None,
     ) -> None:
         """
         Initialize the RegionBasedMatching instance.
@@ -524,38 +522,6 @@ class RegionBasedMatching(InstanceMatchingAlgorithm):
             cca_backend (CCABackend): Backend for connected component analysis.
         """
         self._cca_backend = cca_backend
-
-    def _get_gt_regions(self, gt: np.ndarray) -> Tuple[np.ndarray, int]:
-        """
-        Get ground truth regions using connected components and distance transforms.
-
-        Args:
-            gt: Ground truth array
-
-        Returns:
-            Tuple of (region_map, num_features) where region_map assigns each pixel
-            to the closest ground truth region.
-        """
-        # Step 1: Connected Components
-        labeled_array, num_features = _connected_components(gt, self._cca_backend)
-
-        # Step 2: Compute distance transform for each region
-        distance_map = np.full(gt.shape, np.inf, dtype=np.float32)
-        region_map = np.zeros(gt.shape, dtype=np.int32)
-
-        for region_label in range(1, num_features + 1):
-            # Create region mask
-            region_mask = labeled_array == region_label
-
-            # Compute distance transform
-            distance = distance_transform_edt(~region_mask)
-
-            # Update pixels where this region is closer
-            update_mask = distance < distance_map
-            distance_map[update_mask] = distance[update_mask]
-            region_map[update_mask] = region_label
-
-        return region_map, num_features
 
     def _match_instances(
         self,
@@ -584,7 +550,7 @@ class RegionBasedMatching(InstanceMatchingAlgorithm):
             return labelmap
 
         # Get ground truth regions
-        region_map, num_features = self._get_gt_regions(ref_arr)
+        region_map, num_features = _get_voronoi_regions(ref_arr, cca_backend=self._cca_backend)
 
         # For each prediction instance, find which ground truth region it belongs to
         for pred_label in pred_labels:

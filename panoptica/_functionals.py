@@ -5,6 +5,7 @@ import math
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.numpy_utils import _get_bbox_nd
 from scipy import ndimage
+from scipy.ndimage import distance_transform_edt
 
 if TYPE_CHECKING:
     from panoptica.metrics import Metric
@@ -40,7 +41,7 @@ def _map_labels(
 
 def _connected_components(
     array: np.ndarray,
-    cca_backend: CCABackend,
+    cca_backend: CCABackend | None = None,
 ) -> tuple[np.ndarray, int]:
     """
     Label connected components in a binary array using a specified connected components algorithm.
@@ -55,6 +56,10 @@ def _connected_components(
     Raises:
         NotImplementedError: If the specified backend is not implemented
     """
+    if cca_backend is None:
+        cca_backend = CCABackend.cc3d if array.ndim >= 3 else CCABackend.scipy
+        assert cca_backend is not None
+
     if cca_backend == CCABackend.cc3d:
         import cc3d
 
@@ -589,3 +594,39 @@ def _calc_matching_metric_of_overlapping_partlabels(
     )
 
     return final_sorted_pairs
+
+
+def _get_voronoi_regions(
+    arr: np.ndarray,
+    cca_backend: CCABackend | None = None,
+) -> tuple[np.ndarray, int]:
+    """
+    Get ground truth regions using connected components and distance transforms.
+
+    Args:
+        gt: Ground truth array
+
+    Returns:
+        Tuple of (region_map, num_features) where region_map assigns each pixel
+        to the closest ground truth region.
+    """
+    # Step 1: Connected Components
+    labeled_array, num_features = _connected_components(arr, cca_backend)
+
+    # Step 2: Compute distance transform for each region
+    distance_map = np.full(arr.shape, np.inf, dtype=np.float32)
+    region_map = np.zeros(arr.shape, dtype=np.int32)
+
+    for region_label in range(1, num_features + 1):
+        # Create region mask
+        region_mask = labeled_array == region_label
+
+        # Compute distance transform
+        distance = distance_transform_edt(~region_mask)
+
+        # Update pixels where this region is closer
+        update_mask = distance < distance_map
+        distance_map[update_mask] = distance[update_mask]
+        region_map[update_mask] = region_label
+
+    return region_map, num_features

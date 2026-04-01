@@ -163,12 +163,6 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             UnmatchedInstancePair: The result of the instance approximation.
         """
         cca_backend = self.cca_backend
-        if cca_backend is None:
-            cca_backend = (
-                CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
-            )
-        assert cca_backend is not None
-
         empty_prediction = len(semantic_pair.pred_labels) == 0
         empty_reference = len(semantic_pair.ref_labels) == 0
         prediction_arr, n_prediction_instance = (

@@ -2,6 +2,8 @@
 """
 Integration test for RegionBasedMatching with full panoptic evaluation
 """
+import os
+import unittest
 
 import numpy as np
 from panoptica.panoptica_evaluator import panoptic_evaluate
@@ -33,71 +35,68 @@ def create_test_data():
     return gt, pred
 
 
-def test_region_integration():
-    """Test RegionBasedMatching with full panoptic evaluation"""
-    print("Testing RegionBasedMatching with panoptic_evaluate...")
+class Test_RegionMatching_Integration(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
 
-    # Create test data
-    gt, pred = create_test_data()
+    def test_region_integration(self):
+        """Test RegionBasedMatching with full panoptic evaluation"""
+        print("Testing RegionBasedMatching with panoptic_evaluate...")
 
-    print(f"GT shape: {gt.shape}, unique values: {np.unique(gt)}")
-    print(f"Pred shape: {pred.shape}, unique values: {np.unique(pred)}")
+        # Create test data
+        gt, pred = create_test_data()
 
-    # Create region-based matcher
-    matcher = RegionBasedMatching(cca_backend=CCABackend.scipy)
+        print(f"GT shape: {gt.shape}, unique values: {np.unique(gt)}")
+        print(f"Pred shape: {pred.shape}, unique values: {np.unique(pred)}")
 
-    # Create instance approximator
-    approximator = ConnectedComponentsInstanceApproximator()
+        # Create region-based matcher
+        matcher = RegionBasedMatching(cca_backend=CCABackend.scipy)
 
-    try:
-        # Create semantic pair
-        semantic_pair = SemanticPair(prediction_arr=pred, reference_arr=gt)
+        # Create instance approximator
+        approximator = ConnectedComponentsInstanceApproximator()
 
-        # Run panoptic evaluation
-        result = panoptic_evaluate(
-            input_pair=semantic_pair,
-            instance_approximator=approximator,
-            instance_matcher=matcher,
-            instance_metrics=[Metric.DSC, Metric.IOU],
-            global_metrics=[Metric.DSC],
-            verbose=True,
-        )
+        try:
+            # Create semantic pair
+            semantic_pair = SemanticPair(prediction_arr=pred, reference_arr=gt)
 
-        print(f"\n✅ Integration test successful!")
-        print(f"Number of prediction instances: {result.num_pred_instances}")
-        print(f"Number of reference instances: {result.num_ref_instances}")
-        print(f"TP: {result.tp}")
-        print(f"FP: {result.fp}")
-        print(f"FN: {result.fn}")
-        print(f"Precision: {result.prec}")
-        print(f"Recall: {result.rec}")
-        print(f"RQ: {result.rq}")
+            # Run panoptic evaluation
+            result = panoptic_evaluate(
+                input_pair=semantic_pair,
+                instance_approximator=approximator,
+                instance_matcher=matcher,
+                instance_metrics=[Metric.DSC, Metric.IOU],
+                global_metrics=[Metric.DSC],
+                verbose=True,
+            )
 
-        # Check if metrics are NaN as expected for region-based matching
-        if np.isnan(result.tp):
-            print("✅ Count metrics correctly set to NaN for region-based matching")
-        else:
-            print("⚠️  Expected TP to be NaN for region-based matching")
+            print(f"\n✅ Integration test successful!")
+            print(f"Number of prediction instances: {result.num_pred_instances}")
+            print(f"Number of reference instances: {result.num_ref_instances}")
+            print(f"TP: {result.tp}")
+            print(f"FP: {result.fp}")
+            print(f"FN: {result.fn}")
+            print(f"Precision: {result.prec}")
+            print(f"Recall: {result.rec}")
+            print(f"RQ: {result.rq}")
 
-        # Check individual instance metrics
-        if hasattr(result, "list_metrics") and result.list_metrics:
-            print(f"\nInstance metrics:")
-            for metric, values in result.list_metrics.items():
-                print(f"  {metric}: {values}")
+            # Check if metrics are NaN as expected for region-based matching
+            if np.isnan(result.tp):
+                print("✅ Count metrics correctly set to NaN for region-based matching")
+            else:
+                print("⚠️  Expected TP to be NaN for region-based matching")
 
-        return True
+            # Check individual instance metrics
+            if hasattr(result, "list_metrics") and result.list_metrics:
+                print(f"\nInstance metrics:")
+                for metric, values in result.list_metrics.items():
+                    print(f"  {metric}: {values}")
 
-    except Exception as e:
-        print(f"❌ Error during integration test: {e}")
-        import traceback
+            self.assertTrue(True)
 
-        traceback.print_exc()
-        return False
+        except Exception as e:
+            print(f"❌ Error during integration test: {e}")
+            import traceback
 
-
-if __name__ == "__main__":
-    success = test_region_integration()
-    if success:
-        print("\n🎉 All integration tests passed!")
-    else:
-        print("\n💥 Integration test failed!")
+            traceback.print_exc()
+            self.assertTrue(False)

@@ -128,6 +128,7 @@ def benchmark_panoptica_cupy(mask: np.ndarray):
         _connected_components(mask, CCABackend.cupy)
 
     panoptica_cupy_time = timeit.timeit(label_panoptica_cupy, number=10)
+    cp.get_default_memory_pool().free_all_blocks()
 
     return panoptica_cupy_time
 

@@ -2,6 +2,8 @@
 """
 Comprehensive test suite for RegionBasedMatching implementation
 """
+import os
+import unittest
 
 import numpy as np
 from panoptica.panoptica_evaluator import panoptic_evaluate
@@ -103,9 +105,7 @@ def run_test_scenario(gt, pred, scenario_name):
         )
 
         print(f"✅ {scenario_name} successful!")
-        print(
-            f"  Pred instances: {result.num_pred_instances}, Ref instances: {result.num_ref_instances}"
-        )
+        print(f"  Pred instances: {result.num_pred_instances}, Ref instances: {result.num_ref_instances}")
         print(f"  TP: {result.tp}, FP: {result.fp}, FN: {result.fn}")
 
         # Check individual metrics if available
@@ -125,35 +125,23 @@ def run_test_scenario(gt, pred, scenario_name):
         return False
 
 
-def main():
-    """Run all test scenarios"""
-    print("🧪 Running comprehensive RegionBasedMatching tests...")
+class Test_RegionMatching_Comprehensive(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
 
-    scenarios = [
-        (test_scenario_1_basic, "Test 1: Basic non-overlapping"),
-        (test_scenario_2_overlapping, "Test 2: Overlapping predictions"),
-        (test_scenario_3_empty_prediction, "Test 3: Empty predictions"),
-        (test_scenario_4_extra_predictions, "Test 4: Extra predictions"),
-    ]
+    def test_scenario_1_basic(self):
+        gt, pred = test_scenario_1_basic()
+        self.assertTrue(run_test_scenario(gt, pred, "Test 1: Basic non-overlapping"))
 
-    results = []
-    for scenario_func, name in scenarios:
-        gt, pred = scenario_func()
-        success = run_test_scenario(gt, pred, name)
-        results.append(success)
+    def test_scenario_2_overlapping(self):
+        gt, pred = test_scenario_2_overlapping()
+        self.assertTrue(run_test_scenario(gt, pred, "Test 2: Overlapping predictions"))
 
-    # Summary
-    passed = sum(results)
-    total = len(results)
-    print(f"\n📊 Test Summary: {passed}/{total} scenarios passed")
+    def test_scenario_3_empty_prediction(self):
+        gt, pred = test_scenario_3_empty_prediction()
+        self.assertTrue(run_test_scenario(gt, pred, "Test 3: Empty predictions"))
 
-    if passed == total:
-        print("🎉 All comprehensive tests passed!")
-        return True
-    else:
-        print("💥 Some tests failed!")
-        return False
-
-
-if __name__ == "__main__":
-    main()
+    def test_scenario_4_extra_predictions(self):
+        gt, pred = test_scenario_4_extra_predictions()
+        self.assertTrue(run_test_scenario(gt, pred, "Test 4: Extra predictions"))
