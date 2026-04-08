@@ -770,23 +770,19 @@ class PanopticaResult(object):
 
 class PanopticaAUTCResult(object):
     """
-    Holds a sweep of PanopticaResult objects across a range of matching thresholds.
-    Allows for Area Under the Threshold Curve (AUTC) computation for metrics.
+    Holds dict mapping thresholds across a range to PanopticaResult objects.
+    Computes Area Under The Threshold Curve (AUTC) for metrics from different thresholds.
     """
 
     def __init__(
         self,
         threshold_results: dict[float, PanopticaResult],
-        overlap_matrix: np.ndarray | None = None,
-        overlap_metric: Metric | None = None,
     ) -> None:
         """
         Args:
             threshold_results:  Mapping from threshold float → evaluated PanopticaResult.
                                 Must contain at least one entry; two or more are needed
                                 for AUTC computation.
-            overlap_matrix:     Optional 2D array (n_ref × n_pred) of pairwise scores.
-            overlap_metric:     The Metric used to build overlap_matrix (e.g. Metric.IOU).
         """
         if not threshold_results:
             raise ValueError("threshold_results cannot be empty.")
@@ -795,8 +791,6 @@ class PanopticaAUTCResult(object):
         self._threshold_results: dict[float, PanopticaResult] = dict(
             sorted(threshold_results.items())
         )
-        self._overlap_matrix = overlap_matrix
-        self._overlap_metric = overlap_metric
 
     @property
     def thresholds(self) -> list[float]:
@@ -805,10 +799,6 @@ class PanopticaAUTCResult(object):
     @property
     def threshold_results(self) -> dict[float, PanopticaResult]:
         return self._threshold_results
-
-    @property
-    def overlap_matrix(self) -> np.ndarray | None:
-        return self._overlap_matrix
 
     def get_result_at_threshold(self, threshold: float) -> PanopticaResult:
         """Return the PanopticaResult that was evaluated at *threshold*.
@@ -825,49 +815,6 @@ class PanopticaAUTCResult(object):
             f"No result for threshold {threshold}. "
             f"Available: {self.thresholds}"
         )
-
-    def get_matching_arrays(
-        self, threshold: float
-    ) -> tuple[list[tuple[int, int]], list[int], list[int]]:
-        """Re-apply *threshold* to the cached overlap matrix without touching images.
-
-        Returns (tp_pairs, fp_indices, fn_indices) where:
-            tp_pairs    — list of (ref_idx, pred_idx) for matched instances
-            fp_indices  — prediction indices that were unmatched
-            fn_indices  — reference indices that were unmatched
-
-        Raises:
-            RuntimeError: if no overlap_matrix was provided at construction time.
-        """
-        if self._overlap_matrix is None:
-            raise RuntimeError(
-                "get_matching_arrays() requires an overlap_matrix. "
-                "Pass overlap_matrix= when constructing PanopticaAUTCResult."
-            )
-
-        n_ref, n_pred = self._overlap_matrix.shape
-        matched_ref: set[int] = set()
-        matched_pred: set[int] = set()
-        tp_pairs: list[tuple[int, int]] = []
-
-        # Greedy best-match: highest score first
-        score_indices = np.argwhere(self._overlap_matrix >= threshold)
-        if len(score_indices):
-            scores = self._overlap_matrix[
-                score_indices[:, 0], score_indices[:, 1]
-            ]
-            order = np.argsort(scores)[::-1]
-            for idx in order:
-                r, p = score_indices[idx]
-                if r not in matched_ref and p not in matched_pred:
-                    tp_pairs.append((int(r), int(p)))
-                    matched_ref.add(int(r))
-                    matched_pred.add(int(p))
-
-        fn_indices = [i for i in range(n_ref) if i not in matched_ref]
-        fp_indices = [j for j in range(n_pred) if j not in matched_pred]
-
-        return tp_pairs, fp_indices, fn_indices
 
     def get_autc(self, metric_name: str) -> float:
         """Area Under the Threshold Curve via the trapezoidal rule.
@@ -949,7 +896,6 @@ class PanopticaAUTCResult(object):
             "=== PanopticaAUTCResult ===",
             f"Thresholds : {self.thresholds[0]:.3f} → {self.thresholds[-1]:.3f}"
             f"  ({len(self.thresholds)} steps)",
-            f"Overlap matrix: {'present' if self._overlap_matrix is not None else 'not provided'}",
             "",
             "--- AUTC scores ---",
         ]
@@ -971,13 +917,7 @@ class PanopticaAUTCResult(object):
         return "\n".join(lines)
 
     def __repr__(self) -> str:
-        return (
-            f"PanopticaAUTCResult("
-            f"thresholds={self.thresholds!r}, "
-            f"overlap_matrix={'array' if self._overlap_matrix is not None else None}"
-            f")"
-        )
-
+        return f"PanopticaAUTCResult(thresholds={self.thresholds!r})"
 
 #########################
 # Calculation functions #

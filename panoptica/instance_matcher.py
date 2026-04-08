@@ -218,6 +218,10 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
     def set_threshold(self, new_threshold: float):
         self._matching_threshold = new_threshold
 
+    @property
+    def matching_threshold(self) -> float:
+        return self._matching_threshold
+
 
 class NaiveThresholdMatching(ThresholdBasedMatching):
     """
