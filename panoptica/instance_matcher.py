@@ -218,6 +218,7 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
     def set_threshold(self, new_threshold: float):
         self._matching_threshold = new_threshold
 
+
 class NaiveThresholdMatching(ThresholdBasedMatching):
     """
     Instance matching algorithm that performs threshold-based matching.

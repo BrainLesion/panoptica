@@ -4,27 +4,11 @@
 # coverage html
 import os
 import unittest
-
 import numpy as np
-
 from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
-from panoptica.metrics import Metric
+from panoptica.instance_matcher import NaiveThresholdMatching
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import MetricCouldNotBeComputedException
-from panoptica.utils.processing_pair import SemanticPair
-from panoptica.utils.segmentation_class import SegmentationClassGroups
-import sys
-from pathlib import Path
-
-from unittest import mock
-from panoptica.utils.input_check_and_conversion.sanity_checker import (
-    sanity_check_and_convert_to_array,
-    INPUTDTYPE,
-    _InputDataTypeChecker,
-    print_available_package_to_input_handlers,
-)
 
 
 class Test_AUTC(unittest.TestCase):
