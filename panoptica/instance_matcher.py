@@ -199,7 +199,26 @@ def map_instance_labels(
     return matched_instance_pair
 
 
-class NaiveThresholdMatching(InstanceMatchingAlgorithm):
+class ThresholdBasedMatching(InstanceMatchingAlgorithm):
+    """Base class for matchers that rely on a metric and a cutoff threshold."""
+
+    def __init__(
+        self, matching_metric: Metric = Metric.IOU, matching_threshold: float = 0.5
+    ):
+        self._matching_metric = matching_metric
+        self._matching_threshold = matching_threshold
+
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {
+            "matching_metric": node._matching_metric,
+            "matching_threshold": node._matching_threshold,
+        }
+
+    def set_threshold(self, new_threshold: float):
+        self._matching_threshold = new_threshold
+
+class NaiveThresholdMatching(ThresholdBasedMatching):
     """
     Instance matching algorithm that performs threshold-based matching.
 
@@ -223,9 +242,8 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             matching_threshold (float): The threshold for matching instances.
             allow_many_to_one (bool): Whether to allow many-to-one matching.
         """
+        super().__init__(matching_metric, matching_threshold)
         self._allow_many_to_one = allow_many_to_one
-        self._matching_metric = matching_metric
-        self._matching_threshold = matching_threshold
 
     def _match_instances(
         self,
@@ -278,27 +296,12 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         }
 
 
-class MaxBipartiteMatching(InstanceMatchingAlgorithm):
+class MaxBipartiteMatching(ThresholdBasedMatching):
     """
     Instance matching algorithm that performs optimal one-to-one matching based on maximum bipartite graph matching.
 
     This implementation maximizes the global matching score between predictions and references.
     """
-
-    def __init__(
-        self,
-        matching_metric: Metric = Metric.IOU,
-        matching_threshold: float = 0.5,
-    ) -> None:
-        """
-        Initialize the MaxBipartiteMatching instance.
-
-        Args:
-            matching_metric (Metric): The metric to be used for matching.
-            matching_threshold (float): The metric threshold for matching instances.
-        """
-        self._matching_metric = matching_metric
-        self._matching_threshold = matching_threshold
 
     def _match_instances(
         self,
@@ -390,7 +393,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         }
 
 
-class MaximizeMergeMatching(InstanceMatchingAlgorithm):
+class MaximizeMergeMatching(ThresholdBasedMatching):
     """
     Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one. Only matches if at least a single instance exceeds the threshold.
 
@@ -398,21 +401,6 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         matching_metric (Metric): The metric to be used for matching.
         matching_threshold (float): The threshold for matching instances.
     """
-
-    def __init__(
-        self,
-        matching_metric: Metric = Metric.IOU,
-        matching_threshold: float = 0.5,
-    ) -> None:
-        """
-        Initialize the MaximizeMergeMatching instance.
-
-        Args:
-            matching_metric (Metric): The metric to be used for matching.
-            matching_threshold (float): The threshold for matching instances.
-        """
-        self._matching_metric = matching_metric
-        self._matching_threshold = matching_threshold
 
     def _match_instances(
         self,

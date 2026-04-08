@@ -3,11 +3,13 @@ from typing import Union
 from typing import TYPE_CHECKING
 from dataclasses import dataclass
 
+from panoptica import instance_approximator
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
-from panoptica.instance_matcher import InstanceMatchingAlgorithm
+from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import PanopticaResult
+from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
+from panoptica.utils import processing_pair
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.citation_reminder import citation_reminder
@@ -183,7 +185,6 @@ class Panoptica_Evaluator(SupportsConfig):
 
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
-
             result_grouped[group_name] = self._evaluate_group(
                 group_name,
                 label_group,
@@ -197,6 +198,117 @@ class Panoptica_Evaluator(SupportsConfig):
                 log_times=log_times,
                 verbose=verbose,
                 **metadata,
+            )
+        return result_grouped
+
+    @citation_reminder
+    @measure_time
+    def evaluate_autc(
+        self,
+        prediction_arr: Union[
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
+        ],
+        reference_arr: Union[
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
+        ],
+        threshold_step_size: float = 0.1,
+        result_all: bool = True,
+        voxelspacing: tuple[float, ...] | None = None,
+        save_group_times: bool | None = None,
+        log_times: bool | None = None,
+        verbose: bool | None = None,
+    ) -> dict[str, PanopticaAUTCResult]:
+        """Runs the panoptica evaluation pipeline on the given prediction and reference arrays.
+
+        Args:
+            prediction_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Prediction array or file path.
+            reference_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Reference array or file path.
+            result_all (bool, optional): If True, will calculate all metrics and return a PanopticaResult object. If False, will only return the metrics that were requested. Defaults to True.
+            voxelspacing (tuple[float, ...] | None, optional): Voxel spacing for the evaluation. If None, will use default spacing of (1.0, 1.0, 1.0). Defaults to None.
+            save_group_times (bool | None, optional): If None, will use the value set in the constructor. If True, will save the computation time of each sample and put that into the result object. Defaults to None.
+            log_times (bool | None, optional): If None, will use the value set in the constructor. If True, will print the times for the different phases of the pipeline. Defaults to None.
+            verbose (bool | None, optional): If None, will use the value set in the constructor. If True, will spit out more details than you want. Defaults to None.
+
+        Returns:
+            dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
+        """
+
+        assert isinstance(
+            self.__instance_matcher, ThresholdBasedMatching
+        ), f"evaluate_autc can only be used with ThresholdBasedMatching instance matchers, but got {type(self.__instance_matcher)}"
+
+        # Sanity check input and convert to numpy arrays
+        ((prediction_arr, reference_arr), metadata), checker = (
+            sanity_check_and_convert_to_array(prediction_arr, reference_arr)
+        )
+        if voxelspacing is not None:
+            metadata["voxelspacing"] = voxelspacing
+        #
+        # Take the numpy arrays and convert them to the panoptica internal data structure
+        processing_pair = self.__expected_input(prediction_arr, reference_arr)
+        assert isinstance(
+            processing_pair, self.__expected_input.value
+        ), f"input not of expected type {self.__expected_input}"
+
+        self.__segmentation_class_groups.has_defined_labels_for(
+            processing_pair.prediction_arr, raise_error=True
+        )
+        self.__segmentation_class_groups.has_defined_labels_for(
+            processing_pair.reference_arr, raise_error=True
+        )
+
+        result_grouped: dict[str, PanopticaAUTCResult] = {}
+        for group_name, label_group in self.__segmentation_class_groups.items():
+            group_processing_pair = processing_pair.copy()
+            instance_metadata = group_processing_pair.get_metadata()
+
+            if isinstance(group_processing_pair, SemanticPair):
+                group_processing_pair = _approximate_instances(
+                    group_processing_pair,
+                    instance_metadata,
+                    self.__instance_approximator,
+                    label_group,
+                    log_times=self.__log_times if log_times is None else log_times,
+                    verbose=True if verbose is None else verbose,
+                )
+            threshold_results: dict[float, PanopticaResult] = {}
+            thresholds = np.round(
+                np.arange(
+                    threshold_step_size, 1.0 + threshold_step_size, threshold_step_size
+                ),
+                5,
+            )
+            if verbose:
+                print(f"Evaluating group '{group_name}' across {len(thresholds)} thresholds")
+            for threshold in thresholds:
+                self.__instance_matcher.set_threshold(threshold)
+
+                threshold_results[threshold] = self._evaluate_group(
+                    group_name,
+                    label_group,
+                    group_processing_pair,
+                    result_all,
+                    save_group_times=(
+                        self.__save_group_times
+                        if save_group_times is None
+                        else save_group_times
+                    ),
+                    log_times=log_times,
+                    verbose=verbose,
+                    **metadata,
+                )
+            result_grouped[group_name] = PanopticaAUTCResult(
+                threshold_results=threshold_results
             )
         return result_grouped
 
@@ -231,7 +343,6 @@ class Panoptica_Evaluator(SupportsConfig):
             )
             self.__resulting_metric_keys = list(res.to_dict().keys())
         return self.__resulting_metric_keys
-        # panoptic_evaluate
 
     def _evaluate_group(
         self,
@@ -299,6 +410,7 @@ def panoptic_evaluate(
     verbose=False,
     verbose_calc=False,
     label_group=None,
+    instance_metadata: dict | None = None,
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -342,38 +454,24 @@ def panoptic_evaluate(
 
     # Create initial metadata for parts handling
     # Get metadata directly from the processing pair as a dictionary
-    instance_metadata = input_pair.get_metadata()
+    instance_metadata = (
+        instance_metadata
+        if instance_metadata is not None
+        else input_pair.get_metadata()
+    )
 
     processing_pair = input_pair.copy()
 
     # First Phase: Instance Approximation
     if isinstance(processing_pair, SemanticPair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.SEMANTIC
-        )
-        assert (
-            instance_approximator is not None
-        ), "Got SemanticPair but not InstanceApproximator"
-        if verbose:
-            print("-- Got SemanticPair, will approximate instances")
-        start = perf_counter()
-
-        processing_pair = instance_approximator.approximate_instances(
+        processing_pair = _approximate_instances(
             processing_pair,
-            label_group=label_group,
+            instance_metadata,
+            instance_approximator,
+            label_group,
+            verbose,
+            log_times,
         )
-
-        if log_times:
-            print(f"-- Approximation took {perf_counter() - start} seconds")
-
-        # Update instance metadata after approximation
-        if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
-            instance_metadata["original_num_preds"] = (
-                processing_pair.n_prediction_instance
-            )
-            instance_metadata["original_num_refs"] = (
-                processing_pair.n_reference_instance
-            )
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
@@ -487,6 +585,50 @@ def panoptic_evaluate(
         return processing_pair
 
     raise RuntimeError("End of panoptic pipeline reached without results")
+
+
+def _approximate_instances(
+    processing_pair: SemanticPair,
+    instance_metadata: dict,
+    instance_approximator: InstanceApproximator | None,
+    label_group: LabelGroup | None,
+    verbose=False,
+    log_times: bool = False,
+) -> UnmatchedInstancePair | MatchedInstancePair:
+    """
+    Approximate instances from a semantic pair.
+
+    Args:
+        processing_pair: The pair to be approximated.
+        instance_approximator: The instance approximator to use for approximation.
+        label_group: The label group to consider for approximation.
+        verbose: Whether to print verbose output.
+        log_times: Whether to log the time taken for approximation.
+    """
+
+    assert (
+        instance_approximator is not None
+    ), "Got SemanticPair but not InstanceApproximator"
+    if verbose:
+        print("-- Got SemanticPair, will approximate instances")
+    start = perf_counter()
+
+    approximated_pair = instance_approximator.approximate_instances(
+        processing_pair,
+        label_group=label_group,
+    )
+
+    if log_times:
+        print(f"-- Approximation took {perf_counter() - start} seconds")
+
+    # Update instance metadata after approximation
+    if isinstance(approximated_pair, (UnmatchedInstancePair, MatchedInstancePair)):
+        instance_metadata["original_num_preds"] = (
+            approximated_pair.n_prediction_instance
+        )
+        instance_metadata["original_num_refs"] = approximated_pair.n_reference_instance
+
+    return approximated_pair
 
 
 def _handle_zero_instances_cases(

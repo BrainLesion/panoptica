@@ -768,6 +768,216 @@ class PanopticaResult(object):
             return self._channel_metrics[metric_name]
         return None
 
+class PanopticaAUTCResult(object):
+    """
+    Holds a sweep of PanopticaResult objects across a range of matching thresholds.
+    Allows for Area Under the Threshold Curve (AUTC) computation for metrics.
+    """
+
+    def __init__(
+        self,
+        threshold_results: dict[float, PanopticaResult],
+        overlap_matrix: np.ndarray | None = None,
+        overlap_metric: Metric | None = None,
+    ) -> None:
+        """
+        Args:
+            threshold_results:  Mapping from threshold float → evaluated PanopticaResult.
+                                Must contain at least one entry; two or more are needed
+                                for AUTC computation.
+            overlap_matrix:     Optional 2D array (n_ref × n_pred) of pairwise scores.
+            overlap_metric:     The Metric used to build overlap_matrix (e.g. Metric.IOU).
+        """
+        if not threshold_results:
+            raise ValueError("threshold_results cannot be empty.")
+
+        # Sort by threshold so trapezoid integration is always left-to-right.
+        self._threshold_results: dict[float, PanopticaResult] = dict(
+            sorted(threshold_results.items())
+        )
+        self._overlap_matrix = overlap_matrix
+        self._overlap_metric = overlap_metric
+
+    @property
+    def thresholds(self) -> list[float]:
+        return list(self._threshold_results.keys())
+
+    @property
+    def threshold_results(self) -> dict[float, PanopticaResult]:
+        return self._threshold_results
+
+    @property
+    def overlap_matrix(self) -> np.ndarray | None:
+        return self._overlap_matrix
+
+    def get_result_at_threshold(self, threshold: float) -> PanopticaResult:
+        """Return the PanopticaResult that was evaluated at *threshold*.
+
+        Uses np.isclose for float-safe comparison.
+
+        Raises:
+            ValueError: if no result was stored for that threshold.
+        """
+        for t, res in self._threshold_results.items():
+            if np.isclose(t, threshold):
+                return res
+        raise ValueError(
+            f"No result for threshold {threshold}. "
+            f"Available: {self.thresholds}"
+        )
+
+    def get_matching_arrays(
+        self, threshold: float
+    ) -> tuple[list[tuple[int, int]], list[int], list[int]]:
+        """Re-apply *threshold* to the cached overlap matrix without touching images.
+
+        Returns (tp_pairs, fp_indices, fn_indices) where:
+            tp_pairs    — list of (ref_idx, pred_idx) for matched instances
+            fp_indices  — prediction indices that were unmatched
+            fn_indices  — reference indices that were unmatched
+
+        Raises:
+            RuntimeError: if no overlap_matrix was provided at construction time.
+        """
+        if self._overlap_matrix is None:
+            raise RuntimeError(
+                "get_matching_arrays() requires an overlap_matrix. "
+                "Pass overlap_matrix= when constructing PanopticaAUTCResult."
+            )
+
+        n_ref, n_pred = self._overlap_matrix.shape
+        matched_ref: set[int] = set()
+        matched_pred: set[int] = set()
+        tp_pairs: list[tuple[int, int]] = []
+
+        # Greedy best-match: highest score first
+        score_indices = np.argwhere(self._overlap_matrix >= threshold)
+        if len(score_indices):
+            scores = self._overlap_matrix[
+                score_indices[:, 0], score_indices[:, 1]
+            ]
+            order = np.argsort(scores)[::-1]
+            for idx in order:
+                r, p = score_indices[idx]
+                if r not in matched_ref and p not in matched_pred:
+                    tp_pairs.append((int(r), int(p)))
+                    matched_ref.add(int(r))
+                    matched_pred.add(int(p))
+
+        fn_indices = [i for i in range(n_ref) if i not in matched_ref]
+        fp_indices = [j for j in range(n_pred) if j not in matched_pred]
+
+        return tp_pairs, fp_indices, fn_indices
+
+    def get_autc(self, metric_name: str) -> float:
+        """Area Under the Threshold Curve via the trapezoidal rule.
+
+        NaN / uncomputable values are treated as 0.0 (standard strict AUTC).
+
+        Raises:
+            ValueError:     if fewer than two thresholds were stored.
+            AttributeError: if *metric_name* is not a valid PanopticaResult field.
+        """
+        if len(self.thresholds) < 2:
+            raise ValueError(
+                "AUTC requires at least two thresholds; "
+                f"only {len(self.thresholds)} stored."
+            )
+
+        # Validate the metric name against the first result that has it calculated.
+        first_res = next(iter(self._threshold_results.values()))
+        if metric_name not in first_res._evaluation_metrics:
+            raise AttributeError(
+                f"'{metric_name}' is not a recognised PanopticaResult metric."
+            )
+
+        y_values: list[float] = []
+        for res in self._threshold_results.values():
+            try:
+                val = getattr(res, metric_name)
+                y_values.append(0.0 if (val is None or np.isnan(val)) else float(val))
+            except MetricCouldNotBeComputedException:
+                y_values.append(0.0)
+
+        x = np.array(self.thresholds, dtype=float)
+        y = np.array(y_values, dtype=float)
+
+        # np.trapezoid was introduced in NumPy 2.0; fall back gracefully.
+        trapz = getattr(np, "trapezoid", np.trapz)
+        return float(trapz(y, x=x))
+
+    def to_dict(self) -> dict[str, float]:
+        """Flat dictionary of all successfully computable AUTC metrics.
+
+        Keys are prefixed with ``autc_`` to avoid collision with per-threshold
+        metric names (e.g. ``autc_pq``, ``autc_rq``).
+        """
+        all_keys: set[str] = set()
+        for res in self._threshold_results.values():
+            all_keys.update(res.to_dict().keys())
+
+        result: dict[str, float] = {}
+        for k in sorted(all_keys):
+            try:
+                result[f"autc_{k}"] = self.get_autc(k)
+            except (AttributeError, MetricCouldNotBeComputedException, ValueError):
+                # Skip metrics that can't be integrated (e.g. integer counts).
+                pass
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        # Guard: prevent recursion if internal attributes haven't been set yet
+        if name.startswith("_"):
+            raise AttributeError(name)
+
+        if name.startswith("autc_"):
+            metric_name = name[5:]
+            try:
+                return self.get_autc(metric_name)
+            except AttributeError:
+                raise AttributeError(
+                    f"'{type(self).__name__}' has no attribute '{name}' "
+                    f"(metric '{metric_name}' not found in PanopticaResult)."
+                )
+
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
+
+    def __str__(self) -> str:
+        lines = [
+            "=== PanopticaAUTCResult ===",
+            f"Thresholds : {self.thresholds[0]:.3f} → {self.thresholds[-1]:.3f}"
+            f"  ({len(self.thresholds)} steps)",
+            f"Overlap matrix: {'present' if self._overlap_matrix is not None else 'not provided'}",
+            "",
+            "--- AUTC scores ---",
+        ]
+
+        first_res = next(iter(self._threshold_results.values()))
+        for metric_id, eval_metric in first_res._evaluation_metrics.items():
+            if metric_id.endswith("_std"):
+                continue
+            if not eval_metric._was_calculated or eval_metric._error:
+                continue
+            try:
+                val = self.get_autc(metric_id)
+                label = eval_metric.long_name or metric_id
+                lines.append(f"  AUTC {label}: {val:.4f}")
+            except (AttributeError, ValueError, MetricCouldNotBeComputedException):
+                # Non-numeric or unintegratable metrics (counts, booleans) are skipped.
+                pass
+
+        return "\n".join(lines)
+
+    def __repr__(self) -> str:
+        return (
+            f"PanopticaAUTCResult("
+            f"thresholds={self.thresholds!r}, "
+            f"overlap_matrix={'array' if self._overlap_matrix is not None else None}"
+            f")"
+        )
+
 
 #########################
 # Calculation functions #
