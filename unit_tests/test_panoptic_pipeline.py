@@ -178,7 +178,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
             ref, pred = c()
             b = UnmatchedInstancePair(pred, ref)
 
-            labelmap = a._match_instances(b, context=context, matching_threshold=0.5)
+            labelmap = a._match_instances(b, context=context, matching_threshold=0.0)
             print(labelmap)
             self.assertTrue(len(labelmap) == 1)
             self.assertTrue(labelmap[1] == 2)

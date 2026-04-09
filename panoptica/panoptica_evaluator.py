@@ -343,6 +343,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 group_name="",
                 label_group=LabelGroup(1, single_instance=False),
                 processing_pair=dummy_input,
+                decision_threshold=self.__decision_threshold,
                 result_all=True,
                 voxelspacing=(1.0, 1.0, 1.0),
                 save_group_times=False,
