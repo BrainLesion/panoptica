@@ -1,15 +1,12 @@
 from time import perf_counter
 from typing import Literal, Union
 from typing import TYPE_CHECKING
-from dataclasses import dataclass
 
-from panoptica import instance_approximator
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
-from panoptica.utils import processing_pair
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.citation_reminder import citation_reminder
@@ -163,34 +160,16 @@ class Panoptica_Evaluator(SupportsConfig):
         Returns:
             dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
         """
-        # Sanity check input and convert to numpy arrays
-        ((prediction_arr, reference_arr), metadata), checker = (
-            sanity_check_and_convert_to_array(prediction_arr, reference_arr)
-        )
-        if voxelspacing is not None:
-            metadata["voxelspacing"] = voxelspacing
-        #
-        # Take the numpy arrays and convert them to the panoptica internal data structure
-        processing_pair = self.__expected_input(prediction_arr, reference_arr)
-        assert isinstance(
-            processing_pair, self.__expected_input.value
-        ), f"input not of expected type {self.__expected_input}"
-
-        self.__segmentation_class_groups.has_defined_labels_for(
-            processing_pair.prediction_arr, raise_error=True
-        )
-        self.__segmentation_class_groups.has_defined_labels_for(
-            processing_pair.reference_arr, raise_error=True
-        )
+        processing_pair, metadata = self._preprocess_input(prediction_arr, reference_arr, voxelspacing)
 
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
             result_grouped[group_name] = self._evaluate_group(
-                group_name,
-                label_group,
-                processing_pair,
-                self.__decision_threshold,
-                result_all,
+                group_name=group_name,
+                label_group=label_group,
+                processing_pair=processing_pair,
+                decision_threshold=self.__decision_threshold,
+                result_all=result_all,
                 save_group_times=(
                     self.__save_group_times
                     if save_group_times is None
@@ -256,19 +235,82 @@ class Panoptica_Evaluator(SupportsConfig):
                 self.__decision_threshold is not None
             ), "decision_threshold must be set in the constructor when using fixed decision_threshold mode for evaluate_autc"
 
+        processing_pair, metadata = self._preprocess_input(prediction_arr, reference_arr, voxelspacing)
+
+        result_grouped: dict[str, PanopticaAUTCResult] = {}
+        for group_name, label_group in self.__segmentation_class_groups.items():
+            group_processing_pair = processing_pair.copy()
+            instance_metadata = group_processing_pair.get_metadata()
+
+            if isinstance(group_processing_pair, SemanticPair):
+                group_processing_pair = _approximate_instances(
+                    group_processing_pair,
+                    instance_metadata,
+                    self.__instance_approximator,
+                    label_group,
+                    log_times=self.__log_times if log_times is None else log_times,
+                    verbose=True if verbose is None else verbose,
+                )
+            threshold_results: dict[float, PanopticaResult] = {}
+            thresholds = np.round(
+                np.arange(
+                    threshold_step_size, 1.0 + threshold_step_size, threshold_step_size
+                ),
+                5,
+            )
+            if verbose:
+                print(
+                    f"Evaluating group '{group_name}' across {len(thresholds)} thresholds"
+                )
+            for threshold in thresholds:
+                threshold_results[threshold] = self._evaluate_group(
+                    group_name,
+                    label_group,
+                    group_processing_pair,
+                    decision_threshold=(
+                        self.__decision_threshold
+                        if decision_threshold_mode == "fixed"
+                        else threshold
+                    ),
+                    matching_threshold=threshold,
+                    result_all=result_all,
+                    save_group_times=(
+                        self.__save_group_times
+                        if save_group_times is None
+                        else save_group_times
+                    ),
+                    log_times=log_times,
+                    verbose=verbose,
+                    **metadata,
+                )
+            result_grouped[group_name] = PanopticaAUTCResult(
+                threshold_results=threshold_results
+            )
+        return result_grouped
+    
+    
+    def _preprocess_input(
+        self,
+        prediction_arr: Union[str, Path, np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
+        reference_arr: Union[str, Path, np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
+        voxelspacing: tuple[float, ...] | None = None,
+    ) -> tuple[Union[MatchedInstancePair, UnmatchedInstancePair, SemanticPair], dict]:
+        """Handles data ingestion, sanity checking, and initial validation."""
+        
         # Sanity check input and convert to numpy arrays
-        ((prediction_arr, reference_arr), metadata), checker = (
-            sanity_check_and_convert_to_array(prediction_arr, reference_arr)
+        ((prediction_arr, reference_arr), metadata), _ = sanity_check_and_convert_to_array(
+            prediction_arr, reference_arr
         )
+        
         if voxelspacing is not None:
             metadata["voxelspacing"] = voxelspacing
-        #
+
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
-        assert isinstance(
-            processing_pair, self.__expected_input.value
-        ), f"input not of expected type {self.__expected_input}"
+        assert isinstance(processing_pair, self.__expected_input.value), \
+            f"input not of expected type {self.__expected_input}"
 
+        # Validate labels
         self.__segmentation_class_groups.has_defined_labels_for(
             processing_pair.prediction_arr, raise_error=True
         )
@@ -276,57 +318,7 @@ class Panoptica_Evaluator(SupportsConfig):
             processing_pair.reference_arr, raise_error=True
         )
 
-        result_grouped: dict[str, PanopticaAUTCResult] = {}
-        original_matching_threshold = self.__instance_matcher.matching_threshold
-        try:
-            for group_name, label_group in self.__segmentation_class_groups.items():
-                group_processing_pair = processing_pair.copy()
-                instance_metadata = group_processing_pair.get_metadata()
-
-                if isinstance(group_processing_pair, SemanticPair):
-                    group_processing_pair = _approximate_instances(
-                        group_processing_pair,
-                        instance_metadata,
-                        self.__instance_approximator,
-                        label_group,
-                        log_times=self.__log_times if log_times is None else log_times,
-                        verbose=True if verbose is None else verbose,
-                    )
-                threshold_results: dict[float, PanopticaResult] = {}
-                thresholds = np.round(
-                    np.arange(
-                        threshold_step_size, 1.0 + threshold_step_size, threshold_step_size
-                    ),
-                    5,
-                )
-                if verbose:
-                    print(
-                        f"Evaluating group '{group_name}' across {len(thresholds)} thresholds"
-                    )
-                for threshold in thresholds:
-                    self.__instance_matcher.set_threshold(threshold)
-
-                    threshold_results[threshold] = self._evaluate_group(
-                        group_name,
-                        label_group,
-                        group_processing_pair,
-                        self.__decision_threshold if decision_threshold_mode == "fixed" else threshold,
-                        result_all,
-                        save_group_times=(
-                            self.__save_group_times
-                            if save_group_times is None
-                            else save_group_times
-                        ),
-                        log_times=log_times,
-                        verbose=verbose,
-                        **metadata,
-                    )
-                result_grouped[group_name] = PanopticaAUTCResult(
-                    threshold_results=threshold_results
-                )
-        finally:
-            self.__instance_matcher.set_threshold(original_matching_threshold)
-        return result_grouped
+        return processing_pair, metadata
 
     @property
     def segmentation_class_groups_names(self) -> list[str]:
@@ -366,6 +358,7 @@ class Panoptica_Evaluator(SupportsConfig):
         label_group: LabelGroup,
         processing_pair,
         decision_threshold: float | None = None,
+        matching_threshold: float | None = None,
         result_all: bool = True,
         verbose: bool | None = None,
         log_times: bool | None = None,
@@ -399,6 +392,7 @@ class Panoptica_Evaluator(SupportsConfig):
             global_metrics=self.__global_metrics,
             decision_metric=self.__decision_metric,
             decision_threshold=decision_threshold,
+            matching_threshold=matching_threshold,
             result_all=result_all,
             log_times=self.__log_times if log_times is None else log_times,
             verbose=True if verbose is None else verbose,
@@ -420,6 +414,7 @@ def panoptic_evaluate(
     global_metrics: list[Metric] = [Metric.DSC],
     decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
+    matching_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
     result_all: bool = True,
@@ -512,6 +507,7 @@ def panoptic_evaluate(
         processing_pair = instance_matcher.match_instances(
             processing_pair,
             label_group=label_group,
+            matching_threshold=matching_threshold,
             num_ref_labels=instance_metadata["num_ref_labels"],
             processing_pair_orig_shape=instance_metadata["original_shape"],
             **kwargs,
