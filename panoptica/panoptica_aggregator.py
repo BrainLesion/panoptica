@@ -9,6 +9,7 @@ import os
 import atexit
 import warnings
 import tempfile
+from typing import Optional
 
 # Set start method based on the operating system
 try:
@@ -43,6 +44,8 @@ class Panoptica_Aggregator:
         output_file: Path | str,
         log_times: bool = False,
         continue_file: bool = True,
+        is_autc: bool = False,
+        threshold_step_size: Optional[float] = None,
     ):
         """Initializes the Panoptica_Aggregator.
 
@@ -53,14 +56,25 @@ class Panoptica_Aggregator:
             log_times (bool, optional): If True, computation times will be logged. Defaults to False.
             continue_file (bool, optional): If True, results will continue from existing entries in the file.
                 Defaults to True.
+            is_autc (bool, optional): If True, the aggregator will compute AUTC metrics. Defaults to False.
+            threshold_step_size (Optional[float], optional): The step size for thresholding. Defaults to None.
 
         Raises:
             AssertionError: If the output directory does not exist or if the file extension is not `.tsv`.
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
-        self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
+        self.__autc = is_autc
         self.__log_times = log_times
+        self.__threshold_step_size = threshold_step_size
+
+        if is_autc:
+            assert (
+                self.__threshold_step_size is not None
+            ), "threshold_step_size must be provided to build AUTC headers"
+            self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(threshold_step_size)
+        else:
+            self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
 
         if log_times and COMPUTATION_TIME_KEY not in self.__evaluation_metrics:
             self.__evaluation_metrics.append(COMPUTATION_TIME_KEY)
@@ -174,16 +188,32 @@ class Panoptica_Aggregator:
 
         # Run Evaluation (allowed in parallel)
         print(f"Call evaluate on {subject_name}")
-        res = self.__panoptica_evaluator.evaluate(
-            prediction_arr,
-            reference_arr,
-            result_all=True,
-            verbose=False,
-            log_times=False,
-            save_group_times=self.__log_times,
-            voxelspacing=voxelspacing,
-            **kwargs,
-        )
+        if self.__autc:
+            assert (
+                self.__threshold_step_size is not None
+            ), "threshold_step_size must be provided to build AUTC headers"
+            res = self.__panoptica_evaluator.evaluate_autc(
+                prediction_arr,
+                reference_arr,
+                threshold_step_size=self.__threshold_step_size,
+                result_all=True,
+                verbose=False,
+                log_times=False,
+                save_group_times=self.__log_times,
+                voxelspacing=voxelspacing,
+                **kwargs,
+            )
+        else:
+            res = self.__panoptica_evaluator.evaluate(
+                prediction_arr,
+                reference_arr,
+                result_all=True,
+                verbose=False,
+                log_times=False,
+                save_group_times=self.__log_times,
+                voxelspacing=voxelspacing,
+                **kwargs,
+            )
 
         # Add to file
         self._save_one_subject(subject_name, res)

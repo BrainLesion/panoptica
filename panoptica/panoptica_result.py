@@ -768,6 +768,7 @@ class PanopticaResult(object):
             return self._channel_metrics[metric_name]
         return None
 
+
 class PanopticaAUTCResult(object):
     """
     Holds dict mapping thresholds across a range to PanopticaResult objects.
@@ -784,6 +785,7 @@ class PanopticaAUTCResult(object):
                                 Must contain at least one entry; two or more are needed
                                 for AUTC computation.
         """
+        self.computation_time: float | None = None
         if not threshold_results:
             raise ValueError("threshold_results cannot be empty.")
 
@@ -819,7 +821,7 @@ class PanopticaAUTCResult(object):
     def get_autc(self, metric_name: str) -> float:
         """Area Under the Threshold Curve via the trapezoidal rule.
 
-        NaN / uncomputable values are treated as 0.0 (standard strict AUTC).
+        NaN / uncomputable values are treated as 0.0).
 
         Raises:
             ValueError:     if fewer than two thresholds were stored.
@@ -846,30 +848,41 @@ class PanopticaAUTCResult(object):
             except MetricCouldNotBeComputedException:
                 y_values.append(0.0)
 
-        x = np.array(self.thresholds, dtype=float)
-        y = np.array(y_values, dtype=float)
+        x = list(self.thresholds)
+        y = y_values
 
-        # np.trapezoid was introduced in NumPy 2.0; fall back gracefully.
-        trapz = getattr(np, "trapezoid", np.trapz)
-        return float(trapz(y, x=x))
+        # Pad the left boundary (0.0) using nearest neighbor
+        if x[0] > 0.0:
+            x.insert(0, 0.0)
+            y.insert(0, y[0])
+
+        x_arr = np.array(x, dtype=float)
+        y_arr = np.array(y, dtype=float)
+
+        return float(np.trapezoid(y_arr, x=x_arr))
 
     def to_dict(self) -> dict[str, float]:
-        """Flat dictionary of all successfully computable AUTC metrics.
+        """Flat dictionary containing AUTC metrics AND individual threshold metrics."""
+        result: dict[str, float] = {}
 
-        Keys are prefixed with ``autc_`` to avoid collision with per-threshold
-        metric names (e.g. ``autc_pq``, ``autc_rq``).
-        """
+        # Compute AUTC values
         all_keys: set[str] = set()
         for res in self._threshold_results.values():
             all_keys.update(res.to_dict().keys())
 
-        result: dict[str, float] = {}
         for k in sorted(all_keys):
             try:
                 result[f"autc_{k}"] = self.get_autc(k)
             except (AttributeError, MetricCouldNotBeComputedException, ValueError):
-                # Skip metrics that can't be integrated (e.g. integer counts).
                 pass
+        
+        # Individual threshold values
+        for t, res in self._threshold_results.items():
+            t_str = f"{t:g}" # Formats nicely without trailing zeros (e.g., 0.5)
+            for k, v in res.to_dict().items():
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    result[f"t{t_str}_{k}"] = float(v)
+
         return result
 
     def __getattr__(self, name: str) -> Any:

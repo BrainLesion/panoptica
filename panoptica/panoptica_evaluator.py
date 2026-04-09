@@ -237,6 +237,7 @@ class Panoptica_Evaluator(SupportsConfig):
 
         processing_pair, metadata = self._preprocess_input(prediction_arr, reference_arr, voxelspacing)
 
+        thresholds = self.generate_thresholds(threshold_step_size)
         result_grouped: dict[str, PanopticaAUTCResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
             group_processing_pair = processing_pair.copy()
@@ -252,16 +253,6 @@ class Panoptica_Evaluator(SupportsConfig):
                     verbose=True if verbose is None else verbose,
                 )
             threshold_results: dict[float, PanopticaResult] = {}
-            thresholds = np.round(
-                np.arange(
-                    threshold_step_size, 1.0 + threshold_step_size, threshold_step_size
-                ),
-                5,
-            )
-            if verbose:
-                print(
-                    f"Evaluating group '{group_name}' across {len(thresholds)} thresholds"
-                )
             for threshold in thresholds:
                 threshold_results[threshold] = self._evaluate_group(
                     group_name,
@@ -319,6 +310,14 @@ class Panoptica_Evaluator(SupportsConfig):
         )
 
         return processing_pair, metadata
+    
+    @staticmethod
+    def generate_thresholds(step_size: float) -> np.ndarray:
+        """Return AUTC threshold steps."""
+        return np.round(
+            np.arange(step_size, 1.0 + step_size, step_size),
+            5
+        )
 
     @property
     def segmentation_class_groups_names(self) -> list[str]:
@@ -352,6 +351,18 @@ class Panoptica_Evaluator(SupportsConfig):
             )
             self.__resulting_metric_keys = list(res.to_dict().keys())
         return self.__resulting_metric_keys
+
+    def get_autc_metric_keys(self, threshold_step_size: float) -> list[str]:
+        """Dynamically generates all TSV header keys for an AUTC evaluation."""
+        base_keys = self.resulting_metric_keys
+        keys = [f"autc_{m}" for m in base_keys]
+        
+        for t in self.generate_thresholds(threshold_step_size):
+            t_str = f"{t:g}" 
+            for m in base_keys:
+                keys.append(f"t{t_str}_{m}")
+                
+        return keys
 
     def _evaluate_group(
         self,

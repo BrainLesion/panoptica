@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Optional, Literal
 
 from panoptica import (
     Panoptica_Evaluator,
@@ -20,7 +21,7 @@ import os
 # set_start_method("fork")
 
 
-def main(parallel_opt: str = "future"):  # none, pool, joblib, future
+def main(parallel_opt: Optional[Literal["pool", "joblib", "future"]] = "future"):
     file_dir = Path(__file__).parent.joinpath("spine_example.tsv")
     try:
         os.remove(str(file_dir))

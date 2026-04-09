@@ -1,7 +1,6 @@
 import csv
 import numpy as np
-from pathlib import Path
-import numpy as np
+import re
 
 try:
     import pandas as pd
@@ -380,8 +379,101 @@ def make_autc_plots(
     metric: str,
     groups: list[str] | str | None = None,
     alternate_groupnames: list[str] | str | None = None,
-):
-    raise NotImplementedError("AUTC plots currently in works")
+    fig: go.Figure | None = None,
+    plot_std: bool = True,
+    figure_title: str = "",
+    width: int = 850,
+    height: int = 1200,
+    xaxis_title: str | None = None,
+    yaxis_title: str | None = None,
+    manual_metric_range: None | tuple[float, float] = None,
+) -> go.Figure:
+    if groups is None:
+        groups = list(statistics_dict.values())[0].groupnames
+    if isinstance(groups, str):
+        groups = [groups]
+    if isinstance(alternate_groupnames, str):
+        alternate_groupnames = [alternate_groupnames]
+
+    if fig is None:
+        fig = go.Figure()
+
+    # Regex to dynamically catch all threshold keys (e.g., "t0.5_pq", "t1_pq")
+    pattern = re.compile(rf"^t([0-9\.]+)_{metric}$")
+
+    for setupname, stat in statistics_dict.items():
+        # Find and sort threshold keys for this specific metric
+        t_keys = []
+        for m in stat.metricnames:
+            match = pattern.match(m)
+            if match:
+                t_keys.append((float(match.group(1)), m))
+        
+        t_keys.sort(key=lambda x: x[0])
+
+        if not t_keys:
+            print(f"Warning: No threshold data found for metric '{metric}' in setup '{setupname}'.")
+            continue
+
+        # The thresholds become our X-axis
+        X = [t[0] for t in t_keys]
+
+        for idx, g in enumerate(groups):
+            name = g if alternate_groupnames is None else alternate_groupnames[idx]
+            
+            # Format legend depending on how many setups/groups we are comparing
+            if len(statistics_dict) == 1 and len(groups) == 1:
+                legend_name = str(name)
+            elif len(groups) == 1:
+                legend_name = str(setupname)
+            else:
+                legend_name = f"{setupname} - {name}"
+
+            Y = [
+                ValueSummary(stat.get(g, k[1], remove_nones=True)).avg
+                for k in t_keys
+            ]
+
+            if plot_std:
+                Ystd = [
+                    ValueSummary(stat.get(g, k[1], remove_nones=True)).std
+                    for k in t_keys
+                ]
+                error_y = dict(type="data", array=Ystd)
+            else:
+                error_y = None
+
+            # Line plot with markers
+            fig.add_trace(
+                go.Scatter(
+                    x=X,
+                    y=Y,
+                    mode="lines+markers",
+                    name=legend_name,
+                    error_y=error_y,
+                )
+            )
+
+    # Reuse the exact layout from make_curve_over_setups
+    fig.update_layout(
+        autosize=False,
+        width=width,
+        height=height,
+        showlegend=True,
+        yaxis_title=metric if yaxis_title is None else yaxis_title,
+        xaxis_title="Matching Threshold" if xaxis_title is None else xaxis_title,
+        font={"family": "Arial"},
+        title=figure_title,
+    )
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
+    
+    # Pad the X-axis slightly so 0.0 and 1.0 don't stick to the absolute edges
+    fig.update_xaxes(range=[-0.05, 1.05])
+    
+    if manual_metric_range is not None:
+        fig.update_yaxes(range=[manual_metric_range[0], manual_metric_range[1]])
+        
+    return fig
 
 
 def make_curve_over_setups(
