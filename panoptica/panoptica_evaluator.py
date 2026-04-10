@@ -29,6 +29,7 @@ from panoptica.utils.segmentation_class import (
     LabelGroup,
     _NoSegmentationClassGroups,
 )
+from panoptica.panoptica_pipeline import _panoptic_evaluate
 from pathlib import Path
 
 if TYPE_CHECKING:
@@ -93,13 +94,9 @@ class Panoptica_Evaluator(SupportsConfig):
             segmentation_class_groups = _NoSegmentationClassGroups()
         self.__segmentation_class_groups = segmentation_class_groups
 
-        self.__edge_case_handler = (
-            edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
-        )
+        self.__edge_case_handler = edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
         if self.__decision_metric is not None:
-            assert (
-                self.__decision_threshold is not None
-            ), "decision metric set but no decision threshold for it"
+            assert self.__decision_threshold is not None, "decision metric set but no decision threshold for it"
         #
         self.__log_times = log_times
         self.__verbose = verbose
@@ -162,24 +159,16 @@ class Panoptica_Evaluator(SupportsConfig):
             dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
         """
         # Sanity check input and convert to numpy arrays
-        ((prediction_arr, reference_arr), metadata), checker = (
-            sanity_check_and_convert_to_array(prediction_arr, reference_arr)
-        )
+        ((prediction_arr, reference_arr), metadata), checker = sanity_check_and_convert_to_array(prediction_arr, reference_arr)
         if voxelspacing is not None:
             metadata["voxelspacing"] = voxelspacing
         #
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
-        assert isinstance(
-            processing_pair, self.__expected_input.value
-        ), f"input not of expected type {self.__expected_input}"
+        assert isinstance(processing_pair, self.__expected_input.value), f"input not of expected type {self.__expected_input}"
 
-        self.__segmentation_class_groups.has_defined_labels_for(
-            processing_pair.prediction_arr, raise_error=True
-        )
-        self.__segmentation_class_groups.has_defined_labels_for(
-            processing_pair.reference_arr, raise_error=True
-        )
+        self.__segmentation_class_groups.has_defined_labels_for(processing_pair.prediction_arr, raise_error=True)
+        self.__segmentation_class_groups.has_defined_labels_for(processing_pair.reference_arr, raise_error=True)
 
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
@@ -189,11 +178,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group,
                 processing_pair,
                 result_all,
-                save_group_times=(
-                    self.__save_group_times
-                    if save_group_times is None
-                    else save_group_times
-                ),
+                save_group_times=(self.__save_group_times if save_group_times is None else save_group_times),
                 log_times=log_times,
                 verbose=verbose,
                 **metadata,
@@ -216,9 +201,7 @@ class Panoptica_Evaluator(SupportsConfig):
     @property
     def resulting_metric_keys(self) -> list[str]:
         if self.__resulting_metric_keys is None:
-            dummy_input = MatchedInstancePair(
-                np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8)
-            )
+            dummy_input = MatchedInstancePair(np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8))
             res = self._evaluate_group(
                 group_name="",
                 label_group=LabelGroup(1, single_instance=False),
@@ -254,16 +237,14 @@ class Panoptica_Evaluator(SupportsConfig):
         single_instance_mode = label_group.single_instance
         processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
         decision_threshold = self.__decision_threshold
-        if single_instance_mode and not isinstance(
-            processing_pair, MatchedInstancePair
-        ):
+        if single_instance_mode and not isinstance(processing_pair, MatchedInstancePair):
             processing_pair_grouped = MatchedInstancePair(
                 prediction_arr=processing_pair_grouped.prediction_arr,
                 reference_arr=processing_pair_grouped.reference_arr,
             )
             decision_threshold = 0.0
 
-        result = panoptic_evaluate(
+        result = _panoptic_evaluate(
             input_pair=processing_pair_grouped,
             edge_case_handler=self.__edge_case_handler,
             instance_approximator=self.__instance_approximator,
@@ -283,256 +264,3 @@ class Panoptica_Evaluator(SupportsConfig):
             duration = perf_counter() - start_time
             result.computation_time = duration
         return result
-
-
-def panoptic_evaluate(
-    input_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair,
-    instance_approximator: InstanceApproximator | None = None,
-    instance_matcher: InstanceMatchingAlgorithm | None = None,
-    instance_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
-    global_metrics: list[Metric] = [Metric.DSC],
-    decision_metric: Metric | None = None,
-    decision_threshold: float | None = None,
-    edge_case_handler: EdgeCaseHandler | None = None,
-    log_times: bool = False,
-    result_all: bool = True,
-    verbose=False,
-    verbose_calc=False,
-    label_group=None,
-    **kwargs,
-) -> PanopticaResult:
-    """
-    Perform panoptic evaluation on the given processing pair.
-
-    Args:
-        input_pair: The processing pair to be evaluated.
-        instance_approximator: The instance approximator used for approximating instances.
-        instance_matcher: The instance matcher used for matching instances.
-        instance_metrics: List of metrics to calculate for each instance.
-        global_metrics: List of metrics to calculate globally.
-        decision_metric: Metric used for determining true positives.
-        decision_threshold: Threshold for the decision metric.
-        edge_case_handler: Handler for edge cases.
-        log_times: Whether to log computation times.
-        result_all: Whether to calculate all metrics.
-        verbose: Whether to print verbose information.
-        verbose_calc: Whether to print calculation details.
-        label_group: Group of labels to consider.
-        **kwargs: Additional keyword arguments.
-
-    Returns:
-        PanopticaResult: Result of the panoptic evaluation.
-
-    Raises:
-        AssertionError: If the input processing pair does not match the expected types.
-        RuntimeError: If the end of the panoptic pipeline is reached without producing results.
-    """
-    if verbose:
-        print("Panoptic: Start Evaluation")
-    if edge_case_handler is None:
-        edge_case_handler = EdgeCaseHandler()
-
-    if "voxelspacing" not in kwargs:
-        kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
-
-    # Setup IntermediateStepsData
-    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
-    # Crops away unnecessary space of zeroes
-    input_pair.crop_data()
-
-    # Create initial metadata for parts handling
-    # Get metadata directly from the processing pair as a dictionary
-    instance_metadata = input_pair.get_metadata()
-
-    processing_pair = input_pair.copy()
-
-    # First Phase: Instance Approximation
-    if isinstance(processing_pair, SemanticPair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.SEMANTIC
-        )
-        assert (
-            instance_approximator is not None
-        ), "Got SemanticPair but not InstanceApproximator"
-        if verbose:
-            print("-- Got SemanticPair, will approximate instances")
-        start = perf_counter()
-
-        processing_pair = instance_approximator.approximate_instances(
-            processing_pair,
-            label_group=label_group,
-        )
-
-        if log_times:
-            print(f"-- Approximation took {perf_counter() - start} seconds")
-
-        # Update instance metadata after approximation
-        if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
-            instance_metadata["original_n_preds"] = (
-                processing_pair.n_prediction_instance
-            )
-            instance_metadata["original_n_refs"] = processing_pair.n_reference_instance
-
-    # Second Phase: Instance Matching
-    if isinstance(processing_pair, UnmatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.UNMATCHED_INSTANCE
-        )
-        processing_pair = _handle_zero_instances_cases(
-            processing_pair,
-            eval_metrics=instance_metrics,
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-        )
-
-    if isinstance(processing_pair, UnmatchedInstancePair):
-        if verbose:
-            print("-- Got UnmatchedInstancePair, will match instances")
-        assert (
-            instance_matcher is not None
-        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
-        start = perf_counter()
-
-        processing_pair = instance_matcher.match_instances(
-            processing_pair,
-            label_group=label_group,
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            **kwargs,
-        )
-        if log_times:
-            print(f"-- Matching took {perf_counter() - start} seconds")
-
-    # Third Phase: Instance Evaluation
-    if isinstance(processing_pair, MatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.MATCHED_INSTANCE
-        )
-        processing_pair = _handle_zero_instances_cases(
-            processing_pair,
-            eval_metrics=instance_metrics,
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-        )
-
-    if isinstance(processing_pair, MatchedInstancePair):
-        if verbose:
-            print("-- Got MatchedInstancePair, will evaluate instances")
-        start = perf_counter()
-        processing_pair = evaluate_matched_instance(
-            processing_pair,
-            eval_metrics=instance_metrics,
-            decision_metric=decision_metric,
-            decision_threshold=decision_threshold,
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            **kwargs,
-        )
-        if log_times:
-            print(f"-- Instance Evaluation took {perf_counter() - start} seconds")
-
-    if isinstance(processing_pair, EvaluateInstancePair):
-        # Update instance counts from the processed pair if available
-        if instance_metadata["original_n_preds"] == 0:
-            instance_metadata["original_n_preds"] = processing_pair.n_pred_instances
-        if instance_metadata["original_n_refs"] == 0:
-            instance_metadata["original_n_refs"] = processing_pair.n_ref_instances
-
-        # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
-        # This happens when the effective number of prediction instances is less than original
-        has_many_to_one_mappings = (
-            processing_pair.n_pred_instances < instance_metadata["original_n_preds"]
-        )
-
-        # Use effective counts if many-to-one mappings were detected, otherwise use original counts
-        final_n_pred_instances = (
-            processing_pair.n_pred_instances
-            if has_many_to_one_mappings
-            else instance_metadata["original_n_preds"]
-        )
-        final_n_ref_instances = (
-            processing_pair.n_ref_instances
-            if has_many_to_one_mappings
-            else instance_metadata["original_n_refs"]
-        )
-
-        processing_pair = PanopticaResult(
-            reference_arr=processing_pair.reference_arr,
-            prediction_arr=processing_pair.prediction_arr,
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            n_pred_instances=final_n_pred_instances,
-            n_ref_instances=final_n_ref_instances,
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            label_group=label_group,
-            tp=processing_pair.tp,
-            list_metrics=processing_pair.list_metrics,
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-            intermediate_steps_data=intermediate_steps_data,
-            **kwargs,
-        )
-
-    if isinstance(processing_pair, PanopticaResult):
-        processing_pair._global_metrics = global_metrics
-        if result_all:
-            processing_pair.calculate_all(print_errors=verbose_calc)
-        return processing_pair
-
-    raise RuntimeError("End of panoptic pipeline reached without results")
-
-
-def _handle_zero_instances_cases(
-    processing_pair: UnmatchedInstancePair | MatchedInstancePair,
-    edge_case_handler: EdgeCaseHandler,
-    global_metrics: list[Metric],
-    eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
-) -> UnmatchedInstancePair | MatchedInstancePair | PanopticaResult:
-    """
-    Handle edge cases when comparing reference and prediction masks.
-
-    Args:
-        processing_pair: The processing pair containing reference and prediction data.
-        edge_case_handler: Handler for edge cases.
-        global_metrics: List of global metrics to calculate.
-        eval_metrics: List of evaluation metrics to calculate for instances.
-
-    Returns:
-        UnmatchedInstancePair | MatchedInstancePair | PanopticaResult: The processed processing pair or evaluation result.
-    """
-    n_reference_instance = processing_pair.n_reference_instance
-    n_prediction_instance = processing_pair.n_prediction_instance
-
-    panoptica_result_args = {
-        "list_metrics": {Metric[k.name]: [] for k in eval_metrics},
-        "tp": 0,
-        "edge_case_handler": edge_case_handler,
-        "reference_arr": processing_pair.reference_arr,
-        "prediction_arr": processing_pair.prediction_arr,
-    }
-
-    is_edge_case = False
-
-    # Handle cases where either the reference or the prediction is empty
-    if n_prediction_instance == 0 and n_reference_instance == 0:
-        # Both references and predictions are empty, perfect match
-        n_reference_instance = 0
-        n_prediction_instance = 0
-        is_edge_case = True
-    elif n_reference_instance == 0:
-        # All references are missing, only false positives
-        n_reference_instance = 0
-        n_prediction_instance = n_prediction_instance
-        is_edge_case = True
-    elif n_prediction_instance == 0:
-        # All predictions are missing, only false negatives
-        n_reference_instance = n_reference_instance
-        n_prediction_instance = 0
-        is_edge_case = True
-
-    if is_edge_case:
-        panoptica_result_args["global_metrics"] = global_metrics
-        panoptica_result_args["n_ref_instances"] = n_reference_instance
-        panoptica_result_args["n_pred_instances"] = n_prediction_instance
-        return PanopticaResult(**panoptica_result_args)
-
-    return processing_pair
