@@ -195,26 +195,45 @@ class Panoptica_Aggregator:
 
     def _save_one_subject(self, subject_name, result_grouped):
         with filelock:
-            all_rows_to_write = []
-            
-            for groupname in self.__class_group_names:
-                result: PanopticaResult = result_grouped[groupname]
-                result_data = result.to_dict(self.__output_individual_instance_metrics)
-                rows_as_dicts = result_data if isinstance(result_data, list) else [result_data]
+            if not self.__output_individual_instance_metrics:
+                content = [subject_name]
+                for groupname in self.__class_group_names:
+                    result: PanopticaResult = result_grouped[groupname]
+                    # We use False here to get the single master dict
+                    result_dict = result.to_dict(False)
                     
-                for i, r_dict in enumerate(rows_as_dicts):
-                    if i == 0 and result.computation_time is not None:
-                        r_dict[COMPUTATION_TIME_KEY] = result.computation_time
-                    row_name = subject_name if i == 0 else f"{subject_name}_inst_{i-1}"
-                    print(row_name, i, groupname)
-                    content = [row_name]
+                    if result.computation_time is not None:
+                        result_dict[COMPUTATION_TIME_KEY] = result.computation_time
+                    
                     for e in self.__evaluation_metrics:
-                        content.append(r_dict.get(e, ""))
-                        
-                    all_rows_to_write.append(content)
-                    
-            _write_content(self.__output_file, all_rows_to_write)
-            print(f"Saved entry {subject_name} into {str(self.__output_file)}")
+                        content.append(result_dict.get(e, ""))
+                _write_content(self.__output_file, [content])
+                
+            else:
+                max_tp = 0
+                for groupname in self.__class_group_names:
+                    max_tp = max(max_tp, result_grouped[groupname].tp)
+                num_rows = 1 + max_tp
+                
+                all_rows = []
+                for i in range(num_rows):
+                    name = subject_name if i == 0 else f"{subject_name}_inst_{i-1}"
+                    all_rows.append([name])
+
+                for groupname in self.__class_group_names:
+                    result: PanopticaResult = result_grouped[groupname]
+                    rows_as_dicts = result.to_dict(True) 
+
+                    for i in range(num_rows):
+                        r_dict = rows_as_dicts[i] if i < len(rows_as_dicts) else {}
+                        if i == 0 and result.computation_time is not None:
+                            r_dict[COMPUTATION_TIME_KEY] = result.computation_time
+                        for e in self.__evaluation_metrics:
+                            all_rows[i].append(r_dict.get(e, ""))
+
+                _write_content(self.__output_file, all_rows)
+
+        print(f"Saved entry {subject_name} into {str(self.__output_file)}")
 
     @property
     def panoptica_evaluator(self):
