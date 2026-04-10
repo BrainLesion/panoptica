@@ -1,7 +1,7 @@
 import csv
 import numpy as np
+import warnings
 from pathlib import Path
-import numpy as np
 
 try:
     import pandas as pd
@@ -12,7 +12,7 @@ except Exception as e:
     print("OPTIONAL PACKAGE MISSING")
 
 
-class ValueSummary:
+class FloatDistribution:
     def __init__(self, value_list: list[float]) -> None:
         self.__value_list = value_list
         if len(value_list) == 0:
@@ -26,9 +26,18 @@ class ValueSummary:
             self.__min = min(value_list)
             self.__max = max(value_list)
 
+    def __getitem__(self, key):
+        assert isinstance(
+            key, int
+        ), "Only integer indexing supported for FloatDistribution"
+        return self.__value_list[key]
+
+    def __setitem__(self, key, value):
+        raise TypeError("FloatDistribution is immutable, cannot set item")
+
     @property
     def values(self) -> list[float]:
-        return self.__value_list
+        return list(self.__value_list)
 
     @property
     def avg(self) -> float:
@@ -60,6 +69,18 @@ class ValueSummary:
 
     def __str__(self, ndigits: int = 3):
         return self.get_string_repr(ndigits)
+
+
+class ValueSummary(FloatDistribution):
+    """Deprecated alias for FloatDistribution."""
+
+    def __init__(self, value_list: list[float]) -> None:
+        warnings.warn(
+            "ValueSummary is deprecated and will be removed in a future release. Use FloatDistribution instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(value_list)
 
 
 class Panoptica_Statistic:
@@ -113,7 +134,11 @@ class Panoptica_Statistic:
         return [sn for sn in self.__subj_names if "_inst_" in sn]
 
     @classmethod
-    def from_file(cls, file: str):
+    def from_file(cls, file: str | Path, verbose: bool = True):
+        if isinstance(file, Path):
+            file = str(file)
+        if not file.endswith(".tsv"):
+            file += ".tsv"
         # check integrity of header and so on
         with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
             rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
@@ -125,16 +150,20 @@ class Panoptica_Statistic:
             header[0] == "subject_name"
         ), "First column is not subject_names, something wrong with the file?"
 
-        keys_in_order = list([tuple(c.split("-")) for c in header[1:]])
+        keys_in_order = list([tuple(c.split("-", maxsplit=1)) for c in header[1:]])
+        keys_in_order = list(
+            k if len(k) == 2 else ("ungrouped", k[0]) for k in keys_in_order
+        )
         metric_names = []
         for k in keys_in_order:
             if k[1] not in metric_names:
                 metric_names.append(k[1])
         group_names = list(set([k[0] for k in keys_in_order]))
 
-        print(f"Found {len(rows)-1} entries")
-        print(f"Found metrics: {metric_names}")
-        print(f"Found groups: {group_names}")
+        if verbose:
+            print(f"Found {len(rows)-1} entries")
+            print(f"Found metrics: {metric_names}")
+            print(f"Found groups: {group_names}")
 
         # initialize collection
         subj_names = []
@@ -177,6 +206,14 @@ class Panoptica_Statistic:
         assert (
             subjectname in self.__subj_names
         ), f"subject {subjectname} not in list of subjects, got {self.__subj_names}"
+
+    def _remove_subject(self, subjectname):
+        self._assertsubject(subjectname)
+        sidx = self.__subj_names.index(subjectname)
+        self.__subj_names.pop(sidx)
+        for g in self.__groupnames:
+            for m in self.__metricnames:
+                self.__value_dict[g][m].pop(sidx)
 
     def get(self, group, metric, remove_nones: bool = False) -> list[float]:
         """Returns the list of values for given group and metric
@@ -282,6 +319,24 @@ class Panoptica_Statistic:
         self._assertgroup(groupname)
         return {m: self.get(groupname, m) for m in self.__metricnames}
 
+    def to_dataframe(self) -> pd.DataFrame:
+        """Converts the statistic to a pandas dataframe
+
+        Returns:
+            pd.DataFrame: _description_
+        """
+        data = []
+        for subj in self.__subj_names:
+            subj_values = self.get_one_subject(subj)
+            for g in self.__groupnames:
+                entry = {"subject_name": subj}
+                entry["group"] = g
+                for m in self.__metricnames:
+                    entry[m] = subj_values[g][m]
+                data.append(entry)
+        df = pd.DataFrame(data)
+        return df
+
     def get_across_groups(self, metric) -> list[float]:
         """Given metric, gives list of all values (even across groups!) Treat with care!
 
@@ -296,7 +351,68 @@ class Panoptica_Statistic:
             values += self.get(g, metric)
         return values
 
-    def get_summary_across_groups(self) -> dict[str, ValueSummary]:
+    def get_subject_wise_paired_values_to(
+        self, other: "Panoptica_Statistic", group: str, metric: str
+    ) -> tuple[list[str], list[float], list[float]]:
+        """Calculates the subject-wise paired values in metric for given group to another Panoptica_Statistic object
+
+        Args:
+            other (Panoptica_Statistic): _description_
+            group (str): _description_
+            metric (str): _description_
+        """
+        self._assertgroup(group)
+        self._assertmetric(metric)
+        other._assertgroup(group)
+        other._assertmetric(metric)
+
+        assert len(self.__subj_names) == len(
+            other.__subj_names
+        ), "Length of Subject names do not match between the two Panoptica_Statistic objects!"
+        assert set(self.__subj_names) == set(
+            other.__subj_names
+        ), "Subject names do not match between the two Panoptica_Statistic objects!"
+
+        self_values = []
+        other_values = []
+        for subj in self.__subj_names:
+            self._assertsubject(subj)
+            other._assertsubject(subj)
+
+            sidx_self = self.__subj_names.index(subj)
+            sidx_other = other.__subj_names.index(subj)
+
+            val_self = self.get(group, metric)[sidx_self]
+            val_other = other.get(group, metric)[sidx_other]
+
+            self_values.append(val_self)
+            other_values.append(val_other)
+        return list(self.__subj_names), self_values, other_values
+
+    def get_subject_wise_difference_to(
+        self, other: "Panoptica_Statistic", group: str, metric: str
+    ) -> dict[str, float | None]:
+        """Calculates the subject-wise difference in metric for given group to another Panoptica_Statistic object
+
+        Args:
+            other (Panoptica_Statistic): _description_
+            group (str): _description_
+            metric (str): _description_
+        Returns:
+            dict[str, float]: _description_
+        """
+        subj_names, self_v, other_v = self.get_subject_wise_paired_values_to(
+            other, group, metric
+        )
+        diff_dict = {}
+        for subj, val_self, val_other in zip(subj_names, self_v, other_v):
+            if val_self is not None and val_other is not None:
+                diff_dict[subj] = val_self - val_other
+            else:
+                diff_dict[subj] = None
+        return diff_dict
+
+    def get_summary_across_groups(self) -> dict[str, FloatDistribution]:
         """Calculates the average and std over all groups (so group-wise avg first, then average over those)
 
         Returns:
@@ -306,12 +422,12 @@ class Panoptica_Statistic:
         for m in self.__metricnames:
             value_list = [self.get_summary(g, m).avg for g in self.__groupnames]
             assert len(value_list) == len(self.__groupnames)
-            summary_dict[m] = ValueSummary(value_list)
+            summary_dict[m] = FloatDistribution(value_list)
         return summary_dict
 
     def get_summary_dict(
         self, include_across_group: bool = True
-    ) -> dict[str, dict[str, ValueSummary]]:
+    ) -> dict[str, dict[str, FloatDistribution]]:
         summary_dict = {
             g: {m: self.get_summary(g, m) for m in self.__metricnames}
             for g in self.__groupnames
@@ -320,9 +436,9 @@ class Panoptica_Statistic:
             summary_dict["across_groups"] = self.get_summary_across_groups()
         return summary_dict
 
-    def get_summary(self, group, metric) -> ValueSummary:
+    def get_summary(self, group, metric) -> FloatDistribution:
         values = self.get(group, metric, remove_nones=True)
-        return ValueSummary(values)
+        return FloatDistribution(values)
 
     def print_summary(
         self,
@@ -466,7 +582,7 @@ def make_curve_over_setups(
     # Y values are average metric values in that group and metric
     for idx, g in enumerate(groups):
         Y = [
-            ValueSummary(stat.get(g, metric, remove_nones=True)).avg
+            FloatDistribution(stat.get(g, metric, remove_nones=True)).avg
             for stat in statistics_dict.values()
         ]
 
@@ -474,7 +590,7 @@ def make_curve_over_setups(
 
         if plot_std:
             Ystd = [
-                ValueSummary(stat.get(g, metric, remove_nones=True)).std
+                FloatDistribution(stat.get(g, metric, remove_nones=True)).std
                 for stat in statistics_dict.values()
             ]
         else:

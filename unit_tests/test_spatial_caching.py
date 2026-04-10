@@ -23,7 +23,9 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
         self.n_ref_labels = 2
 
         # Create flattened arrays (total size = n_labels * spatial_size)
-        total_size = (self.n_ref_labels + 1) * np.prod(self.spatial_shape)  # +1 for background
+        total_size = (self.n_ref_labels + 1) * np.prod(
+            self.spatial_shape
+        )  # +1 for background
 
         # Reference array with instances 1 and 2
         self.reference_arr = np.zeros(total_size, dtype=np.uint8)
@@ -106,7 +108,9 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             self.assertIn(metric, mixed_result)
             self.assertIsInstance(mixed_result[metric], (int, float))
             # Metrics should return reasonable values (not NaN or infinite)
-            self.assertFalse(np.isnan(mixed_result[metric]), f"{metric.name} returned NaN")
+            self.assertFalse(
+                np.isnan(mixed_result[metric]), f"{metric.name} returned NaN"
+            )
             self.assertTrue(
                 np.isfinite(mixed_result[metric]),
                 f"{metric.name} returned infinite value",

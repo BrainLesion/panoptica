@@ -86,7 +86,9 @@ class Test_Panoptica_Results(unittest.TestCase):
 
         def powerset(iterable):
             s = list(iterable)
-            return list(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
+            return list(
+                chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
+            )
 
         metrics_list = [m for m in Metric]
         power_set = powerset(metrics_list)  # [Metric.DSC, Metric.IOU, Metric.ASSD])

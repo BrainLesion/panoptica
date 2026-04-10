@@ -58,8 +58,12 @@ class PanopticaResult(object):
 
         if isinstance(label_group, LabelPartGroup):
             # Store the one-hot encoded arrays for both reference and prediction
-            one_hot_ref_array = _get_orig_onehotcc_structure(reference_arr, n_ref_labels, processing_pair_orig_shape)
-            one_hot_pred_array = _get_orig_onehotcc_structure(prediction_arr, n_ref_labels, processing_pair_orig_shape)
+            one_hot_ref_array = _get_orig_onehotcc_structure(
+                reference_arr, n_ref_labels, processing_pair_orig_shape
+            )
+            one_hot_pred_array = _get_orig_onehotcc_structure(
+                prediction_arr, n_ref_labels, processing_pair_orig_shape
+            )
 
             # Store the multi-channel data for later use in global metrics
             self._multi_channel_data = {
@@ -386,7 +390,9 @@ class PanopticaResult(object):
                     n_pred_instances=self.n_pred_instances,
                     n_ref_instances=self.n_ref_instances,
                 )
-                self._list_metrics[m] = Evaluation_List_Metric(m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result)
+                self._list_metrics[m] = Evaluation_List_Metric(
+                    m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result
+                )
             # even if not available, set the global vars
             default_value = None
             was_calculated = False
@@ -408,13 +414,17 @@ class PanopticaResult(object):
                     )
                     default_value = edge_case_result
                 else:
-                    default_value = self._calc_global_bin_metric(m, pred_binary, ref_binary, do_binarize=False)
+                    default_value = self._calc_global_bin_metric(
+                        m, pred_binary, ref_binary, do_binarize=False
+                    )
                 was_calculated = True
 
             self._add_metric(
                 f"global_bin_{m.name.lower()}",
                 MetricType.GLOBAL,
-                lambda x: MetricCouldNotBeComputedException(f"Global Metric {m} not set"),
+                lambda x: MetricCouldNotBeComputedException(
+                    f"Global Metric {m} not set"
+                ),
                 long_name="Global Binary " + m.value.long_name,
                 default_value=default_value,
                 was_calculated=was_calculated,
@@ -473,7 +483,9 @@ class PanopticaResult(object):
                 reference_empty = ref_channel.sum() == 0
 
                 if prediction_empty or reference_empty:
-                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, int(prediction_empty), int(reference_empty))
+                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                        metric, 0, int(prediction_empty), int(reference_empty)
+                    )
                     if is_edgecase:
                         channel_result = result
                     else:
@@ -501,7 +513,9 @@ class PanopticaResult(object):
                 return np.mean(channel_metrics)
             else:
                 # Handle case where no valid metrics could be computed
-                is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, 1, 1)
+                is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                    metric, 0, 1, 1
+                )
                 return result
 
         # Original single-channel logic
@@ -517,7 +531,9 @@ class PanopticaResult(object):
         prediction_empty = pred_binary.sum() == 0
         reference_empty = ref_binary.sum() == 0
         if prediction_empty or reference_empty:
-            is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, int(prediction_empty), int(reference_empty))
+            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                metric, 0, int(prediction_empty), int(reference_empty)
+            )
             if is_edgecase:
                 return result
 
@@ -682,7 +698,9 @@ class PanopticaResult(object):
         if metric in self._list_metrics:
             return self._list_metrics[metric][mode]
         else:
-            raise MetricCouldNotBeComputedException(f"{metric} could not be found, have you set it in eval_metrics during evaluation?")
+            raise MetricCouldNotBeComputedException(
+                f"{metric} could not be found, have you set it in eval_metrics during evaluation?"
+            )
 
     def _calc_metric(self, metric_name: str, supress_error: bool = False):
         """
@@ -711,7 +729,9 @@ class PanopticaResult(object):
             self._evaluation_metrics[metric_name]._was_calculated = True
             return value
         else:
-            raise MetricCouldNotBeComputedException(f"could not find metric with name {metric_name}")
+            raise MetricCouldNotBeComputedException(
+                f"could not find metric with name {metric_name}"
+            )
 
     def __getattribute__(self, __name: str) -> Any:
         """
@@ -738,10 +758,15 @@ class PanopticaResult(object):
                 raise e
         if __name == "_evaluation_metrics":
             return attr
-        if object.__getattribute__(self, "_evaluation_metrics") is not None and __name in self._evaluation_metrics.keys():
+        if (
+            object.__getattribute__(self, "_evaluation_metrics") is not None
+            and __name in self._evaluation_metrics.keys()
+        ):
             if attr is None:
                 if self._evaluation_metrics[__name]._error:
-                    raise MetricCouldNotBeComputedException(f"Requested metric {__name} that could not be computed")
+                    raise MetricCouldNotBeComputedException(
+                        f"Requested metric {__name} that could not be computed"
+                    )
                 elif not self._evaluation_metrics[__name]._was_calculated:
                     value = self._calc_metric(__name)
                     setattr(self, __name, value)
