@@ -83,7 +83,7 @@ class _ProcessingPair(ABC):
         Args:
             verbose (bool, optional): If True, prints uncropping details. Defaults to False.
         """
-        if self.__is_cropped == False:
+        if not self.__is_cropped:
             return
         assert (
             self.__uncropped_shape is not None
