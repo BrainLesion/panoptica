@@ -104,7 +104,7 @@ def run_test_scenario(gt, pred, scenario_name):
 
         print(f"✅ {scenario_name} successful!")
         print(
-            f"  Pred instances: {result.num_pred_instances}, Ref instances: {result.num_ref_instances}"
+            f"  Pred instances: {result.n_pred_instances}, Ref instances: {result.n_ref_instances}"
         )
         print(f"  TP: {result.tp}, FP: {result.fp}, FN: {result.fn}")
 

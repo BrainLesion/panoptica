@@ -30,7 +30,11 @@ With a Python 3.10+ environment, you can install panoptica from [pypi.org](https
 
 ```sh
 pip install panoptica
+
+# or with optional GPU capabilities 
+pip install panoptica[gpu]
 ```
+
 
 Or, alternatively, from [conda](https://anaconda.org/conda-forge/panoptica):
 
@@ -54,10 +58,8 @@ A minimal example of using panoptica could look e.g. like this (here with Matche
 from panoptica import InputType, Panoptica_Evaluator
 from panoptica.metrics import Metric
 
-from auxiliary.io import read_image # feel free to use any other way to read nifti files
-
-ref_masks = read_image("reference.nii.gz")
-pred_masks = read_image("prediction.nii.gz")
+ref_masks = "<path-to-your>/reference.nii.gz"
+pred_masks = "<path-to-your>/prediction.nii.gz"
 
 evaluator = Panoptica_Evaluator(
     expected_input=InputType.MATCHED_INSTANCE,
@@ -163,8 +165,11 @@ Kofler, F., Möller, H., Buchner, J. A., de la Rosa, E., Ezhov, I., Rosier, M., 
 
 We welcome all kinds of contributions from the community!
 
-Some guides on extending panoptica can be found in [panoptica/extending_panoptica.md](https://github.com/BrainLesion/panoptica/tree/main/extending_panoptica.md)
-
 ### Reporting Bugs, Feature Requests and Questions
 
 Please open a new issue [here](https://github.com/BrainLesion/panoptica/issues).
+
+### Code contributions
+
+Nice to have you on board! Please have a look at our [CONTRIBUTING.md](https://github.com/BrainLesion/panoptica/tree/main/CONTRIBUTING.md) file.
+

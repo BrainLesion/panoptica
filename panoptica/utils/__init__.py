@@ -22,4 +22,5 @@ from panoptica.utils.label_group import LabelGroup, LabelMergeGroup
 from panoptica.utils.parallel_processing import NonDaemonicPool
 from panoptica.utils.input_check_and_conversion.sanity_checker import (
     sanity_check_and_convert_to_array,
+    _InputDataTypeChecker,
 )

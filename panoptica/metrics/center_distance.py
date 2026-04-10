@@ -15,6 +15,8 @@ def _compute_instance_center_distance(
     ref_instance_idx: int | None = None,
     pred_instance_idx: int | None = None,
     voxelspacing=None,
+    *args,
+    **kwargs,
 ) -> float:
     """
     Compute the Center Distance between a specific pair of instances.
@@ -35,12 +37,14 @@ def _compute_instance_center_distance(
         return _compute_center_distance(
             reference=ref_labels,
             prediction=pred_labels,
+            voxelspacing=voxelspacing,
         )
     ref_instance_mask = ref_labels == ref_instance_idx
     pred_instance_mask = pred_labels == pred_instance_idx
     return _compute_center_distance(
         reference=ref_instance_mask,
         prediction=pred_instance_mask,
+        voxelspacing=voxelspacing,
     )
 
 
@@ -48,6 +52,8 @@ def _compute_center_distance(
     reference: np.ndarray,
     prediction: np.ndarray,
     voxelspacing=None,
+    *args,
+    **kwargs,
 ) -> float:
     """
     Compute the Center Distance between a specific pair of instances.

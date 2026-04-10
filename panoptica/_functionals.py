@@ -63,19 +63,6 @@ def _connected_components(
         from scipy.ndimage import label
 
         cc_arr, n_instances = label(array)
-    elif cca_backend == CCABackend.cupy:
-        try:
-            import cupy as cp
-            from cupyx.scipy.ndimage import label as cp_label
-
-            array_gpu = cp.asarray(array)
-            cc_arr, n_instances = cp_label(array_gpu)
-            cc_arr = cp.asnumpy(cc_arr)
-        except ImportError:
-            raise ImportError(
-                "CuPy is not installed. Please install CuPy to use the GPU backend. "
-                "You can install it using: pip install cupy-cuda11x or cupy-cuda12x depending on your CUDA version."
-            )
     else:
         raise NotImplementedError(cca_backend)
 
@@ -128,7 +115,7 @@ def _round_to_n(value: float | int, n_significant_digits: int = 2) -> float:
 
 def _get_orig_onehotcc_structure(
     arr_onehot: np.ndarray,
-    num_ref_labels: int,
+    n_ref_labels: int,
     processing_pair_orig_shape: tuple[int, ...],
 ) -> np.ndarray:
     """
@@ -136,13 +123,13 @@ def _get_orig_onehotcc_structure(
 
     Args:
         arr_onehot: One-hot encoded array
-        num_ref_labels: Number of reference labels
+        n_ref_labels: Number of reference labels
         processing_pair_orig_shape: Original shape of the array
 
     Returns:
         np.ndarray: Reshaped array
     """
-    return arr_onehot.reshape((num_ref_labels + 1,) + processing_pair_orig_shape)
+    return arr_onehot.reshape((n_ref_labels + 1,) + processing_pair_orig_shape)
 
 
 # -------------------- LABEL MATCHING & OVERLAP CALCULATION --------------------
@@ -366,7 +353,7 @@ def _calculate_part_scores_for_all_types(
     thing_pair: tuple[int, int],
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
-    num_ref_labels: int,
+    n_ref_labels: int,
     matching_metric: "Metric",
 ) -> dict[int, list[tuple[float, tuple[int, int]]]]:
     """
@@ -376,7 +363,7 @@ def _calculate_part_scores_for_all_types(
         thing_pair: Tuple of (ref_thing_label, pred_thing_label)
         prediction_arr: Prediction array
         reference_arr: Reference array
-        num_ref_labels: Number of reference labels
+        n_ref_labels: Number of reference labels
         matching_metric: Metric used for scoring
 
     Returns:
@@ -389,7 +376,7 @@ def _calculate_part_scores_for_all_types(
     part_scores_by_type = {}
 
     # Process each part label (starting from channel 2)
-    for part_label in range(2, num_ref_labels + 1):
+    for part_label in range(2, n_ref_labels + 1):
         # Create isolated part slices for just this thing pair
         pred_part_slice = prediction_arr[part_label].copy()
         ref_part_slice = reference_arr[part_label].copy()
@@ -486,7 +473,7 @@ def _calc_matching_metric_of_overlapping_partlabels(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
     processing_pair_orig_shape: tuple[int, ...],
-    num_ref_labels: int,
+    n_ref_labels: int,
     matching_metric: "Metric",
 ) -> list[tuple[float, tuple[int, int]]]:
     """
@@ -499,7 +486,7 @@ def _calc_matching_metric_of_overlapping_partlabels(
         prediction_arr: Array containing prediction labels
         reference_arr: Array containing reference labels
         processing_pair_orig_shape: Original shape for processing
-        num_ref_labels: Number of reference labels
+        n_ref_labels: Number of reference labels
         matching_metric: Metric to use for evaluation
 
     Returns:
@@ -507,10 +494,10 @@ def _calc_matching_metric_of_overlapping_partlabels(
     """
     # Reshape arrays to original structure
     prediction_arr = _get_orig_onehotcc_structure(
-        prediction_arr, num_ref_labels, processing_pair_orig_shape
+        prediction_arr, n_ref_labels, processing_pair_orig_shape
     )
     reference_arr = _get_orig_onehotcc_structure(
-        reference_arr, num_ref_labels, processing_pair_orig_shape
+        reference_arr, n_ref_labels, processing_pair_orig_shape
     )
 
     # Calculate overlapping labels for things (channel 0)
@@ -542,7 +529,7 @@ def _calc_matching_metric_of_overlapping_partlabels(
         pred_part_types_in_region = set()
         ref_part_types_in_region = set()
 
-        for part_label in range(2, num_ref_labels + 1):
+        for part_label in range(2, n_ref_labels + 1):
             # Check prediction parts within this thing's region
             pred_part_in_region = prediction_arr[part_label][matched_pred_component]
             if pred_part_in_region.max() > 0:
@@ -555,7 +542,7 @@ def _calc_matching_metric_of_overlapping_partlabels(
 
         # Get part scores for all part types
         part_scores_by_type = _calculate_part_scores_for_all_types(
-            thing_pair, prediction_arr, reference_arr, num_ref_labels, matching_metric
+            thing_pair, prediction_arr, reference_arr, n_ref_labels, matching_metric
         )
 
         # Determine scoring strategy based on part type presence

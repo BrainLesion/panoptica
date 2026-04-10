@@ -93,16 +93,11 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
             AssertionError: If there are negative values in the semantic maps, which is not allowed.
         """
         # Check validity
-        pred_labels, ref_labels = semantic_pair.pred_labels, semantic_pair.ref_labels
-        pred_label_range = (
-            (np.min(pred_labels), np.max(pred_labels))
-            if len(pred_labels) > 0
-            else (0, 0)
-        )
-        ref_label_range = (
-            (np.min(ref_labels), np.max(ref_labels)) if len(ref_labels) > 0 else (0, 0)
-        )
-        min_value = min(np.min(pred_label_range[0]), np.min(ref_label_range[0]))
+        pred_labels = semantic_pair.pred_labels
+        ref_labels = semantic_pair.ref_labels
+        pred_labels_min = np.min(pred_labels) if len(pred_labels) > 0 else 0
+        ref_labels_min = np.min(ref_labels) if len(ref_labels) > 0 else 0
+        min_value = min(pred_labels_min, ref_labels_min)
         assert (
             min_value >= 0
         ), "There are negative values in the semantic maps. This is not allowed!"

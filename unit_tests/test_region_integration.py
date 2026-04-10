@@ -64,8 +64,8 @@ def test_region_integration():
         )
 
         print(f"\n✅ Integration test successful!")
-        print(f"Number of prediction instances: {result.num_pred_instances}")
-        print(f"Number of reference instances: {result.num_ref_instances}")
+        print(f"Number of prediction instances: {result.n_pred_instances}")
+        print(f"Number of reference instances: {result.n_ref_instances}")
         print(f"TP: {result.tp}")
         print(f"FP: {result.fp}")
         print(f"FN: {result.fn}")

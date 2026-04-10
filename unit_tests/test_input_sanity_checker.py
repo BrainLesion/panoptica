@@ -10,16 +10,16 @@ import SimpleITK as sitk
 from unittest import mock
 import nibabel as nib
 import nrrd
-from importlib.util import find_spec
 
 # Optional torch import
+from importlib.util import find_spec
+
 _spec = find_spec("torch")
 if _spec is not None:
     import torch
 
     HAS_TORCH = True
 else:
-    torch = None
     HAS_TORCH = False
 
 from panoptica.utils.input_check_and_conversion.sanity_checker import (

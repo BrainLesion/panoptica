@@ -8,86 +8,29 @@ from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
     _InputDataTypeChecker,
 )
 from panoptica.utils.input_check_and_conversion.check_numpy_array import (
-    sanity_checker_numpy_array,
+    NumpyImageChecker,
 )
 from panoptica.utils.input_check_and_conversion.check_sitk_image import (
-    sanity_checker_sitk_image,
+    SITKImageChecker,
 )
 from panoptica.utils.input_check_and_conversion.check_torch_image import (
-    sanity_checker_torch_image,
+    TorchImageChecker,
 )
 from panoptica.utils.input_check_and_conversion.check_nibabel_image import (
-    sanity_checker_nibabel_image,
+    NibabelImageChecker,
 )
 from panoptica.utils.input_check_and_conversion.check_nrrd_image import (
-    sanity_checker_nrrd_image,
+    NRRDImageChecker,
 )
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
 
 class INPUTDTYPE(_Enum_Compare):
-    NUMPY = _InputDataTypeChecker(
-        supported_file_endings=[
-            ".npy",
-            ".npz",
-        ],
-        required_package_names=["numpy"],
-        sanity_check_handler=sanity_checker_numpy_array,
-    )
-    SITK = _InputDataTypeChecker(
-        supported_file_endings=[
-            ".nii",
-            ".nii.gz",
-            ".mha",
-            ".mhd",
-            ".dcm",
-            ".bmp",
-            ".pic",
-            ".gipl",
-            ".gipl.gz",
-            ".jpg",
-            ".JPG",
-            ".jpeg",
-            ".JPEG",
-            ".png",
-            ".PNG",
-            ".tiff",
-            ".TIFF",
-            ".tif",
-            ".TIF",
-            ".hdr",
-            ".mnc",
-            ".MNC",
-            ".img",
-            ".img.gz",
-            ".vtk",
-        ],
-        required_package_names=["SimpleITK"],
-        sanity_check_handler=sanity_checker_sitk_image,
-    )
-    TORCH = _InputDataTypeChecker(
-        supported_file_endings=[
-            ".pt",
-            ".pth",
-        ],
-        required_package_names=["torch"],
-        sanity_check_handler=sanity_checker_torch_image,
-    )
-    NIBABEL = _InputDataTypeChecker(
-        supported_file_endings=[
-            ".nii",
-            ".nii.gz",
-        ],
-        required_package_names=["nibabel"],
-        sanity_check_handler=sanity_checker_nibabel_image,
-    )
-    NRRD = _InputDataTypeChecker(
-        supported_file_endings=[
-            ".nrrd",
-        ],
-        required_package_names=["nrrd"],
-        sanity_check_handler=sanity_checker_nrrd_image,
-    )
+    NUMPY = NumpyImageChecker()
+    SITK = SITKImageChecker()
+    NIBABEL = NibabelImageChecker()
+    TORCH = TorchImageChecker()
+    NRRD = NRRDImageChecker()
 
 
 def print_available_package_to_input_handlers():
@@ -103,7 +46,13 @@ def print_available_package_to_input_handlers():
 def sanity_check_and_convert_to_array(
     prediction: Any,
     reference: Any,
-) -> tuple[tuple[np.ndarray, np.ndarray], INPUTDTYPE]:
+) -> tuple[
+    tuple[
+        tuple[np.ndarray, np.ndarray],
+        dict,
+    ],
+    INPUTDTYPE,
+]:
     """
     This function is a wrapper that performs sanity check on 2 images.
 
@@ -112,7 +61,7 @@ def sanity_check_and_convert_to_array(
         reference (Any): The second image for comparison.
 
     Returns:
-        tuple[np.ndarray, np.ndarray]: Will return the prediction array and reference array if the sanity check passes, otherwise it raises a corresponding Exception.
+        tuple[np.ndarray, np.ndarray], InputDType, dict: Will return the prediction array, reference array, the INPUTDTYPE and any metadata if the sanity check passes, otherwise it raises a corresponding Exception.
     """
     assert (
         prediction is not None and reference is not None
@@ -137,23 +86,29 @@ def sanity_check_and_convert_to_array(
         checker = inputdtype.value
         if checker.are_requirements_fulfilled():
             if is_path and file_ending in checker.supported_file_endings:
-                r, s = checker(prediction, reference)
+                r, msg, (pred, ref) = checker(prediction, reference)
                 if not r:
                     raise ValueError(
-                        f"Sanity check failed for {inputdtype.name}: {s}. Please check the input files."
+                        f"Sanity check failed for {inputdtype.name}: {msg}. Please check the input files."
                     )
-                return post_check(s), inputdtype
+                return (
+                    convert_to_numpy_array_and_extract_metadata(pred, ref, checker),
+                    inputdtype,
+                )
             elif not is_path:
                 try:
-                    r, s = checker(prediction, reference)
+                    r, msg, (pred, ref) = checker(prediction, reference)
                 except AssertionError as e:
                     continue
                 if not r:
                     raise ValueError(
-                        f"Sanity check failed for {inputdtype.name}: {s}. Please check the input files."
+                        f"Sanity check failed for {inputdtype.name}: {msg}. Please check the input files."
                     )
                 else:
-                    return post_check(s), inputdtype
+                    return (
+                        convert_to_numpy_array_and_extract_metadata(pred, ref, checker),
+                        inputdtype,
+                    )
         elif is_path and file_ending in checker.supported_file_endings:
             missing_package_for_this.append(checker)
     if len(missing_package_for_this) > 0:
@@ -173,8 +128,27 @@ def sanity_check_and_convert_to_array(
     )
 
 
+def convert_to_numpy_array_and_extract_metadata(
+    prediction: object,
+    reference: object,
+    checker: _InputDataTypeChecker,
+):
+    np_prediction = checker.convert_to_numpy_array(prediction)
+    np_reference = checker.convert_to_numpy_array(reference)
+
+    metadata_ref: dict = checker.extract_metadata_from_image(reference)
+    metadata_pred: dict = checker.extract_metadata_from_image(prediction)
+
+    assert (
+        metadata_ref == metadata_pred
+    ), f"Metadata of prediction and reference do not match. Got Reference={metadata_ref}, and prediction={metadata_pred}"
+
+    return post_check(np_prediction, np_reference), metadata_ref
+
+
 def post_check(
-    prediction_reference_array_pair: tuple[np.ndarray, np.ndarray],
+    prediction_array: np.ndarray,
+    reference_array: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     This function performs a post check on the sanity check result.
@@ -185,38 +159,30 @@ def post_check(
     Returns:
         bool: True if the post check passes, False otherwise.
     """
-    assert (
-        isinstance(prediction_reference_array_pair, tuple)
-        and len(prediction_reference_array_pair) == 2
-    ), f"prediction_reference_array_pair must be a tuple of 2 elements. Got {type(prediction_reference_array_pair), len(prediction_reference_array_pair)}"
-    assert isinstance(prediction_reference_array_pair[0], np.ndarray) and isinstance(
-        prediction_reference_array_pair[1], np.ndarray
-    ), f"prediction_reference_array_pair must be a tuple of 2 numpy arrays. Got {type(prediction_reference_array_pair[0]), type(prediction_reference_array_pair[0])}"
+    assert isinstance(prediction_array, np.ndarray) and isinstance(
+        reference_array, np.ndarray
+    ), f"prediction_array and reference_array must be numpy arrays. Got {type(prediction_array), type(reference_array)}"
 
     min_value = min(
-        prediction_reference_array_pair[0].min(),
-        prediction_reference_array_pair[1].min(),
+        prediction_array.min(),
+        reference_array.min(),
     )
     assert (
         min_value >= 0
     ), "There are negative values in the segmentation maps. This is not allowed!"
 
-    if not np.issubdtype(
-        prediction_reference_array_pair[0].dtype, np.integer
-    ) or not np.issubdtype(prediction_reference_array_pair[1].dtype, np.integer):
+    if not np.issubdtype(prediction_array.dtype, np.integer) or not np.issubdtype(
+        reference_array.dtype, np.integer
+    ):
         warn(
             "The input arrays are not of integer type. This may lead to unexpected behavior in the segmentation maps.",
             UserWarning,
         )
 
     max_value = max(
-        prediction_reference_array_pair[0].max(),
-        prediction_reference_array_pair[1].max(),
+        prediction_array.max(),
+        reference_array.max(),
     )
     dtype = _get_smallest_fitting_uint(max_value)
-    prediction_reference_array_pair = (
-        prediction_reference_array_pair[0].astype(dtype),
-        prediction_reference_array_pair[1].astype(dtype),
-    )
 
-    return prediction_reference_array_pair
+    return prediction_array.astype(dtype), reference_array.astype(dtype)
