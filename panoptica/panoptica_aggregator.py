@@ -201,20 +201,20 @@ class Panoptica_Aggregator:
                     result: PanopticaResult = result_grouped[groupname]
                     # We use False here to get the single master dict
                     result_dict = result.to_dict(False)
-                    
+
                     if result.computation_time is not None:
                         result_dict[COMPUTATION_TIME_KEY] = result.computation_time
-                    
+
                     for e in self.__evaluation_metrics:
                         content.append(result_dict.get(e, ""))
                 _write_content(self.__output_file, [content])
-                
+
             else:
                 max_tp = 0
                 for groupname in self.__class_group_names:
                     max_tp = max(max_tp, result_grouped[groupname].tp)
                 num_rows = 1 + max_tp
-                
+
                 all_rows = []
                 for i in range(num_rows):
                     name = subject_name if i == 0 else f"{subject_name}_inst_{i-1}"
@@ -222,7 +222,7 @@ class Panoptica_Aggregator:
 
                 for groupname in self.__class_group_names:
                     result: PanopticaResult = result_grouped[groupname]
-                    rows_as_dicts = result.to_dict(True) 
+                    rows_as_dicts = result.to_dict(True)
 
                     for i in range(num_rows):
                         r_dict = rows_as_dicts[i] if i < len(rows_as_dicts) else {}

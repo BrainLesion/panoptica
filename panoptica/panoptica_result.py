@@ -643,30 +643,36 @@ class PanopticaResult(object):
                     text += "\n"
         return text
 
-    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict | list[dict]:
+    def to_dict(
+        self, output_individual_instance_metrics: bool = False
+    ) -> dict | list[dict]:
         """
         Converts the metrics to a dictionary format.
-        If output_individual_instance_metrics is True, returns a list of dictionaries: 
+        If output_individual_instance_metrics is True, returns a list of dictionaries:
         [Master_Dict, Instance_0_Dict, Instance_1_Dict, ...].
         """
         # Base dictionary (Master row with averages and globals)
-        master_dict = {k: getattr(self, v.id) for k, v in self._evaluation_metrics.items() if (not v._error and v._was_calculated)}
-        
+        master_dict = {
+            k: getattr(self, v.id)
+            for k, v in self._evaluation_metrics.items()
+            if (not v._error and v._was_calculated)
+        }
+
         # If the flag is false, just return the master dictionary
         if not output_individual_instance_metrics:
             return master_dict
-            
+
         # Extract only the valid lists that map to requested columns
         instance_lists = {}
         for metric_enum, list_metric_obj in self._list_metrics.items():
             if list_metric_obj.error or list_metric_obj.ALL is None:
                 continue
 
-            key = metric_enum.value.result_id 
+            key = metric_enum.value.result_id
             # Guard: Only include the list if the column exists in the master row
             if key in master_dict:
                 instance_lists[key] = list_metric_obj.ALL
-        
+
         results = [master_dict]
         for i in range(self.tp):
             inst_dict = {}
@@ -674,7 +680,7 @@ class PanopticaResult(object):
                 # We still keep the fallback `""` just in case a list got corrupted
                 inst_dict[key] = val_list[i] if i < len(val_list) else ""
             results.append(inst_dict)
-            
+
         return results
 
     @property

@@ -113,7 +113,7 @@ class _Metric:
         if self.name == "IOU":
             return "sq"
         return f"sq_{self.name.lower()}"
-            
+
     @property
     def increasing(self):
         """Indicates if higher values of the metric are better.

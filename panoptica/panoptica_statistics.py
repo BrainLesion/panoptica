@@ -462,16 +462,17 @@ class Panoptica_Statistic:
         If master_only is True, ignores individual instance rows to prevent double counting.
         """
         all_values = self.get(group, metric, remove_nones=False)
-        
+
         if master_only:
             # Pair each value with its subject name and filter out the instance rows
             filtered_values = [
-                val for sn, val in zip(self.__subj_names, all_values) 
+                val
+                for sn, val in zip(self.__subj_names, all_values)
                 if "_inst_" not in sn and val is not None
             ]
         else:
             filtered_values = [val for val in all_values if val is not None]
-            
+
         return ValueSummary(filtered_values)
 
     def get_summary_figure(
@@ -490,13 +491,14 @@ class Panoptica_Statistic:
             groups = self.__groupnames
         if isinstance(groups, str):
             groups = [groups]
-            
+
         data_plot = {}
         for g in groups:
             all_values = self.get(g, metric, remove_nones=False)
             if master_only:
                 filtered_values = [
-                    val for sn, val in zip(self.__subj_names, all_values)
+                    val
+                    for sn, val in zip(self.__subj_names, all_values)
                     if "_inst_" not in sn and val is not None
                 ]
             else:
