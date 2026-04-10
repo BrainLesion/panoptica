@@ -216,27 +216,33 @@ class Panoptica_Evaluator(SupportsConfig):
             prediction_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Prediction array or file path.
             reference_arr (Union[ str, Path, np.ndarray, &quot;torch.Tensor&quot;, &quot;nib.nifti1.Nifti1Image&quot;, &quot;sitk.Image&quot;, ]): Reference array or file path.
             threshold_step_size (float, optional): The step size for the threshold range. Defaults to 0.1.
-            decision_threshold (Literal["fixed", "step"], optional): The mode for determining the decision threshold. Defaults to "step" which means the threshold will be the same as for the matching. fixed means it will use the Panoptica_Evaluator's decision_threshold for all thresholds, which can be set in the constructor.
+            decision_threshold_mode (Literal["fixed", "step"], optional): The mode for determining the decision threshold. Defaults to "step" which means the threshold will be the same as for the matching. fixed means it will use the Panoptica_Evaluator's decision_threshold for all thresholds, which can be set in the constructor.
             result_all (bool, optional): If True, will calculate all metrics and return a PanopticaResult object. If False, will only return the metrics that were requested. Defaults to True.
             voxelspacing (tuple[float, ...] | None, optional): Voxel spacing for the evaluation. If None, will use default spacing of (1.0, 1.0, 1.0). Defaults to None.
             save_group_times (bool | None, optional): If None, will use the value set in the constructor. If True, will save the computation time of each sample and put that into the result object. Defaults to None.
             log_times (bool | None, optional): If None, will use the value set in the constructor. If True, will print the times for the different phases of the pipeline. Defaults to None.
             verbose (bool | None, optional): If None, will use the value set in the constructor. If True, will spit out more details than you want. Defaults to None.
 
+        Raises:
+            TypeError: if instance matcher is not of type ThresholdBasedMatching
+            ValueError: if InputType is MATCHED_INSTANCE or if mode is fixed and no __decision_threshold is set
+
         Returns:
-            dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
+            dict[str, PanopticaAUTCResult]: A dictionary with group names as keys and PanopticaAUTCResult objects as values, containing the evaluation results for each group.
         """
 
-        assert isinstance(
-            self.__instance_matcher, ThresholdBasedMatching
-        ), f"evaluate_autc can only be used with ThresholdBasedMatching instance matchers, but got {type(self.__instance_matcher)}"
-
-        assert self.__expected_input != InputType.MATCHED_INSTANCE, "evaluate_autc cannot be used with already matched instance pairs as input"
-
-        if decision_threshold_mode == "fixed":
-            assert (
-                self.__decision_threshold is not None
-            ), "decision_threshold must be set in the constructor when using fixed decision_threshold mode for evaluate_autc"
+        if not isinstance(self.__instance_matcher, ThresholdBasedMatching):
+            raise TypeError(
+                f"evaluate_autc can only be used with ThresholdBasedMatching instance matchers, but got {type(self.__instance_matcher)}"
+            )
+        if self.__expected_input == InputType.MATCHED_INSTANCE:
+            raise ValueError(
+                "evaluate_autc cannot be used with already matched instance pairs as input"
+            )
+        if decision_threshold_mode == "fixed" and self.__decision_threshold is None:
+            raise ValueError(
+                "decision_threshold must be set in the constructor when using fixed decision_threshold mode for evaluate_autc"
+            )
 
         processing_pair, metadata = self._preprocess_input(prediction_arr, reference_arr, voxelspacing)
 
@@ -315,11 +321,12 @@ class Panoptica_Evaluator(SupportsConfig):
     
     @staticmethod
     def generate_thresholds(step_size: float) -> np.ndarray:
-        """Return AUTC threshold steps."""
-        return np.round(
-            np.arange(step_size, 1.0 + step_size, step_size),
-            5
-        )
+        """Return AUTC threshold steps within the inclusive range [step_size, 1]."""
+        if not 0 < step_size <= 1:
+            raise ValueError("step_size must satisfy 0 < step_size <= 1")
+        thresholds = np.arange(step_size, 1.0 + step_size, step_size)
+        thresholds = np.minimum(thresholds, 1.0)
+        return np.unique(np.round(thresholds, 5))
 
     @property
     def segmentation_class_groups_names(self) -> list[str]:

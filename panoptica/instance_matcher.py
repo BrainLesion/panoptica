@@ -229,9 +229,8 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
 
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
-            matching_threshold (float): The threshold to use for matching instances in this operation.
             context (Optional[MatchingContext]): Context information for matching. If None, a default context will be created.
-            override_threshold (Optional[float]): An optional threshold to override the instance matcher's default threshold for this matching operation.
+            matching_threshold (float): The threshold to use for matching instances in this operation.
             **kwargs: Additional keyword arguments.
 
         Returns:

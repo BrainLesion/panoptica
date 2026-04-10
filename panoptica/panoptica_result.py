@@ -827,7 +827,7 @@ class PanopticaAUTCResult(object):
     def get_autc(self, metric_name: str) -> float:
         """Computes Area Under the Threshold Curve
 
-        NaN / uncomputable values are treated as 0.0).
+        NaN / uncomputable values are treated as 0.0.
 
         Raises:
             ValueError:     if fewer than two thresholds were stored.
