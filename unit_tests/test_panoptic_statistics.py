@@ -11,7 +11,7 @@ from panoptica import (
     InputType,
     Panoptica_Aggregator,
     Panoptica_Statistic,
-    ValueDistribution,
+    FloatDistribution,
 )
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
@@ -59,8 +59,8 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         tp_values = statistic_obj.get("ungrouped", "tp")
         sq_values = statistic_obj.get("ungrouped", "sq")
-        self.assertEqual(ValueDistribution(tp_values).avg, 1.0)
-        self.assertEqual(ValueDistribution(sq_values).avg, 0.75)
+        self.assertEqual(FloatDistribution(tp_values).avg, 1.0)
+        self.assertEqual(FloatDistribution(sq_values).avg, 0.75)
 
         os.remove(str(output_test_dir))
 
@@ -88,21 +88,11 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         statistic_obj.print_summary()
 
-        self.assertEqual(
-            ValueDistribution(statistic_obj.get("ungrouped", "tp")).avg, 1.0
-        )
-        self.assertEqual(
-            ValueDistribution(statistic_obj.get("ungrouped", "sq")).avg, 0.875
-        )
-        self.assertEqual(
-            ValueDistribution(statistic_obj.get("ungrouped", "fn")).avg, 0.5
-        )
-        self.assertEqual(
-            ValueDistribution(statistic_obj.get("ungrouped", "rec")).avg, 0.75
-        )
-        self.assertEqual(
-            ValueDistribution(statistic_obj.get("ungrouped", "rec")).std, 0.25
-        )
+        self.assertEqual(FloatDistribution(statistic_obj.get("ungrouped", "tp")).avg, 1.0)
+        self.assertEqual(FloatDistribution(statistic_obj.get("ungrouped", "sq")).avg, 0.875)
+        self.assertEqual(FloatDistribution(statistic_obj.get("ungrouped", "fn")).avg, 0.5)
+        self.assertEqual(FloatDistribution(statistic_obj.get("ungrouped", "rec")).avg, 0.75)
+        self.assertEqual(FloatDistribution(statistic_obj.get("ungrouped", "rec")).std, 0.25)
 
         os.remove(str(output_test_dir))
 
@@ -112,15 +102,15 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         test2 = statistic_obj.get_one_subject("test2")  # get one subject
         print()
         print("test2", test2)
-        self.assertEqual(test2["ungrouped"]["num_ref_instances"], 2)
+        self.assertEqual(test2["ungrouped"]["n_ref_instances"], 2)
 
-        all_num_ref_instances = statistic_obj.get_across_groups("num_ref_instances")
+        all_n_ref_instances = statistic_obj.get_across_groups("n_ref_instances")
         print()
-        print("all_num_ref_instances", all_num_ref_instances)
-        self.assertEqual(len(all_num_ref_instances), 2)
-        self.assertEqual(sum(all_num_ref_instances), 3)
+        print("all_n_ref_instances", all_n_ref_instances)
+        self.assertEqual(len(all_n_ref_instances), 2)
+        self.assertEqual(sum(all_n_ref_instances), 3)
 
         groupwise_summary = statistic_obj.get_summary_across_groups()
         print()
         print(groupwise_summary)
-        self.assertEqual(groupwise_summary["num_ref_instances"].avg, 1.5)
+        self.assertEqual(groupwise_summary["n_ref_instances"].avg, 1.5)

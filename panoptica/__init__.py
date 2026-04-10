@@ -5,7 +5,7 @@ from panoptica.instance_approximator import (
 from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
 from panoptica.panoptica_statistics import (
     Panoptica_Statistic,
-    ValueDistribution,
+    FloatDistribution,
     ValueSummary,
 )
 from panoptica.panoptica_aggregator import Panoptica_Aggregator

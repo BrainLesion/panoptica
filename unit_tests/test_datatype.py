@@ -31,7 +31,7 @@ class Test_EdgeCaseHandler(unittest.TestCase):
         print()
         # print(handler.get_metric_zero_tp_handle(ListMetric.IOU))
         r = handler.handle_zero_tp(
-            Metric.IOU, tp=0, num_pred_instances=1, num_ref_instances=1
+            Metric.IOU, tp=0, n_pred_instances=1, n_ref_instances=1
         )
         print(r)
 
@@ -40,12 +40,12 @@ class Test_EdgeCaseHandler(unittest.TestCase):
             default_result=EdgeCaseResult.ZERO,
         )
         # print(iou_test)
-        t = iou_test(tp=0, num_pred_instances=1, num_ref_instances=1)
+        t = iou_test(tp=0, n_pred_instances=1, n_ref_instances=1)
         print(t)
 
         # iou_test = default_iou
         # print(iou_test)
-        # t = iou_test(tp=0, num_pred_instances=1, num_ref_instances=1)
+        # t = iou_test(tp=0, n_pred_instances=1, n_ref_instances=1)
         # print(t)
 
 
