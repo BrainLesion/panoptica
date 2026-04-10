@@ -402,7 +402,6 @@ def make_autc_plots(
     pattern = re.compile(rf"^t([0-9\.]+)_{metric}$")
 
     for setupname, stat in statistics_dict.items():
-        # Find and sort threshold keys for this specific metric
         t_keys = []
         for m in stat.metricnames:
             match = pattern.match(m)
@@ -415,13 +414,11 @@ def make_autc_plots(
             print(f"Warning: No threshold data found for metric '{metric}' in setup '{setupname}'.")
             continue
 
-        # The thresholds become our X-axis
         X = [t[0] for t in t_keys]
 
         for idx, g in enumerate(groups):
             name = g if alternate_groupnames is None else alternate_groupnames[idx]
             
-            # Format legend depending on how many setups/groups we are comparing
             if len(statistics_dict) == 1 and len(groups) == 1:
                 legend_name = str(name)
             elif len(groups) == 1:
@@ -443,7 +440,6 @@ def make_autc_plots(
             else:
                 error_y = None
 
-            # Line plot with markers
             fig.add_trace(
                 go.Scatter(
                     x=X,
@@ -466,8 +462,6 @@ def make_autc_plots(
         title=figure_title,
     )
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
-    
-    # Pad the X-axis slightly so 0.0 and 1.0 don't stick to the absolute edges
     fig.update_xaxes(range=[-0.05, 1.05])
     
     if manual_metric_range is not None:

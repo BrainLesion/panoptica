@@ -442,8 +442,7 @@ class Evaluation_List_Metric:
             )
 
 
-# Metrics for which AUTC is well-defined: continuous quality scores in [0, 1]
-# that summarise matching+segmentation quality across thresholds.
+# Continuous scores in [0, 1] for which AUTC is well-defined
 AUTC_METRICS = frozenset(
     {
         "rq",
