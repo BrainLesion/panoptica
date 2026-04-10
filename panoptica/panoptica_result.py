@@ -854,7 +854,7 @@ class PanopticaAUTCResult(object):
             except MetricCouldNotBeComputedException:
                 y_values.append(0.0)
 
-        x_values = self.thresholds
+        x_values = list(self.thresholds)
 
         # Pad the left boundary (0.0) using nearest neighbor
         if x_values[0] > 0.0:

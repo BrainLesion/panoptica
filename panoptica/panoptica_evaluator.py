@@ -231,6 +231,8 @@ class Panoptica_Evaluator(SupportsConfig):
             self.__instance_matcher, ThresholdBasedMatching
         ), f"evaluate_autc can only be used with ThresholdBasedMatching instance matchers, but got {type(self.__instance_matcher)}"
 
+        assert self.__expected_input != InputType.MATCHED_INSTANCE, "evaluate_autc cannot be used with already matched instance pairs as input"
+
         if decision_threshold_mode == "fixed":
             assert (
                 self.__decision_threshold is not None
