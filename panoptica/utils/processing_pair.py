@@ -43,8 +43,8 @@ class _ProcessingPair(ABC):
         self.set_dtype(dtype)
         self.__dtype = dtype
         self.__n_dim: int = reference_arr.ndim
-        self.__ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type:ignore
-        self.__pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type:ignore
+        self.__ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type: ignore
+        self.__pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type: ignore
         self.__crop: tuple[slice, ...] = None
         self.__is_cropped: bool = False
         self.__uncropped_shape: tuple[int, ...] = reference_arr.shape
@@ -153,7 +153,7 @@ class _ProcessingPair(ABC):
         return type(self)(
             prediction_arr=self.__prediction_arr,
             reference_arr=self.__reference_arr,
-        )  # type:ignore
+        )  # type: ignore
 
 
 class _ProcessingPairInstanced(_ProcessingPair):
@@ -213,7 +213,7 @@ class _ProcessingPairInstanced(_ProcessingPair):
             reference_arr=self.reference_arr,
             n_prediction_instance=self.n_prediction_instance,
             n_reference_instance=self.n_reference_instance,
-        )  # type:ignore
+        )  # type: ignore
 
 
 def _check_array_integrity(prediction_arr: np.ndarray, reference_arr: np.ndarray, dtype: type | None = None):
@@ -281,7 +281,7 @@ class UnmatchedInstancePair(_ProcessingPairInstanced):
             reference_arr,
             n_prediction_instance,
             n_reference_instance,
-        )  # type:ignore
+        )  # type: ignore
 
 
 class MatchedInstancePair(_ProcessingPairInstanced):
@@ -328,7 +328,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             reference_arr,
             n_prediction_instance,
             n_reference_instance,
-        )  # type:ignore
+        )  # type: ignore
         if matched_instances is None:
             matched_instances = [i for i in self.pred_labels if i in self.ref_labels]
         self.matched_instances = matched_instances
