@@ -26,7 +26,7 @@ class MatchingContext:
     """Encapsulates context information needed for matching operations."""
 
     label_group: Optional[LabelGroup] = None
-    num_ref_labels: Optional[int] = None
+    n_ref_labels: Optional[int] = None
     processing_pair_orig_shape: Optional[Tuple] = None
 
     @property
@@ -81,7 +81,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         label_group=None,
-        num_ref_labels=None,
+        n_ref_labels=None,
         processing_pair_orig_shape=None,
         **kwargs,
     ) -> MatchedInstancePair:
@@ -91,7 +91,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
             label_group: The label group object for this group.
-            num_ref_labels: Number of reference labels.
+            n_ref_labels: Number of reference labels.
             processing_pair_orig_shape: Original shape of the processing pair.
             **kwargs: Additional keyword arguments.
 
@@ -102,12 +102,12 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         context = None
         if (
             label_group is not None
-            or num_ref_labels is not None
+            or n_ref_labels is not None
             or processing_pair_orig_shape is not None
         ):
             context = MatchingContext(
                 label_group=label_group,
-                num_ref_labels=num_ref_labels,
+                n_ref_labels=n_ref_labels,
                 processing_pair_orig_shape=processing_pair_orig_shape,
             )
 
@@ -147,7 +147,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
                 pred_arr,
                 ref_arr,
                 context.processing_pair_orig_shape,
-                context.num_ref_labels,
+                context.n_ref_labels,
                 matching_metric=matching_metric,
             )
         else:
@@ -158,7 +158,9 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     @classmethod
     @abstractmethod
     def _yaml_repr(cls, node) -> dict:
-        raise NotImplementedError(f"Tried to get yaml representation of abstract class {cls.__name__}")
+        raise NotImplementedError(
+            f"Tried to get yaml representation of abstract class {cls.__name__}"
+        )
 
 
 def map_instance_labels(

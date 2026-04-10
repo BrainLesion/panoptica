@@ -7,7 +7,11 @@ from panoptica.instance_matcher import (
     MaxBipartiteMatching,
     RegionBasedMatching,
 )
-from panoptica.panoptica_statistics import Panoptica_Statistic, ValueSummary
+from panoptica.panoptica_statistics import (
+    Panoptica_Statistic,
+    FloatDistribution,
+    ValueSummary,
+)
 from panoptica.panoptica_aggregator import Panoptica_Aggregator
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.panoptica_result import PanopticaResult
