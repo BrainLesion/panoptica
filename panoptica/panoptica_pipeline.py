@@ -15,6 +15,7 @@ from panoptica.utils.processing_pair import (
     EvaluateInstancePair,
     IntermediateStepsData,
 )
+from panoptica._functionals import _get_voronoi_regions
 
 if TYPE_CHECKING:
     import torch
@@ -119,6 +120,163 @@ def _panoptic_evaluate(
         edge_case_handler=edge_case_handler,
         decision_metric=decision_metric,
         decision_threshold=decision_threshold,
+        log_times=log_times,
+        verbose=verbose,
+        **kwargs,
+    )
+
+    if isinstance(processing_pair, EvaluateInstancePair):
+        # Update instance counts from the processed pair if available
+        if instance_metadata["original_n_preds"] == 0:
+            instance_metadata["original_n_preds"] = processing_pair.n_pred_instances
+        if instance_metadata["original_n_refs"] == 0:
+            instance_metadata["original_n_refs"] = processing_pair.n_ref_instances
+
+        # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
+        # This happens when the effective number of prediction instances is less than original
+        has_many_to_one_mappings = processing_pair.n_pred_instances < instance_metadata["original_n_preds"]
+
+        # Use effective counts if many-to-one mappings were detected, otherwise use original counts
+        final_n_pred_instances = processing_pair.n_pred_instances if has_many_to_one_mappings else instance_metadata["original_n_preds"]
+        final_n_ref_instances = processing_pair.n_ref_instances if has_many_to_one_mappings else instance_metadata["original_n_refs"]
+
+        processing_pair = PanopticaResult(
+            reference_arr=processing_pair.reference_arr,
+            prediction_arr=processing_pair.prediction_arr,
+            processing_pair_orig_shape=instance_metadata["original_shape"],
+            n_pred_instances=final_n_pred_instances,
+            n_ref_instances=final_n_ref_instances,
+            n_ref_labels=instance_metadata["n_ref_labels"],
+            label_group=label_group,
+            tp=processing_pair.tp,
+            list_metrics=processing_pair.list_metrics,
+            global_metrics=global_metrics,
+            edge_case_handler=edge_case_handler,
+            intermediate_steps_data=intermediate_steps_data,
+            **kwargs,
+        )
+
+    if isinstance(processing_pair, PanopticaResult):
+        processing_pair._global_metrics = global_metrics
+        if result_all:
+            processing_pair.calculate_all(print_errors=verbose_calc)
+        return processing_pair
+
+    raise RuntimeError("End of panoptic pipeline reached without results")
+
+
+def _panoptic_evaluate_region_wise(
+    input_pair: SemanticPair | UnmatchedInstancePair,
+    instance_approximator: InstanceApproximator | None = None,
+    instance_matcher: InstanceMatchingAlgorithm | None = None,
+    instance_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    global_metrics: list[Metric] = [Metric.DSC],
+    edge_case_handler: EdgeCaseHandler | None = None,
+    log_times: bool = False,
+    result_all: bool = True,
+    verbose=False,
+    verbose_calc=False,
+    label_group=None,
+    **kwargs,
+) -> PanopticaResult:
+    """
+    Perform panoptic evaluation on the given processing pair.
+
+    Args:
+        input_pair: The processing pair to be evaluated.
+        instance_approximator: The instance approximator used for approximating instances.
+        instance_matcher: The instance matcher used for matching instances.
+        instance_metrics: List of metrics to calculate for each instance.
+        global_metrics: List of metrics to calculate globally.
+        edge_case_handler: Handler for edge cases.
+        log_times: Whether to log computation times.
+        result_all: Whether to calculate all metrics.
+        verbose: Whether to print verbose information.
+        verbose_calc: Whether to print calculation details.
+        label_group: Group of labels to consider.
+        **kwargs: Additional keyword arguments.
+
+    Returns:
+        PanopticaResult: Result of the panoptic evaluation.
+
+    Raises:
+        AssertionError: If the input processing pair does not match the expected types.
+        RuntimeError: If the end of the panoptic pipeline is reached without producing results.
+    """
+    if verbose:
+        print("Panoptic: Start Evaluation")
+    if edge_case_handler is None:
+        edge_case_handler = EdgeCaseHandler()
+
+    if "voxelspacing" not in kwargs:
+        kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
+
+    # Setup IntermediateStepsData
+    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
+    # Crops away unnecessary space of zeroes
+    input_pair.crop_data()
+
+    # Create initial metadata for parts handling
+    # Get metadata directly from the processing pair as a dictionary
+    instance_metadata = input_pair.get_metadata()
+
+    processing_pair = input_pair.copy()
+
+    # First Phase: Instance Approximation
+    processing_pair = _phase_instance_approximation(
+        processing_pair,
+        intermediate_steps_data,
+        instance_approximator=instance_approximator,
+        instance_metadata=instance_metadata,
+        label_group=label_group,
+        log_times=log_times,
+        verbose=verbose,
+    )
+
+    if isinstance(processing_pair, UnmatchedInstancePair):
+        # TODO create regions and label to regions
+        region_map, num_features = _get_voronoi_regions(processing_pair.reference_arr, cca_backend=None)
+        # For each prediction instance, find which ground truth region it belongs to
+        for pred_label in pred_labels:
+            pred_mask = pred_arr == pred_label
+
+            # Find the most common region assignment for this prediction instance
+            pred_regions = region_map[pred_mask]
+
+            # Remove background (region 0)
+            pred_regions = pred_regions[pred_regions > 0]
+
+            if len(pred_regions) > 0:
+                # Assign to the most common region
+                unique_regions, counts = np.unique(pred_regions, return_counts=True)
+                most_common_region = unique_regions[np.argmax(counts)]
+    # then loop over regions and evaluate each region separately, then combine results into final PanopticaResult
+
+    # Second Phase: Instance Matching
+    processing_pair = _phase_instance_matching(
+        processing_pair,
+        intermediate_steps_data,
+        instance_metrics=instance_metrics,
+        instance_metadata=instance_metadata,
+        global_metrics=global_metrics,
+        edge_case_handler=edge_case_handler,
+        instance_matcher=instance_matcher,
+        label_group=label_group,
+        log_times=log_times,
+        verbose=verbose,
+        **kwargs,
+    )
+
+    # Third Phase: Instance Evaluation
+    processing_pair = _phase_instance_evaluation(
+        processing_pair,
+        intermediate_steps_data,
+        instance_metrics=instance_metrics,
+        instance_metadata=instance_metadata,
+        global_metrics=global_metrics,
+        edge_case_handler=edge_case_handler,
+        decision_metric=None,
+        decision_threshold=None,
         log_times=log_times,
         verbose=verbose,
         **kwargs,
