@@ -127,3 +127,20 @@ class Test_AUTC(unittest.TestCase):
         res_dict = result.to_dict()
         self.assertIsInstance(res_dict, dict)
         self.assertIn("autc_pq", res_dict)
+
+    def test_autc_metric_keys_match_to_dict(self):
+        """get_autc_metric_keys and to_dict must produce identical key sets."""
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        ref = np.zeros([50, 50], dtype=np.uint16)
+        ref[10:40, 10:40] = 1
+        pred = ref.copy()
+
+        step = 0.1
+        header_keys = set(evaluator.get_autc_metric_keys(step))
+        result_keys = set(evaluator.evaluate_autc(pred, ref, threshold_step_size=step)["ungrouped"].to_dict().keys())
+
+        self.assertEqual(header_keys, result_keys)

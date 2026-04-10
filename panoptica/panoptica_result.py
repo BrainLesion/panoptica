@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from tabnanny import verbose
 from typing import Any, Callable
 
 import numpy as np
@@ -854,8 +853,6 @@ class PanopticaAUTCResult(object):
                 y_values.append(0.0 if (val is None or np.isnan(val)) else float(val))
             except MetricCouldNotBeComputedException:
                 y_values.append(0.0)
-                if verbose:
-                    print(f"{metric_name} not found for {threshold}")
 
         x_values = self.thresholds
 
@@ -919,10 +916,9 @@ class PanopticaAUTCResult(object):
         ]
 
         first_res = next(iter(self._threshold_results.values()))
-        for metric_id, eval_metric in first_res._evaluation_metrics.items():
-            if metric_id.endswith("_std"):
-                continue
-            if not eval_metric._was_calculated or eval_metric._error:
+        for metric_id in sorted(AUTC_METRICS):
+            eval_metric = first_res._evaluation_metrics.get(metric_id)
+            if eval_metric is None or not eval_metric._was_calculated or eval_metric._error:
                 continue
             try:
                 val = self.get_autc(metric_id)
