@@ -20,12 +20,10 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
 
         # Create a small test case that works with reshaping
         self.spatial_shape = (10, 8)  # 2D spatial dimensions
-        self.num_ref_labels = 2
+        self.n_ref_labels = 2
 
-        # Create flattened arrays (total size = num_labels * spatial_size)
-        total_size = (self.num_ref_labels + 1) * np.prod(
-            self.spatial_shape
-        )  # +1 for background
+        # Create flattened arrays (total size = n_labels * spatial_size)
+        total_size = (self.n_ref_labels + 1) * np.prod(self.spatial_shape)  # +1 for background
 
         # Reference array with instances 1 and 2
         self.reference_arr = np.zeros(total_size, dtype=np.uint8)
@@ -59,7 +57,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             eval_metrics=self.spatial_metrics,
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
-            num_ref_labels=self.num_ref_labels,
+            n_ref_labels=self.n_ref_labels,
         )
 
         # Evaluate each spatial metric individually (no caching benefit)
@@ -72,7 +70,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
                 eval_metrics=[metric],  # Single metric
                 voxelspacing=self.voxelspacing,
                 processing_pair_orig_shape=self.processing_pair_orig_shape,
-                num_ref_labels=self.num_ref_labels,
+                n_ref_labels=self.n_ref_labels,
             )
             individual_results[metric] = result[metric]
 
@@ -99,7 +97,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             eval_metrics=self.mixed_metrics,
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
-            num_ref_labels=self.num_ref_labels,
+            n_ref_labels=self.n_ref_labels,
         )
 
         # Verify all metrics computed successfully
@@ -108,9 +106,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             self.assertIn(metric, mixed_result)
             self.assertIsInstance(mixed_result[metric], (int, float))
             # Metrics should return reasonable values (not NaN or infinite)
-            self.assertFalse(
-                np.isnan(mixed_result[metric]), f"{metric.name} returned NaN"
-            )
+            self.assertFalse(np.isnan(mixed_result[metric]), f"{metric.name} returned NaN")
             self.assertTrue(
                 np.isfinite(mixed_result[metric]),
                 f"{metric.name} returned infinite value",
@@ -129,7 +125,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             eval_metrics=self.non_spatial_metrics,
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
-            num_ref_labels=self.num_ref_labels,
+            n_ref_labels=self.n_ref_labels,
         )
 
         # Verify results are computed and reasonable
@@ -153,7 +149,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             eval_metrics=[],  # Empty list
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
-            num_ref_labels=self.num_ref_labels,
+            n_ref_labels=self.n_ref_labels,
         )
 
         # Should return empty dict

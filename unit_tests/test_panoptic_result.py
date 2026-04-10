@@ -24,8 +24,8 @@ class Test_Panoptica_Results(unittest.TestCase):
         c = PanopticaResult(
             prediction_arr=None,
             reference_arr=None,
-            num_ref_instances=2,
-            num_pred_instances=5,
+            n_ref_instances=2,
+            n_pred_instances=5,
             tp=0,
             list_metrics={Metric.IOU: []},
             global_metrics=[Metric.DSC],
@@ -47,8 +47,8 @@ class Test_Panoptica_Results(unittest.TestCase):
                     c = PanopticaResult(
                         prediction_arr=None,
                         reference_arr=None,
-                        num_ref_instances=n_ref,
-                        num_pred_instances=n_pred,
+                        n_ref_instances=n_ref,
+                        n_pred_instances=n_pred,
                         tp=tp,
                         list_metrics={Metric.IOU: []},
                         edge_case_handler=EdgeCaseHandler(),
@@ -65,8 +65,8 @@ class Test_Panoptica_Results(unittest.TestCase):
             c = PanopticaResult(
                 prediction_arr=None,
                 reference_arr=None,
-                num_ref_instances=2,
-                num_pred_instances=5,
+                n_ref_instances=2,
+                n_pred_instances=5,
                 tp=0,
                 list_metrics={Metric.IOU: []},
                 edge_case_handler=EdgeCaseHandler(empty_list_std=ecr),
@@ -86,9 +86,7 @@ class Test_Panoptica_Results(unittest.TestCase):
 
         def powerset(iterable):
             s = list(iterable)
-            return list(
-                chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
-            )
+            return list(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
 
         metrics_list = [m for m in Metric]
         power_set = powerset(metrics_list)  # [Metric.DSC, Metric.IOU, Metric.ASSD])
@@ -101,8 +99,8 @@ class Test_Panoptica_Results(unittest.TestCase):
             c = PanopticaResult(
                 prediction_arr=None,
                 reference_arr=None,
-                num_ref_instances=2,
-                num_pred_instances=5,
+                n_ref_instances=2,
+                n_pred_instances=5,
                 tp=1,
                 list_metrics=list_metrics,
                 edge_case_handler=EdgeCaseHandler(),

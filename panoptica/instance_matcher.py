@@ -24,7 +24,7 @@ class MatchingContext:
     """Encapsulates context information needed for matching operations."""
 
     label_group: Optional[LabelGroup] = None
-    num_ref_labels: Optional[int] = None
+    n_ref_labels: Optional[int] = None
     processing_pair_orig_shape: Optional[Tuple] = None
 
     @property
@@ -79,7 +79,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         label_group=None,
-        num_ref_labels=None,
+        n_ref_labels=None,
         processing_pair_orig_shape=None,
         **kwargs,
     ) -> MatchedInstancePair:
@@ -89,7 +89,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
             label_group: The label group object for this group.
-            num_ref_labels: Number of reference labels.
+            n_ref_labels: Number of reference labels.
             processing_pair_orig_shape: Original shape of the processing pair.
             **kwargs: Additional keyword arguments.
 
@@ -98,14 +98,10 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         """
         # Create context only if any context information is provided
         context = None
-        if (
-            label_group is not None
-            or num_ref_labels is not None
-            or processing_pair_orig_shape is not None
-        ):
+        if label_group is not None or n_ref_labels is not None or processing_pair_orig_shape is not None:
             context = MatchingContext(
                 label_group=label_group,
-                num_ref_labels=num_ref_labels,
+                n_ref_labels=n_ref_labels,
                 processing_pair_orig_shape=processing_pair_orig_shape,
             )
 
@@ -145,24 +141,18 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
                 pred_arr,
                 ref_arr,
                 context.processing_pair_orig_shape,
-                context.num_ref_labels,
+                context.n_ref_labels,
                 matching_metric=matching_metric,
             )
         else:
-            return _calc_matching_metric_of_overlapping_labels(
-                pred_arr, ref_arr, ref_labels, matching_metric=matching_metric
-            )
+            return _calc_matching_metric_of_overlapping_labels(pred_arr, ref_arr, ref_labels, matching_metric=matching_metric)
 
     def _yaml_repr(cls, node) -> dict:
-        raise NotImplementedError(
-            f"Tried to get yaml representation of abstract class {cls.__name__}"
-        )
+        raise NotImplementedError(f"Tried to get yaml representation of abstract class {cls.__name__}")
         return {}
 
 
-def map_instance_labels(
-    processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap
-) -> MatchedInstancePair:
+def map_instance_labels(processing_pair: UnmatchedInstancePair, labelmap: InstanceLabelMap) -> MatchedInstancePair:
     """
     Map instance labels based on the provided labelmap and create a MatchedInstancePair.
 
@@ -246,24 +236,17 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         """
         labelmap = InstanceLabelMap()
 
-        mm_pairs = self._calculate_matching_metric_pairs(
-            unmatched_instance_pair, context, self._matching_metric
-        )
+        mm_pairs = self._calculate_matching_metric_pairs(unmatched_instance_pair, context, self._matching_metric)
 
         # Loop through matched instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if pred_label in labelmap:
                 # skip if prediction label is already matched
                 continue
-            if (
-                labelmap.contains_or(pred_label, ref_label)
-                and not self._allow_many_to_one
-            ):
+            if labelmap.contains_or(pred_label, ref_label) and not self._allow_many_to_one:
                 continue
 
-            if self._matching_metric.score_beats_threshold(
-                matching_score, self._matching_threshold
-            ):
+            if self._matching_metric.score_beats_threshold(matching_score, self._matching_threshold):
                 # Match found, add entry to labelmap
                 labelmap.add_labelmap_entry(pred_label, ref_label)
 
@@ -324,9 +307,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         if len(ref_labels) == 0 or len(pred_labels) == 0:
             return labelmap
 
-        mm_pairs = self._calculate_matching_metric_pairs(
-            unmatched_instance_pair, context, self._matching_metric
-        )
+        mm_pairs = self._calculate_matching_metric_pairs(unmatched_instance_pair, context, self._matching_metric)
 
         # Create cost matrix for bipartite matching
         cost_matrix = self._create_cost_matrix(ref_labels, pred_labels, mm_pairs)
@@ -354,9 +335,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
 
         # Fill in known costs for overlapping instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
-            if not self._matching_metric.score_beats_threshold(
-                matching_score, self._matching_threshold
-            ):
+            if not self._matching_metric.score_beats_threshold(matching_score, self._matching_threshold):
                 continue
 
             ref_idx = ref_label_to_index[ref_label]
@@ -365,9 +344,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
 
         return cost_matrix
 
-    def _solve_bipartite_matching(
-        self, cost_matrix: np.ndarray, ref_labels: List[int], pred_labels: List[int]
-    ) -> InstanceLabelMap:
+    def _solve_bipartite_matching(self, cost_matrix: np.ndarray, ref_labels: List[int], pred_labels: List[int]) -> InstanceLabelMap:
         """Solve the bipartite matching problem and return labelmap."""
         from scipy.optimize import linear_sum_assignment
 
@@ -456,15 +433,11 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
                 continue
             if labelmap.contains_ref(ref_label):
                 pred_labels_ = labelmap.get_pred_labels_matched_to_ref(ref_label)
-                new_score = self.new_combination_score(
-                    pred_labels_, pred_label, ref_label, unmatched_instance_pair
-                )
+                new_score = self.new_combination_score(pred_labels_, pred_label, ref_label, unmatched_instance_pair)
                 if new_score > score_ref[ref_label]:
                     labelmap.add_labelmap_entry(pred_label, ref_label)
                     score_ref[ref_label] = new_score
-            elif self._matching_metric.score_beats_threshold(
-                matching_score, self._matching_threshold
-            ):
+            elif self._matching_metric.score_beats_threshold(matching_score, self._matching_threshold):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
                 score_ref[ref_label] = matching_score
