@@ -28,7 +28,9 @@ def evaluate_matched_instance(
 
     """
     if decision_metric is not None:
-        assert decision_metric.name in [v.name for v in eval_metrics], "decision metric not contained in eval_metrics"
+        assert decision_metric.name in [
+            v.name for v in eval_metrics
+        ], "decision metric not contained in eval_metrics"
         assert decision_threshold is not None, "decision metric set but no threshold"
     # Initialize variables for True Positives (tp)
     tp = len(matched_instance_pair.matched_instances)
@@ -61,7 +63,10 @@ def evaluate_matched_instance(
     # TODO if instance matcher already gives matching metric, adapt here!
     for metric_dict in metric_dicts:
         if decision_metric is None or (
-            decision_threshold is not None and decision_metric.score_beats_threshold(metric_dict[decision_metric], decision_threshold)
+            decision_threshold is not None
+            and decision_metric.score_beats_threshold(
+                metric_dict[decision_metric], decision_threshold
+            )
         ):
             for k, v in metric_dict.items():
                 score_dict[k].append(v)
@@ -102,7 +107,11 @@ def _evaluate_instance(
     pred_arr = prediction_arr == ref_idx
 
     # Detect if we have flattened one-hot arrays that need reshaping for spatial metrics
-    is_flattened_onehot = reference_arr.ndim == 1 and processing_pair_orig_shape is not None and n_ref_labels is not None
+    is_flattened_onehot = (
+        reference_arr.ndim == 1
+        and processing_pair_orig_shape is not None
+        and n_ref_labels is not None
+    )
 
     # Set default voxelspacing based on original or current array dimensions
     if voxelspacing is None:
@@ -126,12 +135,18 @@ def _evaluate_instance(
     result: dict[Metric, float] = {}
 
     # Cache spatial structures if any metric requires them and is_flattened_onehot is True
-    needs_spatial = any(metric.requires_spatial and is_flattened_onehot for metric in eval_metrics)
+    needs_spatial = any(
+        metric.requires_spatial and is_flattened_onehot for metric in eval_metrics
+    )
     ref_spatial = pred_spatial = None
     if needs_spatial:
         # Reshape full arrays back to (num_classes, *spatial_shape) only once
-        ref_spatial = _get_orig_onehotcc_structure(reference_arr, n_ref_labels, processing_pair_orig_shape)
-        pred_spatial = _get_orig_onehotcc_structure(prediction_arr, n_ref_labels, processing_pair_orig_shape)
+        ref_spatial = _get_orig_onehotcc_structure(
+            reference_arr, n_ref_labels, processing_pair_orig_shape
+        )
+        pred_spatial = _get_orig_onehotcc_structure(
+            prediction_arr, n_ref_labels, processing_pair_orig_shape
+        )
 
     for metric in eval_metrics:
         if metric.requires_spatial and is_flattened_onehot:

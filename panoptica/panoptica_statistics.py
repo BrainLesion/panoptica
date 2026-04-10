@@ -1,7 +1,6 @@
 import csv
 import numpy as np
-from pathlib import Path
-import numpy as np
+import warnings
 
 try:
     import pandas as pd
@@ -12,7 +11,7 @@ except Exception as e:
     print("OPTIONAL PACKAGE MISSING")
 
 
-class ValueSummary:
+class FloatDistribution:
     def __init__(self, value_list: list[float]) -> None:
         self.__value_list = value_list
         if len(value_list) == 0:
@@ -60,6 +59,18 @@ class ValueSummary:
 
     def __str__(self, ndigits: int = 3):
         return self.get_string_repr(ndigits)
+
+
+class ValueSummary(FloatDistribution):
+    """Deprecated alias for FloatDistribution."""
+
+    def __init__(self, value_list: list[float]) -> None:
+        warnings.warn(
+            "ValueSummary is deprecated and will be removed in a future release. Use FloatDistribution instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(value_list)
 
 
 class Panoptica_Statistic:
@@ -286,7 +297,7 @@ class Panoptica_Statistic:
             values += self.get(g, metric)
         return values
 
-    def get_summary_across_groups(self) -> dict[str, ValueSummary]:
+    def get_summary_across_groups(self) -> dict[str, FloatDistribution]:
         """Calculates the average and std over all groups (so group-wise avg first, then average over those)
 
         Returns:
@@ -296,12 +307,12 @@ class Panoptica_Statistic:
         for m in self.__metricnames:
             value_list = [self.get_summary(g, m).avg for g in self.__groupnames]
             assert len(value_list) == len(self.__groupnames)
-            summary_dict[m] = ValueSummary(value_list)
+            summary_dict[m] = FloatDistribution(value_list)
         return summary_dict
 
     def get_summary_dict(
         self, include_across_group: bool = True
-    ) -> dict[str, dict[str, ValueSummary]]:
+    ) -> dict[str, dict[str, FloatDistribution]]:
         summary_dict = {
             g: {m: self.get_summary(g, m) for m in self.__metricnames}
             for g in self.__groupnames
@@ -310,9 +321,9 @@ class Panoptica_Statistic:
             summary_dict["across_groups"] = self.get_summary_across_groups()
         return summary_dict
 
-    def get_summary(self, group, metric) -> ValueSummary:
+    def get_summary(self, group, metric) -> FloatDistribution:
         values = self.get(group, metric, remove_nones=True)
-        return ValueSummary(values)
+        return FloatDistribution(values)
 
     def print_summary(
         self,
@@ -436,7 +447,7 @@ def make_curve_over_setups(
     # Y values are average metric values in that group and metric
     for idx, g in enumerate(groups):
         Y = [
-            ValueSummary(stat.get(g, metric, remove_nones=True)).avg
+            FloatDistribution(stat.get(g, metric, remove_nones=True)).avg
             for stat in statistics_dict.values()
         ]
 
@@ -444,7 +455,7 @@ def make_curve_over_setups(
 
         if plot_std:
             Ystd = [
-                ValueSummary(stat.get(g, metric, remove_nones=True)).std
+                FloatDistribution(stat.get(g, metric, remove_nones=True)).std
                 for stat in statistics_dict.values()
             ]
         else:
