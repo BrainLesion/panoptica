@@ -197,27 +197,16 @@ class Panoptica_Aggregator:
             
             for groupname in self.__class_group_names:
                 result: PanopticaResult = result_grouped[groupname]
-                
-                # This will return a single dict, or a list of dicts depending on the flag
                 result_data = result.to_dict(self.__output_individual_instance_metrics)
-                
-                # Standardize to a list to make iteration easy
-                if not isinstance(result_data, list):
-                    result_data = [result_data]
+                rows_as_dicts = result_data if isinstance(result_data, list) else [result_data]
                     
-                # Iterate over the dictionaries (index 0 is Master, index > 0 are Instances)
-                for i, r_dict in enumerate(result_data):
-                    
-                    # Only append computation time to the Master row (index 0)
-                    if result.computation_time is not None and i == 0:
+                for i, r_dict in enumerate(rows_as_dicts):
+                    if i == 0 and result.computation_time is not None:
                         r_dict[COMPUTATION_TIME_KEY] = result.computation_time
-
-                    # Name the row (Master gets subject_name, Instances get _inst_0, _inst_1, etc.)
                     row_name = subject_name if i == 0 else f"{subject_name}_inst_{i-1}"
+                    print(row_name, i, groupname)
                     content = [row_name]
-                    
                     for e in self.__evaluation_metrics:
-                        # get() defaults to "" if the key is missing (which it will be for globals on instance rows)
                         content.append(r_dict.get(e, ""))
                         
                     all_rows_to_write.append(content)
