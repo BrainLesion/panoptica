@@ -29,7 +29,7 @@ from panoptica.utils.segmentation_class import (
     LabelGroup,
     _NoSegmentationClassGroups,
 )
-from panoptica.panoptica_pipeline import _panoptic_evaluate
+from panoptica.panoptica_pipeline import _panoptic_evaluate, _panoptic_evaluate_region_wise
 from pathlib import Path
 
 if TYPE_CHECKING:
@@ -55,6 +55,7 @@ class Panoptica_Evaluator(SupportsConfig):
         global_metrics: list[Metric] = [Metric.DSC],
         decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
+        per_region_evaluation: bool = False,
         save_group_times: bool = False,
         log_times: bool = False,
         verbose: bool = False,
@@ -89,6 +90,7 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__decision_threshold = decision_threshold
         self.__resulting_metric_keys = None
         self.__save_group_times = save_group_times
+        self.__per_region_evaluation = per_region_evaluation
 
         if segmentation_class_groups is None:
             segmentation_class_groups = _NoSegmentationClassGroups()
@@ -244,22 +246,38 @@ class Panoptica_Evaluator(SupportsConfig):
             )
             decision_threshold = 0.0
 
-        result = _panoptic_evaluate(
-            input_pair=processing_pair_grouped,
-            edge_case_handler=self.__edge_case_handler,
-            instance_approximator=self.__instance_approximator,
-            instance_matcher=self.__instance_matcher,
-            instance_metrics=self.__eval_metrics,
-            global_metrics=self.__global_metrics,
-            decision_metric=self.__decision_metric,
-            decision_threshold=decision_threshold,
-            result_all=result_all,
-            log_times=self.__log_times if log_times is None else log_times,
-            verbose=True if verbose is None else verbose,
-            verbose_calc=self.__verbose if verbose is None else verbose,
-            label_group=label_group,
-            **kwargs,
-        )
+        if self.__per_region_evaluation:
+            result = _panoptic_evaluate_region_wise(
+                input_pair=processing_pair_grouped,
+                edge_case_handler=self.__edge_case_handler,
+                instance_approximator=self.__instance_approximator,
+                instance_matcher=self.__instance_matcher,
+                instance_metrics=self.__eval_metrics,
+                global_metrics=self.__global_metrics,
+                result_all=result_all,
+                log_times=self.__log_times if log_times is None else log_times,
+                verbose=True if verbose is None else verbose,
+                verbose_calc=self.__verbose if verbose is None else verbose,
+                label_group=label_group,
+                **kwargs,
+            )
+        else:
+            result = _panoptic_evaluate(
+                input_pair=processing_pair_grouped,
+                edge_case_handler=self.__edge_case_handler,
+                instance_approximator=self.__instance_approximator,
+                instance_matcher=self.__instance_matcher,
+                instance_metrics=self.__eval_metrics,
+                global_metrics=self.__global_metrics,
+                decision_metric=self.__decision_metric,
+                decision_threshold=decision_threshold,
+                result_all=result_all,
+                log_times=self.__log_times if log_times is None else log_times,
+                verbose=True if verbose is None else verbose,
+                verbose_calc=self.__verbose if verbose is None else verbose,
+                label_group=label_group,
+                **kwargs,
+            )
         if self.__save_group_times or save_group_times:
             duration = perf_counter() - start_time
             result.computation_time = duration
