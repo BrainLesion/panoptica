@@ -109,14 +109,16 @@ class Panoptica_Aggregator:
             header_list = _read_first_row(output_file)
             if len(header_list) == 0:
                 # empty file
-                print("Output file given is empty, will start with header")
+                print(
+                    f"{self.__output_file}: Output file given is empty, will start with header"
+                )
                 _write_content(output_file, [header])
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
                 assert header_hash == hash(
                     "+".join(header_list)
-                ), "Hash of header not the same! You are using a different setup!"
+                ), f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
 
         if continue_file:
             with inevalfilelock:
@@ -272,7 +274,7 @@ def _load_first_column_entries(file: str | Path):
             id_list = list([row[0] for row in rows])
 
     n_id = len(id_list)
-    assert n_id == len(list(set(id_list))), "file has duplicate entries!"
+    assert n_id == len(list(set(id_list))), f"{file}: file has duplicate entries!"
 
     return id_list
 
