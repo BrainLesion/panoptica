@@ -82,7 +82,7 @@ class _Metric:
                 pred_instance_idx = [pred_instance_idx]
             prediction_arr = np.isin(
                 prediction_arr.copy(), pred_instance_idx
-            )  # type:ignore
+            )  # type: ignore
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:

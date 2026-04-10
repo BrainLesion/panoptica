@@ -18,7 +18,6 @@ from panoptica.utils.segmentation_class import SegmentationClassGroups
 import sys
 from pathlib import Path
 
-
 output_test_dir = Path(__file__).parent.joinpath("unittest_tmp_file.tsv")
 
 
@@ -52,7 +51,7 @@ class Test_Example_Scripts(unittest.TestCase):
         from examples.example_spine_statistics import main
 
         main("pool")
-    
+
     def test_example_scripts_autc(self):
         directory = Path(__file__).parent.parent.joinpath("examples")
 
@@ -62,7 +61,7 @@ class Test_Example_Scripts(unittest.TestCase):
         sys.path.append(str(directory))
 
         from examples.example_spine_autc import main
-        
+
         main()
 
 

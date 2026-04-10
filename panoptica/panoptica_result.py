@@ -918,7 +918,11 @@ class PanopticaAUTCResult(object):
         first_res = next(iter(self._threshold_results.values()))
         for metric_id in sorted(AUTC_METRICS):
             eval_metric = first_res._evaluation_metrics.get(metric_id)
-            if eval_metric is None or not eval_metric._was_calculated or eval_metric._error:
+            if (
+                eval_metric is None
+                or not eval_metric._was_calculated
+                or eval_metric._error
+            ):
                 continue
             try:
                 val = self.get_autc(metric_id)

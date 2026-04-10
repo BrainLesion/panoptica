@@ -161,7 +161,9 @@ class Panoptica_Evaluator(SupportsConfig):
         Returns:
             dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
         """
-        processing_pair, metadata = self._preprocess_input(prediction_arr, reference_arr, voxelspacing)
+        processing_pair, metadata = self._preprocess_input(
+            prediction_arr, reference_arr, voxelspacing
+        )
 
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
@@ -231,14 +233,18 @@ class Panoptica_Evaluator(SupportsConfig):
             self.__instance_matcher, ThresholdBasedMatching
         ), f"evaluate_autc can only be used with ThresholdBasedMatching instance matchers, but got {type(self.__instance_matcher)}"
 
-        assert self.__expected_input != InputType.MATCHED_INSTANCE, "evaluate_autc cannot be used with already matched instance pairs as input"
+        assert (
+            self.__expected_input != InputType.MATCHED_INSTANCE
+        ), "evaluate_autc cannot be used with already matched instance pairs as input"
 
         if decision_threshold_mode == "fixed":
             assert (
                 self.__decision_threshold is not None
             ), "decision_threshold must be set in the constructor when using fixed decision_threshold mode for evaluate_autc"
 
-        processing_pair, metadata = self._preprocess_input(prediction_arr, reference_arr, voxelspacing)
+        processing_pair, metadata = self._preprocess_input(
+            prediction_arr, reference_arr, voxelspacing
+        )
 
         thresholds = self.generate_thresholds(threshold_step_size)
         result_grouped: dict[str, PanopticaAUTCResult] = {}
@@ -281,27 +287,42 @@ class Panoptica_Evaluator(SupportsConfig):
                 threshold_results=threshold_results
             )
         return result_grouped
-    
+
     def _preprocess_input(
         self,
-        prediction_arr: Union[str, Path, np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
-        reference_arr: Union[str, Path, np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
+        prediction_arr: Union[
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
+        ],
+        reference_arr: Union[
+            str,
+            Path,
+            np.ndarray,
+            "torch.Tensor",
+            "nib.nifti1.Nifti1Image",
+            "sitk.Image",
+        ],
         voxelspacing: tuple[float, ...] | None = None,
     ) -> tuple[Union[MatchedInstancePair, UnmatchedInstancePair, SemanticPair], dict]:
         """Handles data ingestion, sanity checking, and initial validation."""
-        
+
         # Sanity check input and convert to numpy arrays
-        ((prediction_arr, reference_arr), metadata), _ = sanity_check_and_convert_to_array(
-            prediction_arr, reference_arr
+        ((prediction_arr, reference_arr), metadata), _ = (
+            sanity_check_and_convert_to_array(prediction_arr, reference_arr)
         )
-        
+
         if voxelspacing is not None:
             metadata["voxelspacing"] = voxelspacing
 
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
-        assert isinstance(processing_pair, self.__expected_input.value), \
-            f"input not of expected type {self.__expected_input}"
+        assert isinstance(
+            processing_pair, self.__expected_input.value
+        ), f"input not of expected type {self.__expected_input}"
 
         # Validate labels
         self.__segmentation_class_groups.has_defined_labels_for(
@@ -312,14 +333,11 @@ class Panoptica_Evaluator(SupportsConfig):
         )
 
         return processing_pair, metadata
-    
+
     @staticmethod
     def generate_thresholds(step_size: float) -> np.ndarray:
         """Return AUTC threshold steps."""
-        return np.round(
-            np.arange(step_size, 1.0 + step_size, step_size),
-            5
-        )
+        return np.round(np.arange(step_size, 1.0 + step_size, step_size), 5)
 
     @property
     def segmentation_class_groups_names(self) -> list[str]:
