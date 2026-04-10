@@ -172,7 +172,7 @@ class PanopticaResult(object):
         # region DICE
         self.sq_dsc: float
         self._add_metric(
-            "sq_dsc",
+            Metric.DSC.value.result_id,
             MetricType.INSTANCE,
             sq_dsc,
             long_name="Segmentation Quality Dsc",
@@ -196,7 +196,7 @@ class PanopticaResult(object):
         # region clDICE
         self.sq_cldsc: float
         self._add_metric(
-            "sq_cldsc",
+            Metric.clDSC.value.result_id,
             MetricType.INSTANCE,
             sq_cldsc,
             long_name="Segmentation Quality Centerline Dsc",
@@ -220,7 +220,7 @@ class PanopticaResult(object):
         # region ASSD
         self.sq_assd: float
         self._add_metric(
-            "sq_assd",
+            Metric.ASSD.value.result_id,
             MetricType.INSTANCE,
             sq_assd,
             long_name="Segmentation Quality ASSD",
@@ -237,7 +237,7 @@ class PanopticaResult(object):
         # region RVD
         self.sq_rvd: float
         self._add_metric(
-            "sq_rvd",
+            Metric.RVD.value.result_id,
             MetricType.INSTANCE,
             sq_rvd,
             long_name="Segmentation Quality Relative Volume Difference",
@@ -254,7 +254,7 @@ class PanopticaResult(object):
         # region RVAE
         self.sq_rvae: float
         self._add_metric(
-            "sq_rvae",
+            Metric.RVAE.value.result_id,
             MetricType.INSTANCE,
             sq_rvae,
             long_name="Segmentation Quality Relative Volume Absolute Error",
@@ -271,7 +271,7 @@ class PanopticaResult(object):
         # region CEDI
         self.sq_cedi: float
         self._add_metric(
-            "sq_cedi",
+            Metric.CEDI.value.result_id,
             MetricType.INSTANCE,
             sq_cedi,
             long_name="Segmentation Quality Center Distance",
@@ -288,7 +288,7 @@ class PanopticaResult(object):
         # region HD
         self.sq_hd: float
         self._add_metric(
-            "sq_hd",
+            Metric.HD.value.result_id,
             MetricType.INSTANCE,
             sq_hd,
             long_name="Segmentation Quality Hausdorff Distance",
@@ -302,7 +302,7 @@ class PanopticaResult(object):
         )
         self.sq_hd95: float
         self._add_metric(
-            "sq_hd95",
+            Metric.HD95.value.result_id,
             MetricType.INSTANCE,
             sq_hd95,
             long_name="Segmentation Quality Hausdorff Distance 95",
@@ -316,7 +316,7 @@ class PanopticaResult(object):
         )
         self.sq_nsd: float
         self._add_metric(
-            "sq_nsd",
+            Metric.NSD.value.result_id,
             MetricType.INSTANCE,
             sq_nsd,
             long_name="Segmentation Quality Normalized Surface Dice",

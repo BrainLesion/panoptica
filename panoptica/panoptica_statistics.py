@@ -102,6 +102,16 @@ class Panoptica_Statistic:
     def metricnames(self):
         return self.__metricnames
 
+    @property
+    def master_subjects(self) -> list[str]:
+        """Returns only the primary subject names (ignoring instance rows)."""
+        return [sn for sn in self.__subj_names if "_inst_" not in sn]
+
+    @property
+    def instance_subjects(self) -> list[str]:
+        """Returns only the individual instance rows."""
+        return [sn for sn in self.__subj_names if "_inst_" in sn]
+
     @classmethod
     def from_file(cls, file: str):
         # check integrity of header and so on
@@ -331,6 +341,23 @@ class Panoptica_Statistic:
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
             print()
 
+    def get_summary(self, group, metric, master_only: bool = True) -> ValueSummary:
+        """Gets a ValueSummary for a given group and metric.
+        If master_only is True, ignores individual instance rows to prevent double counting.
+        """
+        all_values = self.get(group, metric, remove_nones=False)
+        
+        if master_only:
+            # Pair each value with its subject name and filter out the instance rows
+            filtered_values = [
+                val for sn, val in zip(self.__subj_names, all_values) 
+                if "_inst_" not in sn and val is not None
+            ]
+        else:
+            filtered_values = [val for val in all_values if val is not None]
+            
+        return ValueSummary(filtered_values)
+
     def get_summary_figure(
         self,
         metric: str,
@@ -340,23 +367,26 @@ class Panoptica_Statistic:
         horizontal: bool = True,
         sort: bool = True,
         title: str = "",
+        master_only: bool = True,
     ):
-        """Returns a figure object that shows the given metric for each group and its std
-
-        Args:
-            metric (str): _description_
-            horizontal (bool, optional): _description_. Defaults to True.
-
-        Returns:
-            _type_: _description_
-        """
+        """Returns a figure object that shows the given metric for each group and its std"""
         if groups is None:
             groups = self.__groupnames
         if isinstance(groups, str):
             groups = [groups]
-        data_plot = {
-            g: np.asarray(self.get(g, metric, remove_nones=True)) for g in groups
-        }
+            
+        data_plot = {}
+        for g in groups:
+            all_values = self.get(g, metric, remove_nones=False)
+            if master_only:
+                filtered_values = [
+                    val for sn, val in zip(self.__subj_names, all_values)
+                    if "_inst_" not in sn and val is not None
+                ]
+            else:
+                filtered_values = [val for val in all_values if val is not None]
+            data_plot[g] = np.asarray(filtered_values)
+
         if manual_metric_range is not None:
             assert manual_metric_range[0] < manual_metric_range[1], manual_metric_range
             change = (manual_metric_range[1] - manual_metric_range[0]) / 100
