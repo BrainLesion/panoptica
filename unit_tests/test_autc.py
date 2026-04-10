@@ -95,7 +95,9 @@ class Test_AUTC(unittest.TestCase):
             instance_matcher=NaiveThresholdMatching(),
         )
 
-        result = evaluator.evaluate_autc(pred, ref, threshold_step_size=0.05)["ungrouped"]
+        result = evaluator.evaluate_autc(pred, ref, threshold_step_size=0.05)[
+            "ungrouped"
+        ]
 
         self.assertEqual(result.threshold_results[0.30].tp, 1)  # 0.30 < 1/3
         self.assertEqual(result.threshold_results[0.35].tp, 0)  # 0.35 > 1/3
@@ -141,6 +143,10 @@ class Test_AUTC(unittest.TestCase):
 
         step = 0.1
         header_keys = set(evaluator.get_autc_metric_keys(step))
-        result_keys = set(evaluator.evaluate_autc(pred, ref, threshold_step_size=step)["ungrouped"].to_dict().keys())
+        result_keys = set(
+            evaluator.evaluate_autc(pred, ref, threshold_step_size=step)["ungrouped"]
+            .to_dict()
+            .keys()
+        )
 
         self.assertEqual(header_keys, result_keys)

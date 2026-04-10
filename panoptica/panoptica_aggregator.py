@@ -72,7 +72,9 @@ class Panoptica_Aggregator:
             assert (
                 self.__threshold_step_size is not None
             ), "threshold_step_size must be provided to build AUTC headers"
-            self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(threshold_step_size)
+            self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
+                threshold_step_size
+            )
         else:
             self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
 
@@ -229,7 +231,9 @@ class Panoptica_Aggregator:
             #
             content = [subject_name]
             for groupname in self.__class_group_names:
-                result: PanopticaResult | PanopticaAUTCResult = result_grouped[groupname]
+                result: PanopticaResult | PanopticaAUTCResult = result_grouped[
+                    groupname
+                ]
                 result_dict = result.to_dict()
                 if result.computation_time is not None:
                     result_dict[COMPUTATION_TIME_KEY] = result.computation_time

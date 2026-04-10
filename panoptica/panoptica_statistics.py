@@ -407,18 +407,20 @@ def make_autc_plots(
             match = pattern.match(m)
             if match:
                 t_keys.append((float(match.group(1)), m))
-        
+
         t_keys.sort(key=lambda x: x[0])
 
         if not t_keys:
-            print(f"Warning: No threshold data found for metric '{metric}' in setup '{setupname}'.")
+            print(
+                f"Warning: No threshold data found for metric '{metric}' in setup '{setupname}'."
+            )
             continue
 
         X = [t[0] for t in t_keys]
 
         for idx, g in enumerate(groups):
             name = g if alternate_groupnames is None else alternate_groupnames[idx]
-            
+
             if len(statistics_dict) == 1 and len(groups) == 1:
                 legend_name = str(name)
             elif len(groups) == 1:
@@ -426,10 +428,7 @@ def make_autc_plots(
             else:
                 legend_name = f"{setupname} - {name}"
 
-            Y = [
-                ValueSummary(stat.get(g, k[1], remove_nones=True)).avg
-                for k in t_keys
-            ]
+            Y = [ValueSummary(stat.get(g, k[1], remove_nones=True)).avg for k in t_keys]
 
             if plot_std:
                 Ystd = [
@@ -463,10 +462,10 @@ def make_autc_plots(
     )
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
     fig.update_xaxes(range=[-0.05, 1.05])
-    
+
     if manual_metric_range is not None:
         fig.update_yaxes(range=[manual_metric_range[0], manual_metric_range[1]])
-        
+
     return fig
 
 
