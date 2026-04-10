@@ -667,9 +667,7 @@ def _approximate_instances(
 
     # Update instance metadata after approximation
     if isinstance(approximated_pair, (UnmatchedInstancePair, MatchedInstancePair)):
-        instance_metadata["original_n_preds"] = (
-            approximated_pair.n_prediction_instance
-        )
+        instance_metadata["original_n_preds"] = approximated_pair.n_prediction_instance
         instance_metadata["original_n_refs"] = approximated_pair.n_reference_instance
 
     return approximated_pair
