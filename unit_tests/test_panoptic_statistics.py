@@ -18,7 +18,6 @@ from panoptica.utils.segmentation_class import SegmentationClassGroups
 import sys
 from pathlib import Path
 
-
 output_test_dir = Path(__file__).parent.joinpath("unittest_tmp_file.tsv")
 
 input_test_file = Path(__file__).parent.joinpath("test_unittest_file.tsv")
