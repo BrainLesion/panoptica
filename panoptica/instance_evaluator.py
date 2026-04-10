@@ -30,8 +30,7 @@ def evaluate_matched_instance(
     if decision_metric is not None:
         assert decision_metric.name in [v.name for v in eval_metrics], "decision metric not contained in eval_metrics"
         assert decision_threshold is not None, "decision metric set but no threshold"
-    # Initialize variables for True Positives (tp)
-    tp = len(matched_instance_pair.matched_instances)
+
     score_dict: dict[Metric, list[float]] = {m: [] for m in eval_metrics}
 
     reference_arr, prediction_arr = (
@@ -66,13 +65,13 @@ def evaluate_matched_instance(
             for k, v in metric_dict.items():
                 score_dict[k].append(v)
 
-    # Create and return the PanopticaResult object with computed metrics
+    # Create and return the EvaluateInstancePair object with computed metrics
     return EvaluateInstancePair(
         reference_arr=matched_instance_pair.reference_arr,
         prediction_arr=matched_instance_pair.prediction_arr,
         n_pred_instances=matched_instance_pair.n_prediction_instance,
         n_ref_instances=matched_instance_pair.n_reference_instance,
-        tp=tp,
+        tp=len(matched_instance_pair.matched_instances),
         list_metrics=score_dict,
     )
 

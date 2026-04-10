@@ -43,6 +43,7 @@ class Panoptica_Aggregator:
         output_file: Path | str,
         log_times: bool = False,
         continue_file: bool = True,
+        output_individual_instance_metrics: bool = False,
     ):
         """Initializes the Panoptica_Aggregator.
 
@@ -53,6 +54,7 @@ class Panoptica_Aggregator:
             log_times (bool, optional): If True, computation times will be logged. Defaults to False.
             continue_file (bool, optional): If True, results will continue from existing entries in the file.
                 Defaults to True.
+            output_individual_instance_metrics (bool, optional): If True, individual instance metrics will be output. Defaults to False.
 
         Raises:
             AssertionError: If the output directory does not exist or if the file extension is not `.tsv`.
@@ -61,6 +63,7 @@ class Panoptica_Aggregator:
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
         self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
         self.__log_times = log_times
+        self.__output_individual_instance_metrics = output_individual_instance_metrics
 
         if log_times and COMPUTATION_TIME_KEY not in self.__evaluation_metrics:
             self.__evaluation_metrics.append(COMPUTATION_TIME_KEY)
@@ -189,26 +192,37 @@ class Panoptica_Aggregator:
         self._save_one_subject(subject_name, res)
 
     def _save_one_subject(self, subject_name, result_grouped):
-        """Saves the evaluation results for a single subject.
-
-        Args:
-            subject_name (str): The name of the subject whose results are being saved.
-            result_grouped (dict): A dictionary of grouped results from the evaluation.
-        """
         with filelock:
-            #
-            content = [subject_name]
+            all_rows_to_write = []
+            
             for groupname in self.__class_group_names:
                 result: PanopticaResult = result_grouped[groupname]
-                result_dict = result.to_dict()
-                if result.computation_time is not None:
-                    result_dict[COMPUTATION_TIME_KEY] = result.computation_time
-                del result
+                
+                # This will return a single dict, or a list of dicts depending on the flag
+                result_data = result.to_dict(self.__output_individual_instance_metrics)
+                
+                # Standardize to a list to make iteration easy
+                if not isinstance(result_data, list):
+                    result_data = [result_data]
+                    
+                # Iterate over the dictionaries (index 0 is Master, index > 0 are Instances)
+                for i, r_dict in enumerate(result_data):
+                    
+                    # Only append computation time to the Master row (index 0)
+                    if result.computation_time is not None and i == 0:
+                        r_dict[COMPUTATION_TIME_KEY] = result.computation_time
 
-                for e in self.__evaluation_metrics:
-                    mvalue = result_dict[e] if e in result_dict else ""
-                    content.append(mvalue)
-            _write_content(self.__output_file, [content])
+                    # Name the row (Master gets subject_name, Instances get _inst_0, _inst_1, etc.)
+                    row_name = subject_name if i == 0 else f"{subject_name}_inst_{i-1}"
+                    content = [row_name]
+                    
+                    for e in self.__evaluation_metrics:
+                        # get() defaults to "" if the key is missing (which it will be for globals on instance rows)
+                        content.append(r_dict.get(e, ""))
+                        
+                    all_rows_to_write.append(content)
+                    
+            _write_content(self.__output_file, all_rows_to_write)
             print(f"Saved entry {subject_name} into {str(self.__output_file)}")
 
     @property

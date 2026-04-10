@@ -108,6 +108,13 @@ class _Metric:
         return abs(hash(self.name)) % (10**8)
 
     @property
+    def result_id(self) -> str:
+        """Returns the string identifier used in PanopticaResult (e.g., 'sq_dsc')."""
+        if self.name == "IOU":
+            return "sq"
+        return f"sq_{self.name.lower()}"
+            
+    @property
     def increasing(self):
         """Indicates if higher values of the metric are better.
 
