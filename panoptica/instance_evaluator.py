@@ -13,7 +13,7 @@ def evaluate_matched_instance(
     decision_threshold: float | None = None,
     voxelspacing: tuple[float, ...] | None = None,
     processing_pair_orig_shape: tuple[int, ...] | None = None,
-    num_ref_labels: int | None = None,
+    n_ref_labels: int | None = None,
     **kwargs,
 ) -> EvaluateInstancePair:
     """
@@ -50,7 +50,7 @@ def evaluate_matched_instance(
             eval_metrics,
             voxelspacing,
             processing_pair_orig_shape,
-            num_ref_labels,
+            n_ref_labels,
         )
         for ref_idx in ref_matched_labels
     ]
@@ -75,8 +75,8 @@ def evaluate_matched_instance(
     return EvaluateInstancePair(
         reference_arr=matched_instance_pair.reference_arr,
         prediction_arr=matched_instance_pair.prediction_arr,
-        num_pred_instances=matched_instance_pair.n_prediction_instance,
-        num_ref_instances=matched_instance_pair.n_reference_instance,
+        n_pred_instances=matched_instance_pair.n_prediction_instance,
+        n_ref_instances=matched_instance_pair.n_reference_instance,
         tp=tp,
         list_metrics=score_dict,
     )
@@ -89,7 +89,7 @@ def _evaluate_instance(
     eval_metrics: list[Metric],
     voxelspacing: tuple[float, ...] | None = None,
     processing_pair_orig_shape: tuple[int, ...] | None = None,
-    num_ref_labels: int | None = None,
+    n_ref_labels: int | None = None,
 ) -> dict[Metric, float]:
     """
     Evaluate a single instance.
@@ -110,7 +110,7 @@ def _evaluate_instance(
     is_flattened_onehot = (
         reference_arr.ndim == 1
         and processing_pair_orig_shape is not None
-        and num_ref_labels is not None
+        and n_ref_labels is not None
     )
 
     # Set default voxelspacing based on original or current array dimensions
@@ -142,10 +142,10 @@ def _evaluate_instance(
     if needs_spatial:
         # Reshape full arrays back to (num_classes, *spatial_shape) only once
         ref_spatial = _get_orig_onehotcc_structure(
-            reference_arr, num_ref_labels, processing_pair_orig_shape
+            reference_arr, n_ref_labels, processing_pair_orig_shape
         )
         pred_spatial = _get_orig_onehotcc_structure(
-            prediction_arr, num_ref_labels, processing_pair_orig_shape
+            prediction_arr, n_ref_labels, processing_pair_orig_shape
         )
 
     for metric in eval_metrics:

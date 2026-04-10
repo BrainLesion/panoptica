@@ -45,12 +45,8 @@ class _ProcessingPair(ABC):
         self.set_dtype(dtype)
         self.__dtype = dtype
         self.__n_dim: int = reference_arr.ndim
-        self.__ref_labels: tuple[int, ...] = tuple(
-            _unique_without_zeros(reference_arr)
-        )  # type: ignore
-        self.__pred_labels: tuple[int, ...] = tuple(
-            _unique_without_zeros(prediction_arr)
-        )  # type: ignore
+        self.__ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type: ignore
+        self.__pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type: ignore
         self.__crop: tuple[slice, ...] = None
         self.__is_cropped: bool = False
         self.__uncropped_shape: tuple[int, ...] = reference_arr.shape
@@ -87,7 +83,7 @@ class _ProcessingPair(ABC):
         Args:
             verbose (bool, optional): If True, prints uncropping details. Defaults to False.
         """
-        if self.__is_cropped == False:
+        if not self.__is_cropped:
             return
         assert (
             self.__uncropped_shape is not None
@@ -141,12 +137,12 @@ class _ProcessingPair(ABC):
         return self.__n_dim
 
     @property
-    def _original_num_preds(self) -> int:
+    def _original_n_preds(self) -> int:
         """Override in subclasses for actual counts."""
         return 0
 
     @property
-    def _original_num_refs(self) -> int:
+    def _original_n_refs(self) -> int:
         """Override in subclasses for actual counts."""
         return 0
 
@@ -162,10 +158,10 @@ class _ProcessingPair(ABC):
 
         return {
             "original_shape": self.prediction_arr.shape,
-            "num_ref_labels": max_labels,
-            "num_pred_labels": max_labels,
-            "original_num_preds": self._original_num_preds,
-            "original_num_refs": self._original_num_refs,
+            "n_ref_labels": max_labels,
+            "n_pred_labels": max_labels,
+            "original_n_preds": self._original_n_preds,
+            "original_n_refs": self._original_n_refs,
         }
 
     def copy(self):
@@ -192,11 +188,11 @@ class _ProcessingPairInstanced(_ProcessingPair):
     n_reference_instance: int
 
     @property
-    def _original_num_preds(self) -> int:
+    def _original_n_preds(self) -> int:
         return self.n_prediction_instance
 
     @property
-    def _original_num_refs(self) -> int:
+    def _original_n_refs(self) -> int:
         return self.n_reference_instance
 
     def __init__(
@@ -402,8 +398,8 @@ class EvaluateInstancePair:
     Attributes:
         reference_arr (np.ndarray): Array containing reference instance labels.
         prediction_arr (np.ndarray): Array containing predicted instance labels.
-        num_pred_instances (int): The number of unique instances in the prediction array.
-        num_ref_instances (int): The number of unique instances in the reference array.
+        n_pred_instances (int): The number of unique instances in the prediction array.
+        n_ref_instances (int): The number of unique instances in the reference array.
         tp (int): The number of true positive matches between predicted and reference instances.
         list_metrics (dict[Metric, list[float]]): Dictionary of metric calculations, where each key is a `Metric`
             object, and each value is a list of metric scores (floats).
@@ -411,8 +407,8 @@ class EvaluateInstancePair:
 
     reference_arr: np.ndarray
     prediction_arr: np.ndarray
-    num_pred_instances: int
-    num_ref_instances: int
+    n_pred_instances: int
+    n_ref_instances: int
     tp: int
     list_metrics: dict[Metric, list[float]]
 

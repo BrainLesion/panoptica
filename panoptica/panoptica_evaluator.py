@@ -546,7 +546,7 @@ def panoptic_evaluate(
             processing_pair,
             label_group=label_group,
             matching_threshold=matching_threshold,
-            num_ref_labels=instance_metadata["num_ref_labels"],
+            n_ref_labels=instance_metadata["n_ref_labels"],
             processing_pair_orig_shape=instance_metadata["original_shape"],
             **kwargs,
         )
@@ -575,7 +575,7 @@ def panoptic_evaluate(
             decision_metric=decision_metric,
             decision_threshold=decision_threshold,
             processing_pair_orig_shape=instance_metadata["original_shape"],
-            num_ref_labels=instance_metadata["num_ref_labels"],
+            n_ref_labels=instance_metadata["n_ref_labels"],
             **kwargs,
         )
         if log_times:
@@ -583,42 +583,36 @@ def panoptic_evaluate(
 
     if isinstance(processing_pair, EvaluateInstancePair):
         # Update instance counts from the processed pair if available
-        if (
-            hasattr(processing_pair, "num_pred_instances")
-            and instance_metadata["original_num_preds"] == 0
-        ):
-            instance_metadata["original_num_preds"] = processing_pair.num_pred_instances
-        if (
-            hasattr(processing_pair, "num_ref_instances")
-            and instance_metadata["original_num_refs"] == 0
-        ):
-            instance_metadata["original_num_refs"] = processing_pair.num_ref_instances
+        if instance_metadata["original_n_preds"] == 0:
+            instance_metadata["original_n_preds"] = processing_pair.n_pred_instances
+        if instance_metadata["original_n_refs"] == 0:
+            instance_metadata["original_n_refs"] = processing_pair.n_ref_instances
 
         # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
         # This happens when the effective number of prediction instances is less than original
         has_many_to_one_mappings = (
-            processing_pair.num_pred_instances < instance_metadata["original_num_preds"]
+            processing_pair.n_pred_instances < instance_metadata["original_n_preds"]
         )
 
         # Use effective counts if many-to-one mappings were detected, otherwise use original counts
-        final_num_pred_instances = (
-            processing_pair.num_pred_instances
+        final_n_pred_instances = (
+            processing_pair.n_pred_instances
             if has_many_to_one_mappings
-            else instance_metadata["original_num_preds"]
+            else instance_metadata["original_n_preds"]
         )
-        final_num_ref_instances = (
-            processing_pair.num_ref_instances
+        final_n_ref_instances = (
+            processing_pair.n_ref_instances
             if has_many_to_one_mappings
-            else instance_metadata["original_num_refs"]
+            else instance_metadata["original_n_refs"]
         )
 
         processing_pair = PanopticaResult(
             reference_arr=processing_pair.reference_arr,
             prediction_arr=processing_pair.prediction_arr,
             processing_pair_orig_shape=instance_metadata["original_shape"],
-            num_pred_instances=final_num_pred_instances,
-            num_ref_instances=final_num_ref_instances,
-            num_ref_labels=instance_metadata["num_ref_labels"],
+            n_pred_instances=final_n_pred_instances,
+            n_ref_instances=final_n_ref_instances,
+            n_ref_labels=instance_metadata["n_ref_labels"],
             label_group=label_group,
             tp=processing_pair.tp,
             list_metrics=processing_pair.list_metrics,
@@ -673,10 +667,10 @@ def _approximate_instances(
 
     # Update instance metadata after approximation
     if isinstance(approximated_pair, (UnmatchedInstancePair, MatchedInstancePair)):
-        instance_metadata["original_num_preds"] = (
+        instance_metadata["original_n_preds"] = (
             approximated_pair.n_prediction_instance
         )
-        instance_metadata["original_num_refs"] = approximated_pair.n_reference_instance
+        instance_metadata["original_n_refs"] = approximated_pair.n_reference_instance
 
     return approximated_pair
 
@@ -731,8 +725,8 @@ def _handle_zero_instances_cases(
 
     if is_edge_case:
         panoptica_result_args["global_metrics"] = global_metrics
-        panoptica_result_args["num_ref_instances"] = n_reference_instance
-        panoptica_result_args["num_pred_instances"] = n_prediction_instance
+        panoptica_result_args["n_ref_instances"] = n_reference_instance
+        panoptica_result_args["n_pred_instances"] = n_prediction_instance
         return PanopticaResult(**panoptica_result_args)
 
     return processing_pair

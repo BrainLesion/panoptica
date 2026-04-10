@@ -75,7 +75,7 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
         normal (EdgeCaseResult | None): Result when a normal zero-TP scenario occurs.
 
     Methods:
-        __call__(tp, num_pred_instances, num_ref_instances): Determines if an edge case is detected and returns its result.
+        __call__(tp, n_pred_instances, n_ref_instances): Determines if an edge case is detected and returns its result.
         __eq__(value): Compares this handling object to another.
         __str__(): String representation of edge cases.
         _yaml_repr(cls, node): YAML representation for the edge case.
@@ -116,22 +116,22 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
         )
 
     def __call__(
-        self, tp: int, num_pred_instances, num_ref_instances
+        self, tp: int, n_pred_instances: int, n_ref_instances: int
     ) -> tuple[bool, float | None]:
         if tp != 0:
             return False, EdgeCaseResult.NONE.value
         #
-        elif num_pred_instances + num_ref_instances == 0:
+        elif n_pred_instances + n_ref_instances == 0:
             return True, self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES].value
-        elif num_ref_instances == 0:
+        elif n_ref_instances == 0:
             return True, self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF].value
-        elif num_pred_instances == 0:
+        elif n_pred_instances == 0:
             return True, self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED].value
-        elif num_pred_instances > 0 and num_ref_instances > 0:
+        elif n_pred_instances > 0 and n_ref_instances > 0:
             return True, self._edgecase_dict[EdgeCaseZeroTP.NORMAL].value
 
         raise NotImplementedError(
-            f"MetricZeroTPEdgeCaseHandling: couldn't handle case, got tp {tp}, n_pred_instances {num_pred_instances}, n_ref_instances {num_ref_instances}"
+            f"MetricZeroTPEdgeCaseHandling: couldn't handle case, got tp {tp}, n_pred_instances {n_pred_instances}, n_ref_instances {n_ref_instances}"
         )
 
     def __eq__(self, __value: object) -> bool:
@@ -167,7 +167,7 @@ class EdgeCaseHandler(SupportsConfig):
         empty_list_std (EdgeCaseResult): Default edge case for handling standard deviation of empty lists.
 
     Methods:
-        handle_zero_tp(metric, tp, num_pred_instances, num_ref_instances): Checks if an edge case exists and returns its result.
+        handle_zero_tp(metric, tp, n_pred_instances, n_ref_instances): Checks if an edge case exists and returns its result.
         listmetric_zeroTP_handling: Returns the edge case handling dictionary.
         get_metric_zero_tp_handle(metric): Returns the zero-TP handler for a specific metric.
         handle_empty_list_std(): Handles standard deviation of empty lists.
@@ -212,16 +212,16 @@ class EdgeCaseHandler(SupportsConfig):
         self,
         metric: Metric,
         tp: int,
-        num_pred_instances: int,
-        num_ref_instances: int,
+        n_pred_instances: int,
+        n_ref_instances: int,
     ) -> tuple[bool, float | None]:
         """_summary_
 
         Args:
             metric (Metric): _description_
             tp (int): _description_
-            num_pred_instances (int): _description_
-            num_ref_instances (int): _description_
+            n_pred_instances (int): _description_
+            n_ref_instances (int): _description_
 
         Raises:
             NotImplementedError: _description_
@@ -238,8 +238,8 @@ class EdgeCaseHandler(SupportsConfig):
 
         return self.__listmetric_zeroTP_handling[metric](
             tp=tp,
-            num_pred_instances=num_pred_instances,
-            num_ref_instances=num_ref_instances,
+            n_pred_instances=n_pred_instances,
+            n_ref_instances=n_ref_instances,
         )
 
     @property
