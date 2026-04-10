@@ -6,6 +6,7 @@ from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
+from panoptica.metrics.metrics import AUTC_METRICS
 from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
@@ -279,7 +280,6 @@ class Panoptica_Evaluator(SupportsConfig):
             )
         return result_grouped
     
-    
     def _preprocess_input(
         self,
         prediction_arr: Union[str, Path, np.ndarray, "torch.Tensor", "nib.nifti1.Nifti1Image", "sitk.Image"],
@@ -353,15 +353,13 @@ class Panoptica_Evaluator(SupportsConfig):
         return self.__resulting_metric_keys
 
     def get_autc_metric_keys(self, threshold_step_size: float) -> list[str]:
-        """Dynamically generates all TSV header keys for an AUTC evaluation."""
+        """Must produce keys in exactly the same order as PanopticaAUTCResult.to_dict()."""
+        keys = [f"autc_{m}" for m in sorted(AUTC_METRICS)]
         base_keys = self.resulting_metric_keys
-        keys = [f"autc_{m}" for m in base_keys]
-        
         for t in self.generate_thresholds(threshold_step_size):
-            t_str = f"{t:g}" 
+            t_str = f"{t:g}"
             for m in base_keys:
                 keys.append(f"t{t_str}_{m}")
-                
         return keys
 
     def _evaluate_group(

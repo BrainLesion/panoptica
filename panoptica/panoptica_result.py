@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from tabnanny import verbose
 from typing import Any, Callable
 
 import numpy as np
@@ -12,6 +13,7 @@ from panoptica.metrics import (
     MetricMode,
     MetricType,
 )
+from panoptica.metrics.metrics import AUTC_METRICS
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import IntermediateStepsData
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
@@ -769,10 +771,16 @@ class PanopticaResult(object):
         return None
 
 
+# endregion
+
+
+# region AUTCResult
 class PanopticaAUTCResult(object):
     """
     Holds dict mapping thresholds across a range to PanopticaResult objects.
     Computes Area Under The Threshold Curve (AUTC) for metrics from different thresholds.
+    Pads the left boundary to x=0.0 using nearest-neighbor so the integral
+    always covers the full [0.0, 1.0] range regardless of step_size.
     """
 
     def __init__(
@@ -814,12 +822,11 @@ class PanopticaAUTCResult(object):
             if np.isclose(t, threshold):
                 return res
         raise ValueError(
-            f"No result for threshold {threshold}. "
-            f"Available: {self.thresholds}"
+            f"No result for threshold {threshold}. " f"Available: {self.thresholds}"
         )
 
     def get_autc(self, metric_name: str) -> float:
-        """Area Under the Threshold Curve via the trapezoidal rule.
+        """Computes Area Under the Threshold Curve
 
         NaN / uncomputable values are treated as 0.0).
 
@@ -841,44 +848,42 @@ class PanopticaAUTCResult(object):
             )
 
         y_values: list[float] = []
-        for res in self._threshold_results.values():
+        for threshold, result in self._threshold_results.items():
             try:
-                val = getattr(res, metric_name)
+                val = getattr(result, metric_name)
                 y_values.append(0.0 if (val is None or np.isnan(val)) else float(val))
             except MetricCouldNotBeComputedException:
                 y_values.append(0.0)
+                if verbose:
+                    print(f"{metric_name} not found for {threshold}")
 
-        x = list(self.thresholds)
-        y = y_values
+        x_values = self.thresholds
 
         # Pad the left boundary (0.0) using nearest neighbor
-        if x[0] > 0.0:
-            x.insert(0, 0.0)
-            y.insert(0, y[0])
+        if x_values[0] > 0.0:
+            x_values.insert(0, 0.0)
+            y_values.insert(0, y_values[0])
 
-        x_arr = np.array(x, dtype=float)
-        y_arr = np.array(y, dtype=float)
+        x_arr = np.array(x_values, dtype=float)
+        y_arr = np.array(y_values, dtype=float)
 
         return float(np.trapezoid(y_arr, x=x_arr))
 
     def to_dict(self) -> dict[str, float]:
-        """Flat dictionary containing AUTC metrics AND individual threshold metrics."""
+        """Flat dictionary containing AUTC metrics AND individual threshold metrics.
+
+        AUTC is only computed for continuous ratio metrics in _AUTC_METRICS.
+        """
         result: dict[str, float] = {}
 
-        # Compute AUTC values
-        all_keys: set[str] = set()
-        for res in self._threshold_results.values():
-            all_keys.update(res.to_dict().keys())
-
-        for k in sorted(all_keys):
+        for k in sorted(AUTC_METRICS):
             try:
                 result[f"autc_{k}"] = self.get_autc(k)
             except (AttributeError, MetricCouldNotBeComputedException, ValueError):
                 pass
-        
-        # Individual threshold values
+
         for t, res in self._threshold_results.items():
-            t_str = f"{t:g}" # Formats nicely without trailing zeros (e.g., 0.5)
+            t_str = f"{t:g}"
             for k, v in res.to_dict().items():
                 if isinstance(v, (int, float)) and not isinstance(v, bool):
                     result[f"t{t_str}_{k}"] = float(v)
@@ -931,6 +936,7 @@ class PanopticaAUTCResult(object):
 
     def __repr__(self) -> str:
         return f"PanopticaAUTCResult(thresholds={self.thresholds!r})"
+
 
 #########################
 # Calculation functions #

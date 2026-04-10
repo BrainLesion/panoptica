@@ -20,7 +20,7 @@ class Test_AUTC(unittest.TestCase):
         """
         Test AUTC computation on a perfect prediction.
         If IoU is 1.0 everywhere, the metric curve is flat at y=1.0.
-        Integrating y=1.0 over the threshold range [0.1, 1.0] gives an area of 0.9.
+        Integrating y=1.0 over the threshold range [0.1, 1.0] including padding of y(0)=1 gives an area of 1.
         """
         ref = np.zeros([50, 50], dtype=np.uint16)
         ref[10:40, 10:40] = 1  # 30x30 square
@@ -36,10 +36,9 @@ class Test_AUTC(unittest.TestCase):
             "ungrouped"
         ]
 
-        # Check that trapezoidal integration of a flat 1.0 curve over 0.9 width = 0.9
-        self.assertAlmostEqual(result.autc_pq, 0.9)
-        self.assertAlmostEqual(result.autc_sq, 0.9)
-        self.assertAlmostEqual(result.autc_rq, 0.9)
+        self.assertAlmostEqual(result.autc_pq, 1.0)
+        self.assertAlmostEqual(result.autc_sq, 1.0)
+        self.assertAlmostEqual(result.autc_rq, 1.0)
 
         # TP count should be exactly 1 at all thresholds
         for t in result.thresholds:
@@ -47,17 +46,12 @@ class Test_AUTC(unittest.TestCase):
 
     def test_partial_overlap_autc(self):
         """
-        Test the drop-off behavior. Pred and Ref overlap with exactly 0.5 IoU.
-        The matching algorithm should find 1 TP for thresholds <= 0.5,
-        and 0 TP for thresholds > 0.5.
+        Test the drop-off behavior. Pred and Ref overlap with IoU = 1/3 (~0.333).
         """
         ref = np.zeros([50, 50], dtype=np.uint16)
         pred = np.zeros([50, 50], dtype=np.uint16)
 
-        # Reference: 10x20 = 200 pixels
         ref[10:20, 10:30] = 1
-        # Prediction: 10x20 = 200 pixels, offset to the right by 10 pixels
-        # Intersection: 10x10 = 100 pixels. Union = 300 pixels. IoU = 1/3 (0.333...)
         pred[10:20, 20:40] = 1
 
         evaluator = Panoptica_Evaluator(
@@ -76,11 +70,35 @@ class Test_AUTC(unittest.TestCase):
 
         # Thresholds from 0.4 onwards should fail to match due to threshold > IoU
         self.assertEqual(result.threshold_results[0.4].tp, 0)
-        self.assertEqual(result.threshold_results[0.9].tp, 0)
+        self.assertEqual(result.threshold_results[1.0].tp, 0)
 
-        # The AUTC should be computable, greater than 0, but less than the perfect 0.9
+        # The AUTC should be computable, greater than 0, but less than the perfect 1.0
         self.assertGreater(result.autc_pq, 0.0)
-        self.assertLess(result.autc_pq, 0.9)
+        self.assertLess(result.autc_pq, 1.0)
+
+    def test_partial_overlap_autc_boundary(self):
+        """
+        Test matching exactly at the IoU boundary using a fine step size.
+        IoU = 1/3 exactly. With step_size=0.05, we get thresholds 0.30, 0.35, ...
+        - threshold 0.30 < 0.333 → should match (TP=1)
+        - threshold 0.35 > 0.333 → should NOT match (TP=0)
+        This pins the boundary behaviour precisely.
+        """
+        ref = np.zeros([50, 50], dtype=np.uint16)
+        pred = np.zeros([50, 50], dtype=np.uint16)
+        ref[10:20, 10:30] = 1
+        pred[10:20, 20:40] = 1
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+
+        result = evaluator.evaluate_autc(pred, ref, threshold_step_size=0.05)["ungrouped"]
+
+        self.assertEqual(result.threshold_results[0.30].tp, 1)  # 0.30 < 1/3
+        self.assertEqual(result.threshold_results[0.35].tp, 0)  # 0.35 > 1/3
 
     def test_empty_arrays_autc(self):
         """

@@ -442,6 +442,20 @@ class Evaluation_List_Metric:
             )
 
 
+# Metrics for which AUTC is well-defined: continuous quality scores in [0, 1]
+# that summarise matching+segmentation quality across thresholds.
+AUTC_METRICS = frozenset(
+    {
+        "rq",
+        "sq",
+        "pq",
+        "sq_dsc",
+        "pq_dsc",
+        "sq_cldsc",
+        "pq_cldsc",
+    }
+)
+
 if __name__ == "__main__":
     print(Metric.DSC)
     # print(MatchingMetric.DSC.name)

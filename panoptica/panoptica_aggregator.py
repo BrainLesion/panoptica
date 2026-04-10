@@ -1,7 +1,7 @@
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaResult
+from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from pathlib import Path
 from multiprocessing import Lock, set_start_method
 import csv
@@ -229,7 +229,7 @@ class Panoptica_Aggregator:
             #
             content = [subject_name]
             for groupname in self.__class_group_names:
-                result: PanopticaResult = result_grouped[groupname]
+                result: PanopticaResult | PanopticaAUTCResult = result_grouped[groupname]
                 result_dict = result.to_dict()
                 if result.computation_time is not None:
                     result_dict[COMPUTATION_TIME_KEY] = result.computation_time

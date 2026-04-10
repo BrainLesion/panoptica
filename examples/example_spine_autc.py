@@ -13,6 +13,11 @@ from panoptica.panoptica_statistics import make_autc_plots
 def main():
     directory = Path(__file__).parent
     file_dir = directory / "spine_autc_example.tsv"
+
+    try:
+        os.remove(str(file_dir))
+    except FileNotFoundError:
+        pass
     
     # Setup paths
     reference_mask = directory / "spine_seg/matched_instance/ref.nii.gz"
@@ -54,3 +59,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
