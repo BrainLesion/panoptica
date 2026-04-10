@@ -2,7 +2,8 @@
 """
 Test script for the RegionBasedMatching implementation
 """
-
+import os
+import unittest
 import numpy as np
 from panoptica.instance_matcher import RegionBasedMatching
 from panoptica.utils.processing_pair import UnmatchedInstancePair
@@ -30,49 +31,46 @@ def create_test_data():
     return gt, pred
 
 
-def test_region_based_matching():
-    """Test the RegionBasedMatching algorithm"""
-    print("Testing RegionBasedMatching...")
+class Test_RegionMatching(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
 
-    # Create test data
-    gt, pred = create_test_data()
+    def test_region_based_matching(self):
+        """Test the RegionBasedMatching algorithm"""
+        print("Testing RegionBasedMatching...")
 
-    # Create unmatched instance pair
-    unmatched_pair = UnmatchedInstancePair(prediction_arr=pred, reference_arr=gt)
+        # Create test data
+        gt, pred = create_test_data()
 
-    print(f"Ground truth labels: {unmatched_pair.ref_labels}")
-    print(f"Prediction labels: {unmatched_pair.pred_labels}")
+        # Create unmatched instance pair
+        unmatched_pair = UnmatchedInstancePair(prediction_arr=pred, reference_arr=gt)
 
-    # Create region-based matcher
-    matcher = RegionBasedMatching(cca_backend=CCABackend.scipy)
+        print(f"Ground truth labels: {unmatched_pair.ref_labels}")
+        print(f"Prediction labels: {unmatched_pair.pred_labels}")
 
-    # Perform matching
-    try:
-        labelmap = matcher._match_instances(unmatched_pair)
+        # Create region-based matcher
+        matcher = RegionBasedMatching(cca_backend=CCABackend.scipy)
 
-        print(f"Matching successful!")
-        print(f"Label map: {labelmap.get_one_to_one_dictionary()}")
+        # Perform matching
+        try:
+            labelmap = matcher._match_instances(unmatched_pair)
 
-        # Create matched instance pair
-        matched_pair = matcher.match_instances(unmatched_pair)
+            print(f"Matching successful!")
+            print(f"Label map: {labelmap.get_one_to_one_dictionary()}")
 
-        print(f"Matched instances: {matched_pair.matched_instances}")
-        print(f"Prediction instances: {matched_pair.n_prediction_instance}")
-        print(f"Reference instances: {matched_pair.n_reference_instance}")
+            # Create matched instance pair
+            matched_pair = matcher.match_instances(unmatched_pair)
 
-        return True
+            print(f"Matched instances: {matched_pair.matched_instances}")
+            print(f"Prediction instances: {matched_pair.n_prediction_instance}")
+            print(f"Reference instances: {matched_pair.n_reference_instance}")
 
-    except Exception as e:
-        print(f"Error during matching: {e}")
-        import traceback
+            self.assertTrue(True)
 
-        traceback.print_exc()
-        return False
+        except Exception as e:
+            print(f"Error during matching: {e}")
+            import traceback
 
-
-if __name__ == "__main__":
-    success = test_region_based_matching()
-    if success:
-        print("\n✅ Region-based matching test passed!")
-    else:
-        print("\n❌ Region-based matching test failed!")
+            traceback.print_exc()
+            self.assertTrue(False)
