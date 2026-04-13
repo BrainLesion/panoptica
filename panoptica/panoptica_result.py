@@ -306,7 +306,7 @@ class PanopticaResult(object):
         )
         self.sq_hd95: float
         self._add_metric(
-            f"sq_{Metric.HD.value.name.lower()}",
+            f"sq_{Metric.HD95.value.name.lower()}",
             MetricType.INSTANCE,
             sq_hd95,
             long_name="Segmentation Quality Hausdorff Distance 95",
