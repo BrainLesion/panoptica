@@ -66,7 +66,9 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         pass
 
     def _yaml_repr(cls, node) -> dict:
-        raise NotImplementedError(f"Tried to get yaml representation of abstract class {cls.__name__}")
+        raise NotImplementedError(
+            f"Tried to get yaml representation of abstract class {cls.__name__}"
+        )
         return {}
 
     def approximate_instances(
@@ -96,16 +98,20 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         pred_labels_min = np.min(pred_labels) if len(pred_labels) > 0 else 0
         ref_labels_min = np.min(ref_labels) if len(ref_labels) > 0 else 0
         min_value = min(pred_labels_min, ref_labels_min)
-        assert min_value >= 0, "There are negative values in the semantic maps. This is not allowed!"
+        assert (
+            min_value >= 0
+        ), "There are negative values in the semantic maps. This is not allowed!"
 
         # If label_group is LabelPartGroup, force OneHotConnectedComponentsInstanceApproximator
         if isinstance(label_group, LabelPartGroup):
-            instance_pair = OneHotConnectedComponentsInstanceApproximator(cca_backend=CCABackend.cc3d)._approximate_instances(
-                semantic_pair, label_group=label_group, **kwargs
-            )
+            instance_pair = OneHotConnectedComponentsInstanceApproximator(
+                cca_backend=CCABackend.cc3d
+            )._approximate_instances(semantic_pair, label_group=label_group, **kwargs)
         else:
             # Call the instance approximation algorithm
-            instance_pair = self._approximate_instances(semantic_pair, label_group=label_group, **kwargs)
+            instance_pair = self._approximate_instances(
+                semantic_pair, label_group=label_group, **kwargs
+            )
 
         return instance_pair
 
@@ -138,7 +144,9 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         """
         self.cca_backend = cca_backend
 
-    def _approximate_instances(self, semantic_pair: SemanticPair, **kwargs) -> UnmatchedInstancePair:
+    def _approximate_instances(
+        self, semantic_pair: SemanticPair, **kwargs
+    ) -> UnmatchedInstancePair:
         """
         Approximate instances using the connected components algorithm.
 
@@ -153,10 +161,14 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         empty_prediction = len(semantic_pair.pred_labels) == 0
         empty_reference = len(semantic_pair.ref_labels) == 0
         prediction_arr, n_prediction_instance = (
-            _connected_components(semantic_pair.prediction_arr, cca_backend) if not empty_prediction else (semantic_pair.prediction_arr, 0)
+            _connected_components(semantic_pair.prediction_arr, cca_backend)
+            if not empty_prediction
+            else (semantic_pair.prediction_arr, 0)
         )
         reference_arr, n_reference_instance = (
-            _connected_components(semantic_pair.reference_arr, cca_backend) if not empty_reference else (semantic_pair.reference_arr, 0)
+            _connected_components(semantic_pair.reference_arr, cca_backend)
+            if not empty_reference
+            else (semantic_pair.reference_arr, 0)
         )
 
         return UnmatchedInstancePair(
@@ -186,19 +198,27 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
         # Move the class axis to the front: (C, *arr_shape)
         return np.moveaxis(one_hot, -1, 0)
 
-    def _approximate_instances(self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None) -> UnmatchedInstancePair:
+    def _approximate_instances(
+        self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None
+    ) -> UnmatchedInstancePair:
         cca_backend = self.cca_backend
         if label_group is not None and isinstance(label_group, LabelPartGroup):
             cca_backend = CCABackend.cc3d
         elif cca_backend is None:
-            cca_backend = CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+            cca_backend = (
+                CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
+            )
 
         # binarize values before count collections
         binarized_prediction = semantic_pair.prediction_arr > 0
         binarized_reference = semantic_pair.reference_arr > 0
 
-        _, n_prediction_instance = _connected_components(binarized_prediction, cca_backend)
-        _, n_reference_instance = _connected_components(binarized_reference, cca_backend)
+        _, n_prediction_instance = _connected_components(
+            binarized_prediction, cca_backend
+        )
+        _, n_reference_instance = _connected_components(
+            binarized_reference, cca_backend
+        )
 
         # One-hot encode
         prediction_arr = self._one_hot(semantic_pair.prediction_arr)
@@ -209,11 +229,15 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
 
         # Pad arrays to have the same number of classes if needed
         if prediction_arr.shape[0] < max_classes:
-            pad_width = ((0, max_classes - prediction_arr.shape[0]),) + tuple((0, 0) for _ in range(prediction_arr.ndim - 1))
+            pad_width = ((0, max_classes - prediction_arr.shape[0]),) + tuple(
+                (0, 0) for _ in range(prediction_arr.ndim - 1)
+            )
             prediction_arr = np.pad(prediction_arr, pad_width, mode="constant")
 
         if reference_arr.shape[0] < max_classes:
-            pad_width = ((0, max_classes - reference_arr.shape[0]),) + tuple((0, 0) for _ in range(reference_arr.ndim - 1))
+            pad_width = ((0, max_classes - reference_arr.shape[0]),) + tuple(
+                (0, 0) for _ in range(reference_arr.ndim - 1)
+            )
             reference_arr = np.pad(reference_arr, pad_width, mode="constant")
 
         for i in range(max_classes):

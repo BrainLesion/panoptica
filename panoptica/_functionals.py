@@ -109,7 +109,13 @@ def _round_to_n(value: float | int, n_significant_digits: int = 2) -> float:
     Returns:
         float: The rounded value
     """
-    return value if value == 0 else round(value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1))
+    return (
+        value
+        if value == 0
+        else round(
+            value, -int(math.floor(math.log10(abs(value)))) + (n_significant_digits - 1)
+        )
+    )
 
 
 def _get_orig_onehotcc_structure(
@@ -155,7 +161,11 @@ def _calc_overlapping_labels(
     overlap_arr = (overlap_arr * max_ref) + reference_arr
     overlap_arr[reference_arr == 0] = 0
 
-    return [(int(i % (max_ref)), int(i // (max_ref))) for i in np.unique(overlap_arr) if i > max_ref]
+    return [
+        (int(i % (max_ref)), int(i // (max_ref)))
+        for i in np.unique(overlap_arr)
+        if i > max_ref
+    ]
 
 
 def _calc_matching_metric_of_overlapping_labels(
@@ -182,9 +192,14 @@ def _calc_matching_metric_of_overlapping_labels(
         ref_labels=ref_labels,
     )
 
-    mm_pairs = [(matching_metric.value(reference_arr, prediction_arr, i[0], i[1]), (i[0], i[1])) for i in overlapping_labels]
+    mm_pairs = [
+        (matching_metric.value(reference_arr, prediction_arr, i[0], i[1]), (i[0], i[1]))
+        for i in overlapping_labels
+    ]
 
-    mm_pairs = sorted(mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing)
+    mm_pairs = sorted(
+        mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
+    )
 
     return mm_pairs
 
@@ -206,7 +221,11 @@ def calculate_all_label_pairs(
     pred_labels = [int(label) for label in np.unique(prediction_arr) if label > 0]
     ref_labels = [int(label) for label in ref_labels if label > 0]
 
-    return [(ref_label, pred_label) for ref_label in ref_labels for pred_label in pred_labels]
+    return [
+        (ref_label, pred_label)
+        for ref_label in ref_labels
+        for pred_label in pred_labels
+    ]
 
 
 # -------------------- PART LABEL PROCESSING --------------------
@@ -258,7 +277,9 @@ def _get_encompassed_parts(part_slice: np.ndarray, thing_mask: np.ndarray) -> li
     return encompassed_parts
 
 
-def _consolidate_multiple_parts(part_slice: np.ndarray, encompassed_parts: list[int]) -> np.ndarray:
+def _consolidate_multiple_parts(
+    part_slice: np.ndarray, encompassed_parts: list[int]
+) -> np.ndarray:
     """
     Consolidate multiple encompassed parts to the lowest label.
 
@@ -275,7 +296,9 @@ def _consolidate_multiple_parts(part_slice: np.ndarray, encompassed_parts: list[
     return part_slice
 
 
-def _find_optimal_part_matching_per_type(part_pairs: list[tuple[float, tuple[int, int]]], matching_metric: "Metric") -> list[float]:
+def _find_optimal_part_matching_per_type(
+    part_pairs: list[tuple[float, tuple[int, int]]], matching_metric: "Metric"
+) -> list[float]:
     """
     Find optimal matching between reference and predicted parts for a single part type.
 
@@ -298,21 +321,31 @@ def _find_optimal_part_matching_per_type(part_pairs: list[tuple[float, tuple[int
     pred_parts = set(pair[1][1] for pair in part_pairs)
 
     # Sort part pairs by score
-    sorted_pairs = sorted(part_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing)
+    sorted_pairs = sorted(
+        part_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
+    )
 
     matching_scores = []
     used_pred_parts = set()
 
     for ref_part in sorted(ref_parts):
         # Find best available predicted part for this reference part
-        candidates = [(score, p_part) for score, (r_part, p_part) in sorted_pairs if r_part == ref_part and p_part not in used_pred_parts]
+        candidates = [
+            (score, p_part)
+            for score, (r_part, p_part) in sorted_pairs
+            if r_part == ref_part and p_part not in used_pred_parts
+        ]
 
         if candidates:
             # Prefer positive scores, then sort by metric preference
             positive_candidates = [(s, p) for s, p in candidates if s > 0]
-            final_candidates = positive_candidates if positive_candidates else candidates
+            final_candidates = (
+                positive_candidates if positive_candidates else candidates
+            )
 
-            final_candidates.sort(key=lambda x: x[0], reverse=not matching_metric.decreasing)
+            final_candidates.sort(
+                key=lambda x: x[0], reverse=not matching_metric.decreasing
+            )
             best_score, best_pred_part = final_candidates[0]
 
             matching_scores.append(best_score)
@@ -358,16 +391,24 @@ def _calculate_part_scores_for_all_types(
         ref_part_slice[~matched_ref_component] = 0
 
         # Get encompassed parts for both prediction and reference
-        encompassed_pred_parts = _get_encompassed_parts(pred_part_slice, matched_pred_component)
-        encompassed_ref_parts = _get_encompassed_parts(ref_part_slice, matched_ref_component)
+        encompassed_pred_parts = _get_encompassed_parts(
+            pred_part_slice, matched_pred_component
+        )
+        encompassed_ref_parts = _get_encompassed_parts(
+            ref_part_slice, matched_ref_component
+        )
 
         # Skip if no parts found in either
         if not encompassed_pred_parts and not encompassed_ref_parts:
             continue
 
         # Consolidate multiple parts to lowest label
-        pred_part_slice = _consolidate_multiple_parts(pred_part_slice, encompassed_pred_parts)
-        ref_part_slice = _consolidate_multiple_parts(ref_part_slice, encompassed_ref_parts)
+        pred_part_slice = _consolidate_multiple_parts(
+            pred_part_slice, encompassed_pred_parts
+        )
+        ref_part_slice = _consolidate_multiple_parts(
+            ref_part_slice, encompassed_ref_parts
+        )
 
         part_pairs_for_type = []
 
@@ -382,7 +423,9 @@ def _calculate_part_scores_for_all_types(
 
             for ref_label in ref_unique_labels:
                 for pred_label in pred_unique_labels:
-                    score = matching_metric.value(ref_part_slice, pred_part_slice, ref_label, pred_label)
+                    score = matching_metric.value(
+                        ref_part_slice, pred_part_slice, ref_label, pred_label
+                    )
                     part_pairs_for_type.append((score, (ref_label, pred_label)))
 
         elif ref_has_parts != pred_has_parts:
@@ -417,7 +460,9 @@ def _calculate_combined_part_score(
 
     for part_type, part_pairs in part_scores_by_type.items():
         # Get optimal matching for this part type
-        matching_scores = _find_optimal_part_matching_per_type(part_pairs, matching_metric)
+        matching_scores = _find_optimal_part_matching_per_type(
+            part_pairs, matching_metric
+        )
 
         if matching_scores:
             # Add all individual part scores (no averaging within part type)
@@ -453,8 +498,12 @@ def _calc_matching_metric_of_overlapping_partlabels(
         list: List of (score, (ref_label, pred_label)) pairs
     """
     # Reshape arrays to original structure
-    prediction_arr = _get_orig_onehotcc_structure(prediction_arr, n_ref_labels, processing_pair_orig_shape)
-    reference_arr = _get_orig_onehotcc_structure(reference_arr, n_ref_labels, processing_pair_orig_shape)
+    prediction_arr = _get_orig_onehotcc_structure(
+        prediction_arr, n_ref_labels, processing_pair_orig_shape
+    )
+    reference_arr = _get_orig_onehotcc_structure(
+        reference_arr, n_ref_labels, processing_pair_orig_shape
+    )
 
     # Calculate overlapping labels for things (channel 0)
     overlapping_labels = _calc_overlapping_labels(
@@ -464,9 +513,14 @@ def _calc_matching_metric_of_overlapping_partlabels(
     )
 
     # Calculate thing scores
-    thing_pairs = [(matching_metric.value(reference_arr[0], prediction_arr[0], i, j), (i, j)) for i, j in overlapping_labels]
+    thing_pairs = [
+        (matching_metric.value(reference_arr[0], prediction_arr[0], i, j), (i, j))
+        for i, j in overlapping_labels
+    ]
 
-    sorted_thing_pairs = sorted(thing_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing)
+    sorted_thing_pairs = sorted(
+        thing_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
+    )
 
     # Process each thing pair to include part scores
     final_pairs = []
@@ -492,16 +546,22 @@ def _calc_matching_metric_of_overlapping_partlabels(
                 ref_part_types_in_region.add(part_label)
 
         # Get part scores for all part types
-        part_scores_by_type = _calculate_part_scores_for_all_types(thing_pair, prediction_arr, reference_arr, n_ref_labels, matching_metric)
+        part_scores_by_type = _calculate_part_scores_for_all_types(
+            thing_pair, prediction_arr, reference_arr, n_ref_labels, matching_metric
+        )
 
         # Determine scoring strategy based on part type presence
         if pred_part_types_in_region and ref_part_types_in_region:
             # Both have some parts - calculate combined part score
-            total_part_score, total_part_count = _calculate_combined_part_score(part_scores_by_type, matching_metric)
+            total_part_score, total_part_count = _calculate_combined_part_score(
+                part_scores_by_type, matching_metric
+            )
 
             # Calculate combined score: (thing_score + sum_of_all_part_scores) / (1 + total_part_count)
             if total_part_count > 0:
-                updated_score = (thing_score + total_part_score) / (1 + total_part_count)
+                updated_score = (thing_score + total_part_score) / (
+                    1 + total_part_count
+                )
             else:
                 updated_score = thing_score
 
@@ -516,7 +576,9 @@ def _calc_matching_metric_of_overlapping_partlabels(
         final_pairs.append((updated_score, thing_pair))
 
     # Final sort by updated scores
-    final_sorted_pairs = sorted(final_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing)
+    final_sorted_pairs = sorted(
+        final_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
+    )
 
     return final_sorted_pairs
 
