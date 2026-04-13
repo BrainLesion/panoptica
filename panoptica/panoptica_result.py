@@ -667,13 +667,21 @@ class PanopticaResult(object):
         # Populate the instance dictionaries directly from the columnar metrics
         for metric_enum, list_metric_obj in self._list_metrics.items():
             # IOU is a special case where the metric name does not have the suffix -> just "sq"
-            sq_key = f"sq_{metric_enum.value.name.lower()}" if metric_enum != Metric.IOU else "sq"
-            
-            if list_metric_obj.error or list_metric_obj.ALL is None or sq_key not in master_dict:
+            sq_key = (
+                f"sq_{metric_enum.value.name.lower()}"
+                if metric_enum != Metric.IOU
+                else "sq"
+            )
+
+            if (
+                list_metric_obj.error
+                or list_metric_obj.ALL is None
+                or sq_key not in master_dict
+            ):
                 continue
 
             val_list = list_metric_obj.ALL
-            
+
             # Scatter the list values across the pre-allocated row dictionaries
             for i in range(self.tp):
                 # Offset by 1 because results[0] is the master_dict
