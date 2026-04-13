@@ -210,26 +210,32 @@ class Panoptica_Aggregator:
                 _write_content(self.__output_file, [content])
 
             else:
-                max_tp = 0
-                for groupname in self.__class_group_names:
-                    max_tp = max(max_tp, result_grouped[groupname].tp)
-                num_rows = 1 + max_tp
-
                 all_rows = []
-                for i in range(num_rows):
-                    name = subject_name if i == 0 else f"{subject_name}_inst_{i-1}"
-                    all_rows.append([name])
-
+                summary_row = [subject_name]
+                group_rows_as_dicts = {}
                 for groupname in self.__class_group_names:
                     result: PanopticaResult = result_grouped[groupname]
                     rows_as_dicts = result.to_dict(True)
-
-                    for i in range(num_rows):
-                        r_dict = rows_as_dicts[i] if i < len(rows_as_dicts) else {}
-                        if i == 0 and result.computation_time is not None:
-                            r_dict[COMPUTATION_TIME_KEY] = result.computation_time
-                        for e in self.__evaluation_metrics:
-                            all_rows[i].append(r_dict.get(e, ""))
+                    group_rows_as_dicts[groupname] = rows_as_dicts
+                    summary_dict = rows_as_dicts[0] if len(rows_as_dicts) > 0 else {}
+                    if result.computation_time is not None:
+                        summary_dict = dict(summary_dict)
+                        summary_dict[COMPUTATION_TIME_KEY] = result.computation_time
+                    for e in self.__evaluation_metrics:
+                        summary_row.append(summary_dict.get(e, ""))
+                all_rows.append(summary_row)
+                for groupname in self.__class_group_names:
+                    rows_as_dicts = group_rows_as_dicts[groupname]
+                    for inst_idx, r_dict in enumerate(rows_as_dicts[1:]):
+                        row = [f"{subject_name}-{groupname}_inst_{inst_idx}"]
+                        for current_groupname in self.__class_group_names:
+                            if current_groupname == groupname:
+                                for e in self.__evaluation_metrics:
+                                    row.append(r_dict.get(e, ""))
+                            else:
+                                for _ in self.__evaluation_metrics:
+                                    row.append("")
+                        all_rows.append(row)
 
                 _write_content(self.__output_file, all_rows)
 

@@ -436,10 +436,6 @@ class Panoptica_Statistic:
             summary_dict["across_groups"] = self.get_summary_across_groups()
         return summary_dict
 
-    def get_summary(self, group, metric) -> FloatDistribution:
-        values = self.get(group, metric, remove_nones=True)
-        return FloatDistribution(values)
-
     def print_summary(
         self,
         ndigits: int = 3,
@@ -457,7 +453,7 @@ class Panoptica_Statistic:
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
             print()
 
-    def get_summary(self, group, metric, master_only: bool = True) -> ValueSummary:
+    def get_summary(self, group, metric, master_only: bool = True) -> FloatDistribution:
         """Gets a ValueSummary for a given group and metric.
         If master_only is True, ignores individual instance rows to prevent double counting.
         """
@@ -473,7 +469,7 @@ class Panoptica_Statistic:
         else:
             filtered_values = [val for val in all_values if val is not None]
 
-        return ValueSummary(filtered_values)
+        return FloatDistribution(filtered_values)
 
     def get_summary_figure(
         self,

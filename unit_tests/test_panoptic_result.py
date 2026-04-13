@@ -154,3 +154,43 @@ class Test_Panoptica_Results(unittest.TestCase):
                     c.sq_rvae
                 with self.assertRaises(MetricCouldNotBeComputedException):
                     c.sq_rvae_std
+
+    def test_to_dict_individual_instances(self):
+        result = PanopticaResult(
+            prediction_arr=None,
+            reference_arr=None,
+            n_ref_instances=2,
+            n_pred_instances=2,
+            tp=2,
+            list_metrics={
+            Metric.IOU: [0.8, 0.9],
+            Metric.DSC: [0.85, 0.95]
+        },
+            edge_case_handler=EdgeCaseHandler(),
+        )
+        result.calculate_all(print_errors=False)
+
+        result_dicts = result.to_dict(output_individual_instance_metrics=True)
+
+        self.assertIsInstance(result_dicts, list)
+        self.assertEqual(len(result_dicts), 3)
+
+        master_dict = result_dicts[0]
+        inst_0_dict = result_dicts[1]
+        inst_1_dict = result_dicts[2]
+
+        self.assertIn("tp", master_dict)
+        self.assertIn("sq", master_dict)
+        self.assertIn("sq_std", master_dict)
+        self.assertEqual(master_dict["tp"], 2)
+
+        self.assertIn("sq", inst_0_dict)
+        self.assertIn("sq_dsc", inst_0_dict)
+        self.assertNotIn("tp", inst_0_dict)
+        self.assertNotIn("sq_std", inst_0_dict)
+        self.assertNotIn("fp", inst_0_dict)
+
+        self.assertEqual(inst_0_dict["sq"], 0.8)
+        self.assertEqual(inst_1_dict["sq"], 0.9)
+        self.assertEqual(inst_0_dict["sq_dsc"], 0.85)
+        self.assertEqual(inst_1_dict["sq_dsc"], 0.95)
