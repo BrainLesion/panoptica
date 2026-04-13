@@ -162,8 +162,8 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr,
             reference_arr=reference_arr,
-            n_prediction_instance=n_prediction_instance,
-            n_reference_instance=n_reference_instance,
+            n_pred_instances=n_prediction_instance,
+            n_ref_instances=n_reference_instance,
         )
 
     @classmethod
@@ -228,8 +228,8 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr.flatten().astype(np.int64),
             reference_arr=reference_arr.flatten().astype(np.int64),
-            n_prediction_instance=n_prediction_instance,
-            n_reference_instance=n_reference_instance,
+            n_pred_instances=n_prediction_instance,
+            n_ref_instances=n_reference_instance,
         )
 
     @classmethod

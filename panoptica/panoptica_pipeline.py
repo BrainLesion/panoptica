@@ -378,8 +378,8 @@ def _phase_instance_approximation(
 
         # Update instance metadata after approximation
         if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
-            instance_metadata["original_n_preds"] = processing_pair.n_prediction_instance
-            instance_metadata["original_n_refs"] = processing_pair.n_reference_instance
+            instance_metadata["original_n_preds"] = processing_pair.n_pred_instances
+            instance_metadata["original_n_refs"] = processing_pair.n_ref_instances
 
     return processing_pair
 
@@ -484,8 +484,8 @@ def _handle_zero_instances_cases(
     Returns:
         UnmatchedInstancePair | MatchedInstancePair | PanopticaResult: The processed processing pair or evaluation result.
     """
-    n_reference_instance = processing_pair.n_reference_instance
-    n_prediction_instance = processing_pair.n_prediction_instance
+    n_reference_instance = processing_pair.n_ref_instances
+    n_prediction_instance = processing_pair.n_pred_instances
 
     panoptica_result_args = {
         "list_metrics": {Metric[k.name]: [] for k in eval_metrics},
