@@ -194,6 +194,7 @@ class Panoptica_Aggregator:
         self._save_one_subject(subject_name, res)
 
     def _save_one_subject(self, subject_name, result_grouped):
+        """Saves the evaluation results for a single subject."""
         with filelock:
             if not self.__output_individual_instance_metrics:
                 content = [subject_name]
