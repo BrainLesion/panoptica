@@ -882,8 +882,10 @@ class PanopticaAUTCResult(object):
         for t, res in self._threshold_results.items():
             t_str = f"{t:g}"
             for k, v in res.to_dict().items():
-                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                if isinstance(v, (int, float)):
                     result[f"t{t_str}_{k}"] = float(v)
+                else:
+                    result[f"t{t_str}_{k}"] = np.nan
 
         return result
 

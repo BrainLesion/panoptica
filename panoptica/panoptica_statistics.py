@@ -546,11 +546,11 @@ def make_autc_plots(
             else:
                 legend_name = f"{setupname} - {name}"
 
-            Y = [ValueSummary(stat.get(g, k[1], remove_nones=True)).avg for k in t_keys]
+            Y = [FloatDistribution(stat.get(g, k[1], remove_nones=True)).avg for k in t_keys]
 
             if plot_std:
                 Ystd = [
-                    ValueSummary(stat.get(g, k[1], remove_nones=True)).std
+                    FloatDistribution(stat.get(g, k[1], remove_nones=True)).std
                     for k in t_keys
                 ]
                 error_y = dict(type="data", array=Ystd)

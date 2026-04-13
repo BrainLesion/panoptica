@@ -21,7 +21,7 @@ import os
 # set_start_method("fork")
 
 
-def main(parallel_opt: Optional[Literal["pool", "joblib", "future"]] = "future"):
+def main(parallel_opt: Literal["pool", "joblib", "future", "none"] = "future"):
     file_dir = Path(__file__).parent.joinpath("spine_example.tsv")
     try:
         os.remove(str(file_dir))

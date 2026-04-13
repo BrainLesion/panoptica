@@ -253,40 +253,55 @@ class Panoptica_Evaluator(SupportsConfig):
         thresholds = self.generate_thresholds(threshold_step_size)
         result_grouped: dict[str, PanopticaAUTCResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
-            group_processing_pair = processing_pair.copy()
-            instance_metadata = group_processing_pair.get_metadata()
+            prediction_arr_grouped = label_group(processing_pair.prediction_arr)
+            reference_arr_grouped = label_group(processing_pair.reference_arr)
 
-            if isinstance(group_processing_pair, SemanticPair):
-                group_processing_pair = _approximate_instances(
-                    group_processing_pair,
+            processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
+            instance_metadata = processing_pair_grouped.get_metadata()
+            if label_group.single_instance and not isinstance(
+                processing_pair, MatchedInstancePair
+            ):
+                processing_pair_grouped = MatchedInstancePair(
+                    prediction_arr=processing_pair_grouped.prediction_arr,
+                    reference_arr=processing_pair_grouped.reference_arr,
+                )
+
+            if isinstance(processing_pair_grouped, SemanticPair):
+                processing_pair_grouped = _approximate_instances(
+                    processing_pair_grouped,
                     instance_metadata,
                     self.__instance_approximator,
                     label_group,
                     log_times=self.__log_times if log_times is None else log_times,
                     verbose=True if verbose is None else verbose,
                 )
+
             threshold_results: dict[float, PanopticaResult] = {}
             for threshold in thresholds:
-                threshold_results[threshold] = self._evaluate_group(
-                    group_name,
-                    label_group,
-                    group_processing_pair,
-                    decision_threshold=(
-                        self.__decision_threshold
-                        if decision_threshold_mode == "fixed"
-                        else threshold
-                    ),
+                decision_threshold = threshold
+                if label_group.single_instance:
+                    decision_threshold = 0.0
+                elif decision_threshold_mode == "fixed":
+                    decision_threshold = self.__decision_threshold
+
+                threshold_results[threshold] = panoptic_evaluate(
+                    input_pair=processing_pair_grouped,
+                    edge_case_handler=self.__edge_case_handler,
+                    instance_approximator=self.__instance_approximator,
+                    instance_matcher=self.__instance_matcher,
+                    instance_metrics=self.__eval_metrics,
+                    global_metrics=self.__global_metrics,
+                    decision_metric=self.__decision_metric,
+                    decision_threshold=decision_threshold,
                     matching_threshold=threshold,
                     result_all=result_all,
-                    save_group_times=(
-                        self.__save_group_times
-                        if save_group_times is None
-                        else save_group_times
-                    ),
-                    log_times=log_times,
-                    verbose=verbose,
+                    log_times=self.__log_times if log_times is None else log_times,
+                    verbose=True if verbose is None else verbose,
+                    verbose_calc=self.__verbose if verbose is None else verbose,
+                    label_group=label_group,
                     **metadata,
                 )
+
             result_grouped[group_name] = PanopticaAUTCResult(
                 threshold_results=threshold_results
             )
