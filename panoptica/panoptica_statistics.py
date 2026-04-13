@@ -546,7 +546,10 @@ def make_autc_plots(
             else:
                 legend_name = f"{setupname} - {name}"
 
-            Y = [FloatDistribution(stat.get(g, k[1], remove_nones=True)).avg for k in t_keys]
+            Y = [
+                FloatDistribution(stat.get(g, k[1], remove_nones=True)).avg
+                for k in t_keys
+            ]
 
             if plot_std:
                 Ystd = [
