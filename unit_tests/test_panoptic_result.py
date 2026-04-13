@@ -162,10 +162,7 @@ class Test_Panoptica_Results(unittest.TestCase):
             n_ref_instances=2,
             n_pred_instances=2,
             tp=2,
-            list_metrics={
-            Metric.IOU: [0.8, 0.9],
-            Metric.DSC: [0.85, 0.95]
-        },
+            list_metrics={Metric.IOU: [0.8, 0.9], Metric.DSC: [0.85, 0.95]},
             edge_case_handler=EdgeCaseHandler(),
         )
         result.calculate_all(print_errors=False)
