@@ -176,7 +176,7 @@ class PanopticaResult(object):
         # region DICE
         self.sq_dsc: float
         self._add_metric(
-            Metric.DSC.value.result_id,
+            f"sq_{Metric.DSC.value.name.lower()}",
             MetricType.INSTANCE,
             sq_dsc,
             long_name="Segmentation Quality Dsc",
@@ -200,7 +200,7 @@ class PanopticaResult(object):
         # region clDICE
         self.sq_cldsc: float
         self._add_metric(
-            Metric.clDSC.value.result_id,
+            f"sq_{Metric.clDSC.value.name.lower()}",
             MetricType.INSTANCE,
             sq_cldsc,
             long_name="Segmentation Quality Centerline Dsc",
@@ -224,7 +224,7 @@ class PanopticaResult(object):
         # region ASSD
         self.sq_assd: float
         self._add_metric(
-            Metric.ASSD.value.result_id,
+            f"sq_{Metric.ASSD.value.name.lower()}",
             MetricType.INSTANCE,
             sq_assd,
             long_name="Segmentation Quality ASSD",
@@ -241,7 +241,7 @@ class PanopticaResult(object):
         # region RVD
         self.sq_rvd: float
         self._add_metric(
-            Metric.RVD.value.result_id,
+            f"sq_{Metric.RVD.value.name.lower()}",
             MetricType.INSTANCE,
             sq_rvd,
             long_name="Segmentation Quality Relative Volume Difference",
@@ -258,7 +258,7 @@ class PanopticaResult(object):
         # region RVAE
         self.sq_rvae: float
         self._add_metric(
-            Metric.RVAE.value.result_id,
+            f"sq_{Metric.RVAE.value.name.lower()}",
             MetricType.INSTANCE,
             sq_rvae,
             long_name="Segmentation Quality Relative Volume Absolute Error",
@@ -275,7 +275,7 @@ class PanopticaResult(object):
         # region CEDI
         self.sq_cedi: float
         self._add_metric(
-            Metric.CEDI.value.result_id,
+            f"sq_{Metric.CEDI.value.name.lower()}",
             MetricType.INSTANCE,
             sq_cedi,
             long_name="Segmentation Quality Center Distance",
@@ -292,7 +292,7 @@ class PanopticaResult(object):
         # region HD
         self.sq_hd: float
         self._add_metric(
-            Metric.HD.value.result_id,
+            f"sq_{Metric.HD.value.name.lower()}",
             MetricType.INSTANCE,
             sq_hd,
             long_name="Segmentation Quality Hausdorff Distance",
@@ -306,7 +306,7 @@ class PanopticaResult(object):
         )
         self.sq_hd95: float
         self._add_metric(
-            Metric.HD95.value.result_id,
+            f"sq_{Metric.HD.value.name.lower()}",
             MetricType.INSTANCE,
             sq_hd95,
             long_name="Segmentation Quality Hausdorff Distance 95",
@@ -320,7 +320,7 @@ class PanopticaResult(object):
         )
         self.sq_nsd: float
         self._add_metric(
-            Metric.NSD.value.result_id,
+            f"sq_{Metric.NSD.value.name.lower()}",
             MetricType.INSTANCE,
             sq_nsd,
             long_name="Segmentation Quality Normalized Surface Dice",
@@ -658,28 +658,26 @@ class PanopticaResult(object):
             if (not v._error and v._was_calculated)
         }
 
-        # If the flag is false, just return the master dictionary
         if not output_individual_instance_metrics:
             return master_dict
 
-        # Extract only the valid lists that map to requested columns
-        instance_lists = {}
+        # allocate the results list: 1 Master Dict + 1 Empty Dict per True Positive
+        results = [master_dict] + [{} for _ in range(self.tp)]
+
+        # Populate the instance dictionaries directly from the columnar metrics
         for metric_enum, list_metric_obj in self._list_metrics.items():
-            if list_metric_obj.error or list_metric_obj.ALL is None:
+            # IOU is a special case where the metric name does not have the suffix -> just "sq"
+            sq_key = f"sq_{metric_enum.value.name.lower()}" if metric_enum != Metric.IOU else "sq"
+            
+            if list_metric_obj.error or list_metric_obj.ALL is None or sq_key not in master_dict:
                 continue
 
-            key = metric_enum.value.result_id
-            # Guard: Only include the list if the column exists in the master row
-            if key in master_dict:
-                instance_lists[key] = list_metric_obj.ALL
-
-        results = [master_dict]
-        for i in range(self.tp):
-            inst_dict = {}
-            for key, val_list in instance_lists.items():
-                # We still keep the fallback `""` just in case a list got corrupted
-                inst_dict[key] = val_list[i] if i < len(val_list) else ""
-            results.append(inst_dict)
+            val_list = list_metric_obj.ALL
+            
+            # Scatter the list values across the pre-allocated row dictionaries
+            for i in range(self.tp):
+                # Offset by 1 because results[0] is the master_dict
+                results[i + 1][sq_key] = val_list[i] if i < len(val_list) else ""
 
         return results
 
