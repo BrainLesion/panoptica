@@ -253,6 +253,9 @@ class Panoptica_Evaluator(SupportsConfig):
         thresholds = self.generate_thresholds(threshold_step_size)
         result_grouped: dict[str, PanopticaAUTCResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
+            if self.__save_group_times or save_group_times:
+                start_time = perf_counter()
+
             prediction_arr_grouped = label_group(processing_pair.prediction_arr)
             reference_arr_grouped = label_group(processing_pair.reference_arr)
 
@@ -299,12 +302,16 @@ class Panoptica_Evaluator(SupportsConfig):
                     verbose=True if verbose is None else verbose,
                     verbose_calc=self.__verbose if verbose is None else verbose,
                     label_group=label_group,
+                    instance_metadata=instance_metadata,
                     **metadata,
                 )
 
             result_grouped[group_name] = PanopticaAUTCResult(
                 threshold_results=threshold_results
             )
+            if self.__save_group_times or save_group_times:
+                duration = perf_counter() - start_time
+                result_grouped[group_name].computation_time = duration
         return result_grouped
 
     def _preprocess_input(
