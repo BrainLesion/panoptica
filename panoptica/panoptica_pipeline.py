@@ -135,21 +135,11 @@ def _panoptic_evaluate(
 
         # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
         # This happens when the effective number of prediction instances is less than original
-        has_many_to_one_mappings = (
-            processing_pair.n_pred_instances < instance_metadata["original_n_preds"]
-        )
+        has_many_to_one_mappings = processing_pair.n_pred_instances < instance_metadata["original_n_preds"]
 
         # Use effective counts if many-to-one mappings were detected, otherwise use original counts
-        final_n_pred_instances = (
-            processing_pair.n_pred_instances
-            if has_many_to_one_mappings
-            else instance_metadata["original_n_preds"]
-        )
-        final_n_ref_instances = (
-            processing_pair.n_ref_instances
-            if has_many_to_one_mappings
-            else instance_metadata["original_n_refs"]
-        )
+        final_n_pred_instances = processing_pair.n_pred_instances if has_many_to_one_mappings else instance_metadata["original_n_preds"]
+        final_n_ref_instances = processing_pair.n_ref_instances if has_many_to_one_mappings else instance_metadata["original_n_refs"]
 
         processing_pair = PanopticaResult(
             reference_arr=processing_pair.reference_arr,
@@ -244,147 +234,146 @@ def _panoptic_evaluate_region_wise(
         verbose=verbose,
     )
 
-    assert isinstance(
-        processing_pair, UnmatchedInstancePair
-    ), f"Expected UnmatchedInstancePair, got {type(processing_pair)}"
-
-    # create regions and label to regions
-    region_map, num_features = _get_voronoi_regions(
-        processing_pair.reference_arr, cca_backend=None
+    assert isinstance(processing_pair, UnmatchedInstancePair), f"Expected UnmatchedInstancePair, got {type(processing_pair)}"
+    processing_pair = _handle_zero_instances_cases(
+        processing_pair,
+        eval_metrics=instance_metrics,
+        global_metrics=global_metrics,
+        edge_case_handler=edge_case_handler,
     )
 
-    region2result_map: dict[int, PanopticaResult] = {}
+    # proceed if pipeline only if no edge case handling necessary
+    if not isinstance(processing_pair, PanopticaResult):
 
-    for i in range(1, num_features + 1):
-        region_mask = region_map == i
+        # create regions and label to regions
+        region_map, num_features = _get_voronoi_regions(processing_pair.reference_arr, cca_backend=None)
+        assert num_features > 0, "Expected at least one region in the reference mask for region-wise evaluation"
 
-        intermediate_steps_data_r: IntermediateStepsData = IntermediateStepsData(
-            input_pair
-        )
+        region2result_map: dict[int, PanopticaResult] = {}
 
-        # multiply region mask with both prediction and reference arr
-        processing_pair_r = UnmatchedInstancePair(
-            processing_pair.prediction_arr * region_mask,
-            processing_pair.reference_arr * region_mask,
-        )
+        for i in range(1, num_features + 1):
+            region_mask = region_map == i
 
-        # Second Phase: Instance Matching
-        processing_pair_r = _phase_instance_matching(
-            processing_pair_r,
-            intermediate_steps_data_r,
-            instance_metrics=instance_metrics,
-            instance_metadata=instance_metadata,
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-            instance_matcher=instance_matcher,
-            label_group=label_group,
-            log_times=log_times,
-            verbose=verbose,
-            **kwargs,
-        )
+            intermediate_steps_data_r: IntermediateStepsData = IntermediateStepsData(input_pair)
 
-        # Third Phase: Instance Evaluation
-        processing_pair_r = _phase_instance_evaluation(
-            processing_pair_r,
-            intermediate_steps_data_r,
-            instance_metrics=instance_metrics,
-            instance_metadata=instance_metadata,
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-            decision_metric=None,
-            decision_threshold=None,
-            log_times=log_times,
-            verbose=verbose,
-            **kwargs,
-        )
-
-        if isinstance(processing_pair_r, EvaluateInstancePair):
-            # Update instance counts from the processed pair if available
-            if instance_metadata["original_n_preds"] == 0:
-                instance_metadata["original_n_preds"] = (
-                    processing_pair_r.n_pred_instances
-                )
-            if instance_metadata["original_n_refs"] == 0:
-                instance_metadata["original_n_refs"] = processing_pair_r.n_ref_instances
-
-            # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
-            # This happens when the effective number of prediction instances is less than original
-            has_many_to_one_mappings = (
-                processing_pair_r.n_pred_instances
-                < instance_metadata["original_n_preds"]
+            # multiply region mask with both prediction and reference arr
+            processing_pair_r = UnmatchedInstancePair(
+                processing_pair.prediction_arr * region_mask,
+                processing_pair.reference_arr * region_mask,
             )
 
-            # Use effective counts if many-to-one mappings were detected, otherwise use original counts
-            final_n_pred_instances = (
-                processing_pair_r.n_pred_instances
-                if has_many_to_one_mappings
-                else instance_metadata["original_n_preds"]
-            )
-            final_n_ref_instances = (
-                processing_pair_r.n_ref_instances
-                if has_many_to_one_mappings
-                else instance_metadata["original_n_refs"]
-            )
-
-            processing_pair_r = PanopticaResult(
-                reference_arr=processing_pair_r.reference_arr,
-                prediction_arr=processing_pair_r.prediction_arr,
-                processing_pair_orig_shape=instance_metadata["original_shape"],
-                n_pred_instances=final_n_pred_instances,
-                n_ref_instances=final_n_ref_instances,
-                n_ref_labels=instance_metadata["n_ref_labels"],
-                label_group=label_group,
-                tp=processing_pair_r.tp,
-                list_metrics=processing_pair_r.list_metrics,
+            # Second Phase: Instance Matching
+            processing_pair_r = _phase_instance_matching(
+                processing_pair_r,
+                intermediate_steps_data_r,
+                instance_metrics=instance_metrics,
+                instance_metadata=instance_metadata,
                 global_metrics=global_metrics,
                 edge_case_handler=edge_case_handler,
-                intermediate_steps_data=intermediate_steps_data_r,
+                instance_matcher=instance_matcher,
+                label_group=label_group,
+                log_times=log_times,
+                verbose=verbose,
                 **kwargs,
             )
 
-        if isinstance(processing_pair_r, PanopticaResult):
-            processing_pair_r._global_metrics = global_metrics
-            if result_all:
-                processing_pair_r.calculate_all(print_errors=False)
-
-            region2result_map[i] = processing_pair_r
-
-    if len(region2result_map) == num_features:
-        # Combine results from all regions into a single PanopticaResult
-        combined_result = PanopticaResult(
-            reference_arr=input_pair.reference_arr,
-            prediction_arr=input_pair.prediction_arr,
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            n_pred_instances=processing_pair_r.n_pred_instances,
-            n_ref_instances=num_features,  # We set n_ref_instances to the number of regions, as each region corresponds to one reference instance
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            label_group=label_group,
-            tp=np.nan,
-            list_metrics={},  # TODO: how to combine list metrics across regions? For now, we leave it empty and only calculate global metrics
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-            intermediate_steps_data=intermediate_steps_data,
-            **kwargs,
-        )
-        # combined global metrics post-hoc
-        for gm in global_metrics:
-            gm_attr_name = f"global_bin_{gm.name.lower()}"
-            setattr(
-                combined_result,
-                gm_attr_name,
-                np.mean(
-                    [
-                        getattr(region2result_map[i], gm_attr_name)
-                        for i in range(1, num_features + 1)
-                    ]
-                ),
+            # Third Phase: Instance Evaluation
+            processing_pair_r = _phase_instance_evaluation(
+                processing_pair_r,
+                intermediate_steps_data_r,
+                instance_metrics=instance_metrics,
+                instance_metadata=instance_metadata,
+                global_metrics=global_metrics,
+                edge_case_handler=edge_case_handler,
+                decision_metric=None,
+                decision_threshold=None,
+                log_times=log_times,
+                verbose=verbose,
+                **kwargs,
             )
 
-        return combined_result
+            if isinstance(processing_pair_r, EvaluateInstancePair):
+                # Update instance counts from the processed pair if available
+                if instance_metadata["original_n_preds"] == 0:
+                    instance_metadata["original_n_preds"] = processing_pair_r.n_pred_instances
+                if instance_metadata["original_n_refs"] == 0:
+                    instance_metadata["original_n_refs"] = processing_pair_r.n_ref_instances
+
+                # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
+                # This happens when the effective number of prediction instances is less than original
+                has_many_to_one_mappings = processing_pair_r.n_pred_instances < instance_metadata["original_n_preds"]
+
+                # Use effective counts if many-to-one mappings were detected, otherwise use original counts
+                final_n_pred_instances = (
+                    processing_pair_r.n_pred_instances if has_many_to_one_mappings else instance_metadata["original_n_preds"]
+                )
+                final_n_ref_instances = (
+                    processing_pair_r.n_ref_instances if has_many_to_one_mappings else instance_metadata["original_n_refs"]
+                )
+
+                processing_pair_r = PanopticaResult(
+                    reference_arr=processing_pair_r.reference_arr,
+                    prediction_arr=processing_pair_r.prediction_arr,
+                    processing_pair_orig_shape=instance_metadata["original_shape"],
+                    n_pred_instances=final_n_pred_instances,
+                    n_ref_instances=final_n_ref_instances,
+                    n_ref_labels=instance_metadata["n_ref_labels"],
+                    label_group=label_group,
+                    tp=processing_pair_r.tp,
+                    list_metrics=processing_pair_r.list_metrics,
+                    global_metrics=global_metrics,
+                    edge_case_handler=edge_case_handler,
+                    intermediate_steps_data=intermediate_steps_data_r,
+                    **kwargs,
+                )
+
+            if isinstance(processing_pair_r, PanopticaResult):
+                processing_pair_r._global_metrics = global_metrics
+                if result_all:
+                    processing_pair_r.calculate_all(print_errors=False)
+
+                region2result_map[i] = processing_pair_r
+
+        if len(region2result_map) == num_features:
+            # Combine results from all regions into a single PanopticaResult
+            combined_result = PanopticaResult(
+                reference_arr=input_pair.reference_arr,
+                prediction_arr=input_pair.prediction_arr,
+                processing_pair_orig_shape=instance_metadata["original_shape"],
+                n_pred_instances=np.nan,
+                n_ref_instances=np.nan,  # We set n_ref_instances to the number of regions, as each region corresponds to one reference instance
+                n_ref_labels=instance_metadata["n_ref_labels"],
+                label_group=label_group,
+                tp=np.nan,
+                list_metrics={},
+                global_metrics=global_metrics,
+                edge_case_handler=edge_case_handler,
+                intermediate_steps_data=intermediate_steps_data,
+                **kwargs,
+            )
     else:
-        raise RuntimeError(
-            f"Expected results for {num_features} regions, but got {len(region2result_map)}"
-        )
+        # In case edge case handling already produced a result, we skip the region-wise processing and return the edge case result directly
+        combined_result = processing_pair
+        combined_result.tp = np.nan  # Set tp to nan to indicate that no true positive calculation was done
+        combined_result.n_pred_instances = np.nan
+        combined_result.n_ref_instances = np.nan
+        num_features = 0
+
+    # combined global metrics post-hoc
+    for gm in global_metrics:
+        gm_attr_name = f"global_bin_{gm.name.lower()}"
+        rm_attr_name = f"region_avg_{gm.name.lower()}"
+
+        if num_features > 0:
+            setattr(
+                combined_result,
+                rm_attr_name,
+                np.mean([getattr(region2result_map[i], gm_attr_name) for i in range(1, num_features + 1)]),
+            )
+        else:
+            setattr(combined_result, rm_attr_name, 0.0)
+
+    return combined_result
 
 
 def _phase_instance_approximation(
@@ -398,12 +387,8 @@ def _phase_instance_approximation(
 ):
     # First Phase: Instance Approximation
     if isinstance(processing_pair, SemanticPair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.SEMANTIC
-        )
-        assert (
-            instance_approximator is not None
-        ), "Got SemanticPair but not InstanceApproximator"
+        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.SEMANTIC)
+        assert instance_approximator is not None, "Got SemanticPair but not InstanceApproximator"
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
@@ -439,9 +424,7 @@ def _phase_instance_matching(
 ):
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.UNMATCHED_INSTANCE
-        )
+        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.UNMATCHED_INSTANCE)
         processing_pair = _handle_zero_instances_cases(
             processing_pair,
             eval_metrics=instance_metrics,
@@ -452,9 +435,7 @@ def _phase_instance_matching(
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
             print("-- Got UnmatchedInstancePair, will match instances")
-        assert (
-            instance_matcher is not None
-        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        assert instance_matcher is not None, "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
 
         processing_pair = instance_matcher.match_instances(
@@ -484,9 +465,7 @@ def _phase_instance_evaluation(
 ):
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.MATCHED_INSTANCE
-        )
+        intermediate_steps_data.add_intermediate_arr_data(processing_pair.copy(), InputType.MATCHED_INSTANCE)
         processing_pair = _handle_zero_instances_cases(
             processing_pair,
             eval_metrics=instance_metrics,

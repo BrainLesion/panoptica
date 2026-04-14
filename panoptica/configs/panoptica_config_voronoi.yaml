@@ -26,6 +26,7 @@ instance_approximator: !ConnectedComponentsInstanceApproximator {cca_backend: nu
 instance_matcher: !NaiveThresholdMatching {allow_many_to_one: false, matching_metric: !Metric DSC,
   matching_threshold: 0.0}
 log_times: true
+per_region_evaluation: true
 segmentation_class_groups: !SegmentationClassGroups
   groups:
     tumortype1: !LabelGroup

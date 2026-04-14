@@ -47,19 +47,9 @@ class Test_RegionMatching(unittest.TestCase):
 
         print(f"Ground truth labels: {unmatched_pair.ref_labels}")
         print(f"Prediction labels: {unmatched_pair.pred_labels}")
-        try:
-            # Create regions
-            region_map, num_features = _get_voronoi_regions(
-                unmatched_pair.reference_arr, cca_backend=None
-            )
+        # Create regions
+        region_map, num_features = _get_voronoi_regions(unmatched_pair.reference_arr, cca_backend=None)
 
-            print(f"Matching successful!")
+        print(f"Matching successful!")
 
-            self.assertTrue(True)
-
-        except Exception as e:
-            print(f"Error during matching: {e}")
-            import traceback
-
-            traceback.print_exc()
-            self.assertTrue(False)
+        self.assertTrue(True)
