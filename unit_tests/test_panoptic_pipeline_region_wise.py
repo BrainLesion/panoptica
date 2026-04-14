@@ -96,7 +96,9 @@ class Test_RegionMatching_Comprehensive(unittest.TestCase):
         print(f"Pred unique values: {np.unique(pred)}")
 
         # Create components
-        matcher = NaiveThresholdMatching(matching_metric=Metric.DSC, matching_threshold=0.5)
+        matcher = NaiveThresholdMatching(
+            matching_metric=Metric.DSC, matching_threshold=0.5
+        )
         semantic_pair = UnmatchedInstancePair(prediction_arr=pred, reference_arr=gt)
 
         # Run evaluation
@@ -123,7 +125,9 @@ class Test_RegionMatching_Comprehensive(unittest.TestCase):
         print("RESULT 2 (region-wise)")
         print(result2)
 
-        semantic_pair2 = UnmatchedInstancePair(prediction_arr=pred, reference_arr=np.asarray(gt == 1, dtype=pred.dtype))
+        semantic_pair2 = UnmatchedInstancePair(
+            prediction_arr=pred, reference_arr=np.asarray(gt == 1, dtype=pred.dtype)
+        )
 
         # Run evaluation
         result3 = _panoptic_evaluate(
@@ -167,11 +171,15 @@ class Test_RegionMatching_Comprehensive(unittest.TestCase):
 
     def test_scenario_1_basic(self):
         gt, pred = test_scenario_1_basic()
-        self.assertTrue(self.run_test_scenario(gt, pred, "Test 1: Basic non-overlapping"))
+        self.assertTrue(
+            self.run_test_scenario(gt, pred, "Test 1: Basic non-overlapping")
+        )
 
     def test_scenario_2_overlapping(self):
         gt, pred = test_scenario_2_overlapping()
-        self.assertTrue(self.run_test_scenario(gt, pred, "Test 2: Overlapping predictions"))
+        self.assertTrue(
+            self.run_test_scenario(gt, pred, "Test 2: Overlapping predictions")
+        )
 
     def test_scenario_3_empty_prediction(self):
         gt, pred = test_scenario_3_empty_prediction()
