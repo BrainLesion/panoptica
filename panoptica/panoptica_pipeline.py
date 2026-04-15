@@ -246,7 +246,7 @@ def _panoptic_evaluate_region_wise(
     if not isinstance(processing_pair, PanopticaResult):
 
         # create regions and label to regions
-        region_map, num_features = _get_voronoi_regions(processing_pair.reference_arr, cca_backend=None)
+        region_map, num_features = _get_voronoi_regions(processing_pair.reference_arr, processing_pair.n_ref_instances)
         assert num_features > 0, "Expected at least one region in the reference mask for region-wise evaluation"
 
         region2result_map: dict[int, PanopticaResult] = {}
