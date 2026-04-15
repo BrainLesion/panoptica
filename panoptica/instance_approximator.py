@@ -158,12 +158,6 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
             UnmatchedInstancePair: The result of the instance approximation.
         """
         cca_backend = self.cca_backend
-        if cca_backend is None:
-            cca_backend = (
-                CCABackend.cc3d if semantic_pair.n_dim >= 3 else CCABackend.scipy
-            )
-        assert cca_backend is not None
-
         empty_prediction = len(semantic_pair.pred_labels) == 0
         empty_reference = len(semantic_pair.ref_labels) == 0
         prediction_arr, n_prediction_instance = (
@@ -180,8 +174,8 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr,
             reference_arr=reference_arr,
-            n_prediction_instance=n_prediction_instance,
-            n_reference_instance=n_reference_instance,
+            n_pred_instances=n_prediction_instance,
+            n_ref_instances=n_reference_instance,
         )
 
     @classmethod
@@ -258,8 +252,8 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
         return UnmatchedInstancePair(
             prediction_arr=prediction_arr.flatten().astype(np.int64),
             reference_arr=reference_arr.flatten().astype(np.int64),
-            n_prediction_instance=n_prediction_instance,
-            n_reference_instance=n_reference_instance,
+            n_pred_instances=n_prediction_instance,
+            n_ref_instances=n_reference_instance,
         )
 
     @classmethod

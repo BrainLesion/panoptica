@@ -430,6 +430,17 @@ class PanopticaResult(object):
                 was_calculated=was_calculated,
             )
 
+            self._add_metric(
+                f"region_avg_{m.name.lower()}",
+                MetricType.GLOBAL,
+                lambda x: MetricCouldNotBeComputedException(
+                    f"Region Average Metric {m} not set"
+                ),
+                long_name="Region Average " + m.value.long_name,
+                default_value=None,
+                was_calculated=False,
+            )
+
     def _calc_global_bin_metric(
         self,
         metric: Metric,
