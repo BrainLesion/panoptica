@@ -48,7 +48,9 @@ class Test_RegionMatching(unittest.TestCase):
         print(f"Ground truth labels: {unmatched_pair.ref_labels}")
         print(f"Prediction labels: {unmatched_pair.pred_labels}")
         # Create regions
-        region_map, num_features = _get_voronoi_regions(unmatched_pair.reference_arr, unmatched_pair.n_ref_instances)
+        region_map, num_features = _get_voronoi_regions(
+            unmatched_pair.reference_arr, unmatched_pair.n_ref_instances
+        )
 
         print(f"Matching successful!")
 
