@@ -180,27 +180,27 @@ class _ProcessingPairInstanced(_ProcessingPair):
     This subclass tracks additional details about the number of unique instances in each array.
 
     Attributes:
-        n_prediction_instance (int): Number of unique prediction instances.
-        n_reference_instance (int): Number of unique reference instances.
+        n_pred_instances (int): Number of unique prediction instances.
+        n_ref_instances (int): Number of unique reference instances.
     """
 
-    n_prediction_instance: int
-    n_reference_instance: int
+    n_pred_instances: int
+    n_ref_instances: int
 
     @property
     def _original_n_preds(self) -> int:
-        return self.n_prediction_instance
+        return self.n_pred_instances
 
     @property
     def _original_n_refs(self) -> int:
-        return self.n_reference_instance
+        return self.n_ref_instances
 
     def __init__(
         self,
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
-        n_prediction_instance: int | None = None,
-        n_reference_instance: int | None = None,
+        n_pred_instances: int | None = None,
+        n_ref_instances: int | None = None,
     ) -> None:
         """Initializes a processing pair for instances.
 
@@ -208,19 +208,19 @@ class _ProcessingPairInstanced(_ProcessingPair):
             prediction_arr (np.ndarray): Array of predicted instance labels.
             reference_arr (np.ndarray): Array of reference instance labels.
             dtype (type | None): Expected data type of the arrays.
-            n_prediction_instance (int | None, optional): Pre-calculated number of prediction instances.
-            n_reference_instance (int | None, optional): Pre-calculated number of reference instances.
+            n_pred_instances (int | None, optional): Pre-calculated number of prediction instances.
+            n_ref_instances (int | None, optional): Pre-calculated number of reference instances.
         """
         super().__init__(prediction_arr, reference_arr)
-        if n_prediction_instance is None:
-            self.n_prediction_instance = _count_unique_without_zeros(prediction_arr)
+        if n_pred_instances is None:
+            self.n_pred_instances = _count_unique_without_zeros(prediction_arr)
 
         else:
-            self.n_prediction_instance = n_prediction_instance
-        if n_reference_instance is None:
-            self.n_reference_instance = _count_unique_without_zeros(reference_arr)
+            self.n_pred_instances = n_pred_instances
+        if n_ref_instances is None:
+            self.n_ref_instances = _count_unique_without_zeros(reference_arr)
         else:
-            self.n_reference_instance = n_reference_instance
+            self.n_ref_instances = n_ref_instances
 
     def copy(self):
         """
@@ -229,8 +229,8 @@ class _ProcessingPairInstanced(_ProcessingPair):
         return type(self)(
             prediction_arr=self.prediction_arr.copy(),
             reference_arr=self.reference_arr.copy(),
-            n_prediction_instance=self.n_prediction_instance,
-            n_reference_instance=self.n_reference_instance,
+            n_pred_instances=self.n_pred_instances,
+            n_ref_instances=self.n_ref_instances,
         )  # type: ignore
 
 
@@ -297,14 +297,14 @@ class UnmatchedInstancePair(_ProcessingPairInstanced):
         self,
         prediction_arr: np.ndarray,
         reference_arr: np.ndarray,
-        n_prediction_instance: int | None = None,
-        n_reference_instance: int | None = None,
+        n_pred_instances: int | None = None,
+        n_ref_instances: int | None = None,
     ) -> None:
         super().__init__(
             prediction_arr,
             reference_arr,
-            n_prediction_instance,
-            n_reference_instance,
+            n_pred_instances,
+            n_ref_instances,
         )  # type: ignore
 
 
@@ -331,8 +331,8 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         missed_reference_labels: list[int] | None = None,
         missed_prediction_labels: list[int] | None = None,
         matched_instances: list[int] | None = None,
-        n_prediction_instance: int | None = None,
-        n_reference_instance: int | None = None,
+        n_pred_instances: int | None = None,
+        n_ref_instances: int | None = None,
     ) -> None:
         """Initializes a MatchedInstancePair
 
@@ -342,16 +342,16 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             missed_reference_labels (list[int] | None, optional): List of unmatched reference labels. Defaults to None.
             missed_prediction_labels (list[int] | None, optional): List of unmatched prediction labels. Defaults to None.
             matched_instances (int | None, optional): matched instances labels, i.e. unique matched labels in both maps. Defaults to None.
-            n_prediction_instance (int | None, optional): Number of prediction instances. Defaults to None.
-            n_reference_instance (int | None, optional): Number of reference instances. Defaults to None.
+            n_pred_instances (int | None, optional): Number of prediction instances. Defaults to None.
+            n_ref_instances (int | None, optional): Number of reference instances. Defaults to None.
 
             For each argument: If none, will calculate on initialization.
         """
         super().__init__(
             prediction_arr,
             reference_arr,
-            n_prediction_instance,
-            n_reference_instance,
+            n_pred_instances,
+            n_ref_instances,
         )  # type: ignore
         if matched_instances is None:
             matched_instances = [i for i in self.pred_labels if i in self.ref_labels]
@@ -380,8 +380,8 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         return type(self)(
             prediction_arr=self.prediction_arr.copy(),
             reference_arr=self.reference_arr.copy(),
-            n_prediction_instance=self.n_prediction_instance,
-            n_reference_instance=self.n_reference_instance,
+            n_pred_instances=self.n_pred_instances,
+            n_ref_instances=self.n_ref_instances,
             missed_reference_labels=self.missed_reference_labels,
             missed_prediction_labels=self.missed_prediction_labels,
             matched_instances=self.matched_instances,
