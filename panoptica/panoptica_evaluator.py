@@ -7,7 +7,6 @@ from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
-from panoptica.metrics.metrics import AUTC_METRICS
 from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
@@ -386,6 +385,13 @@ class Panoptica_Evaluator(SupportsConfig):
     def segmentation_class_groups_names(self) -> list[str]:
         return self.__segmentation_class_groups.keys()
 
+    @property
+    def resulting_metric_keys(self) -> list[str]:
+        if self.__resulting_metric_keys is None:
+            res = self._get_dummy_result()
+            self.__resulting_metric_keys = list(res.to_dict().keys())
+        return self.__resulting_metric_keys
+
     def set_log_group_times(self, should_save: bool):
         self.__save_group_times = should_save
 
@@ -395,29 +401,28 @@ class Panoptica_Evaluator(SupportsConfig):
     def _set_instance_matcher(self, matcher: InstanceMatchingAlgorithm):
         self.__instance_matcher = matcher
 
-    @property
-    def resulting_metric_keys(self) -> list[str]:
-        if self.__resulting_metric_keys is None:
-            dummy_input = MatchedInstancePair(
-                np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8)
-            )
-            res = self._evaluate_group(
-                group_name="",
-                label_group=LabelGroup(1, single_instance=False),
-                processing_pair=dummy_input,
-                decision_threshold=self.__decision_threshold,
-                result_all=True,
-                voxelspacing=(1.0, 1.0, 1.0),
-                save_group_times=False,
-                log_times=False,
-                verbose=False,
-            )
-            self.__resulting_metric_keys = list(res.to_dict().keys())
-        return self.__resulting_metric_keys
+    def _get_dummy_result(self) -> PanopticaResult:
+        """Helper method to generate a blank evaluation for extracting dynamic metric keys."""
+        dummy_input = MatchedInstancePair(
+            np.ones((1, 1, 1), dtype=np.uint8), np.ones((1, 1, 1), dtype=np.uint8)
+        )
+        return self._evaluate_group(
+            group_name="",
+            label_group=LabelGroup(1, single_instance=False),
+            processing_pair=dummy_input,
+            decision_threshold=self.__decision_threshold,
+            result_all=True,
+            voxelspacing=(1.0, 1.0, 1.0),
+            save_group_times=False,
+            log_times=False,
+            verbose=False,
+        )
 
     def get_autc_metric_keys(self, threshold_step_size: float) -> list[str]:
         """Must produce keys in exactly the same order as PanopticaAUTCResult.to_dict()."""
-        keys = [f"autc_{m}" for m in sorted(AUTC_METRICS)]
+        res = self._get_dummy_result()
+        keys = [f"autc_{m}" for m in sorted(res.autc_metrics)]
+        
         base_keys = self.resulting_metric_keys
         for t in self.generate_thresholds(threshold_step_size):
             t_str = f"{t:g}"

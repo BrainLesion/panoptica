@@ -324,6 +324,8 @@ class Evaluation_Metric:
         long_name: str | None = None,
         was_calculated: bool = False,
         error: bool = False,
+        lower_bound: float | None = None,
+        upper_bound: float | None = None,
     ):
         self.id = name_id
         self.metric_type = metric_type
@@ -333,6 +335,8 @@ class Evaluation_Metric:
         self._value = None
         self._error = error
         self._error_obj: MetricCouldNotBeComputedException | None = None
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
 
     def __call__(self, result_obj: "PanopticaResult") -> Any:
         """If called, needs to return its way, raise error or calculate it
@@ -441,19 +445,6 @@ class Evaluation_List_Metric:
                 f"List_Metric {self.id} does not contain {mode} member"
             )
 
-
-# Continuous scores in [0, 1] for which AUTC is well-defined
-AUTC_METRICS = frozenset(
-    {
-        "rq",
-        "sq",
-        "pq",
-        "sq_dsc",
-        "pq_dsc",
-        "sq_cldsc",
-        "pq_cldsc",
-    }
-)
 
 if __name__ == "__main__":
     print(Metric.DSC)

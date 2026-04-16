@@ -12,7 +12,6 @@ from panoptica.metrics import (
     MetricMode,
     MetricType,
 )
-from panoptica.metrics.metrics import AUTC_METRICS
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import IntermediateStepsData
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
@@ -146,6 +145,8 @@ class PanopticaResult(object):
             MetricType.MATCHING,
             rq,
             long_name="Recognition Quality / F1-Score",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
@@ -157,6 +158,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             sq,
             long_name="Segmentation Quality IoU",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         self.sq_std: float
         self._add_metric(
@@ -171,6 +174,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             pq,
             long_name="Panoptic Quality IoU",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
@@ -181,6 +186,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             sq_dsc,
             long_name="Segmentation Quality Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         self.sq_dsc_std: float
         self._add_metric(
@@ -195,6 +202,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             pq_dsc,
             long_name="Panoptic Quality Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
@@ -205,6 +214,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             sq_cldsc,
             long_name="Segmentation Quality Centerline Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         self.sq_cldsc_std: float
         self._add_metric(
@@ -442,6 +453,13 @@ class PanopticaResult(object):
                 was_calculated=False,
             )
 
+    @property
+    def autc_metrics(self) -> list[str]:
+        return [
+            k for k, v in self._evaluation_metrics.items()
+            if v.lower_bound == 0.0 and v.upper_bound == 1.0
+        ]
+
     def _calc_global_bin_metric(
         self,
         metric: Metric,
@@ -562,6 +580,8 @@ class PanopticaResult(object):
         long_name: str | None = None,
         default_value=None,
         was_calculated: bool = False,
+        lower_bound: float | None = None,
+        upper_bound: float | None = None,
     ):
         """
         Adds a new metric to the evaluation metrics.
@@ -589,6 +609,8 @@ class PanopticaResult(object):
             calc_func=calc_func,
             long_name=long_name,
             was_calculated=was_calculated,
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
         )
         self._evaluation_metrics[name_id] = eval_metric
         return default_value
@@ -880,11 +902,14 @@ class PanopticaAUTCResult(object):
     def to_dict(self) -> dict[str, float]:
         """Flat dictionary containing AUTC metrics AND individual threshold metrics.
 
-        AUTC is only computed for continuous ratio metrics in _AUTC_METRICS.
+        AUTC is only computed for continuous ratio metrics that have a bounded domain.
         """
         result: dict[str, float] = {}
+        
+        first_res = next(iter(self._threshold_results.values()))
+        autc_metrics = first_res.autc_metrics
 
-        for k in sorted(AUTC_METRICS):
+        for k in sorted(autc_metrics):
             try:
                 result[f"autc_{k}"] = self.get_autc(k)
             except (AttributeError, MetricCouldNotBeComputedException, ValueError):
@@ -929,7 +954,7 @@ class PanopticaAUTCResult(object):
         ]
 
         first_res = next(iter(self._threshold_results.values()))
-        for metric_id in sorted(AUTC_METRICS):
+        for metric_id in sorted(first_res.autc_metrics):
             eval_metric = first_res._evaluation_metrics.get(metric_id)
             if (
                 eval_metric is None
@@ -942,7 +967,6 @@ class PanopticaAUTCResult(object):
                 label = eval_metric.long_name or metric_id
                 lines.append(f"  AUTC {label}: {val:.4f}")
             except (AttributeError, ValueError, MetricCouldNotBeComputedException):
-                # Non-numeric or unintegratable metrics (counts, booleans) are skipped.
                 pass
 
         return "\n".join(lines)
