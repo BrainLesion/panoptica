@@ -102,6 +102,23 @@ class Panoptica_Statistic:
         self.__groupnames = list(value_dict.keys())
         self.__metricnames = list(value_dict[self.__groupnames[0]].keys())
 
+        self.__threshold_pattern = re.compile(rf"^t([0-9\.]+)_{'(.+)'}$")
+        self.__threshold_map: dict[str, list[float]] = {} # base_metric -> [0.1, 0.5, ...]
+        
+        # Regex to catch "t0.5_pq" -> threshold=0.5, base_metric="pq"
+        for m in self.__metricnames:
+            match = re.match(r"^t([0-9\.]+)_", m)
+            if match:
+                threshold_val = float(match.group(1))
+                # Extract the base metric name (everything after the first underscore)
+                base_metric = m.split("_", 1)[1] 
+                if base_metric not in self.__threshold_map:
+                    self.__threshold_map[base_metric] = []
+                self.__threshold_map[base_metric].append(threshold_val)
+        
+        for m in self.__threshold_map:
+            self.__threshold_map[m].sort()
+
         # assert length of everything
         for g in self.groupnames:
             assert len(self.metricnames) == len(
@@ -123,6 +140,15 @@ class Panoptica_Statistic:
     @property
     def metricnames(self):
         return self.__metricnames
+
+    @property
+    def base_metric_names(self) -> list[str]:
+        """Returns metric names that are not thresholded."""
+        return [m for m in self.__metricnames if not re.match(r"^t[0-9\.]_.", m)]
+
+    def get_thresholds_for_metric(self, metric: str) -> list[float]:
+        """Returns available thresholds for a specific metric (e.g. 'pq')."""
+        return self.__threshold_map.get(metric, [])
 
     @classmethod
     def from_file(cls, file: str | Path, verbose: bool = True):
@@ -435,6 +461,7 @@ class Panoptica_Statistic:
         self,
         ndigits: int = 3,
         only_across_groups: bool = True,
+        include_thresholds: bool = False,
     ):
         summary = self.get_summary_dict(include_across_group=only_across_groups)
         print()
@@ -443,7 +470,8 @@ class Panoptica_Statistic:
             groups = ["across_groups"]
         for g in groups:
             print(f"Group {g}:")
-            for m in self.__metricnames:
+            metrics_to_show = self.__metricnames if include_thresholds else self.base_metric_names
+            for m in metrics_to_show:
                 avg, std = summary[g][m].avg, summary[g][m].std
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
             print()
@@ -516,26 +544,14 @@ def make_autc_plots(
     if fig is None:
         fig = go.Figure()
 
-    # Regex to dynamically catch all threshold keys (e.g., "t0.5_pq", "t1_pq")
-    pattern = re.compile(rf"^t([0-9\.]+)_{metric}$")
-
     for setupname, stat in statistics_dict.items():
-        t_keys = []
-        for m in stat.metricnames:
-            match = pattern.match(m)
-            if match:
-                t_keys.append((float(match.group(1)), m))
-
-        t_keys.sort(key=lambda x: x[0])
-
-        if not t_keys:
-            print(
-                f"Warning: No threshold data found for metric '{metric}' in setup '{setupname}'."
-            )
+        thresholds = stat.get_thresholds_for_metric(metric)
+        
+        if not thresholds:
+            print(f"Warning: No threshold data found for '{metric}' in '{setupname}'.")
             continue
 
-        X = [t[0] for t in t_keys]
-
+        X = thresholds
         for idx, g in enumerate(groups):
             name = g if alternate_groupnames is None else alternate_groupnames[idx]
 
@@ -547,14 +563,14 @@ def make_autc_plots(
                 legend_name = f"{setupname} - {name}"
 
             Y = [
-                FloatDistribution(stat.get(g, k[1], remove_nones=True)).avg
-                for k in t_keys
+                FloatDistribution(stat.get(g, f"t{t:g}_{metric}", remove_nones=True)).avg
+                for t in thresholds
             ]
 
             if plot_std:
                 Ystd = [
-                    FloatDistribution(stat.get(g, k[1], remove_nones=True)).std
-                    for k in t_keys
+                    FloatDistribution(stat.get(g, f"t{t:g}_{metric}", remove_nones=True)).std
+                    for t in thresholds
                 ]
                 error_y = dict(type="data", array=Ystd)
             else:

@@ -230,6 +230,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             pq_cldsc,
             long_name="Panoptic Quality Centerline Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
