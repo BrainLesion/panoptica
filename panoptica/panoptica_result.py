@@ -902,7 +902,7 @@ class PanopticaAUTCResult(object):
     def to_dict(self) -> dict[str, float]:
         """Flat dictionary containing AUTC metrics AND individual threshold metrics.
 
-        AUTC is only computed for continuous ratio metrics that have a bounded domain.
+        AUTC is only computed for continuous ratio metrics that have a bounded domain from 0 to 1.
         """
         result: dict[str, float] = {}
         
@@ -913,7 +913,7 @@ class PanopticaAUTCResult(object):
             try:
                 result[f"autc_{k}"] = self.get_autc(k)
             except (AttributeError, MetricCouldNotBeComputedException, ValueError):
-                pass
+                result[f"autc_{k}"] = np.nan
 
         for t, res in self._threshold_results.items():
             t_str = f"{t:g}"

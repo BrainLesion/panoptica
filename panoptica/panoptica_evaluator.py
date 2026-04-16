@@ -264,8 +264,9 @@ class Panoptica_Evaluator(SupportsConfig):
 
         thresholds = self.generate_thresholds(threshold_step_size)
         result_grouped: dict[str, PanopticaAUTCResult] = {}
+        save_group_times = self.__save_group_times if save_group_times is None else save_group_times
         for group_name, label_group in self.__segmentation_class_groups.items():
-            if self.__save_group_times or save_group_times:
+            if save_group_times:
                 start_time = perf_counter()
 
             prediction_arr_grouped = label_group(processing_pair.prediction_arr)
@@ -289,7 +290,7 @@ class Panoptica_Evaluator(SupportsConfig):
                     instance_metadata,
                     label_group,
                     log_times=self.__log_times if log_times is None else log_times,
-                    verbose=True if verbose is None else verbose,
+                    verbose=self.__verbose if verbose is None else verbose,
                 )
 
             threshold_results: dict[float, PanopticaResult] = {}
@@ -312,7 +313,7 @@ class Panoptica_Evaluator(SupportsConfig):
                     matching_threshold=threshold,
                     result_all=result_all,
                     log_times=self.__log_times if log_times is None else log_times,
-                    verbose=True if verbose is None else verbose,
+                    verbose=self.__verbose if verbose is None else verbose,
                     verbose_calc=self.__verbose if verbose is None else verbose,
                     label_group=label_group,
                     **metadata,
@@ -321,7 +322,7 @@ class Panoptica_Evaluator(SupportsConfig):
             result_grouped[group_name] = PanopticaAUTCResult(
                 threshold_results=threshold_results
             )
-            if self.__save_group_times or save_group_times:
+            if save_group_times:
                 duration = perf_counter() - start_time
                 result_grouped[group_name].computation_time = duration
         return result_grouped
@@ -375,8 +376,10 @@ class Panoptica_Evaluator(SupportsConfig):
     @staticmethod
     def generate_thresholds(step_size: float) -> np.ndarray:
         """Return AUTC threshold steps within the inclusive range [step_size, 1]."""
-        if not 0 < step_size <= 1:
-            raise ValueError("step_size must satisfy 0 < step_size <= 1")
+        if not 0 < step_size < 1:
+            raise ValueError(
+                "step_size must satisfy 0 < step_size < 1 to generate at least two AUTC thresholds"
+            )
         thresholds = np.arange(step_size, 1.0 + step_size, step_size)
         thresholds = np.minimum(thresholds, 1.0)
         return np.unique(np.round(thresholds, 5))
@@ -471,7 +474,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 global_metrics=self.__global_metrics,
                 result_all=result_all,
                 log_times=self.__log_times if log_times is None else log_times,
-                verbose=True if verbose is None else verbose,
+                verbose=self.__verbose if verbose is None else verbose,
                 verbose_calc=self.__verbose if verbose is None else verbose,
                 label_group=label_group,
                 **kwargs,
@@ -489,7 +492,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 matching_threshold=matching_threshold,
                 result_all=result_all,
                 log_times=self.__log_times if log_times is None else log_times,
-                verbose=True if verbose is None else verbose,
+                verbose=self.__verbose if verbose is None else verbose,
                 verbose_calc=self.__verbose if verbose is None else verbose,
                 label_group=label_group,
                 **kwargs,
