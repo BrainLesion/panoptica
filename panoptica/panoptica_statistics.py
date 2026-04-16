@@ -103,19 +103,21 @@ class Panoptica_Statistic:
         self.__metricnames = list(value_dict[self.__groupnames[0]].keys())
 
         self.__threshold_pattern = re.compile(rf"^t([0-9\.]+)_{'(.+)'}$")
-        self.__threshold_map: dict[str, list[float]] = {} # base_metric -> [0.1, 0.5, ...]
-        
+        self.__threshold_map: dict[str, list[float]] = (
+            {}
+        )  # base_metric -> [0.1, 0.5, ...]
+
         # Regex to catch "t0.5_pq" -> threshold=0.5, base_metric="pq"
         for m in self.__metricnames:
             match = re.match(r"^t([0-9\.]+)_", m)
             if match:
                 threshold_val = float(match.group(1))
                 # Extract the base metric name (everything after the first underscore)
-                base_metric = m.split("_", 1)[1] 
+                base_metric = m.split("_", 1)[1]
                 if base_metric not in self.__threshold_map:
                     self.__threshold_map[base_metric] = []
                 self.__threshold_map[base_metric].append(threshold_val)
-        
+
         for m in self.__threshold_map:
             self.__threshold_map[m].sort()
 
@@ -470,7 +472,9 @@ class Panoptica_Statistic:
             groups = ["across_groups"]
         for g in groups:
             print(f"Group {g}:")
-            metrics_to_show = self.__metricnames if include_thresholds else self.base_metric_names
+            metrics_to_show = (
+                self.__metricnames if include_thresholds else self.base_metric_names
+            )
             for m in metrics_to_show:
                 avg, std = summary[g][m].avg, summary[g][m].std
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
@@ -546,7 +550,7 @@ def make_autc_plots(
 
     for setupname, stat in statistics_dict.items():
         thresholds = stat.get_thresholds_for_metric(metric)
-        
+
         if not thresholds:
             print(f"Warning: No threshold data found for '{metric}' in '{setupname}'.")
             continue
@@ -563,13 +567,17 @@ def make_autc_plots(
                 legend_name = f"{setupname} - {name}"
 
             Y = [
-                FloatDistribution(stat.get(g, f"t{t:g}_{metric}", remove_nones=True)).avg
+                FloatDistribution(
+                    stat.get(g, f"t{t:g}_{metric}", remove_nones=True)
+                ).avg
                 for t in thresholds
             ]
 
             if plot_std:
                 Ystd = [
-                    FloatDistribution(stat.get(g, f"t{t:g}_{metric}", remove_nones=True)).std
+                    FloatDistribution(
+                        stat.get(g, f"t{t:g}_{metric}", remove_nones=True)
+                    ).std
                     for t in thresholds
                 ]
                 error_y = dict(type="data", array=Ystd)

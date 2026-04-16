@@ -120,13 +120,13 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
     def test_autc_statistic_write_read(self):
         """
-        Tests the Panoptica_Aggregator's ability to correctly build headers, 
+        Tests the Panoptica_Aggregator's ability to correctly build headers,
         evaluate AUTC, write to a TSV, and read back via Panoptica_Statistic.
         """
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
         a[20:40, 10:20] = 1
-        b[20:40, 10:20] = 1 
+        b[20:40, 10:20] = 1
 
         evaluator = Panoptica_Evaluator(
             expected_input=InputType.SEMANTIC,
@@ -136,10 +136,10 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         # thresholds will be [0.5, 1.0]
         aggregator = Panoptica_Aggregator(
-            panoptica_evaluator=evaluator, 
+            panoptica_evaluator=evaluator,
             output_file=output_test_dir,
             is_autc=True,
-            threshold_step_size=0.5
+            threshold_step_size=0.5,
         )
 
         aggregator.evaluate(b, a, "test_autc_subject")
@@ -150,14 +150,14 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         self.assertIn("autc_pq", metrics)
         self.assertIn("autc_sq", metrics)
-        
+
         self.assertIn("t0.5_pq", metrics)
         self.assertIn("t1_pq", metrics)
 
         autc_pq_vals = statistic_obj.get("ungrouped", "autc_pq")
         self.assertEqual(len(autc_pq_vals), 1)
         self.assertEqual(autc_pq_vals[0], 1.0)
-        
+
         t05_pq_vals = statistic_obj.get("ungrouped", "t0.5_pq")
         self.assertEqual(t05_pq_vals[0], 1.0)
 
@@ -166,7 +166,6 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         if output_test_dir.exists():
             os.remove(str(output_test_dir))
-
 
     def test_mismatch_regular_and_autc_aggregator_header(self):
         """
@@ -185,7 +184,7 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         agg_regular = Panoptica_Aggregator(
             panoptica_evaluator=evaluator_regular,
             output_file=output_test_dir,
-            is_autc=False
+            is_autc=False,
         )
         agg_regular.evaluate(a, a, "test_regular")
 
@@ -195,12 +194,11 @@ class Test_Panoptica_Statistics(unittest.TestCase):
                 panoptica_evaluator=evaluator_regular,
                 output_file=output_test_dir,
                 is_autc=True,
-                threshold_step_size=0.1
+                threshold_step_size=0.1,
             )
-            
+
         if output_test_dir.exists():
             os.remove(str(output_test_dir))
-
 
     def test_make_autc_plots_graceful_on_regular_stats(self):
         """
@@ -220,9 +218,7 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         )
 
         agg = Panoptica_Aggregator(
-            panoptica_evaluator=evaluator,
-            output_file=output_test_dir,
-            is_autc=False
+            panoptica_evaluator=evaluator, output_file=output_test_dir, is_autc=False
         )
         agg.evaluate(a, a, "test_reg")
 
@@ -230,11 +226,8 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         # Attempt to plot an AUTC curve from a regular stat object
         # It should print a warning internally, but not crash.
-        fig = make_autc_plots(
-            statistics_dict={"Regular": stat},
-            metric="pq"
-        )
-        
+        fig = make_autc_plots(statistics_dict={"Regular": stat}, metric="pq")
+
         # Verify the figure was created but has 0 traces plotted
         self.assertEqual(len(fig.data), 0)
 

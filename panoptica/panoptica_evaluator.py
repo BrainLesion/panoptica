@@ -264,7 +264,9 @@ class Panoptica_Evaluator(SupportsConfig):
 
         thresholds = self.generate_thresholds(threshold_step_size)
         result_grouped: dict[str, PanopticaAUTCResult] = {}
-        save_group_times = self.__save_group_times if save_group_times is None else save_group_times
+        save_group_times = (
+            self.__save_group_times if save_group_times is None else save_group_times
+        )
         for group_name, label_group in self.__segmentation_class_groups.items():
             if save_group_times:
                 start_time = perf_counter()
@@ -425,7 +427,7 @@ class Panoptica_Evaluator(SupportsConfig):
         """Must produce keys in exactly the same order as PanopticaAUTCResult.to_dict()."""
         res = self._get_dummy_result()
         keys = [f"autc_{m}" for m in sorted(res.autc_metrics)]
-        
+
         base_keys = self.resulting_metric_keys
         for t in self.generate_thresholds(threshold_step_size):
             t_str = f"{t:g}"
