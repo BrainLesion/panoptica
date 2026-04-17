@@ -1,6 +1,6 @@
-from panoptica.utils import format_autc_key
 from __future__ import annotations
 
+from panoptica.utils import format_autc_key
 from panoptica.utils import format_threshold_key
 from typing import Any, Callable
 import numpy as np

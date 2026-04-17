@@ -145,7 +145,7 @@ class Panoptica_Statistic:
         return [
             m
             for m in self.__metricnames
-            if not is_threshold_key(m) and not is_autc_key(m)
+            if not is_threshold_key(m)
         ]
 
     def get_thresholds_for_metric(self, metric: str) -> list[float]:
