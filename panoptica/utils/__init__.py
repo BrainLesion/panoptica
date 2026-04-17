@@ -24,3 +24,8 @@ from panoptica.utils.input_check_and_conversion.sanity_checker import (
     sanity_check_and_convert_to_array,
     _InputDataTypeChecker,
 )
+from panoptica.utils.serialization import (
+    format_instance_subject_name,
+    parse_instance_subject_name,
+    is_instance_row,
+)

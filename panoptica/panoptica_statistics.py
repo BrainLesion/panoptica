@@ -1,3 +1,4 @@
+from panoptica.utils import is_instance_row
 import csv
 import numpy as np
 import warnings
@@ -38,6 +39,13 @@ class FloatDistribution:
     @property
     def values(self) -> list[float]:
         return list(self.__value_list)
+
+    def master_values(self, group, metric) -> list[float]:
+        return [
+                val
+                for sn, val in zip(self.__subj_names, self.get(group, metric, remove_nones=False))
+                if not is_instance_row(sn) and val is not None
+            ]
 
     @property
     def avg(self) -> float:
@@ -126,12 +134,18 @@ class Panoptica_Statistic:
     @property
     def master_subjects(self) -> list[str]:
         """Returns only the primary subject names (ignoring instance rows)."""
-        return [sn for sn in self.__subj_names if "_inst_" not in sn]
+        return [sn for sn in self.__subj_names if not is_instance_row(sn)]
 
     @property
     def instance_subjects(self) -> list[str]:
         """Returns only the individual instance rows."""
-        return [sn for sn in self.__subj_names if "_inst_" in sn]
+        return [sn for sn in self.__subj_names if is_instance_row(sn)]
+
+    @property
+    def nonNoneValues(self) -> list[float]:
+        return [
+            val for val in self.__value_list if val is not None
+        ]
 
     @classmethod
     def from_file(cls, file: str | Path, verbose: bool = True):
@@ -454,7 +468,7 @@ class Panoptica_Statistic:
             print()
 
     def get_summary(self, group, metric, master_only: bool = True) -> FloatDistribution:
-        """Gets a ValueSummary for a given group and metric.
+        """Gets a FloatDistribution for a given group and metric.
         If master_only is True, ignores individual instance rows to prevent double counting.
         """
         all_values = self.get(group, metric, remove_nones=False)
@@ -464,10 +478,10 @@ class Panoptica_Statistic:
             filtered_values = [
                 val
                 for sn, val in zip(self.__subj_names, all_values)
-                if "_inst_" not in sn and val is not None
+                if not is_instance_row(sn) and val is not None
             ]
         else:
-            filtered_values = [val for val in all_values if val is not None]
+            filtered_values = self.nonNoneValues
 
         return FloatDistribution(filtered_values)
 
@@ -495,10 +509,10 @@ class Panoptica_Statistic:
                 filtered_values = [
                     val
                     for sn, val in zip(self.__subj_names, all_values)
-                    if "_inst_" not in sn and val is not None
+                    if not is_instance_row(sn) and val is not None
                 ]
             else:
-                filtered_values = [val for val in all_values if val is not None]
+                filtered_values = self.nonNoneValues
             data_plot[g] = np.asarray(filtered_values)
 
         if manual_metric_range is not None:

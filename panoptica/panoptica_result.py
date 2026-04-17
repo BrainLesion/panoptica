@@ -1,9 +1,7 @@
 from __future__ import annotations
-
+import math
 from typing import Any, Callable
-
 import numpy as np
-
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
@@ -152,21 +150,21 @@ class PanopticaResult(object):
         # region IOU
         self.sq: float
         self._add_metric(
-            "sq",
+            Metric.IOU.get_result_key("sq"),
             MetricType.INSTANCE,
             sq,
             long_name="Segmentation Quality IoU",
         )
         self.sq_std: float
         self._add_metric(
-            "sq_std",
+            Metric.IOU.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_std,
             long_name="Segmentation Quality IoU Standard Deviation",
         )
         self.pq: float
         self._add_metric(
-            "pq",
+            Metric.IOU.get_result_key("pq"),
             MetricType.INSTANCE,
             pq,
             long_name="Panoptic Quality IoU",
@@ -176,21 +174,21 @@ class PanopticaResult(object):
         # region DICE
         self.sq_dsc: float
         self._add_metric(
-            f"sq_{Metric.DSC.value.name.lower()}",
+            Metric.DSC.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_dsc,
             long_name="Segmentation Quality Dsc",
         )
         self.sq_dsc_std: float
         self._add_metric(
-            "sq_dsc_std",
+            Metric.DSC.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_dsc_std,
             long_name="Segmentation Quality Dsc Standard Deviation",
         )
         self.pq_dsc: float
         self._add_metric(
-            "pq_dsc",
+            Metric.DSC.get_result_key("pq"),
             MetricType.INSTANCE,
             pq_dsc,
             long_name="Panoptic Quality Dsc",
@@ -200,21 +198,21 @@ class PanopticaResult(object):
         # region clDICE
         self.sq_cldsc: float
         self._add_metric(
-            f"sq_{Metric.clDSC.value.name.lower()}",
+            Metric.clDSC.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_cldsc,
             long_name="Segmentation Quality Centerline Dsc",
         )
         self.sq_cldsc_std: float
         self._add_metric(
-            "sq_cldsc_std",
+            Metric.clDSC.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_cldsc_std,
             long_name="Segmentation Quality Centerline Dsc Standard Deviation",
         )
         self.pq_cldsc: float
         self._add_metric(
-            "pq_cldsc",
+            Metric.clDSC.get_result_key("pq"),
             MetricType.INSTANCE,
             pq_cldsc,
             long_name="Panoptic Quality Centerline Dsc",
@@ -224,14 +222,14 @@ class PanopticaResult(object):
         # region ASSD
         self.sq_assd: float
         self._add_metric(
-            f"sq_{Metric.ASSD.value.name.lower()}",
+            Metric.ASSD.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_assd,
             long_name="Segmentation Quality ASSD",
         )
         self.sq_assd_std: float
         self._add_metric(
-            "sq_assd_std",
+            Metric.ASSD.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_assd_std,
             long_name="Segmentation Quality ASSD Standard Deviation",
@@ -241,14 +239,14 @@ class PanopticaResult(object):
         # region RVD
         self.sq_rvd: float
         self._add_metric(
-            f"sq_{Metric.RVD.value.name.lower()}",
+            Metric.RVD.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_rvd,
             long_name="Segmentation Quality Relative Volume Difference",
         )
         self.sq_rvd_std: float
         self._add_metric(
-            "sq_rvd_std",
+            Metric.RVD.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_rvd_std,
             long_name="Segmentation Quality Relative Volume Difference Standard Deviation",
@@ -258,14 +256,14 @@ class PanopticaResult(object):
         # region RVAE
         self.sq_rvae: float
         self._add_metric(
-            f"sq_{Metric.RVAE.value.name.lower()}",
+            Metric.RVAE.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_rvae,
             long_name="Segmentation Quality Relative Volume Absolute Error",
         )
         self.sq_rvae_std: float
         self._add_metric(
-            "sq_rvae_std",
+            Metric.RVAE.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_rvae_std,
             long_name="Segmentation Quality Relative Volume Absolute Error Standard Deviation",
@@ -275,14 +273,14 @@ class PanopticaResult(object):
         # region CEDI
         self.sq_cedi: float
         self._add_metric(
-            f"sq_{Metric.CEDI.value.name.lower()}",
+            Metric.CEDI.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_cedi,
             long_name="Segmentation Quality Center Distance",
         )
         self.sq_cedi_std: float
         self._add_metric(
-            "sq_cedi_std",
+            Metric.CEDI.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_cedi_std,
             long_name="Segmentation Quality Center Distance Standard Deviation",
@@ -292,42 +290,42 @@ class PanopticaResult(object):
         # region HD
         self.sq_hd: float
         self._add_metric(
-            f"sq_{Metric.HD.value.name.lower()}",
+            Metric.HD.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_hd,
             long_name="Segmentation Quality Hausdorff Distance",
         )
         self.sq_hd_std: float
         self._add_metric(
-            "sq_hd_std",
+            Metric.HD.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_hd_std,
             long_name="Segmentation Quality Hausdorff Distance Standard Deviation",
         )
         self.sq_hd95: float
         self._add_metric(
-            f"sq_{Metric.HD95.value.name.lower()}",
+            Metric.HD95.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_hd95,
             long_name="Segmentation Quality Hausdorff Distance 95",
         )
         self.sq_hd95_std: float
         self._add_metric(
-            "sq_hd95_std",
+            Metric.HD95.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_hd95_std,
             long_name="Segmentation Quality Hausdorff Distance 95 Standard Deviation",
         )
         self.sq_nsd: float
         self._add_metric(
-            f"sq_{Metric.NSD.value.name.lower()}",
+            Metric.NSD.get_result_key("sq"),
             MetricType.INSTANCE,
             sq_nsd,
             long_name="Segmentation Quality Normalized Surface Dice",
         )
         self.sq_nsd_std: float
         self._add_metric(
-            "sq_nsd_std",
+            Metric.NSD.get_result_key("sq", is_std=True),
             MetricType.INSTANCE,
             sq_nsd_std,
             long_name="Segmentation Quality Normalized Surface Dice Standard Deviation",
@@ -673,30 +671,30 @@ class PanopticaResult(object):
             return master_dict
 
         # allocate the results list: 1 Master Dict + 1 Empty Dict per True Positive
-        results = [master_dict] + [{} for _ in range(self.tp)]
+        n_instances = max(
+            (len(lm.ALL) for lm in self._list_metrics.values()
+            if not lm.error and lm.ALL is not None),
+            default=0,
+        )
 
-        # Populate the instance dictionaries directly from the columnar metrics
-        for metric_enum, list_metric_obj in self._list_metrics.items():
-            # IOU is a special case where the metric name does not have the suffix -> just "sq"
-            sq_key = (
-                f"sq_{metric_enum.value.name.lower()}"
-                if metric_enum != Metric.IOU
-                else "sq"
+        if not (isinstance(self.tp, float) and np.isnan(self.tp)):
+            assert n_instances == self.tp, (
+                f"tp={self.tp} but list metric lengths={n_instances}; "
+                "possible decision-threshold filtering mismatch"
             )
 
-            if (
-                list_metric_obj.error
-                or list_metric_obj.ALL is None
-                or sq_key not in master_dict
-            ):
+        results = [master_dict] + [{} for _ in range(n_instances)]
+
+        for metric_enum, list_metric_obj in self._list_metrics.items():
+            if list_metric_obj.error or list_metric_obj.ALL is None:
                 continue
 
             val_list = list_metric_obj.ALL
-
-            # Scatter the list values across the pre-allocated row dictionaries
-            for i in range(self.tp):
-                # Offset by 1 because results[0] is the master_dict
-                results[i + 1][sq_key] = val_list[i] if i < len(val_list) else ""
+            for i in range(n_instances):
+                # val_list may be shorter than n_instances if this metric hit a partial calculation error
+                results[i + 1][metric_enum.get_result_key("sq")] = (
+                    val_list[i] if i < len(val_list) else None
+                )
 
         return results
 

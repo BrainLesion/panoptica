@@ -1,3 +1,4 @@
+from panoptica.utils import format_instance_subject_name
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
@@ -196,21 +197,7 @@ class Panoptica_Aggregator:
     def _save_one_subject(self, subject_name, result_grouped):
         """Saves the evaluation results for a single subject."""
         with filelock:
-            if not self.__output_individual_instance_metrics:
-                content = [subject_name]
-                for groupname in self.__class_group_names:
-                    result: PanopticaResult = result_grouped[groupname]
-                    # We use False here to get the single master dict
-                    result_dict = result.to_dict(False)
-
-                    if result.computation_time is not None:
-                        result_dict[COMPUTATION_TIME_KEY] = result.computation_time
-
-                    for e in self.__evaluation_metrics:
-                        content.append(result_dict.get(e, ""))
-                _write_content(self.__output_file, [content])
-
-            else:
+            if self.__output_individual_instance_metrics:
                 all_rows = []
                 summary_row = [subject_name]
                 group_rows_as_dicts = {}
@@ -228,7 +215,7 @@ class Panoptica_Aggregator:
                 for groupname in self.__class_group_names:
                     rows_as_dicts = group_rows_as_dicts[groupname]
                     for inst_idx, r_dict in enumerate(rows_as_dicts[1:]):
-                        row = [f"{subject_name}-{groupname}_inst_{inst_idx}"]
+                        row = [format_instance_subject_name(subject_name, groupname, inst_idx)]
                         for current_groupname in self.__class_group_names:
                             if current_groupname == groupname:
                                 for e in self.__evaluation_metrics:
@@ -239,8 +226,20 @@ class Panoptica_Aggregator:
                         all_rows.append(row)
 
                 _write_content(self.__output_file, all_rows)
+            else:
+                content = [subject_name]
+                for groupname in self.__class_group_names:
+                    result: PanopticaResult = result_grouped[groupname]
+                    result_dict = result.to_dict(False)
 
-        print(f"Saved entry {subject_name} into {str(self.__output_file)}")
+                    if result.computation_time is not None:
+                        result_dict[COMPUTATION_TIME_KEY] = result.computation_time
+
+                    for e in self.__evaluation_metrics:
+                        content.append(result_dict.get(e, ""))
+                _write_content(self.__output_file, [content])
+
+            print(f"Saved entry {subject_name} into {str(self.__output_file)}")
 
     @property
     def panoptica_evaluator(self):
