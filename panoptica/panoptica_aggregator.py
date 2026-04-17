@@ -7,7 +7,6 @@ from multiprocessing import Lock, set_start_method
 import csv
 import os
 import atexit
-import warnings
 import tempfile
 from typing import Optional
 
@@ -60,7 +59,7 @@ class Panoptica_Aggregator:
             threshold_step_size (Optional[float], optional): The step size for thresholding. Defaults to None.
 
         Raises:
-            AssertionError: If the output directory does not exist or if the file extension is not `.tsv`.
+            ValueError: If the output directory does not exist or if the file extension is not `.tsv`.
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
@@ -69,9 +68,10 @@ class Panoptica_Aggregator:
         self.__threshold_step_size = threshold_step_size
 
         if is_autc:
-            assert (
-                self.__threshold_step_size is not None
-            ), "threshold_step_size must be provided to build AUTC headers"
+            if self.__threshold_step_size is None:
+                raise ValueError(
+                    "threshold_step_size must be provided to build AUTC headers"
+                )
             self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
                 threshold_step_size
             )
@@ -193,9 +193,10 @@ class Panoptica_Aggregator:
         # Run Evaluation (allowed in parallel)
         print(f"Call evaluate on {subject_name}")
         if self.__autc:
-            assert (
-                self.__threshold_step_size is not None
-            ), "threshold_step_size must be provided to build AUTC headers"
+            if self.__threshold_step_size is None:
+                raise ValueError(
+                    "threshold_step_size must be provided to build AUTC headers"
+                )
             res = self.__panoptica_evaluator.evaluate_autc(
                 prediction_arr,
                 reference_arr,

@@ -31,4 +31,5 @@ from panoptica.utils.serialization import (
     parse_autc_key,
     is_threshold_key,
     is_autc_key,
+    _AUTC_PREFIX
 )

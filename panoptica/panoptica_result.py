@@ -1,15 +1,15 @@
 from __future__ import annotations
-
-from panoptica.utils import format_autc_key
-from panoptica.utils import format_threshold_key
 from typing import Any, Callable
 import numpy as np
+from panoptica.utils import _AUTC_PREFIX
+from panoptica.utils import is_autc_key
+from panoptica.utils import format_autc_key
+from panoptica.utils import format_threshold_key
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
     Metric,
     MetricCouldNotBeComputedException,
-    MetricMode,
     MetricType,
 )
 from panoptica.utils import EdgeCaseHandler
@@ -935,8 +935,8 @@ class PanopticaAUTCResult(object):
         if name.startswith("_"):
             raise AttributeError(name)
 
-        if name.startswith("autc_"):
-            metric_name = name[5:]
+        if is_autc_key(name):
+            metric_name = name[len(_AUTC_PREFIX):]
             try:
                 return self.get_autc(metric_name)
             except AttributeError:

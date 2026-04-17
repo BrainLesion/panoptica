@@ -4,9 +4,7 @@ from panoptica.panoptica_pipeline import _phase_instance_approximation
 from time import perf_counter
 from typing import Literal, Union
 from typing import TYPE_CHECKING
-
 from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult

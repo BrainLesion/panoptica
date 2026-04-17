@@ -141,7 +141,7 @@ class Panoptica_Statistic:
 
     @property
     def base_metric_names(self) -> list[str]:
-        """Returns metric names that are not thresholded and not AUTC."""
+        """Returns metric names that are not thresholded"""
         return [
             m
             for m in self.__metricnames
