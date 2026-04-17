@@ -74,8 +74,8 @@ def evaluate_matched_instance(
     return EvaluateInstancePair(
         reference_arr=matched_instance_pair.reference_arr,
         prediction_arr=matched_instance_pair.prediction_arr,
-        n_pred_instances=matched_instance_pair.n_prediction_instance,
-        n_ref_instances=matched_instance_pair.n_reference_instance,
+        n_pred_instances=matched_instance_pair.n_pred_instances,
+        n_ref_instances=matched_instance_pair.n_ref_instances,
         tp=len(matched_instance_pair.matched_instances),
         list_metrics=score_dict,
     )
