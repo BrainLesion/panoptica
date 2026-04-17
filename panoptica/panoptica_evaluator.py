@@ -1,3 +1,5 @@
+from panoptica.utils import format_autc_key
+from panoptica.utils import format_threshold_key
 from panoptica.panoptica_pipeline import _phase_instance_approximation
 from time import perf_counter
 from typing import Literal, Union
@@ -424,13 +426,12 @@ class Panoptica_Evaluator(SupportsConfig):
     def get_autc_metric_keys(self, threshold_step_size: float) -> list[str]:
         """Must produce keys in exactly the same order as PanopticaAUTCResult.to_dict()."""
         res = self._get_dummy_result()
-        keys = [f"autc_{m}" for m in sorted(res.autc_metrics)]
+        keys = [format_autc_key(m) for m in sorted(res.autc_metrics)]
         
         base_keys = self.resulting_metric_keys
         for t in self.generate_thresholds(threshold_step_size):
-            t_str = f"{t:g}"
             for m in base_keys:
-                keys.append(f"t{t_str}_{m}")
+                keys.append(format_threshold_key(t, m))
         return keys
 
     def _evaluate_group(

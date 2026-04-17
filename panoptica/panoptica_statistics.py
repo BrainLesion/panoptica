@@ -1,5 +1,9 @@
+from panoptica.utils import format_threshold_key
+from panoptica.utils import is_autc_key
+from panoptica.utils import is_threshold_key
+from panoptica.utils import parse_autc_key
+from panoptica.utils import parse_threshold_key
 import csv
-import re
 import numpy as np
 import warnings
 from pathlib import Path
@@ -101,17 +105,12 @@ class Panoptica_Statistic:
 
         self.__groupnames = list(value_dict.keys())
         self.__metricnames = list(value_dict[self.__groupnames[0]].keys())
-
-        self.__threshold_pattern = re.compile(rf"^t([0-9\.]+)_{'(.+)'}$")
-        self.__threshold_map: dict[str, list[float]] = {} # base_metric -> [0.1, 0.5, ...]
+        self.__threshold_map: dict[str, list[float]] = {}
         
-        # Regex to catch "t0.5_pq" -> threshold=0.5, base_metric="pq"
         for m in self.__metricnames:
-            match = re.match(r"^t([0-9\.]+)_", m)
-            if match:
-                threshold_val = float(match.group(1))
-                # Extract the base metric name (everything after the first underscore)
-                base_metric = m.split("_", 1)[1] 
+            parsed = parse_threshold_key(m)
+            if parsed:
+                threshold_val, base_metric = parsed
                 if base_metric not in self.__threshold_map:
                     self.__threshold_map[base_metric] = []
                 self.__threshold_map[base_metric].append(threshold_val)
@@ -140,11 +139,14 @@ class Panoptica_Statistic:
     @property
     def metricnames(self):
         return self.__metricnames
-
+        
     @property
     def base_metric_names(self) -> list[str]:
-        """Returns metric names that are not thresholded."""
-        return [m for m in self.__metricnames if not re.match(r"^t[0-9\.]_.", m)]
+        """Returns metric names that are not thresholded and not AUTC."""
+        return [
+            m for m in self.__metricnames 
+            if not is_threshold_key(m) and not is_autc_key(m)
+        ]
 
     def get_thresholds_for_metric(self, metric: str) -> list[float]:
         """Returns available thresholds for a specific metric (e.g. 'pq')."""
@@ -563,13 +565,13 @@ def make_autc_plots(
                 legend_name = f"{setupname} - {name}"
 
             Y = [
-                FloatDistribution(stat.get(g, f"t{t:g}_{metric}", remove_nones=True)).avg
+                FloatDistribution(stat.get(g, format_threshold_key(t, metric), remove_nones=True)).avg
                 for t in thresholds
             ]
 
             if plot_std:
                 Ystd = [
-                    FloatDistribution(stat.get(g, f"t{t:g}_{metric}", remove_nones=True)).std
+                    FloatDistribution(stat.get(g, format_threshold_key(t, metric), remove_nones=True)).std
                     for t in thresholds
                 ]
                 error_y = dict(type="data", array=Ystd)

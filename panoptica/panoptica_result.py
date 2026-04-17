@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+from panoptica.utils import format_threshold_key
 from typing import Any, Callable
-
 import numpy as np
-
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
@@ -918,12 +917,11 @@ class PanopticaAUTCResult(object):
                 result[f"autc_{k}"] = np.nan
 
         for t, res in self._threshold_results.items():
-            t_str = f"{t:g}"
             for k, v in res.to_dict().items():
                 if isinstance(v, (int, float)):
-                    result[f"t{t_str}_{k}"] = float(v)
+                    result[format_threshold_key(t, k)] = float(v)
                 else:
-                    result[f"t{t_str}_{k}"] = np.nan
+                    result[format_threshold_key(t, k)] = np.nan
 
         return result
 
