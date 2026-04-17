@@ -215,7 +215,11 @@ class Panoptica_Aggregator:
                 for groupname in self.__class_group_names:
                     rows_as_dicts = group_rows_as_dicts[groupname]
                     for inst_idx, r_dict in enumerate(rows_as_dicts[1:]):
-                        row = [format_instance_subject_name(subject_name, groupname, inst_idx)]
+                        row = [
+                            format_instance_subject_name(
+                                subject_name, groupname, inst_idx
+                            )
+                        ]
                         for current_groupname in self.__class_group_names:
                             if current_groupname == groupname:
                                 for e in self.__evaluation_metrics:

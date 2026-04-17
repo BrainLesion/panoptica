@@ -135,12 +135,12 @@ class Panoptica_Statistic:
         return [sn for sn in self.__subj_names if is_instance_row(sn)]
 
     def master_values(self, values: list[float]) -> list[float]:
-        """"Pair each value with its subject name and filter out the instance rows"""
+        """ "Pair each value with its subject name and filter out the instance rows"""
         return [
-                val
-                for sn, val in zip(self.__subj_names, values)
-                if not is_instance_row(sn) and val is not None
-            ]
+            val
+            for sn, val in zip(self.__subj_names, values)
+            if not is_instance_row(sn) and val is not None
+        ]
 
     @classmethod
     def from_file(cls, file: str | Path, verbose: bool = True):

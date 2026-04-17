@@ -120,7 +120,11 @@ class _Metric:
     @property
     def suffix(self) -> str:
         """Returns the override if set, otherwise defaults to '_name'"""
-        return f"_{self.name.lower()}" if self.suffix_override is None else self.suffix_override
+        return (
+            f"_{self.name.lower()}"
+            if self.suffix_override is None
+            else self.suffix_override
+        )
 
     def score_beats_threshold(
         self, matching_score: float, matching_threshold: float
@@ -159,7 +163,14 @@ class Metric(_Enum_Compare):
     """
 
     DSC = _Metric("DSC", "Dice", False, False, _compute_instance_volumetric_dice)
-    IOU = _Metric("IOU", "Intersection over Union", False, False, _compute_instance_iou, suffix_override="")
+    IOU = _Metric(
+        "IOU",
+        "Intersection over Union",
+        False,
+        False,
+        _compute_instance_iou,
+        suffix_override="",
+    )
     ASSD = _Metric(
         "ASSD",
         "Average Symmetric Surface Distance",
@@ -277,10 +288,10 @@ class Metric(_Enum_Compare):
         Generates standard keys for PanopticaResult (e.g., 'sq', 'pq_dsc', 'sq_hd_std').
         """
         key = f"{prefix}{self.value.suffix}"
-        
+
         if is_std:
             key += "_std"
-            
+
         return key
 
     def __hash__(self) -> int:

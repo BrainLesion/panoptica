@@ -672,8 +672,11 @@ class PanopticaResult(object):
 
         # allocate the results list: 1 Master Dict + 1 Empty Dict per True Positive
         n_instances = max(
-            (len(lm.ALL) for lm in self._list_metrics.values()
-            if not lm.error and lm.ALL is not None),
+            (
+                len(lm.ALL)
+                for lm in self._list_metrics.values()
+                if not lm.error and lm.ALL is not None
+            ),
             default=0,
         )
 
