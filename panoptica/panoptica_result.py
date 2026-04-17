@@ -936,7 +936,7 @@ class PanopticaAUTCResult(object):
             raise AttributeError(name)
 
         if is_autc_key(name):
-            metric_name = name[len(_AUTC_PREFIX):]
+            metric_name = name[len(_AUTC_PREFIX) :]
             try:
                 return self.get_autc(metric_name)
             except AttributeError:
