@@ -106,7 +106,7 @@ class Panoptica_Statistic:
         self.__groupnames = list(value_dict.keys())
         self.__metricnames = list(value_dict[self.__groupnames[0]].keys())
         self.__threshold_map: dict[str, list[float]] = {}
-        
+
         for m in self.__metricnames:
             parsed = parse_threshold_key(m)
             if parsed:
@@ -114,7 +114,7 @@ class Panoptica_Statistic:
                 if base_metric not in self.__threshold_map:
                     self.__threshold_map[base_metric] = []
                 self.__threshold_map[base_metric].append(threshold_val)
-        
+
         for m in self.__threshold_map:
             self.__threshold_map[m].sort()
 
@@ -139,12 +139,13 @@ class Panoptica_Statistic:
     @property
     def metricnames(self):
         return self.__metricnames
-        
+
     @property
     def base_metric_names(self) -> list[str]:
         """Returns metric names that are not thresholded and not AUTC."""
         return [
-            m for m in self.__metricnames 
+            m
+            for m in self.__metricnames
             if not is_threshold_key(m) and not is_autc_key(m)
         ]
 
@@ -472,7 +473,9 @@ class Panoptica_Statistic:
             groups = ["across_groups"]
         for g in groups:
             print(f"Group {g}:")
-            metrics_to_show = self.__metricnames if include_thresholds else self.base_metric_names
+            metrics_to_show = (
+                self.__metricnames if include_thresholds else self.base_metric_names
+            )
             for m in metrics_to_show:
                 avg, std = summary[g][m].avg, summary[g][m].std
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
@@ -548,7 +551,7 @@ def make_autc_plots(
 
     for setupname, stat in statistics_dict.items():
         thresholds = stat.get_thresholds_for_metric(metric)
-        
+
         if not thresholds:
             print(f"Warning: No threshold data found for '{metric}' in '{setupname}'.")
             continue
@@ -565,13 +568,17 @@ def make_autc_plots(
                 legend_name = f"{setupname} - {name}"
 
             Y = [
-                FloatDistribution(stat.get(g, format_threshold_key(t, metric), remove_nones=True)).avg
+                FloatDistribution(
+                    stat.get(g, format_threshold_key(t, metric), remove_nones=True)
+                ).avg
                 for t in thresholds
             ]
 
             if plot_std:
                 Ystd = [
-                    FloatDistribution(stat.get(g, format_threshold_key(t, metric), remove_nones=True)).std
+                    FloatDistribution(
+                        stat.get(g, format_threshold_key(t, metric), remove_nones=True)
+                    ).std
                     for t in thresholds
                 ]
                 error_y = dict(type="data", array=Ystd)

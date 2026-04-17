@@ -457,7 +457,8 @@ class PanopticaResult(object):
     @property
     def autc_metrics(self) -> list[str]:
         return [
-            k for k, v in self._evaluation_metrics.items()
+            k
+            for k, v in self._evaluation_metrics.items()
             if v.lower_bound == 0.0 and v.upper_bound == 1.0
         ]
 
@@ -906,7 +907,7 @@ class PanopticaAUTCResult(object):
         AUTC is only computed for continuous ratio metrics that have a bounded domain from 0 to 1.
         """
         result: dict[str, float] = {}
-        
+
         first_res = next(iter(self._threshold_results.values()))
         autc_metrics = first_res.autc_metrics
 
