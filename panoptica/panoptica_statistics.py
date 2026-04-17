@@ -40,13 +40,6 @@ class FloatDistribution:
     def values(self) -> list[float]:
         return list(self.__value_list)
 
-    def master_values(self, group, metric) -> list[float]:
-        return [
-                val
-                for sn, val in zip(self.__subj_names, self.get(group, metric, remove_nones=False))
-                if not is_instance_row(sn) and val is not None
-            ]
-
     @property
     def avg(self) -> float:
         return self.__avg
@@ -141,11 +134,13 @@ class Panoptica_Statistic:
         """Returns only the individual instance rows."""
         return [sn for sn in self.__subj_names if is_instance_row(sn)]
 
-    @property
-    def nonNoneValues(self) -> list[float]:
+    def master_values(self, values: list[float]) -> list[float]:
+        """"Pair each value with its subject name and filter out the instance rows"""
         return [
-            val for val in self.__value_list if val is not None
-        ]
+                val
+                for sn, val in zip(self.__subj_names, values)
+                if not is_instance_row(sn) and val is not None
+            ]
 
     @classmethod
     def from_file(cls, file: str | Path, verbose: bool = True):
@@ -474,14 +469,9 @@ class Panoptica_Statistic:
         all_values = self.get(group, metric, remove_nones=False)
 
         if master_only:
-            # Pair each value with its subject name and filter out the instance rows
-            filtered_values = [
-                val
-                for sn, val in zip(self.__subj_names, all_values)
-                if not is_instance_row(sn) and val is not None
-            ]
+            filtered_values = self.master_values(all_values)
         else:
-            filtered_values = self.nonNoneValues
+            filtered_values = [val for val in all_values if val is not None]
 
         return FloatDistribution(filtered_values)
 
@@ -506,13 +496,9 @@ class Panoptica_Statistic:
         for g in groups:
             all_values = self.get(g, metric, remove_nones=False)
             if master_only:
-                filtered_values = [
-                    val
-                    for sn, val in zip(self.__subj_names, all_values)
-                    if not is_instance_row(sn) and val is not None
-                ]
+                filtered_values = self.master_values(all_values)
             else:
-                filtered_values = self.nonNoneValues
+                filtered_values = [val for val in all_values if val is not None]
             data_plot[g] = np.asarray(filtered_values)
 
         if manual_metric_range is not None:
