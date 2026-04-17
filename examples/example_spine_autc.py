@@ -6,7 +6,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from panoptica import (
     Panoptica_Evaluator,
     Panoptica_Aggregator,
-    Metric,
 )
 from panoptica.panoptica_statistics import make_autc_plots
 

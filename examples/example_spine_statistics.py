@@ -1,6 +1,4 @@
-from pathlib import Path
 from typing import Literal
-
 from panoptica import (
     Panoptica_Evaluator,
     Panoptica_Aggregator,

@@ -1,7 +1,6 @@
 from panoptica.utils import format_threshold_key
 from panoptica.utils import is_autc_key
 from panoptica.utils import is_threshold_key
-from panoptica.utils import parse_autc_key
 from panoptica.utils import parse_threshold_key
 import csv
 import numpy as np

@@ -23,7 +23,10 @@ def parse_threshold_key(key: str) -> tuple[float, str] | None:
     """Returns (threshold, base_metric) or None if not a threshold key."""
     m = _THRESHOLD_PATTERN.match(key)
     if m:
-        return float(m.group(1)), m.group(2)
+        try:
+            return float(m.group(1)), m.group(2)
+        except ValueError:
+            return None
     return None
 
 

@@ -1,3 +1,4 @@
+from panoptica.utils import format_autc_key
 from __future__ import annotations
 
 from panoptica.utils import format_threshold_key
@@ -911,18 +912,21 @@ class PanopticaAUTCResult(object):
         first_res = next(iter(self._threshold_results.values()))
         autc_metrics = first_res.autc_metrics
 
-        for k in sorted(autc_metrics):
+        for metric in sorted(autc_metrics):
+            key = format_autc_key(metric)
             try:
-                result[f"autc_{k}"] = self.get_autc(k)
+                result[key] = self.get_autc(metric)
             except (AttributeError, MetricCouldNotBeComputedException, ValueError):
-                result[f"autc_{k}"] = np.nan
+                result[key] = np.nan
 
         for t, res in self._threshold_results.items():
             for k, v in res.to_dict().items():
-                if isinstance(v, (int, float)):
-                    result[format_threshold_key(t, k)] = float(v)
-                else:
-                    result[format_threshold_key(t, k)] = np.nan
+                key = format_threshold_key(t, k)
+                try:
+                    numeric_v = float(v)
+                    result[key] = np.nan if np.isnan(numeric_v) else numeric_v
+                except (TypeError, ValueError):
+                    result[key] = np.nan
 
         return result
 
