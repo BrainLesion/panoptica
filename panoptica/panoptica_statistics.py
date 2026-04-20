@@ -134,8 +134,8 @@ class Panoptica_Statistic:
         """Returns only the individual instance rows."""
         return [sn for sn in self.__subj_names if is_instance_row(sn)]
 
-    def master_values(self, values: list[float]) -> list[float]:
-        """ "Pair each value with its subject name and filter out the instance rows"""
+    def master_values(self, values: list[float | None]) -> list[float]:
+        """Pair each value with its subject name and filter out the instance rows."""
         return [
             val
             for sn, val in zip(self.__subj_names, values)
