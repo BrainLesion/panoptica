@@ -60,17 +60,21 @@ def evaluate_matched_instance(
     #    )
 
     # TODO if instance matcher already gives matching metric, adapt here!
+    tp = 0
     for instance_result in per_instance_results:
-        if decision_metric is None or (
+        if not instance_result:
+            continue
+        accepted = decision_metric is None or (
             decision_threshold is not None
             and decision_metric.score_beats_threshold(
                 instance_result[decision_metric], decision_threshold
             )
-        ):
-            for metric, score in instance_result.items():
-                score_dict[metric].append(score)
-
-    derived_tp = len(next(iter(score_dict.values()))) if score_dict else 0
+        )
+        if not accepted:
+            continue
+        tp += 1
+        for metric, score in instance_result.items():
+            score_dict[metric].append(score)
 
     # Create and return the EvaluateInstancePair object with computed metrics
     return EvaluateInstancePair(
@@ -78,7 +82,7 @@ def evaluate_matched_instance(
         prediction_arr=matched_instance_pair.prediction_arr,
         n_pred_instances=matched_instance_pair.n_pred_instances,
         n_ref_instances=matched_instance_pair.n_ref_instances,
-        tp=derived_tp,
+        tp=tp,
         list_metrics=score_dict,
     )
 
