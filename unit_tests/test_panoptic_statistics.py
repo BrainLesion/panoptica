@@ -189,7 +189,7 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         agg_regular.evaluate(a, a, "test_regular")
 
         # Try to resume/append to the same file but with an AUTC setup
-        with self.assertRaisesRegex(AssertionError, "Hash of header not the same"):
+        with self.assertRaisesRegex(ValueError, "Hash of header not the same"):
             agg_autc = Panoptica_Aggregator(
                 panoptica_evaluator=evaluator_regular,
                 output_file=output_test_dir,
