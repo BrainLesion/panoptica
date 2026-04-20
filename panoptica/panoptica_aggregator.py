@@ -87,7 +87,9 @@ class Panoptica_Aggregator:
             output_file = Path(output_file)
         # uses tsv
         if not output_file.parent.exists():
-            raise FileNotFoundError(f"Directory {str(output_file.parent)} does not exist")
+            raise FileNotFoundError(
+                f"Directory {str(output_file.parent)} does not exist"
+            )
 
         out_file_path = str(output_file)
 
@@ -96,7 +98,9 @@ class Panoptica_Aggregator:
             # extension exists
             extension = out_file_path.split(".")[-1]
             if extension != "tsv":
-                raise ValueError(f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension")
+                raise ValueError(
+                    f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
+                )
         else:
             out_file_path += ".tsv"  # add extension
 
@@ -133,7 +137,9 @@ class Panoptica_Aggregator:
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
                 if header_hash != hash("+".join(header_list)):
-                    raise ValueError(f"{self.__output_file}: Hash of header not the same! You are using a different setup!")
+                    raise ValueError(
+                        f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
+                    )
 
         if continue_file:
             with inevalfilelock:
