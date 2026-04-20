@@ -1,7 +1,7 @@
 from __future__ import annotations
+from panoptica.metrics import MetricMode
 from typing import Any, Callable
 import numpy as np
-from panoptica import MetricMode
 from panoptica.utils import _AUTC_PREFIX
 from panoptica.utils import is_autc_key
 from panoptica.utils import format_autc_key
