@@ -241,10 +241,11 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
     def match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        matching_threshold: Optional[float] = None,
         label_group=None,
         n_ref_labels=None,
         processing_pair_orig_shape=None,
+        *,
+        matching_threshold: Optional[float] = None,
         **kwargs,
     ) -> MatchedInstancePair:
         return super().match_instances(
