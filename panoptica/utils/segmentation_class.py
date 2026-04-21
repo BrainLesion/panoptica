@@ -2,6 +2,7 @@ import numpy as np
 from pathlib import Path
 from panoptica.utils.config import SupportsConfig
 from panoptica.utils.label_group import LabelGroup, _LabelGroupAny
+from panoptica.utils.serialization import validate_group_name
 
 NO_GROUP_KEY = "ungrouped"
 
@@ -39,6 +40,7 @@ class SegmentationClassGroups(SupportsConfig):
             # transform dict into list of LabelGroups
             for i, g in groups.items():
                 name_lower = str(i).lower()
+                validate_group_name(name_lower)
                 if isinstance(g, LabelGroup):
                     self.__group_dictionary[name_lower] = g
                 else:

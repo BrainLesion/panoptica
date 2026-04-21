@@ -1,4 +1,4 @@
-from panoptica.utils import format_instance_subject_name
+from panoptica.utils import format_instance_subject_name, validate_subject_name
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
@@ -166,6 +166,7 @@ class Panoptica_Aggregator:
         Raises:
             ValueError: If the subject name has already been evaluated or is in process.
         """
+        validate_subject_name(subject_name)
         # Read tmp file to see which sample names are blocked
         with inevalfilelock:
             id_list = _load_first_column_entries(self.__output_buffer_file)
@@ -324,4 +325,4 @@ def _write_content(file: str | Path, content: list[list[str]]):
     with open(str(file), "a", encoding="utf8", newline="") as tsvfile:
         writer = csv.writer(tsvfile, delimiter="\t", lineterminator="\n")
         for c in content:
-            writer.writerow(c)
+            writer.writerow(["" if v is None else v for v in c])

@@ -28,4 +28,6 @@ from panoptica.utils.serialization import (
     format_instance_subject_name,
     parse_instance_subject_name,
     is_instance_row,
+    validate_subject_name,
+    validate_group_name,
 )
