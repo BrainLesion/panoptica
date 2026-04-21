@@ -20,7 +20,7 @@ def search_path(
     basepath = str(basepath)
     if not os.path.exists(basepath):
         raise FileNotFoundError(
-            f"basepath for search_path() doesnt exist, got {basepath}"
+            f"basepath for search_path() doesn't exist, got {basepath}"
         )
     if not basepath.endswith("/"):
         basepath += "/"

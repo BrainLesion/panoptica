@@ -225,7 +225,7 @@ class Panoptica_Statistic:
 
         if not (group in self.__value_dict and metric in self.__value_dict[group]):
             raise KeyError(
-                f"Values not found for group {group} and metric {metric} evem though they should!"
+                f"Values not found for group {group} and metric {metric} even though they should!"
             )
         if not remove_nones:
             return self.__value_dict[group][metric]
