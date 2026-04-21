@@ -91,7 +91,9 @@ class Test_SegmentationClassGroups_Validation(unittest.TestCase):
 class Test_Evaluator_Validates_Subject(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
-        self.output_file = Path(__file__).parent.joinpath("unittest_serialization_tmp.tsv")
+        self.output_file = Path(__file__).parent.joinpath(
+            "unittest_serialization_tmp.tsv"
+        )
         self.buffer_file = Path(str(self.output_file) + ".tmp")
         return super().setUp()
 
@@ -120,7 +122,9 @@ class Test_Evaluator_Validates_Subject(unittest.TestCase):
 
 class Test_Write_Content_None_Normalization(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp_file = Path(__file__).parent.joinpath("unittest_none_normalization.tsv")
+        self.tmp_file = Path(__file__).parent.joinpath(
+            "unittest_none_normalization.tsv"
+        )
         if self.tmp_file.exists():
             os.remove(str(self.tmp_file))
         return super().setUp()
