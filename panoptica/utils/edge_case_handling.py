@@ -98,7 +98,9 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
                 and normal is not None
             )
         ):
-            raise ValueError("default_result is None and the rest is not fully specified")
+            raise ValueError(
+                "default_result is None and the rest is not fully specified"
+            )
 
         self._default_result = default_result
         self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}

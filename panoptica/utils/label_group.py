@@ -41,9 +41,7 @@ class LabelGroup(SupportsConfig):
             )
         self.__value_labels = value_labels
         if not np.all([v > 0 for v in self.__value_labels]):
-            raise ValueError(
-                f"Given value labels are not >0, got {value_labels}"
-            )
+            raise ValueError(f"Given value labels are not >0, got {value_labels}")
         self.__single_instance = single_instance
         if self.__single_instance:
             if len(value_labels) != 1:

@@ -159,9 +159,10 @@ def post_check(
     Returns:
         bool: True if the post check passes, False otherwise.
     """
-    if not (isinstance(prediction_array, np.ndarray) and isinstance(
-        reference_array, np.ndarray
-    )):
+    if not (
+        isinstance(prediction_array, np.ndarray)
+        and isinstance(reference_array, np.ndarray)
+    ):
         raise TypeError(
             f"prediction_array and reference_array must be numpy arrays. Got {type(prediction_array), type(reference_array)}"
         )

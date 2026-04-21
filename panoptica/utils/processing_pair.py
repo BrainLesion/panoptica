@@ -110,7 +110,9 @@ class _ProcessingPair(ABC):
             dtype (type): Expected integer type for the arrays.
         """
         if not np.issubdtype(type, int_type):
-            raise TypeError("set_dtype: tried to set dtype to something other than integers")
+            raise TypeError(
+                "set_dtype: tried to set dtype to something other than integers"
+            )
         self.__prediction_arr = self.__prediction_arr.astype(type)
         self.__reference_arr = self.__reference_arr.astype(type)
 
@@ -252,9 +254,9 @@ def _check_array_integrity(
     Example:
     >>> _check_array_integrity(np.array([1, 2, 3]), np.array([4, 5, 6]), dtype=int)
     """
-    if not (isinstance(prediction_arr, np.ndarray) and isinstance(
-        reference_arr, np.ndarray
-    )):
+    if not (
+        isinstance(prediction_arr, np.ndarray) and isinstance(reference_arr, np.ndarray)
+    ):
         raise TypeError("prediction and/or reference are not numpy arrays")
     if prediction_arr.shape != reference_arr.shape:
         raise ValueError(

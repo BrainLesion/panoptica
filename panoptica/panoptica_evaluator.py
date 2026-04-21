@@ -186,9 +186,7 @@ class Panoptica_Evaluator(SupportsConfig):
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
         if not isinstance(processing_pair, self.__expected_input.value):
-            raise TypeError(
-                f"input not of expected type {self.__expected_input}"
-            )
+            raise TypeError(f"input not of expected type {self.__expected_input}")
 
         self.__segmentation_class_groups.has_defined_labels_for(
             processing_pair.prediction_arr, raise_error=True

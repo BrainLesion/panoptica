@@ -545,9 +545,7 @@ def make_curve_over_setups(
     #
     for setupname, stat in statistics_dict.items():
         if metric not in stat.metricnames:
-            raise ValueError(
-                f"metric {metric} not in statistic obj {setupname}"
-            )
+            raise ValueError(f"metric {metric} not in statistic obj {setupname}")
 
     setupnames = list(statistics_dict.keys())
     convert_x_to_digit = True

@@ -245,9 +245,7 @@ def _panoptic_evaluate_region_wise(
     )
 
     if not isinstance(processing_pair, UnmatchedInstancePair):
-        raise TypeError(
-            f"Expected UnmatchedInstancePair, got {type(processing_pair)}"
-        )
+        raise TypeError(f"Expected UnmatchedInstancePair, got {type(processing_pair)}")
     processing_pair = _handle_zero_instances_cases(
         processing_pair,
         eval_metrics=instance_metrics,
@@ -429,9 +427,7 @@ def _phase_instance_approximation(
             processing_pair.copy(), InputType.SEMANTIC
         )
         if instance_approximator is None:
-            raise ValueError(
-                "Got SemanticPair but not InstanceApproximator"
-            )
+            raise ValueError("Got SemanticPair but not InstanceApproximator")
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
