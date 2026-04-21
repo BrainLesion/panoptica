@@ -297,6 +297,7 @@ class Panoptica_Evaluator(SupportsConfig):
 
             threshold_results: dict[float, PanopticaResult] = {}
             for threshold in thresholds:
+                threshold = float(threshold)
                 decision_threshold = threshold
                 if label_group.single_instance:
                     decision_threshold = 0.0
@@ -376,7 +377,7 @@ class Panoptica_Evaluator(SupportsConfig):
         return processing_pair, metadata
 
     @staticmethod
-    def generate_thresholds(step_size: float) -> np.ndarray:
+    def generate_thresholds(step_size: float) -> list[float]:
         """Return AUTC threshold steps within the inclusive range [step_size, 1]."""
         if not 0 < step_size < 1:
             raise ValueError(
@@ -384,7 +385,7 @@ class Panoptica_Evaluator(SupportsConfig):
             )
         thresholds = np.arange(step_size, 1.0 + step_size, step_size)
         thresholds = np.minimum(thresholds, 1.0)
-        return np.unique(np.round(thresholds, 5))
+        return [float(t) for t in np.unique(np.round(thresholds, 5))]
 
     @property
     def segmentation_class_groups_names(self) -> list[str]:
