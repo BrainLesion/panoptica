@@ -170,7 +170,7 @@ class LabelPartGroup(LabelGroup):
             single_instance (bool, optional): If True, ignores matching threshold. Defaults to False.
 
         Raises:
-            AssertionError: If labels are empty, not positive integers, or if incompatible with single_instance.
+            ValueError: If labels are empty, not positive integers, or if incompatible with single_instance.
             ValueError: If no thing or part labels are provided.
         """
         # Convert single integers to lists
@@ -259,7 +259,7 @@ class _LabelGroupAny(LabelGroup):
 
     @property
     def value_labels(self) -> list[int]:
-        raise AssertionError("LabelGroupAny has no value_labels, it is all labels")
+        raise NotImplementedError("LabelGroupAny has no value_labels, it is all labels")
 
     @property
     def single_instance(self) -> bool:

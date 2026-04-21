@@ -32,7 +32,7 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
             Perform instance approximation on the given SemanticPair.
 
     Raises:
-        AssertionError: If there are negative values in the semantic maps, which is not allowed.
+        ValueError: If there are negative values in the semantic maps, which is not allowed.
 
     Example:
     >>> class CustomInstanceApproximator(InstanceApproximator):
@@ -90,7 +90,7 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
             UnmatchedInstancePair | MatchedInstancePair: The result of the instance approximation.
 
         Raises:
-            AssertionError: If there are negative values in the semantic maps, which is not allowed.
+            ValueError: If there are negative values in the semantic maps, which is not allowed.
         """
         # Check validity
         pred_labels = semantic_pair.pred_labels

@@ -67,6 +67,9 @@ def _compute_center_distance(
     Returns:
         float: Center Distance between the specified instances. Higher values
         indicate worse localization quality.
+
+    Raises:
+        ValueError: If voxelspacing does not have the same dimensionality as the input.
     """
     ref_com = _compute_center_of_mass(reference)
     pred_com = _compute_center_of_mass(prediction)

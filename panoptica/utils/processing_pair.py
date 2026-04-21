@@ -245,11 +245,8 @@ def _check_array_integrity(
         dtype (type | None): Expected type of the arrays. If None, dtype validation is skipped.
 
     Raises:
-        AssertionError: If validation fails in any of the following cases:
-            - Arrays are not numpy arrays.
-            - Shapes of both arrays are not identical.
-            - Data types of both arrays do not match.
-            - Dtype mismatch when specified.
+        TypeError: If arrays are not numpy arrays, or if dtype mismatch when specified.
+        ValueError: If shapes of both arrays are not identical, or if there are negative values.
 
     Example:
     >>> _check_array_integrity(np.array([1, 2, 3]), np.array([4, 5, 6]), dtype=int)

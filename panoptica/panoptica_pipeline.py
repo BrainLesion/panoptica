@@ -63,7 +63,8 @@ def _panoptic_evaluate(
         PanopticaResult: Result of the panoptic evaluation.
 
     Raises:
-        AssertionError: If the input processing pair does not match the expected types.
+        TypeError: If the input processing pair does not match the expected types.
+        ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
     if verbose:
@@ -211,7 +212,8 @@ def _panoptic_evaluate_region_wise(
         PanopticaResult: Result of the panoptic evaluation.
 
     Raises:
-        AssertionError: If the input processing pair does not match the expected types.
+        TypeError: If the input processing pair does not match the expected types.
+        ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
     if verbose:

@@ -55,7 +55,8 @@ class Panoptica_Aggregator:
                 Defaults to True.
 
         Raises:
-            AssertionError: If the output directory does not exist or if the file extension is not `.tsv`.
+            FileNotFoundError: If the output directory does not exist.
+            ValueError: If the file extension is not `.tsv`.
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
@@ -263,7 +264,7 @@ def _load_first_column_entries(file: str | Path):
         list: A list of entries from the first column of the file.
 
     Raises:
-        AssertionError: If the file contains duplicate entries.
+        ValueError: If the file contains duplicate entries.
     """
     if isinstance(file, Path):
         file = str(file)
