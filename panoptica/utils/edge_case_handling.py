@@ -89,12 +89,16 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
         empty_reference_result: EdgeCaseResult | None = None,
         normal: EdgeCaseResult | None = None,
     ) -> None:
-        assert default_result is not None or (
-            no_instances_result is not None
-            and empty_prediction_result is not None
-            and empty_reference_result is not None
-            and normal is not None
-        ), "default_result is None and the rest is not fully specified"
+        if not (
+            default_result is not None
+            or (
+                no_instances_result is not None
+                and empty_prediction_result is not None
+                and empty_reference_result is not None
+                and normal is not None
+            )
+        ):
+            raise ValueError("default_result is None and the rest is not fully specified")
 
         self._default_result = default_result
         self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}

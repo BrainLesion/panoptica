@@ -52,9 +52,10 @@ class TorchImageChecker(_InputDataTypeChecker):
         **kwargs,
     ) -> tuple[bool, str]:
         # assert correct datatype
-        assert isinstance(prediction_image, torch.Tensor) and isinstance(
+        if not (isinstance(prediction_image, torch.Tensor) and isinstance(
             reference_image, torch.Tensor
-        ), "Input images must be of type torch.Tensor"
+        )):
+            raise TypeError("Input images must be of type torch.Tensor")
 
         return _sanity_check_images(
             prediction_image.numpy(),

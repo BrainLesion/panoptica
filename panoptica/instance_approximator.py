@@ -98,9 +98,10 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         pred_labels_min = np.min(pred_labels) if len(pred_labels) > 0 else 0
         ref_labels_min = np.min(ref_labels) if len(ref_labels) > 0 else 0
         min_value = min(pred_labels_min, ref_labels_min)
-        assert (
-            min_value >= 0
-        ), "There are negative values in the semantic maps. This is not allowed!"
+        if min_value < 0:
+            raise ValueError(
+                "There are negative values in the semantic maps. This is not allowed!"
+            )
 
         # If label_group is LabelPartGroup, force OneHotConnectedComponentsInstanceApproximator
         if isinstance(label_group, LabelPartGroup):

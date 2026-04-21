@@ -244,9 +244,10 @@ def _panoptic_evaluate_region_wise(
         verbose=verbose,
     )
 
-    assert isinstance(
-        processing_pair, UnmatchedInstancePair
-    ), f"Expected UnmatchedInstancePair, got {type(processing_pair)}"
+    if not isinstance(processing_pair, UnmatchedInstancePair):
+        raise TypeError(
+            f"Expected UnmatchedInstancePair, got {type(processing_pair)}"
+        )
     processing_pair = _handle_zero_instances_cases(
         processing_pair,
         eval_metrics=instance_metrics,
@@ -261,9 +262,10 @@ def _panoptic_evaluate_region_wise(
         region_map, num_features = _get_voronoi_regions(
             processing_pair.reference_arr, processing_pair.n_ref_instances
         )
-        assert (
-            num_features > 0
-        ), "Expected at least one region in the reference mask for region-wise evaluation"
+        if num_features <= 0:
+            raise ValueError(
+                "Expected at least one region in the reference mask for region-wise evaluation"
+            )
 
         region2result_map: dict[int, PanopticaResult] = {}
 
@@ -426,9 +428,10 @@ def _phase_instance_approximation(
         intermediate_steps_data.add_intermediate_arr_data(
             processing_pair.copy(), InputType.SEMANTIC
         )
-        assert (
-            instance_approximator is not None
-        ), "Got SemanticPair but not InstanceApproximator"
+        if instance_approximator is None:
+            raise ValueError(
+                "Got SemanticPair but not InstanceApproximator"
+            )
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
@@ -477,9 +480,10 @@ def _phase_instance_matching(
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
             print("-- Got UnmatchedInstancePair, will match instances")
-        assert (
-            instance_matcher is not None
-        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        if instance_matcher is None:
+            raise ValueError(
+                "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+            )
         start = perf_counter()
 
         processing_pair = instance_matcher.match_instances(

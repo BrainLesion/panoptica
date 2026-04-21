@@ -68,9 +68,10 @@ class Panoptica_Aggregator:
         if isinstance(output_file, str):
             output_file = Path(output_file)
         # uses tsv
-        assert (
-            output_file.parent.exists()
-        ), f"Directory {str(output_file.parent)} does not exist"
+        if not output_file.parent.exists():
+            raise FileNotFoundError(
+                f"Directory {str(output_file.parent)} does not exist"
+            )
 
         out_file_path = str(output_file)
 
@@ -78,9 +79,10 @@ class Panoptica_Aggregator:
         if "." in out_file_path:
             # extension exists
             extension = out_file_path.split(".")[-1]
-            assert (
-                extension == "tsv"
-            ), f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
+            if extension != "tsv":
+                raise ValueError(
+                    f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
+                )
         else:
             out_file_path += ".tsv"  # add extension
 
@@ -116,9 +118,10 @@ class Panoptica_Aggregator:
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-                assert header_hash == hash(
-                    "+".join(header_list)
-                ), f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
+                if header_hash != hash("+".join(header_list)):
+                    raise ValueError(
+                        f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
+                    )
 
         if continue_file:
             with inevalfilelock:
@@ -274,7 +277,8 @@ def _load_first_column_entries(file: str | Path):
             id_list = list([row[0] for row in rows])
 
     n_id = len(id_list)
-    assert n_id == len(list(set(id_list))), f"{file}: file has duplicate entries!"
+    if n_id != len(list(set(id_list))):
+        raise ValueError(f"{file}: file has duplicate entries!")
 
     return id_list
 

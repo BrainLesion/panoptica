@@ -63,12 +63,10 @@ def sanity_check_and_convert_to_array(
     Returns:
         tuple[np.ndarray, np.ndarray], InputDType, dict: Will return the prediction array, reference array, the INPUTDTYPE and any metadata if the sanity check passes, otherwise it raises a corresponding Exception.
     """
-    assert (
-        prediction is not None and reference is not None
-    ), "prediction and reference cannot be None."
-    assert type(prediction) is type(
-        reference
-    ), "prediction and reference must be of the same type."
+    if prediction is None or reference is None:
+        raise ValueError("prediction and reference cannot be None.")
+    if type(prediction) is not type(reference):
+        raise TypeError("prediction and reference must be of the same type.")
 
     is_path = isinstance(prediction, (str, Path))
     file_ending = None
@@ -76,9 +74,10 @@ def sanity_check_and_convert_to_array(
         prediction = Path(prediction)
         reference = Path(reference)
         file_ending = "".join(prediction.suffixes)
-        assert file_ending == "".join(
-            reference.suffixes
-        ), f"prediction and reference must have the same file ending. Got {file_ending, reference.suffix}"
+        if file_ending != "".join(reference.suffixes):
+            raise ValueError(
+                f"prediction and reference must have the same file ending. Got {file_ending, reference.suffix}"
+            )
 
     missing_package_for_this = []
 
@@ -98,7 +97,7 @@ def sanity_check_and_convert_to_array(
             elif not is_path:
                 try:
                     r, msg, (pred, ref) = checker(prediction, reference)
-                except AssertionError as e:
+                except TypeError as e:
                     continue
                 if not r:
                     raise ValueError(
@@ -139,9 +138,10 @@ def convert_to_numpy_array_and_extract_metadata(
     metadata_ref: dict = checker.extract_metadata_from_image(reference)
     metadata_pred: dict = checker.extract_metadata_from_image(prediction)
 
-    assert (
-        metadata_ref == metadata_pred
-    ), f"Metadata of prediction and reference do not match. Got Reference={metadata_ref}, and prediction={metadata_pred}"
+    if not (metadata_ref == metadata_pred):
+        raise ValueError(
+            f"Metadata of prediction and reference do not match. Got Reference={metadata_ref}, and prediction={metadata_pred}"
+        )
 
     return post_check(np_prediction, np_reference), metadata_ref
 
@@ -159,17 +159,21 @@ def post_check(
     Returns:
         bool: True if the post check passes, False otherwise.
     """
-    assert isinstance(prediction_array, np.ndarray) and isinstance(
+    if not (isinstance(prediction_array, np.ndarray) and isinstance(
         reference_array, np.ndarray
-    ), f"prediction_array and reference_array must be numpy arrays. Got {type(prediction_array), type(reference_array)}"
+    )):
+        raise TypeError(
+            f"prediction_array and reference_array must be numpy arrays. Got {type(prediction_array), type(reference_array)}"
+        )
 
     min_value = min(
         prediction_array.min(),
         reference_array.min(),
     )
-    assert (
-        min_value >= 0
-    ), "There are negative values in the segmentation maps. This is not allowed!"
+    if min_value < 0:
+        raise ValueError(
+            "There are negative values in the segmentation maps. This is not allowed!"
+        )
 
     if not np.issubdtype(prediction_array.dtype, np.integer) or not np.issubdtype(
         reference_array.dtype, np.integer

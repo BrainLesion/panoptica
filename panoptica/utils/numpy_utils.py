@@ -76,15 +76,18 @@ def _get_bbox_nd(
     Returns:
         list of boundary coordinates [x_min, x_max, y_min, y_max, z_min, z_max]
     """
-    assert img is not None, "bbox_nd: received None as image"
-    assert np.count_nonzero(img) > 0, "bbox_nd: img is empty, cannot calculate a bbox"
+    if img is None:
+        raise ValueError("bbox_nd: received None as image")
+    if np.count_nonzero(img) <= 0:
+        raise ValueError("bbox_nd: img is empty, cannot calculate a bbox")
     N = img.ndim
     shp = img.shape
     if isinstance(px_dist, int):
         px_dist = np.ones(N, dtype=np.uint8) * px_dist
-    assert (
-        len(px_dist) == N
-    ), f"dimension mismatch, got img shape {shp} and px_dist {px_dist}"
+    if len(px_dist) != N:
+        raise ValueError(
+            f"dimension mismatch, got img shape {shp} and px_dist {px_dist}"
+        )
 
     out = []
     for ax in itertools.combinations(reversed(range(N)), N - 1):

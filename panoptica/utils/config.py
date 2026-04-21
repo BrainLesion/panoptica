@@ -34,7 +34,8 @@ def _load_yaml(file: str | Path, registered_class=None):
         yaml.register_class(registered_class)
     yaml.default_flow_style = None
     data = yaml.load(file)
-    assert isinstance(data, dict) or isinstance(data, object)
+    if not (isinstance(data, dict) or isinstance(data, object)):
+        raise TypeError(f"Loaded YAML data is not a dict or object, got {type(data)}")
     return data
 
 
@@ -55,7 +56,10 @@ def _save_yaml(data_dict: dict | object, out_file: str | Path, registered_class=
     _register_helper_classes(yaml)
     if registered_class is not None:
         yaml.register_class(registered_class)
-        assert isinstance(data_dict, registered_class)
+        if not isinstance(data_dict, registered_class):
+            raise TypeError(
+                f"data_dict is not an instance of {registered_class.__name__}, got {type(data_dict)}"
+            )
         # if isinstance(data_dict, object):
         yaml.dump(data_dict, out_file)
         # else:
@@ -95,11 +99,13 @@ def _load_from_config(cls, path: str | Path):
     if not path.exists():
         # If the path as path does not exist, try using it as name
         path_ = config_by_name(path.name)
-    assert (
-        path_.exists()
-    ), f"load_from_config: {path} does not exist, neither does {path_}"
+    if not path_.exists():
+        raise FileNotFoundError(
+            f"load_from_config: {path} does not exist, neither does {path_}"
+        )
     obj = _load_yaml(path_, registered_class=cls)
-    assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
+    if not isinstance(obj, cls):
+        raise TypeError(f"Loaded config was not for class {cls.__name__}")
     return obj
 
 
@@ -115,9 +121,11 @@ def _load_from_config_by_path(cls, path: str | Path):
     """
     if isinstance(path, str):
         path = Path(path)
-    assert path.exists(), f"load_from_config: {path} does not exist"
+    if not path.exists():
+        raise FileNotFoundError(f"load_from_config: {path} does not exist")
     obj = _load_yaml(path, registered_class=cls)
-    assert isinstance(obj, cls), f"Loaded config was not for class {cls.__name__}"
+    if not isinstance(obj, cls):
+        raise TypeError(f"Loaded config was not for class {cls.__name__}")
     return obj
 
 
@@ -132,7 +140,8 @@ def _load_from_config_by_name(cls, name: str):
         An instance of the specified class.
     """
     path = config_by_name(name)
-    assert path.exists(), f"load_from_config: {path} does not exist"
+    if not path.exists():
+        raise FileNotFoundError(f"load_from_config: {path} does not exist")
     return _load_from_config_by_path(cls, path)
 
 
@@ -148,7 +157,8 @@ def _save_to_config(obj, path: str | Path):
     if not path.parent.exists() or path.parent.name == "":
         dir, name = config_dir_by_name(path.name)
         path = dir.joinpath(name)
-    assert path.parent.exists(), f"save_to_config: {path} does not exist"
+    if not path.parent.exists():
+        raise FileNotFoundError(f"save_to_config: {path} does not exist")
     _save_yaml(obj, path, registered_class=type(obj))
 
 
@@ -215,9 +225,10 @@ class SupportsConfig:
             An instance of the class.
         """
         obj = _load_from_config(cls, path)
-        assert isinstance(
-            obj, cls
-        ), f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
+        if not isinstance(obj, cls):
+            raise TypeError(
+                f"loaded object was not of the correct class, expected {cls.__name__} but got {type(obj)}"
+            )
         return obj
 
     def save_to_config(self, path: str | Path):
@@ -241,9 +252,10 @@ class SupportsConfig:
         Returns:
             YAML node: YAML-compatible node representation of the object.
         """
-        assert hasattr(
-            cls, "_yaml_repr"
-        ), f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
+        if not hasattr(cls, "_yaml_repr"):
+            raise NotImplementedError(
+                f"Class {cls.__name__} has no _yaml_repr(cls, node) defined"
+            )
         return representer.represent_mapping("!" + cls.__name__, cls._yaml_repr(node))
 
     @classmethod

@@ -35,20 +35,22 @@ class InstanceLabelMap(object):
             ref_label (int): Reference label to map to.
 
         Raises:
-            AssertionError: If `ref_label` is not an integer.
-            AssertionError: If any `pred_labels` are not integers.
+            TypeError: If `ref_label` is not an integer.
+            ValueError: If `ref_label` is not positive.
+            TypeError: If any `pred_labels` are not integers.
+            ValueError: If any `pred_labels` are negative.
             Exception: If a prediction label is already mapped to a different reference label.
         """
         if not isinstance(pred_labels, list):
             pred_labels = [pred_labels]
-        assert isinstance(ref_label, int), "add_labelmap_entry: got no int as ref_label"
-        assert ref_label > 0, "add_labelmap_entry: got no positive int as ref_label"
-        assert np.all(
-            [isinstance(r, int) for r in pred_labels]
-        ), "add_labelmap_entry: got no int as pred_label"
-        assert np.all(
-            [r >= 0 for r in pred_labels]
-        ), "add_labelmap_entry: got a non-positive int as pred_label"
+        if not isinstance(ref_label, int):
+            raise TypeError("add_labelmap_entry: got no int as ref_label")
+        if ref_label <= 0:
+            raise ValueError("add_labelmap_entry: got no positive int as ref_label")
+        if not np.all([isinstance(r, int) for r in pred_labels]):
+            raise TypeError("add_labelmap_entry: got no int as pred_label")
+        if not np.all([r >= 0 for r in pred_labels]):
+            raise ValueError("add_labelmap_entry: got a non-positive int as pred_label")
         for p in pred_labels:
             if p in self and self[p] != ref_label:
                 raise Exception(

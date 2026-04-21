@@ -579,9 +579,10 @@ class PanopticaResult(object):
         setattr(self, name_id, default_value)
         # assert hasattr(self, name_id), f"added metric {name_id} but it is not a member variable of this class"
         if calc_func is None:
-            assert (
-                was_calculated
-            ), "Tried to add a metric without a calc_function but that hasn't been calculated yet, how did you think this could works?"
+            if not was_calculated:
+                raise ValueError(
+                    "Tried to add a metric without a calc_function but that hasn't been calculated yet, how did you think this could works?"
+                )
         eval_metric = Evaluation_Metric(
             name_id,
             metric_type=metric_type,

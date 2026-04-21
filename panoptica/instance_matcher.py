@@ -186,7 +186,10 @@ def map_instance_labels(
         pred_labelmap[p] = label_counter
         label_counter += 1
 
-    assert np.all([i in pred_labelmap for i in pred_labels])
+    if not np.all([i in pred_labelmap for i in pred_labels]):
+        raise ValueError(
+            "Not all prediction labels were assigned to the label map"
+        )
 
     # Using the labelmap, actually change the labels in the array here
     prediction_arr_relabeled = _map_labels(prediction_arr, pred_labelmap)

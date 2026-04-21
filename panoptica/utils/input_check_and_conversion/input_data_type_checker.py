@@ -96,9 +96,8 @@ class _InputDataTypeChecker(ABC):
         if isinstance(reference, (str, Path)):
             reference = self.load_image_from_path(reference)
 
-        assert (
-            prediction is not None and reference is not None
-        ), "Could not load images from the given paths."
+        if prediction is None or reference is None:
+            raise ValueError("Could not load images from the given paths.")
 
         c, msg = self.sanity_check_images(prediction, reference)
         return c, msg, (prediction, reference)
