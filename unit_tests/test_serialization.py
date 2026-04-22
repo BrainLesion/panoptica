@@ -66,6 +66,16 @@ class Test_Serialization_Validation(unittest.TestCase):
         validate_subject_name("subject_with_inst_in_name")
         validate_subject_name("plain")
 
+    def test_blank_subject_name_rejected(self):
+        for bad in ("", " ", "\t", "\n  "):
+            with self.assertRaises(ValueError):
+                validate_subject_name(bad)
+
+    def test_blank_group_name_rejected(self):
+        for bad in ("", " ", "\t", "\n  "):
+            with self.assertRaises(ValueError):
+                validate_group_name(bad)
+
     def test_format_rejects_bad_group(self):
         with self.assertRaises(ValueError):
             format_instance_subject_name("subj", "bad-group", 0)

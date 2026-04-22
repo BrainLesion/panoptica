@@ -20,12 +20,14 @@ _SUBJECT_COLLISION_PATTERN = re.compile(
 )
 
 def validate_subject_name(name: str) -> None:
-    """Raises ValueError if `name` would be misclassified as an instance row.
+    """Raises ValueError if `name` is blank or would be misclassified as an instance row.
 
     Subject names are user-provided and may legitimately contain '-'. The only
     collision shape we need to reject is names that would match the instance-row
     regex on their own (e.g. 'patient-001_inst_5').
     """
+    if not name or not name.strip():
+        raise ValueError("Subject name must be a non-empty, non-whitespace string.")
     if _SUBJECT_COLLISION_PATTERN.match(name):
         raise ValueError(
             f"Subject name {name!r} collides with the reserved instance-row "
@@ -34,12 +36,14 @@ def validate_subject_name(name: str) -> None:
         )
 
 def validate_group_name(name: str) -> None:
-    """Raises ValueError if `name` contains a reserved structural token.
+    """Raises ValueError if `name` is blank or contains a reserved structural token.
 
     '-' is the delimiter between subject and group in instance rows (and between
     group and metric in TSV headers); '_inst_' is the instance-index marker.
     Allowing either in a group name makes instance-row parsing ambiguous.
     """
+    if not name or not name.strip():
+        raise ValueError("Group name must be a non-empty, non-whitespace string.")
     if _INST_SEP in name:
         raise ValueError(
             f"Group name {name!r} contains reserved delimiter {_INST_SEP!r}. "
