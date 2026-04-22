@@ -4,7 +4,28 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
-  run_lint:
-    uses: BrainLesion/BrainLes/.github/workflows/pr_lint.yml@main
-    secrets: inherit
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Ruff Linter
+        uses: astral-sh/ruff-action@v4
+        with:
+          args: "check ."
+
+      - name: Run Ruff Formatter Check
+        uses: astral-sh/ruff-action@v4
+        with:
+          args: "format --check ."
+
+      - name: Run BasedPyright
+        run: poetry run basedpyright

@@ -56,7 +56,6 @@ test = [
     "coverage>=7.0.1",
     "pytest-mock>=3.6.0,<4.0.0",
     "future>=0.18.3, <1.0.0",
-    "flake8>=4.0.1",
 ]
 docs = [
     "Sphinx>=7.0.0",
@@ -67,8 +66,10 @@ docs = [
 dev = [
     { include-group = "test" },
     { include-group = "docs" },
-    "pre-commit>=2.20.0,<3.0.0",
+    "pre-commit>=4.6.0,<5.0.0",
     "torch>=2.1.0,<3.0.0",
+    "ruff (>=0.15.11,<0.16.0)",
+    "basedpyright (>=1.39.3,<2.0.0)",
 ]
 
 [tool.poetry.group.nifti]
@@ -89,3 +90,22 @@ gpu = ["torch>=2.1.0,<3.0.0"]
 
 [tool.poetry.scripts]
 panopticacli = "panoptica.cli:app"
+
+[tool.ruff]
+target-version = "py310" 
+
+[tool.ruff.lint]
+# Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes.
+select = ["E", "F", "I"] # "I" turns on isort for import sorting
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.basedpyright]
+include = ["panoptica", "unit_tests", "examples"]
+exclude = ["**/.pytest_cache", "**/__pycache__"]
+typeCheckingMode = "standard" # we might increase to strict
+pythonVersion = "3.10"
+pythonPlatform = "All"
