@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.spatial import cKDTree
+
 from panoptica.metrics.assd import __surface_distances
 
 

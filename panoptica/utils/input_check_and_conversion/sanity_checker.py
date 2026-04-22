@@ -1,11 +1,15 @@
-from typing import Any
-import numpy as np
 from pathlib import Path
+from typing import Any
 from warnings import warn
 
+import numpy as np
+
 from panoptica.utils.constants import _Enum_Compare
-from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
-    _InputDataTypeChecker,
+from panoptica.utils.input_check_and_conversion.check_nibabel_image import (
+    NibabelImageChecker,
+)
+from panoptica.utils.input_check_and_conversion.check_nrrd_image import (
+    NRRDImageChecker,
 )
 from panoptica.utils.input_check_and_conversion.check_numpy_array import (
     NumpyImageChecker,
@@ -16,11 +20,8 @@ from panoptica.utils.input_check_and_conversion.check_sitk_image import (
 from panoptica.utils.input_check_and_conversion.check_torch_image import (
     TorchImageChecker,
 )
-from panoptica.utils.input_check_and_conversion.check_nibabel_image import (
-    NibabelImageChecker,
-)
-from panoptica.utils.input_check_and_conversion.check_nrrd_image import (
-    NRRDImageChecker,
+from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
+    _InputDataTypeChecker,
 )
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
@@ -97,7 +98,7 @@ def sanity_check_and_convert_to_array(
             elif not is_path:
                 try:
                     r, msg, (pred, ref) = checker(prediction, reference)
-                except TypeError as e:
+                except TypeError:
                     continue
                 if not r:
                     raise ValueError(

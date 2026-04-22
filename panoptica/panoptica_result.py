@@ -1,26 +1,30 @@
 from __future__ import annotations
+
 from typing import Any, Callable
+
 import numpy as np
-from panoptica.metrics import MetricMode
-from panoptica.utils import _AUTC_PREFIX
-from panoptica.utils import is_autc_key
-from panoptica.utils import format_autc_key
-from panoptica.utils import format_threshold_key
+
+from panoptica._functionals import _get_orig_onehotcc_structure
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
     Metric,
     MetricCouldNotBeComputedException,
+    MetricMode,
     MetricType,
 )
-from panoptica.utils import EdgeCaseHandler
-from panoptica.utils.processing_pair import IntermediateStepsData
+from panoptica.utils import (
+    _AUTC_PREFIX,
+    EdgeCaseHandler,
+    format_autc_key,
+    format_threshold_key,
+    is_autc_key,
+)
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
-from panoptica._functionals import _get_orig_onehotcc_structure
+from panoptica.utils.processing_pair import IntermediateStepsData
 
 
 class PanopticaResult(object):
-
     def __init__(
         self,
         reference_arr: np.ndarray,
@@ -895,7 +899,7 @@ class PanopticaAUTCResult(object):
             if np.isclose(t, threshold):
                 return res
         raise ValueError(
-            f"No result for threshold {threshold}. " f"Available: {self.thresholds}"
+            f"No result for threshold {threshold}. Available: {self.thresholds}"
         )
 
     def get_autc(self, metric_name: str) -> float:

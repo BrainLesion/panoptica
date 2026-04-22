@@ -9,14 +9,8 @@ import numpy as np
 
 from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
-from panoptica.metrics import Metric
-from panoptica.panoptica_evaluator import Panoptica_Evaluator, EdgeCaseHandler
-from panoptica.panoptica_result import MetricCouldNotBeComputedException
-from panoptica.utils.processing_pair import SemanticPair
-from panoptica.utils.segmentation_class import SegmentationClassGroups
-import sys
-from pathlib import Path
+from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.panoptica_evaluator import EdgeCaseHandler, Panoptica_Evaluator
 
 
 class Test_EdgeCase_Handling(unittest.TestCase):

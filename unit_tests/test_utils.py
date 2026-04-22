@@ -4,13 +4,14 @@
 # coverage html
 import os
 import unittest
+
 import numpy as np
-from panoptica.utils.numpy_utils import (
-    _unique_without_zeros,
-    _count_unique_without_zeros,
-    _get_smallest_fitting_uint,
-)
+
 from panoptica.utils.citation_reminder import citation_reminder
+from panoptica.utils.numpy_utils import (
+    _count_unique_without_zeros,
+    _unique_without_zeros,
+)
 
 
 class Test_Citation_Reminder(unittest.TestCase):

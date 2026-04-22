@@ -1,16 +1,18 @@
-from panoptica.utils import format_instance_subject_name, validate_subject_name
-import numpy as np
-from panoptica.panoptica_statistics import Panoptica_Statistic
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
-from pathlib import Path
-from multiprocessing import Lock, set_start_method
+import atexit
 import csv
 import os
-import atexit
 import tempfile
 import warnings
+from multiprocessing import Lock, set_start_method
+from pathlib import Path
 from typing import Optional
+
+import numpy as np
+
+from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+from panoptica.panoptica_statistics import Panoptica_Statistic
+from panoptica.utils import format_instance_subject_name, validate_subject_name
 
 # Set start method based on the operating system
 try:

@@ -1,42 +1,41 @@
-from panoptica.utils import format_autc_key
-from panoptica.utils import format_threshold_key
-from panoptica.panoptica_pipeline import _phase_instance_approximation
+from pathlib import Path
 from time import perf_counter
-from typing import Literal, Union
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, Union
+
+import numpy as np
+
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
-from panoptica.utils.timing import measure_time
-from panoptica.utils import EdgeCaseHandler
-from panoptica.utils.citation_reminder import citation_reminder
-from panoptica.utils.processing_pair import (
-    MatchedInstancePair,
-    SemanticPair,
-    UnmatchedInstancePair,
-    InputType,
-)
-from panoptica.utils.input_check_and_conversion.sanity_checker import (
-    sanity_check_and_convert_to_array,
-)
-import numpy as np
-from panoptica.utils.config import SupportsConfig
-from panoptica.utils.segmentation_class import (
-    SegmentationClassGroups,
-    LabelGroup,
-    _NoSegmentationClassGroups,
-)
 from panoptica.panoptica_pipeline import (
     _panoptic_evaluate,
     _panoptic_evaluate_region_wise,
+    _phase_instance_approximation,
 )
-from pathlib import Path
+from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+from panoptica.utils import EdgeCaseHandler, format_autc_key, format_threshold_key
+from panoptica.utils.citation_reminder import citation_reminder
+from panoptica.utils.config import SupportsConfig
+from panoptica.utils.input_check_and_conversion.sanity_checker import (
+    sanity_check_and_convert_to_array,
+)
+from panoptica.utils.processing_pair import (
+    InputType,
+    MatchedInstancePair,
+    SemanticPair,
+    UnmatchedInstancePair,
+)
+from panoptica.utils.segmentation_class import (
+    LabelGroup,
+    SegmentationClassGroups,
+    _NoSegmentationClassGroups,
+)
+from panoptica.utils.timing import measure_time
 
 if TYPE_CHECKING:
-    import torch
-    import SimpleITK as sitk
     import nibabel as nib
+    import SimpleITK as sitk
+    import torch
 
 
 class Panoptica_Evaluator(SupportsConfig):
@@ -275,7 +274,10 @@ class Panoptica_Evaluator(SupportsConfig):
             prediction_arr_grouped = label_group(processing_pair.prediction_arr)
             reference_arr_grouped = label_group(processing_pair.reference_arr)
 
-            processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
+            processing_pair_grouped = processing_pair.__class__(
+                prediction_arr=prediction_arr_grouped,
+                reference_arr=reference_arr_grouped,
+            )  # type: ignore
             instance_metadata = processing_pair_grouped.get_metadata()
             if label_group.single_instance and not isinstance(
                 processing_pair, MatchedInstancePair
@@ -459,7 +461,9 @@ class Panoptica_Evaluator(SupportsConfig):
         reference_arr_grouped = label_group(processing_pair.reference_arr)
 
         single_instance_mode = label_group.single_instance
-        processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
+        processing_pair_grouped = processing_pair.__class__(
+            prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped
+        )  # type: ignore
         if single_instance_mode and not isinstance(
             processing_pair, MatchedInstancePair
         ):

@@ -3,20 +3,16 @@
 # coverage report
 # coverage html
 import os
+import sys
 import unittest
+from pathlib import Path
 
 import numpy as np
 
-from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
+from panoptica import InputType, Panoptica_Aggregator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
-from panoptica.metrics import Metric
+from panoptica.instance_matcher import NaiveThresholdMatching
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import MetricCouldNotBeComputedException
-from panoptica.utils.processing_pair import SemanticPair
-from panoptica.utils.segmentation_class import SegmentationClassGroups
-import sys
-from pathlib import Path
 
 output_test_dir = Path(__file__).parent.joinpath("unittest_tmp_file.tsv")
 

@@ -8,33 +8,27 @@ import unittest
 import numpy as np
 
 from panoptica import UnmatchedInstancePair
+from panoptica.instance_evaluator import (
+    _evaluate_instance,
+)
+from panoptica.instance_matcher import (
+    InstanceLabelMap,
+    MatchingContext,
+    MaxBipartiteMatching,
+    NaiveThresholdMatching,
+)
 from panoptica.metrics import (
     Metric,
 )
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import (
-    MaximizeMergeMatching,
-    NaiveThresholdMatching,
-    MaxBipartiteMatching,
-    InstanceLabelMap,
-    MatchingContext,
-)
-from panoptica.metrics import Metric
-from panoptica.instance_evaluator import (
-    evaluate_matched_instance,
-    _evaluate_instance,
-)
 from unit_tests.unit_test_utils import (
+    case_multiple_overlapping_instances,
     case_simple_identical,
     case_simple_nooverlap,
+    case_simple_overlap_but_large_discrepancy,
     case_simple_overpredicted,
     case_simple_shifted,
     case_simple_underpredicted,
-    case_simple_overlap_but_large_discrepancy,
-    case_multiple_overlapping_instances,
 )
-import sys
-from pathlib import Path
 
 
 class Test_Panoptica_Instance_Approximation(unittest.TestCase):

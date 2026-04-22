@@ -1,9 +1,13 @@
-from abc import ABC, abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 
 import numpy as np
 
-from panoptica.utils.constants import CCABackend
 from panoptica._functionals import _connected_components
+from panoptica.utils.config import SupportsConfig
+from panoptica.utils.constants import CCABackend
+
+# Add LabelGroup import
+from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 
 # from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 from panoptica.utils.processing_pair import (
@@ -11,10 +15,6 @@ from panoptica.utils.processing_pair import (
     SemanticPair,
     UnmatchedInstancePair,
 )
-from panoptica.utils.config import SupportsConfig
-
-# Add LabelGroup import
-from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 
 
 class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):

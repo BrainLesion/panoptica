@@ -4,15 +4,16 @@
 # coverage html
 import os
 import unittest
-import numpy as np
-from pathlib import Path
-import SimpleITK as sitk
-from unittest import mock
-import nibabel as nib
-import nrrd
 
 # Optional torch import
 from importlib.util import find_spec
+from pathlib import Path
+from unittest import mock
+
+import nibabel as nib
+import nrrd
+import numpy as np
+import SimpleITK as sitk
 
 _spec = find_spec("torch")
 if _spec is not None:
@@ -22,14 +23,13 @@ if _spec is not None:
 else:
     HAS_TORCH = False
 
-from panoptica.utils.input_check_and_conversion.sanity_checker import (
-    sanity_check_and_convert_to_array,
-    INPUTDTYPE,
-    _InputDataTypeChecker,
-    print_available_package_to_input_handlers,
-)
 from panoptica.utils.input_check_and_conversion.check_nrrd_image import (
     NRRDImage,
+)
+from panoptica.utils.input_check_and_conversion.sanity_checker import (
+    INPUTDTYPE,
+    print_available_package_to_input_handlers,
+    sanity_check_and_convert_to_array,
 )
 
 test_npy_file = Path(__file__).parent.joinpath("test.npy")

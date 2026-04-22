@@ -4,14 +4,16 @@
 # coverage html
 import os
 import unittest
+from pathlib import Path
+
+import numpy as np
+
 from panoptica.cli import cli_main
 from unit_tests.unit_test_utils import (
     case_multiple_overlapping_instances,
     case_simple_identical,
     case_simple_overlap_but_large_discrepancy,
 )
-from pathlib import Path
-import numpy as np
 
 test_npy_pred_file = Path(__file__).parent.joinpath("test-prediction.npy")
 test_npy_ref_file = Path(__file__).parent.joinpath("test-reference.npy")

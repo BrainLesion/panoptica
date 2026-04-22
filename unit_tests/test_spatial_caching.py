@@ -6,13 +6,14 @@ whether spatial metrics are evaluated individually or together as a batch.
 """
 
 import unittest
+
 import numpy as np
+
 from panoptica.instance_evaluator import _evaluate_instance
 from panoptica.metrics import Metric
 
 
 class Test_Spatial_Caching_Optimization(unittest.TestCase):
-
     def setUp(self):
         """Set up test data for spatial caching tests."""
         # Create flattened one-hot test data that will trigger spatial reshaping

@@ -1,11 +1,13 @@
 from enum import Enum, auto
+from pathlib import Path
+
+import numpy as np
+
 from panoptica.utils.config import (
-    _register_class_to_yaml,
     _load_from_config,
+    _register_class_to_yaml,
     _save_to_config,
 )
-from pathlib import Path
-import numpy as np
 
 
 class _Enum_Compare(Enum):

@@ -3,33 +3,31 @@
 # coverage report
 # coverage html
 import os
+import random
 import unittest
+from pathlib import Path
 
+import numpy as np
+
+from panoptica import (
+    ConnectedComponentsInstanceApproximator,
+    MaxBipartiteMatching,
+    NaiveThresholdMatching,
+    Panoptica_Evaluator,
+)
 from panoptica.metrics import (
     Metric,
     _Metric,
-    Evaluation_List_Metric,
-    MetricMode,
-    MetricCouldNotBeComputedException,
 )
-from panoptica.utils.filepath import config_by_name
-from panoptica.utils.segmentation_class import SegmentationClassGroups, LabelGroup
 from panoptica.utils.constants import CCABackend
 from panoptica.utils.edge_case_handling import (
+    EdgeCaseHandler,
     EdgeCaseResult,
     EdgeCaseZeroTP,
     MetricZeroTPEdgeCaseHandling,
-    EdgeCaseHandler,
 )
-from panoptica import (
-    ConnectedComponentsInstanceApproximator,
-    NaiveThresholdMatching,
-    MaxBipartiteMatching,
-    Panoptica_Evaluator,
-)
-from pathlib import Path
-import numpy as np
-import random
+from panoptica.utils.filepath import config_by_name
+from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 
 test_file = Path(__file__).parent.joinpath("test.yaml")
 

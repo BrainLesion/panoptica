@@ -1,7 +1,8 @@
 import numpy as np
+
 from panoptica.metrics import Metric
-from panoptica.utils.constants import _Enum_Compare, auto
 from panoptica.utils.config import SupportsConfig
+from panoptica.utils.constants import _Enum_Compare, auto
 
 
 class EdgeCaseResult(_Enum_Compare):

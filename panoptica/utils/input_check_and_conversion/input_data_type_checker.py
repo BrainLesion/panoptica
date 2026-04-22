@@ -1,8 +1,9 @@
 import sys
+from abc import ABC, abstractmethod
 from importlib.util import find_spec
-import numpy as np
-from abc import abstractmethod, ABC
 from pathlib import Path
+
+import numpy as np
 
 
 def _is_package_available(package_name: str) -> bool:

@@ -1,12 +1,11 @@
 import cProfile
-
 from pathlib import Path
 
 from panoptica import (
     ConnectedComponentsInstanceApproximator,
+    InputType,
     NaiveThresholdMatching,
     Panoptica_Evaluator,
-    InputType,
 )
 
 directory = str(Path(__file__).absolute().parent)

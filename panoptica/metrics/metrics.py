@@ -5,18 +5,17 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 
 from panoptica.metrics import (
-    _compute_instance_average_symmetric_surface_distance,
     _compute_centerline_dice,
-    _compute_instance_volumetric_dice,
-    _compute_instance_iou,
-    _compute_instance_relative_volume_difference,
-    _compute_instance_relative_volume_error,
+    _compute_instance_average_symmetric_surface_distance,
     _compute_instance_center_distance,
     _compute_instance_hausdorff_distance,
     _compute_instance_hausdorff_distance95,
+    _compute_instance_iou,
     # _compute_instance_segmentation_tendency,
     _compute_instance_normalized_surface_dice,
-    _compute_normalized_surface_dice,
+    _compute_instance_relative_volume_difference,
+    _compute_instance_relative_volume_error,
+    _compute_instance_volumetric_dice,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -81,9 +80,7 @@ class _Metric:
             reference_arr = reference_arr.copy() == ref_instance_idx
             if isinstance(pred_instance_idx, int):
                 pred_instance_idx = [pred_instance_idx]
-            prediction_arr = np.isin(
-                prediction_arr.copy(), pred_instance_idx
-            )  # type: ignore
+            prediction_arr = np.isin(prediction_arr.copy(), pred_instance_idx)  # type: ignore
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
@@ -458,7 +455,9 @@ class Evaluation_List_Metric:
         self.STD = (
             None
             if self.ALL is None
-            else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+            else empty_list_std
+            if len(self.ALL) == 0
+            else np.std(self.ALL)
         )
 
     def __getitem__(self, mode: MetricMode | str):
