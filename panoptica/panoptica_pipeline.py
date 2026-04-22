@@ -487,13 +487,18 @@ def _phase_instance_matching(
         ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
         start = perf_counter()
 
+        match_kwargs = {
+            "label_group": label_group,
+            "n_ref_labels": instance_metadata["n_ref_labels"],
+            "processing_pair_orig_shape": instance_metadata["original_shape"],
+            **kwargs,
+        }
+        if matching_threshold is not None:
+            match_kwargs["matching_threshold"] = matching_threshold
+
         processing_pair = instance_matcher.match_instances(
             processing_pair,
-            label_group=label_group,
-            matching_threshold=matching_threshold,
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            **kwargs,
+            **match_kwargs,
         )
         if log_times:
             print(f"-- Matching took {perf_counter() - start} seconds")
