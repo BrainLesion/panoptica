@@ -1,26 +1,20 @@
-from pathlib import Path
-
+from typing import Literal
 from panoptica import (
     Panoptica_Evaluator,
     Panoptica_Aggregator,
-    InputType,
-    NaiveThresholdMatching,
-    Metric,
 )
-from panoptica.utils import SegmentationClassGroups, LabelGroup
 from panoptica.panoptica_statistics import make_curve_over_setups
 from pathlib import Path
 from panoptica.utils import NonDaemonicPool
 from joblib import delayed, Parallel
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
-from multiprocessing import set_start_method
 import os
 
 # set_start_method("fork")
 
 
-def main(parallel_opt: str = "future"):  # none, pool, joblib, future
+def main(parallel_opt: Literal["pool", "joblib", "future", "none"] = "future"):
     file_dir = Path(__file__).parent.joinpath("spine_example.tsv")
     try:
         os.remove(str(file_dir))

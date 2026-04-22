@@ -57,9 +57,11 @@ class SITKImageChecker(_InputDataTypeChecker):
         self, prediction_image: sitk.Image, reference_image: sitk.Image, *args, **kwargs
     ) -> tuple[bool, str]:
         # assert correct datatype
-        assert isinstance(prediction_image, sitk.Image) and isinstance(
-            reference_image, sitk.Image
-        ), "Input images must be of type sitk.Image"
+        if not (
+            isinstance(prediction_image, sitk.Image)
+            and isinstance(reference_image, sitk.Image)
+        ):
+            raise TypeError("Input images must be of type sitk.Image")
 
         # dimensions need to be exact
         if prediction_image.GetDimension() != reference_image.GetDimension():

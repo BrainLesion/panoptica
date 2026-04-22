@@ -52,6 +52,18 @@ class Test_Example_Scripts(unittest.TestCase):
 
         main("pool")
 
+    def test_example_scripts_autc(self):
+        directory = Path(__file__).parent.parent.joinpath("examples")
+
+        if not directory.exists():
+            self.skipTest(f"directory {directory} does not exist")
+
+        sys.path.append(str(directory))
+
+        from examples.example_spine_autc import main
+
+        main()
+
 
 class Test_Panoptica_Aggregator(unittest.TestCase):
     def setUp(self) -> None:

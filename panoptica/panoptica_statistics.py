@@ -1,4 +1,7 @@
 from panoptica.utils import is_instance_row
+from panoptica.utils import format_threshold_key
+from panoptica.utils import is_threshold_key
+from panoptica.utils import parse_threshold_key
 import csv
 import numpy as np
 import warnings
@@ -28,9 +31,8 @@ class FloatDistribution:
             self.__max = max(value_list)
 
     def __getitem__(self, key):
-        assert isinstance(
-            key, int
-        ), "Only integer indexing supported for FloatDistribution"
+        if not isinstance(key, int):
+            raise TypeError("Only integer indexing supported for FloatDistribution")
         return self.__value_list[key]
 
     def __setitem__(self, key, value):
@@ -101,16 +103,30 @@ class Panoptica_Statistic:
 
         self.__groupnames = list(value_dict.keys())
         self.__metricnames = list(value_dict[self.__groupnames[0]].keys())
+        self.__threshold_map: dict[str, list[float]] = {}
 
-        # assert length of everything
+        for m in self.__metricnames:
+            parsed = parse_threshold_key(m)
+            if parsed:
+                threshold_val, base_metric = parsed
+                if base_metric not in self.__threshold_map:
+                    self.__threshold_map[base_metric] = []
+                self.__threshold_map[base_metric].append(threshold_val)
+
+        for m in self.__threshold_map:
+            self.__threshold_map[m].sort()
+
+        # check length of everything
         for g in self.groupnames:
-            assert len(self.metricnames) == len(
-                list(value_dict[g].keys())
-            ), f"Group {g}, has inconsistent number of metrics, got {len(list(value_dict[g].keys()))} but expected {len(self.metricnames)}"
+            if len(self.metricnames) != len(list(value_dict[g].keys())):
+                raise ValueError(
+                    f"Group {g}, has inconsistent number of metrics, got {len(list(value_dict[g].keys()))} but expected {len(self.metricnames)}"
+                )
             for m in self.metricnames:
-                assert len(self.get(g, m)) == len(
-                    self.subjectnames
-                ), f"Group {g}, m {m} has not right subjects, got {len(self.get(g, m))}, expected {len(self.subjectnames)}"
+                if len(self.get(g, m)) != len(self.subjectnames):
+                    raise ValueError(
+                        f"Group {g}, m {m} has not right subjects, got {len(self.get(g, m))}, expected {len(self.subjectnames)}"
+                    )
 
     @property
     def subjectnames(self):
@@ -141,6 +157,14 @@ class Panoptica_Statistic:
             for sn, val in zip(self.__subj_names, values)
             if not is_instance_row(sn) and val is not None
         ]
+        
+    def base_metric_names(self) -> list[str]:
+        """Returns metric names that are not thresholded"""
+        return [m for m in self.__metricnames if not is_threshold_key(m)]
+
+    def get_thresholds_for_metric(self, metric: str) -> list[float]:
+        """Returns available thresholds for a specific metric (e.g. 'pq')."""
+        return self.__threshold_map.get(metric, [])
 
     @classmethod
     def from_file(cls, file: str | Path, verbose: bool = True):
@@ -155,9 +179,10 @@ class Panoptica_Statistic:
             rows = [row for row in rd]
 
         header = rows[0]
-        assert (
-            header[0] == "subject_name"
-        ), "First column is not subject_names, something wrong with the file?"
+        if header[0] != "subject_name":
+            raise ValueError(
+                "First column is not subject_names, something wrong with the file?"
+            )
 
         keys_in_order = list([tuple(c.split("-", maxsplit=1)) for c in header[1:]])
         keys_in_order = list(
@@ -202,19 +227,22 @@ class Panoptica_Statistic:
         return Panoptica_Statistic(subj_names=subj_names, value_dict=value_dict)
 
     def _assertgroup(self, group):
-        assert (
-            group in self.__groupnames
-        ), f"group {group} not existent, only got groups {self.__groupnames}"
+        if group not in self.__groupnames:
+            raise KeyError(
+                f"group {group} not existent, only got groups {self.__groupnames}"
+            )
 
     def _assertmetric(self, metric):
-        assert (
-            metric in self.__metricnames
-        ), f"metric {metric} not existent, only got metrics {self.__metricnames}"
+        if metric not in self.__metricnames:
+            raise KeyError(
+                f"metric {metric} not existent, only got metrics {self.__metricnames}"
+            )
 
     def _assertsubject(self, subjectname):
-        assert (
-            subjectname in self.__subj_names
-        ), f"subject {subjectname} not in list of subjects, got {self.__subj_names}"
+        if subjectname not in self.__subj_names:
+            raise KeyError(
+                f"subject {subjectname} not in list of subjects, got {self.__subj_names}"
+            )
 
     def _remove_subject(self, subjectname):
         self._assertsubject(subjectname)
@@ -237,9 +265,10 @@ class Panoptica_Statistic:
         self._assertgroup(group)
         self._assertmetric(metric)
 
-        assert (
-            group in self.__value_dict and metric in self.__value_dict[group]
-        ), f"Values not found for group {group} and metric {metric} evem though they should!"
+        if not (group in self.__value_dict and metric in self.__value_dict[group]):
+            raise KeyError(
+                f"Values not found for group {group} and metric {metric} even though they should!"
+            )
         if not remove_nones:
             return self.__value_dict[group][metric]
         return [i for i in self.__value_dict[group][metric] if i is not None]
@@ -375,12 +404,14 @@ class Panoptica_Statistic:
         other._assertgroup(group)
         other._assertmetric(metric)
 
-        assert len(self.__subj_names) == len(
-            other.__subj_names
-        ), "Length of Subject names do not match between the two Panoptica_Statistic objects!"
-        assert set(self.__subj_names) == set(
-            other.__subj_names
-        ), "Subject names do not match between the two Panoptica_Statistic objects!"
+        if len(self.__subj_names) != len(other.__subj_names):
+            raise ValueError(
+                "Length of Subject names do not match between the two Panoptica_Statistic objects!"
+            )
+        if set(self.__subj_names) != set(other.__subj_names):
+            raise ValueError(
+                "Subject names do not match between the two Panoptica_Statistic objects!"
+            )
 
         self_values = []
         other_values = []
@@ -430,7 +461,10 @@ class Panoptica_Statistic:
         summary_dict = {}
         for m in self.__metricnames:
             value_list = [self.get_summary(g, m).avg for g in self.__groupnames]
-            assert len(value_list) == len(self.__groupnames)
+            if len(value_list) != len(self.__groupnames):
+                raise ValueError(
+                    f"Unexpected mismatch in value_list length for metric {m}"
+                )
             summary_dict[m] = FloatDistribution(value_list)
         return summary_dict
 
@@ -449,6 +483,7 @@ class Panoptica_Statistic:
         self,
         ndigits: int = 3,
         only_across_groups: bool = True,
+        include_thresholds: bool = False,
     ):
         summary = self.get_summary_dict(include_across_group=only_across_groups)
         print()
@@ -457,7 +492,10 @@ class Panoptica_Statistic:
             groups = ["across_groups"]
         for g in groups:
             print(f"Group {g}:")
-            for m in self.__metricnames:
+            metrics_to_show = (
+                self.__metricnames if include_thresholds else self.base_metric_names
+            )
+            for m in metrics_to_show:
                 avg, std = summary[g][m].avg, summary[g][m].std
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
             print()
@@ -502,7 +540,10 @@ class Panoptica_Statistic:
             data_plot[g] = np.asarray(filtered_values)
 
         if manual_metric_range is not None:
-            assert manual_metric_range[0] < manual_metric_range[1], manual_metric_range
+            if manual_metric_range[0] >= manual_metric_range[1]:
+                raise ValueError(
+                    f"manual_metric_range must have lower bound less than upper bound, got {manual_metric_range}"
+                )
             change = (manual_metric_range[1] - manual_metric_range[0]) / 100
             manual_metric_range = (
                 manual_metric_range[0] - change,
@@ -524,8 +565,93 @@ def make_autc_plots(
     metric: str,
     groups: list[str] | str | None = None,
     alternate_groupnames: list[str] | str | None = None,
-):
-    raise NotImplementedError("AUTC plots currently in works")
+    fig: go.Figure | None = None,
+    plot_std: bool = True,
+    figure_title: str = "",
+    width: int = 850,
+    height: int = 1200,
+    xaxis_title: str | None = None,
+    yaxis_title: str | None = None,
+    manual_metric_range: None | tuple[float, float] = None,
+) -> go.Figure:
+    if groups is None:
+        groups = list(statistics_dict.values())[0].groupnames
+    if isinstance(groups, str):
+        groups = [groups]
+    if isinstance(alternate_groupnames, str):
+        alternate_groupnames = [alternate_groupnames]
+    if alternate_groupnames is not None and len(alternate_groupnames) != len(groups):
+        raise ValueError(
+            f"alternate_groupnames has length {len(alternate_groupnames)} but groups has length {len(groups)}; they must match."
+        )
+
+    if fig is None:
+        fig = go.Figure()
+
+    for setupname, stat in statistics_dict.items():
+        thresholds = stat.get_thresholds_for_metric(metric)
+
+        if not thresholds:
+            print(f"Warning: No threshold data found for '{metric}' in '{setupname}'.")
+            continue
+
+        X = thresholds
+        for idx, g in enumerate(groups):
+            name = g if alternate_groupnames is None else alternate_groupnames[idx]
+
+            if len(statistics_dict) == 1 and len(groups) == 1:
+                legend_name = str(name)
+            elif len(groups) == 1:
+                legend_name = str(setupname)
+            else:
+                legend_name = f"{setupname} - {name}"
+
+            Y = [
+                FloatDistribution(
+                    stat.get(g, format_threshold_key(t, metric), remove_nones=True)
+                ).avg
+                for t in thresholds
+            ]
+
+            if plot_std:
+                Ystd = [
+                    FloatDistribution(
+                        stat.get(g, format_threshold_key(t, metric), remove_nones=True)
+                    ).std
+                    for t in thresholds
+                ]
+                error_y = dict(type="data", array=Ystd)
+            else:
+                error_y = None
+
+            fig.add_trace(
+                go.Scatter(
+                    x=X,
+                    y=Y,
+                    mode="lines+markers",
+                    name=legend_name,
+                    error_y=error_y,
+                )
+            )
+
+    # Reuse the exact layout from make_curve_over_setups
+    fig.update_layout(
+        autosize=False,
+        width=width,
+        height=height,
+        showlegend=True,
+        yaxis_title=metric if yaxis_title is None else yaxis_title,
+        xaxis_title="Matching Threshold" if xaxis_title is None else xaxis_title,
+        font={"family": "Arial"},
+        title=figure_title,
+    )
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
+    fig.update_xaxes(range=[-0.05, 1.05])
+
+    if manual_metric_range is not None:
+        fig.update_yaxes(range=[manual_metric_range[0], manual_metric_range[1]])
+
+    return fig
 
 
 def make_curve_over_setups(
@@ -551,15 +677,19 @@ def make_curve_over_setups(
         groups = [groups]
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
+    if alternate_groupnames is not None and len(alternate_groupnames) != len(groups):
+        raise ValueError(
+            f"alternate_groupnames has length {len(alternate_groupnames)} but groups has length {len(groups)}; they must match."
+        )
 
-    assert (
-        plot_as_barchart or len(groups) == 1
-    ), "When plotting without barcharts, you cannot plot more than one group at the same time"
+    if not plot_as_barchart and len(groups) != 1:
+        raise ValueError(
+            "When plotting without barcharts, you cannot plot more than one group at the same time"
+        )
     #
     for setupname, stat in statistics_dict.items():
-        assert (
-            metric in stat.metricnames
-        ), f"metric {metric} not in statistic obj {setupname}"
+        if metric not in stat.metricnames:
+            raise ValueError(f"metric {metric} not in statistic obj {setupname}")
 
     setupnames = list(statistics_dict.keys())
     convert_x_to_digit = True

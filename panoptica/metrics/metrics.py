@@ -352,6 +352,8 @@ class Evaluation_Metric:
         long_name: str | None = None,
         was_calculated: bool = False,
         error: bool = False,
+        lower_bound: float | None = None,
+        upper_bound: float | None = None,
     ):
         self.id = name_id
         self.metric_type = metric_type
@@ -361,6 +363,8 @@ class Evaluation_Metric:
         self._value = None
         self._error = error
         self._error_obj: MetricCouldNotBeComputedException | None = None
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
 
     def __call__(self, result_obj: "PanopticaResult") -> Any:
         """If called, needs to return its way, raise error or calculate it
@@ -388,12 +392,14 @@ class Evaluation_Metric:
 
         # Calculate it
         try:
-            assert (
-                not self._was_calculated
-            ), f"Metric {self.id} was called to compute, but is set to have been already calculated"
-            assert (
-                self._calc_func is not None
-            ), f"Metric {self.id} was called to compute, but has no calculation function set"
+            if self._was_calculated:
+                raise RuntimeError(
+                    f"Metric {self.id} was called to compute, but is set to have been already calculated"
+                )
+            if self._calc_func is None:
+                raise RuntimeError(
+                    f"Metric {self.id} was called to compute, but has no calculation function set"
+                )
             value = self._calc_func(result_obj)
         except MetricCouldNotBeComputedException as e:
             value = e

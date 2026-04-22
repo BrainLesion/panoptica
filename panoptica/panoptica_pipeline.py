@@ -1,3 +1,4 @@
+from typing import Optional
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -32,6 +33,7 @@ def _panoptic_evaluate(
     global_metrics: list[Metric] = [Metric.DSC],
     decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
+    matching_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
     result_all: bool = True,
@@ -63,7 +65,8 @@ def _panoptic_evaluate(
         PanopticaResult: Result of the panoptic evaluation.
 
     Raises:
-        AssertionError: If the input processing pair does not match the expected types.
+        TypeError: If the input processing pair does not match the expected types.
+        ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
     if verbose:
@@ -105,6 +108,7 @@ def _panoptic_evaluate(
         global_metrics=global_metrics,
         edge_case_handler=edge_case_handler,
         instance_matcher=instance_matcher,
+        matching_threshold=matching_threshold,
         label_group=label_group,
         log_times=log_times,
         verbose=verbose,
@@ -211,7 +215,8 @@ def _panoptic_evaluate_region_wise(
         PanopticaResult: Result of the panoptic evaluation.
 
     Raises:
-        AssertionError: If the input processing pair does not match the expected types.
+        TypeError: If the input processing pair does not match the expected types.
+        ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
     if verbose:
@@ -244,9 +249,8 @@ def _panoptic_evaluate_region_wise(
         verbose=verbose,
     )
 
-    assert isinstance(
-        processing_pair, UnmatchedInstancePair
-    ), f"Expected UnmatchedInstancePair, got {type(processing_pair)}"
+    if not isinstance(processing_pair, UnmatchedInstancePair):
+        raise TypeError(f"Expected UnmatchedInstancePair, got {type(processing_pair)}")
     processing_pair = _handle_zero_instances_cases(
         processing_pair,
         eval_metrics=instance_metrics,
@@ -261,9 +265,10 @@ def _panoptic_evaluate_region_wise(
         region_map, num_features = _get_voronoi_regions(
             processing_pair.reference_arr, processing_pair.n_ref_instances
         )
-        assert (
-            num_features > 0
-        ), "Expected at least one region in the reference mask for region-wise evaluation"
+        if num_features <= 0:
+            raise ValueError(
+                "Expected at least one region in the reference mask for region-wise evaluation"
+            )
 
         region2result_map: dict[int, PanopticaResult] = {}
 
@@ -414,7 +419,7 @@ def _panoptic_evaluate_region_wise(
 
 def _phase_instance_approximation(
     processing_pair: SemanticPair,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: Optional[IntermediateStepsData],
     instance_approximator: InstanceApproximator,
     instance_metadata: dict,
     label_group=None,
@@ -423,12 +428,12 @@ def _phase_instance_approximation(
 ):
     # First Phase: Instance Approximation
     if isinstance(processing_pair, SemanticPair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.SEMANTIC
-        )
-        assert (
-            instance_approximator is not None
-        ), "Got SemanticPair but not InstanceApproximator"
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.SEMANTIC
+            )
+        if instance_approximator is None:
+            raise ValueError("Got SemanticPair but not InstanceApproximator")
         if verbose:
             print("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
@@ -457,6 +462,7 @@ def _phase_instance_matching(
     global_metrics: list[Metric],
     edge_case_handler: EdgeCaseHandler,
     instance_matcher: InstanceMatchingAlgorithm,
+    matching_threshold: float | None = None,
     label_group=None,
     log_times=False,
     verbose=False,
@@ -477,17 +483,24 @@ def _phase_instance_matching(
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
             print("-- Got UnmatchedInstancePair, will match instances")
-        assert (
-            instance_matcher is not None
-        ), "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+        if instance_matcher is None:
+            raise ValueError(
+                "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
+            )
         start = perf_counter()
+
+        match_kwargs = {
+            "label_group": label_group,
+            "n_ref_labels": instance_metadata["n_ref_labels"],
+            "processing_pair_orig_shape": instance_metadata["original_shape"],
+            **kwargs,
+        }
+        if matching_threshold is not None:
+            match_kwargs["matching_threshold"] = matching_threshold
 
         processing_pair = instance_matcher.match_instances(
             processing_pair,
-            label_group=label_group,
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            **kwargs,
+            **match_kwargs,
         )
         if log_times:
             print(f"-- Matching took {perf_counter() - start} seconds")

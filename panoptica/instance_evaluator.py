@@ -28,11 +28,11 @@ def evaluate_matched_instance(
 
     """
     if decision_metric is not None:
-        assert decision_metric.name in [
-            v.name for v in eval_metrics
-        ], "decision metric not contained in eval_metrics"
-        assert decision_threshold is not None, "decision metric set but no threshold"
-
+        if decision_metric.name not in [v.name for v in eval_metrics]:
+            raise ValueError("decision metric not contained in eval_metrics")
+        if decision_threshold is None:
+            raise ValueError("decision metric set but no threshold")
+    # Initialize variables for True Positives (tp)
     score_dict: dict[Metric, list[float]] = {m: [] for m in eval_metrics}
 
     reference_arr, prediction_arr = (

@@ -2,14 +2,15 @@ from panoptica.utils import format_instance_subject_name, validate_subject_name
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaResult
+from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from pathlib import Path
 from multiprocessing import Lock, set_start_method
 import csv
 import os
 import atexit
-import warnings
 import tempfile
+import warnings
+from typing import Optional
 
 # Set start method based on the operating system
 try:
@@ -45,6 +46,8 @@ class Panoptica_Aggregator:
         log_times: bool = False,
         continue_file: bool = True,
         output_individual_instance_metrics: bool = False,
+        is_autc: bool = False,
+        threshold_step_size: Optional[float] = None,
     ):
         """Initializes the Panoptica_Aggregator.
 
@@ -56,15 +59,30 @@ class Panoptica_Aggregator:
             continue_file (bool, optional): If True, results will continue from existing entries in the file.
                 Defaults to True.
             output_individual_instance_metrics (bool, optional): If True, individual instance metrics will be output. Defaults to False.
+            is_autc (bool, optional): If True, the aggregator will compute AUTC metrics. Defaults to False.
+            threshold_step_size (Optional[float], optional): The step size for thresholding. Defaults to None.
 
         Raises:
-            AssertionError: If the output directory does not exist or if the file extension is not `.tsv`.
+            FileNotFoundError: If the output directory does not exist.
+            ValueError: If the file extension is not `.tsv`, or if the header of the existing file does not match the expected header based on the evaluator's configuration.
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
-        self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
+        self.__autc = is_autc
         self.__log_times = log_times
         self.__output_individual_instance_metrics = output_individual_instance_metrics
+        self.__threshold_step_size = threshold_step_size
+
+        if is_autc:
+            if self.__threshold_step_size is None:
+                raise ValueError(
+                    "threshold_step_size must be provided to build AUTC headers"
+                )
+            self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
+                threshold_step_size
+            )
+        else:
+            self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
 
         if log_times and COMPUTATION_TIME_KEY not in self.__evaluation_metrics:
             self.__evaluation_metrics.append(COMPUTATION_TIME_KEY)
@@ -72,9 +90,10 @@ class Panoptica_Aggregator:
         if isinstance(output_file, str):
             output_file = Path(output_file)
         # uses tsv
-        assert (
-            output_file.parent.exists()
-        ), f"Directory {str(output_file.parent)} does not exist"
+        if not output_file.parent.exists():
+            raise FileNotFoundError(
+                f"Directory {str(output_file.parent)} does not exist"
+            )
 
         out_file_path = str(output_file)
 
@@ -82,9 +101,10 @@ class Panoptica_Aggregator:
         if "." in out_file_path:
             # extension exists
             extension = out_file_path.split(".")[-1]
-            assert (
-                extension == "tsv"
-            ), f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
+            if extension != "tsv":
+                raise ValueError(
+                    f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
+                )
         else:
             out_file_path += ".tsv"  # add extension
 
@@ -120,9 +140,10 @@ class Panoptica_Aggregator:
                 continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-                assert header_hash == hash(
-                    "+".join(header_list)
-                ), f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
+                if header_hash != hash("+".join(header_list)):
+                    raise ValueError(
+                        f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
+                    )
 
         if continue_file:
             with inevalfilelock:
@@ -181,16 +202,33 @@ class Panoptica_Aggregator:
 
         # Run Evaluation (allowed in parallel)
         print(f"Call evaluate on {subject_name}")
-        res = self.__panoptica_evaluator.evaluate(
-            prediction_arr,
-            reference_arr,
-            result_all=True,
-            verbose=False,
-            log_times=False,
-            save_group_times=self.__log_times,
-            voxelspacing=voxelspacing,
-            **kwargs,
-        )
+        if self.__autc:
+            if self.__threshold_step_size is None:
+                raise ValueError(
+                    "threshold_step_size must be provided to build AUTC headers"
+                )
+            res = self.__panoptica_evaluator.evaluate_autc(
+                prediction_arr,
+                reference_arr,
+                threshold_step_size=self.__threshold_step_size,
+                result_all=True,
+                verbose=False,
+                log_times=False,
+                save_group_times=self.__log_times,
+                voxelspacing=voxelspacing,
+                **kwargs,
+            )
+        else:
+            res = self.__panoptica_evaluator.evaluate(
+                prediction_arr,
+                reference_arr,
+                result_all=True,
+                verbose=False,
+                log_times=False,
+                save_group_times=self.__log_times,
+                voxelspacing=voxelspacing,
+                **kwargs,
+            )
 
         # Add to file
         self._save_one_subject(subject_name, res)
@@ -234,7 +272,7 @@ class Panoptica_Aggregator:
             else:
                 content = [subject_name]
                 for groupname in self.__class_group_names:
-                    result: PanopticaResult = result_grouped[groupname]
+                    result: PanopticaResult | PanopticaAUTCResult = result_grouped[groupname]
                     result_dict = result.to_dict(False)
 
                     if result.computation_time is not None:
@@ -293,7 +331,7 @@ def _load_first_column_entries(file: str | Path):
         list: A list of entries from the first column of the file.
 
     Raises:
-        AssertionError: If the file contains duplicate entries.
+        ValueError: If the file contains duplicate entries.
     """
     if isinstance(file, Path):
         file = str(file)
@@ -307,7 +345,8 @@ def _load_first_column_entries(file: str | Path):
             id_list = list([row[0] for row in rows])
 
     n_id = len(id_list)
-    assert n_id == len(list(set(id_list))), f"{file}: file has duplicate entries!"
+    if n_id != len(list(set(id_list))):
+        raise ValueError(f"{file}: file has duplicate entries!")
 
     return id_list
 

@@ -90,9 +90,11 @@ class NRRDImageChecker(_InputDataTypeChecker):
         self, prediction_image: NRRDImage, reference_image: NRRDImage, *args, **kwargs
     ) -> tuple[bool, str]:
         # assert correct datatype
-        assert isinstance(prediction_image, NRRDImage) and isinstance(
-            reference_image, NRRDImage
-        ), "Input images must be of type NRRD_IMAGE"
+        if not (
+            isinstance(prediction_image, NRRDImage)
+            and isinstance(reference_image, NRRDImage)
+        ):
+            raise TypeError("Input images must be of type NRRD_IMAGE")
         # start necessary comparisons
         # dimensions need to be exact
         if prediction_image.shape != reference_image.shape:

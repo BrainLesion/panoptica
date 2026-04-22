@@ -1,12 +1,16 @@
 from __future__ import annotations
 from typing import Any, Callable
 import numpy as np
+from panoptica.metrics import MetricMode
+from panoptica.utils import _AUTC_PREFIX
+from panoptica.utils import is_autc_key
+from panoptica.utils import format_autc_key
+from panoptica.utils import format_threshold_key
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
     Metric,
     MetricCouldNotBeComputedException,
-    MetricMode,
     MetricType,
 )
 from panoptica.utils import EdgeCaseHandler
@@ -142,6 +146,8 @@ class PanopticaResult(object):
             MetricType.MATCHING,
             rq,
             long_name="Recognition Quality / F1-Score",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
@@ -153,6 +159,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             sq,
             long_name="Segmentation Quality IoU",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         self.sq_std: float
         self._add_metric(
@@ -167,6 +175,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             pq,
             long_name="Panoptic Quality IoU",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
@@ -177,6 +187,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             sq_dsc,
             long_name="Segmentation Quality Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         self.sq_dsc_std: float
         self._add_metric(
@@ -191,6 +203,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             pq_dsc,
             long_name="Panoptic Quality Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
@@ -201,6 +215,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             sq_cldsc,
             long_name="Segmentation Quality Centerline Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         self.sq_cldsc_std: float
         self._add_metric(
@@ -215,6 +231,8 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             pq_cldsc,
             long_name="Panoptic Quality Centerline Dsc",
+            lower_bound=0.0,
+            upper_bound=1.0,
         )
         # endregion
         #
@@ -438,6 +456,14 @@ class PanopticaResult(object):
                 was_calculated=False,
             )
 
+    @property
+    def autc_metrics(self) -> list[str]:
+        return [
+            k
+            for k, v in self._evaluation_metrics.items()
+            if v.lower_bound == 0.0 and v.upper_bound == 1.0
+        ]
+
     def _calc_global_bin_metric(
         self,
         metric: Metric,
@@ -558,6 +584,8 @@ class PanopticaResult(object):
         long_name: str | None = None,
         default_value=None,
         was_calculated: bool = False,
+        lower_bound: float | None = None,
+        upper_bound: float | None = None,
     ):
         """
         Adds a new metric to the evaluation metrics.
@@ -576,15 +604,18 @@ class PanopticaResult(object):
         setattr(self, name_id, default_value)
         # assert hasattr(self, name_id), f"added metric {name_id} but it is not a member variable of this class"
         if calc_func is None:
-            assert (
-                was_calculated
-            ), "Tried to add a metric without a calc_function but that hasn't been calculated yet, how did you think this could works?"
+            if not was_calculated:
+                raise ValueError(
+                    "Cannot add metric without a calc_func unless it is marked as already calculated (was_calculated=True)."
+                )
         eval_metric = Evaluation_Metric(
             name_id,
             metric_type=metric_type,
             calc_func=calc_func,
             long_name=long_name,
             was_calculated=was_calculated,
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
         )
         self._evaluation_metrics[name_id] = eval_metric
         return default_value
@@ -811,6 +842,180 @@ class PanopticaResult(object):
         if hasattr(self, "_channel_metrics") and metric_name in self._channel_metrics:
             return self._channel_metrics[metric_name]
         return None
+
+
+# endregion
+
+
+# region AUTCResult
+class PanopticaAUTCResult(object):
+    """
+    Holds dict mapping thresholds across a range to PanopticaResult objects.
+    Computes Area Under The Threshold Curve (AUTC) for metrics from different thresholds.
+    Pads the left boundary to x=0.0 using nearest-neighbor so the integral
+    always covers the full [0.0, 1.0] range regardless of step_size.
+    """
+
+    def __init__(
+        self,
+        threshold_results: dict[float, PanopticaResult],
+    ) -> None:
+        """
+        Args:
+            threshold_results:  Mapping from threshold float → evaluated PanopticaResult.
+                                Must contain at least one entry; two or more are needed
+                                for AUTC computation.
+        """
+        self.computation_time: float | None = None
+        if not threshold_results:
+            raise ValueError("threshold_results cannot be empty.")
+
+        # Sort by threshold so trapezoid integration is always left-to-right.
+        self._threshold_results: dict[float, PanopticaResult] = dict(
+            sorted(threshold_results.items())
+        )
+
+    @property
+    def thresholds(self) -> list[float]:
+        return list(self._threshold_results.keys())
+
+    @property
+    def threshold_results(self) -> dict[float, PanopticaResult]:
+        return self._threshold_results
+
+    def get_result_at_threshold(self, threshold: float) -> PanopticaResult:
+        """Return the PanopticaResult that was evaluated at *threshold*.
+
+        Uses np.isclose for float-safe comparison.
+
+        Raises:
+            ValueError: if no result was stored for that threshold.
+        """
+        for t, res in self._threshold_results.items():
+            if np.isclose(t, threshold):
+                return res
+        raise ValueError(
+            f"No result for threshold {threshold}. " f"Available: {self.thresholds}"
+        )
+
+    def get_autc(self, metric_name: str) -> float:
+        """Computes Area Under the Threshold Curve
+
+        NaN / uncomputable values are treated as 0.0.
+
+        Raises:
+            ValueError:     if fewer than two thresholds were stored.
+            AttributeError: if *metric_name* is not a valid PanopticaResult field.
+        """
+        if len(self.thresholds) < 2:
+            raise ValueError(
+                "AUTC requires at least two thresholds; "
+                f"only {len(self.thresholds)} stored."
+            )
+
+        # Validate the metric name against the first result that has it calculated.
+        first_res = next(iter(self._threshold_results.values()))
+        if metric_name not in first_res._evaluation_metrics:
+            raise AttributeError(
+                f"'{metric_name}' is not a recognised PanopticaResult metric."
+            )
+
+        y_values: list[float] = []
+        for threshold, result in self._threshold_results.items():
+            try:
+                val = getattr(result, metric_name)
+                y_values.append(0.0 if (val is None or np.isnan(val)) else float(val))
+            except MetricCouldNotBeComputedException:
+                y_values.append(0.0)
+
+        x_values = list(self.thresholds)
+
+        # Pad the left boundary (0.0) using nearest neighbor
+        if x_values[0] > 0.0:
+            x_values.insert(0, 0.0)
+            y_values.insert(0, y_values[0])
+
+        x_arr = np.array(x_values, dtype=float)
+        y_arr = np.array(y_values, dtype=float)
+
+        return float(np.trapezoid(y_arr, x=x_arr))
+
+    def to_dict(self) -> dict[str, float]:
+        """Flat dictionary containing AUTC metrics AND individual threshold metrics.
+
+        AUTC is only computed for continuous ratio metrics that have a bounded domain from 0 to 1.
+        """
+        result: dict[str, float] = {}
+
+        first_res = next(iter(self._threshold_results.values()))
+        autc_metrics = first_res.autc_metrics
+
+        for metric in sorted(autc_metrics):
+            key = format_autc_key(metric)
+            try:
+                result[key] = self.get_autc(metric)
+            except (AttributeError, MetricCouldNotBeComputedException, ValueError):
+                result[key] = np.nan
+
+        for t, res in self._threshold_results.items():
+            for k, v in res.to_dict().items():
+                key = format_threshold_key(t, k)
+                try:
+                    numeric_v = float(v)
+                    result[key] = np.nan if np.isnan(numeric_v) else numeric_v
+                except (TypeError, ValueError):
+                    result[key] = np.nan
+
+        return result
+
+    def __getattr__(self, name: str) -> Any:
+        # Guard: prevent recursion if internal attributes haven't been set yet
+        if name.startswith("_"):
+            raise AttributeError(name)
+
+        if is_autc_key(name):
+            metric_name = name[len(_AUTC_PREFIX) :]
+            try:
+                return self.get_autc(metric_name)
+            except AttributeError:
+                raise AttributeError(
+                    f"'{type(self).__name__}' has no attribute '{name}' "
+                    f"(metric '{metric_name}' not found in PanopticaResult)."
+                )
+
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
+
+    def __str__(self) -> str:
+        lines = [
+            "=== PanopticaAUTCResult ===",
+            f"Thresholds : {self.thresholds[0]:.3f} → {self.thresholds[-1]:.3f}"
+            f"  ({len(self.thresholds)} steps)",
+            "",
+            "--- AUTC scores ---",
+        ]
+
+        first_res = next(iter(self._threshold_results.values()))
+        for metric_id in sorted(first_res.autc_metrics):
+            eval_metric = first_res._evaluation_metrics.get(metric_id)
+            if (
+                eval_metric is None
+                or not eval_metric._was_calculated
+                or eval_metric._error
+            ):
+                continue
+            try:
+                val = self.get_autc(metric_id)
+                label = eval_metric.long_name or metric_id
+                lines.append(f"  AUTC {label}: {val:.4f}")
+            except (AttributeError, ValueError, MetricCouldNotBeComputedException):
+                pass
+
+        return "\n".join(lines)
+
+    def __repr__(self) -> str:
+        return f"PanopticaAUTCResult(thresholds={self.thresholds!r})"
 
 
 #########################

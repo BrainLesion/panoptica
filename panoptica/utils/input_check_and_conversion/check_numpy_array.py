@@ -37,9 +37,11 @@ def _sanity_check_images(
     prediction_image: np.ndarray, reference_image: np.ndarray, *args, **kwargs
 ) -> tuple[bool, str]:
     # assert correct datatype
-    assert isinstance(prediction_image, np.ndarray) and isinstance(
-        reference_image, np.ndarray
-    ), "prediction and reference must be of type np.ndarray."
+    if not (
+        isinstance(prediction_image, np.ndarray)
+        and isinstance(reference_image, np.ndarray)
+    ):
+        raise TypeError("prediction and reference must be of type np.ndarray.")
 
     # dimensions need to be exact
     if prediction_image.shape != reference_image.shape:
