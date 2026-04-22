@@ -93,6 +93,7 @@ panopticacli = "panoptica.cli:app"
 
 [tool.ruff]
 target-version = "py310" 
+line-length = 130
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes.
