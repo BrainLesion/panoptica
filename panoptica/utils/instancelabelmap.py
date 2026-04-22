@@ -50,7 +50,7 @@ class InstanceLabelMap(object):
         if not np.all([isinstance(r, int) for r in pred_labels]):
             raise TypeError("add_labelmap_entry: got no int as pred_label")
         if not np.all([r >= 0 for r in pred_labels]):
-            raise ValueError("add_labelmap_entry: got a non-positive int as pred_label")
+            raise ValueError("add_labelmap_entry: got a negative int as pred_label")
         for p in pred_labels:
             if p in self and self[p] != ref_label:
                 raise Exception(
