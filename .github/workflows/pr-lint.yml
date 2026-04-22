@@ -1,4 +1,4 @@
-name: lint
+name: code-quality
 
 on:
   pull_request:
@@ -6,7 +6,32 @@ on:
       - main
 
 jobs:
-  lint-and-typecheck:
+  lint:
+    name: Ruff Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Run Ruff Linter
+        uses: astral-sh/ruff-action@v4
+        with:
+          args: "check ."
+
+  format:
+    name: Ruff Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Run Ruff Formatter Check
+        uses: astral-sh/ruff-action@v4
+        with:
+          args: "format --check ."
+
+  typecheck:
+    name: BasedPyright
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -17,15 +42,11 @@ jobs:
         with:
           python-version: "3.10"
 
-      - name: Ruff Linter
-        uses: astral-sh/ruff-action@v4
-        with:
-          args: "check ."
+      - name: Install Poetry
+        run: pip install poetry
 
-      - name: Run Ruff Formatter Check
-        uses: astral-sh/ruff-action@v4
-        with:
-          args: "format --check ."
+      - name: Install dependencies
+        run: poetry install --with dev 
 
       - name: Run BasedPyright
         run: poetry run basedpyright

@@ -106,6 +106,6 @@ indent-style = "space"
 [tool.basedpyright]
 include = ["panoptica", "unit_tests", "examples"]
 exclude = ["**/.pytest_cache", "**/__pycache__"]
-typeCheckingMode = "standard" # we might increase to strict
+typeCheckingMode = "strict" # we might increase to standard/strict
 pythonVersion = "3.10"
 pythonPlatform = "All"
