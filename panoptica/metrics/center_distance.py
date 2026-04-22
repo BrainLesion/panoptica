@@ -83,7 +83,7 @@ def _compute_center_distance(
     if voxelspacing is not None:
         if len(voxelspacing) != len(pred_com):
             raise ValueError(
-                "Voxelspacing must have same dimensionality than the input"
+                f"Voxelspacing must have same dimensionality as the input (len(voxelspacing)={len(voxelspacing)}, len(input)={len(pred_com)})"
             )
         diff_vector = np.multiply(diff_vector, voxelspacing)
     center_distance = float(np.linalg.norm(diff_vector))

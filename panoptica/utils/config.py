@@ -34,8 +34,13 @@ def _load_yaml(file: str | Path, registered_class=None):
         yaml.register_class(registered_class)
     yaml.default_flow_style = None
     data = yaml.load(file)
-    if not (isinstance(data, dict) or isinstance(data, object)):
-        raise TypeError(f"Loaded YAML data is not a dict or object, got {type(data)}")
+    if registered_class is not None:
+        if not isinstance(data, registered_class):
+            raise TypeError(
+                f"Loaded YAML data is not an instance of {registered_class.__name__}, got {type(data)}"
+            )
+    elif not isinstance(data, dict):
+        raise TypeError(f"Loaded YAML data is not a dict, got {type(data)}")
     return data
 
 
