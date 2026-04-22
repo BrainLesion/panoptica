@@ -20,11 +20,13 @@ def preprocess_readme(input_file: str, output_file: str) -> None:
             r"> \[!"
             + ad_type
             + "\]\s*\n((?:> .*\n)*)",  # Match the > [!ad_type] and subsequent lines
-            lambda m: "```{"
-            + ad_type
-            + "}\n"
-            + m.group(1).replace("> ", "").strip()
-            + "\n```",  # Replace with MyST syntax
+            lambda m: (
+                "```{"
+                + ad_type
+                + "}\n"
+                + m.group(1).replace("> ", "").strip()
+                + "\n```"
+            ),  # Replace with MyST syntax
             content,
         )
     # Write the transformed content to the output file

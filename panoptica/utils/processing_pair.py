@@ -1,12 +1,12 @@
 from abc import ABC
+from dataclasses import dataclass
 
 import numpy as np
 
 from panoptica._functionals import _get_paired_crop
+from panoptica.metrics import Metric
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 from panoptica.utils.constants import _Enum_Compare
-from dataclasses import dataclass
-from panoptica.metrics import Metric
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
 uint_type: type = np.unsignedinteger
@@ -46,7 +46,9 @@ class _ProcessingPair(ABC):
         self.__dtype = dtype
         self.__n_dim: int = reference_arr.ndim
         self.__ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type: ignore
-        self.__pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type: ignore
+        self.__pred_labels: tuple[int, ...] = tuple(
+            _unique_without_zeros(prediction_arr)
+        )  # type: ignore
         self.__crop: tuple[slice, ...] = None
         self.__is_cropped: bool = False
         self.__uncropped_shape: tuple[int, ...] = reference_arr.shape

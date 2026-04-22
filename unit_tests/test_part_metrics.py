@@ -4,15 +4,16 @@
 # coverage html
 import os
 import unittest
+
 import numpy as np
 
 from panoptica import InputType
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
+from panoptica.instance_matcher import MaxBipartiteMatching
 from panoptica.metrics import Metric
-from panoptica.utils.segmentation_class import SegmentationClassGroups
+from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.utils.label_group import LabelMergeGroup, LabelPartGroup
+from panoptica.utils.segmentation_class import SegmentationClassGroups
 
 
 class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):

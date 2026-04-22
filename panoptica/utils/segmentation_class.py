@@ -1,5 +1,5 @@
 import numpy as np
-from pathlib import Path
+
 from panoptica.utils.config import SupportsConfig
 from panoptica.utils.label_group import LabelGroup, _LabelGroupAny
 from panoptica.utils.serialization import validate_group_name

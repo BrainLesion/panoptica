@@ -3,7 +3,10 @@
 # coverage report
 # coverage html
 import os
+import sys
 import unittest
+from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
@@ -13,18 +16,10 @@ from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatc
 from panoptica.metrics import Metric
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.panoptica_result import MetricCouldNotBeComputedException
-from panoptica.utils.processing_pair import SemanticPair
-from panoptica.utils.segmentation_class import SegmentationClassGroups
-import sys
-from pathlib import Path
-
-from unittest import mock
 from panoptica.utils.input_check_and_conversion.sanity_checker import (
-    sanity_check_and_convert_to_array,
     INPUTDTYPE,
-    _InputDataTypeChecker,
-    print_available_package_to_input_handlers,
 )
+from panoptica.utils.segmentation_class import SegmentationClassGroups
 
 
 class Test_Example_Scripts(unittest.TestCase):

@@ -8,19 +8,14 @@ import unittest
 import numpy as np
 
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import (
-    MetricCouldNotBeComputedException,
-    PanopticaResult,
-)
-from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
 from unit_tests.unit_test_utils import (
+    case_multiple_overlapping_instances,
     case_simple_identical,
     case_simple_nooverlap,
+    case_simple_overlap_but_large_discrepancy,
     case_simple_overpredicted,
     case_simple_shifted,
     case_simple_underpredicted,
-    case_simple_overlap_but_large_discrepancy,
-    case_multiple_overlapping_instances,
 )
 
 

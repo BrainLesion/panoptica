@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -10,13 +10,13 @@ from panoptica._functionals import (
     _map_labels,
 )
 from panoptica.metrics import Metric
+from panoptica.utils.config import SupportsConfig
+from panoptica.utils.instancelabelmap import InstanceLabelMap
+from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     UnmatchedInstancePair,
 )
-from panoptica.utils.instancelabelmap import InstanceLabelMap
-from panoptica.utils.config import SupportsConfig
-from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 
 
 @dataclass

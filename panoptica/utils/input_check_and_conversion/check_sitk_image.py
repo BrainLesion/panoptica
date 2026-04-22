@@ -1,6 +1,8 @@
-import numpy as np
 from importlib.util import find_spec
 from pathlib import Path
+
+import numpy as np
+
 from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
     _InputDataTypeChecker,
 )

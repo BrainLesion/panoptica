@@ -1,5 +1,4 @@
 import cProfile
-
 from pathlib import Path
 
 from panoptica import Panoptica_Evaluator

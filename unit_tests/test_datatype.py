@@ -4,20 +4,21 @@
 # coverage html
 import os
 import unittest
+
 import numpy as np
 
+from panoptica import InputType
 from panoptica.metrics import (
-    Metric,
     Evaluation_List_Metric,
-    MetricMode,
+    Metric,
     MetricCouldNotBeComputedException,
+    MetricMode,
 )
 from panoptica.utils.edge_case_handling import (
-    EdgeCaseResult,
     EdgeCaseHandler,
+    EdgeCaseResult,
     MetricZeroTPEdgeCaseHandling,
 )
-from panoptica import InputType
 
 
 class Test_EdgeCaseHandler(unittest.TestCase):

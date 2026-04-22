@@ -4,9 +4,11 @@
 # coverage html
 import os
 import unittest
+
 import numpy as np
-from panoptica.utils.processing_pair import UnmatchedInstancePair
+
 from panoptica._functionals import _get_voronoi_regions
+from panoptica.utils.processing_pair import UnmatchedInstancePair
 
 
 def create_test_data():
@@ -52,6 +54,6 @@ class Test_RegionMatching(unittest.TestCase):
             unmatched_pair.reference_arr, unmatched_pair.n_ref_instances
         )
 
-        print(f"Matching successful!")
+        print("Matching successful!")
 
         self.assertTrue(True)

@@ -1,11 +1,12 @@
 import os
-from pathlib import Path
-from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
+
+from tqdm import tqdm
 
 from panoptica import (
-    Panoptica_Evaluator,
     Panoptica_Aggregator,
+    Panoptica_Evaluator,
 )
 from panoptica.panoptica_statistics import make_autc_plots
 

@@ -1,10 +1,52 @@
-name: lint
+name: code-quality
 
 on:
   pull_request:
     branches:
       - main
+
 jobs:
-  run_lint:
-    uses: BrainLesion/BrainLes/.github/workflows/pr_lint.yml@main
-    secrets: inherit
+  lint:
+    name: Ruff Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Run Ruff Linter
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "check ."
+
+  format:
+    name: Ruff Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Run Ruff Formatter Check
+        uses: astral-sh/ruff-action@v3
+        with:
+          args: "format --check ."
+
+  typecheck:
+    name: BasedPyright
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --with dev 
+
+      - name: Run BasedPyright
+        run: poetry run basedpyright

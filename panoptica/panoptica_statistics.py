@@ -1,11 +1,15 @@
-from panoptica.utils import is_instance_row
-from panoptica.utils import format_threshold_key
-from panoptica.utils import is_threshold_key
-from panoptica.utils import parse_threshold_key
 import csv
-import numpy as np
 import warnings
 from pathlib import Path
+
+import numpy as np
+
+from panoptica.utils import (
+    format_threshold_key,
+    is_instance_row,
+    is_threshold_key,
+    parse_threshold_key,
+)
 
 try:
     import pandas as pd
@@ -196,7 +200,7 @@ class Panoptica_Statistic:
         group_names = list(set([k[0] for k in keys_in_order]))
 
         if verbose:
-            print(f"Found {len(rows)-1} entries")
+            print(f"Found {len(rows) - 1} entries")
             print(f"Found metrics: {metric_names}")
             print(f"Found groups: {group_names}")
 

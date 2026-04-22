@@ -4,17 +4,19 @@
 # coverage html
 import os
 import unittest
+from pathlib import Path
+
 import numpy as np
+
 from panoptica import (
+    FloatDistribution,
     InputType,
     Panoptica_Aggregator,
     Panoptica_Statistic,
-    FloatDistribution,
 )
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from pathlib import Path
 
 output_test_dir = Path(__file__).parent.joinpath("unittest_tmp_file.tsv")
 

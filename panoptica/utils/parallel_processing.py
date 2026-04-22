@@ -1,5 +1,5 @@
 import multiprocessing.pool
-from multiprocessing import Pool, Process
+from multiprocessing import Process
 from typing import Callable
 
 

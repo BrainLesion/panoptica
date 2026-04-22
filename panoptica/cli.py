@@ -1,11 +1,11 @@
 import os
+from importlib.metadata import version
+from pathlib import Path
 from typing import Optional
+from warnings import warn
+
 import typer
 from typing_extensions import Annotated
-from importlib.metadata import version
-import SimpleITK as sitk
-from pathlib import Path
-from warnings import warn
 
 from panoptica import Panoptica_Evaluator
 

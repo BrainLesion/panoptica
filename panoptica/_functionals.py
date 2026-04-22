@@ -1,11 +1,12 @@
-from typing import TYPE_CHECKING
-from multiprocessing import Pool
-import numpy as np
 import math
-from panoptica.utils.constants import CCABackend
-from panoptica.utils.numpy_utils import _get_bbox_nd
+from typing import TYPE_CHECKING
+
+import numpy as np
 from scipy import ndimage
 from scipy.ndimage import distance_transform_edt
+
+from panoptica.utils.constants import CCABackend
+from panoptica.utils.numpy_utils import _get_bbox_nd
 
 if TYPE_CHECKING:
     from panoptica.metrics import Metric

@@ -4,21 +4,11 @@
 # coverage html
 import os
 import unittest
-import numpy as np
 import warnings
-import sys
-from pathlib import Path
 
-import unittest
 import numpy as np
 
-from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaResult
-from panoptica.utils.edge_case_handling import (
-    EdgeCaseHandler,
-)
 
 # Suppress SWIG-related deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*SwigPy.*")
@@ -26,11 +16,11 @@ warnings.filterwarnings(
     "ignore", category=DeprecationWarning, message=".*swigvarlink.*"
 )
 
-from panoptica import Panoptica_Evaluator, InputType
-from panoptica.utils.segmentation_class import SegmentationClassGroups
+from panoptica import InputType, Panoptica_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
+from panoptica.instance_matcher import MaxBipartiteMatching, NaiveThresholdMatching
 from panoptica.utils.label_group import LabelPartGroup
+from panoptica.utils.segmentation_class import SegmentationClassGroups
 
 
 class BaseMatcherTest(unittest.TestCase):
@@ -115,7 +105,6 @@ class BaseMatcherTest(unittest.TestCase):
 
 
 class Test_Naive_Matcher_Variations(BaseMatcherTest):
-
     def test_perfect_overlap_masks(self):
         """Test case with perfect overlap between prediction and reference masks."""
 
@@ -169,7 +158,6 @@ class Test_Naive_Matcher_Variations(BaseMatcherTest):
 
 
 class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
-
     def test_perfect_overlap_masks(self):
         """Test case with perfect overlap between prediction and reference masks."""
 
@@ -225,7 +213,6 @@ class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
 
 
 class Test_Part_Matcher_Variations(BaseMatcherTest):
-
     def get_part_groups(self):
         """Get the complex groups configuration for part tests."""
         return {
@@ -446,7 +433,6 @@ class Test_Part_Matcher_Variations(BaseMatcherTest):
 
 
 class Test_MultiPart_Matcher_Variations(BaseMatcherTest):
-
     def get_part_groups(self):
         """Get the complex groups configuration for part tests."""
         return {

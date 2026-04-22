@@ -1,9 +1,8 @@
-from multiprocessing import Pool
 import numpy as np
 
+from panoptica._functionals import _get_orig_onehotcc_structure, _get_paired_crop
 from panoptica.metrics import Metric
-from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
-from panoptica._functionals import _get_paired_crop, _get_orig_onehotcc_structure
+from panoptica.utils.processing_pair import EvaluateInstancePair, MatchedInstancePair
 
 
 def evaluate_matched_instance(

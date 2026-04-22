@@ -6,13 +6,13 @@ import os
 import unittest
 
 import numpy as np
-from panoptica.panoptica_pipeline import (
-    _panoptic_evaluate_region_wise,
-    _panoptic_evaluate,
-)
+
 from panoptica.instance_matcher import NaiveThresholdMatching
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.metrics import Metric
+from panoptica.panoptica_pipeline import (
+    _panoptic_evaluate,
+    _panoptic_evaluate_region_wise,
+)
 from panoptica.utils.processing_pair import UnmatchedInstancePair
 
 

@@ -1,8 +1,7 @@
 import cProfile
-
 from pathlib import Path
 
-from panoptica import Panoptica_Evaluator, InputType
+from panoptica import InputType, Panoptica_Evaluator
 from panoptica.metrics import Metric
 from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 

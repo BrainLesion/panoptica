@@ -1,7 +1,9 @@
-from typing import Optional
 from time import perf_counter
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
+import numpy as np
+
+from panoptica._functionals import _get_voronoi_regions
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
@@ -9,20 +11,16 @@ from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import (
+    EvaluateInstancePair,
+    InputType,
+    IntermediateStepsData,
     MatchedInstancePair,
     SemanticPair,
     UnmatchedInstancePair,
-    InputType,
-    EvaluateInstancePair,
-    IntermediateStepsData,
 )
-from panoptica._functionals import _get_voronoi_regions
-import numpy as np
 
 if TYPE_CHECKING:
-    import torch
-    import SimpleITK as sitk
-    import nibabel as nib
+    pass
 
 
 def _panoptic_evaluate(
@@ -260,7 +258,6 @@ def _panoptic_evaluate_region_wise(
 
     # proceed if pipeline only if no edge case handling necessary
     if not isinstance(processing_pair, PanopticaResult):
-
         # create regions and label to regions
         region_map, num_features = _get_voronoi_regions(
             processing_pair.reference_arr, processing_pair.n_ref_instances

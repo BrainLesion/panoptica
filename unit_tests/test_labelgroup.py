@@ -4,10 +4,11 @@
 # coverage html
 import os
 import unittest
+
 import numpy as np
 
-from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 from panoptica.utils.label_group import LabelMergeGroup, LabelPartGroup
+from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 
 
 class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
@@ -149,7 +150,7 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
 
         keys = classgroups.keys()
         for i in range(1, 5):
-            self.assertTrue(f"group_{i-1}" in keys, f"not {i} in {keys}")
+            self.assertTrue(f"group_{i - 1}" in keys, f"not {i} in {keys}")
 
     def test_segmentationclassgroup_default(self):
         group1 = LabelGroup([1, 2, 3, 4, 5], single_instance=False)
