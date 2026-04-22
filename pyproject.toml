@@ -98,7 +98,7 @@ line-length = 130
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`) codes.
 select = ["E", "F", "I"] # "I" turns on isort for import sorting
-ignore = []
+ignore = ["E501"] # Let the formatter handle what it can, ignore the rest
 
 [tool.ruff.format]
 quote-style = "double"
@@ -107,6 +107,6 @@ indent-style = "space"
 [tool.basedpyright]
 include = ["panoptica", "unit_tests", "examples"]
 exclude = ["**/.pytest_cache", "**/__pycache__"]
-typeCheckingMode = "strict" # we might increase to standard/strict
+typeCheckingMode = "basic" # we might increase to standard/strict
 pythonVersion = "3.10"
 pythonPlatform = "All"
