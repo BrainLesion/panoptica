@@ -18,9 +18,10 @@ def search_path(
         All found paths
     """
     basepath = str(basepath)
-    assert os.path.exists(
-        basepath
-    ), f"basepath for search_path() doesnt exist, got {basepath}"
+    if not os.path.exists(basepath):
+        raise FileNotFoundError(
+            f"basepath for search_path() doesn't exist, got {basepath}"
+        )
     if not basepath.endswith("/"):
         basepath += "/"
     print(f"search_path: in {basepath}{query}") if verbose else None
@@ -46,7 +47,8 @@ def config_dir_by_name(name: str) -> tuple[Path, str]:
 def config_by_name(name: str) -> Path:
     directory, name = config_dir_by_name(name)
     p = search_path(directory, query=f"**/{name}", suppress=True)
-    assert (
-        len(p) == 1
-    ), f"Did not find exactly one config yaml with name {name} in directory {directory}, got {p}"
+    if len(p) != 1:
+        raise FileNotFoundError(
+            f"Did not find exactly one config yaml with name {name} in directory {directory}, got {p}"
+        )
     return p[0]

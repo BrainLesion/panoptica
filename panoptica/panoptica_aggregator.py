@@ -300,7 +300,7 @@ def _load_first_column_entries(file: str | Path):
         list: A list of entries from the first column of the file.
 
     Raises:
-        AssertionError: If the file contains duplicate entries.
+        ValueError: If the file contains duplicate entries.
     """
     if isinstance(file, Path):
         file = str(file)
@@ -314,7 +314,8 @@ def _load_first_column_entries(file: str | Path):
             id_list = list([row[0] for row in rows])
 
     n_id = len(id_list)
-    assert n_id == len(list(set(id_list))), f"{file}: file has duplicate entries!"
+    if n_id != len(list(set(id_list))):
+        raise ValueError(f"{file}: file has duplicate entries!")
 
     return id_list
 

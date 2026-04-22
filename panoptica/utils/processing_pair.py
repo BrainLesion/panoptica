@@ -85,9 +85,8 @@ class _ProcessingPair(ABC):
         """
         if not self.__is_cropped:
             return
-        assert (
-            self.__uncropped_shape is not None
-        ), "Calling uncrop_data() without having cropped first"
+        if self.__uncropped_shape is None:
+            raise RuntimeError("Calling uncrop_data() without having cropped first")
         prediction_arr = np.zeros(self.__uncropped_shape)
         prediction_arr[self.__crop] = self.__prediction_arr
         self.__prediction_arr = prediction_arr
@@ -110,9 +109,10 @@ class _ProcessingPair(ABC):
         Args:
             dtype (type): Expected integer type for the arrays.
         """
-        assert np.issubdtype(
-            type, int_type
-        ), "set_dtype: tried to set dtype to something other than integers"
+        if not np.issubdtype(type, int_type):
+            raise TypeError(
+                "set_dtype: tried to set dtype to something other than integers"
+            )
         self.__prediction_arr = self.__prediction_arr.astype(type)
         self.__reference_arr = self.__reference_arr.astype(type)
 
@@ -245,36 +245,39 @@ def _check_array_integrity(
         dtype (type | None): Expected type of the arrays. If None, dtype validation is skipped.
 
     Raises:
-        AssertionError: If validation fails in any of the following cases:
-            - Arrays are not numpy arrays.
-            - Shapes of both arrays are not identical.
-            - Data types of both arrays do not match.
-            - Dtype mismatch when specified.
+        TypeError: If arrays are not numpy arrays, or if dtype mismatch when specified.
+        ValueError: If shapes of both arrays are not identical, or if there are negative values.
 
     Example:
     >>> _check_array_integrity(np.array([1, 2, 3]), np.array([4, 5, 6]), dtype=int)
     """
-    assert isinstance(prediction_arr, np.ndarray) and isinstance(
-        reference_arr, np.ndarray
-    ), "prediction and/or reference are not numpy arrays"
-    assert (
-        prediction_arr.shape == reference_arr.shape
-    ), f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
+    if not (
+        isinstance(prediction_arr, np.ndarray) and isinstance(reference_arr, np.ndarray)
+    ):
+        raise TypeError("prediction and/or reference are not numpy arrays")
+    if prediction_arr.shape != reference_arr.shape:
+        raise ValueError(
+            f"shape mismatch, got {prediction_arr.shape},{reference_arr.shape}"
+        )
 
     min_value = min(prediction_arr.min(), reference_arr.min())
-    assert (
-        min_value >= 0
-    ), "There are negative values in the semantic maps. This is not allowed!"
+    if min_value < 0:
+        raise ValueError(
+            "There are negative values in the semantic maps. This is not allowed!"
+        )
 
     # if prediction_arr.dtype != reference_arr.dtype:
     #    print(f"Dtype is equal in prediction and reference, got {prediction_arr.dtype},{reference_arr.dtype}. Intended?")
     # assert prediction_arr.dtype == reference_arr.dtype, f"dtype mismatch, got {prediction_arr.dtype},{reference_arr.dtype}"
     if dtype is not None:
-        assert (
+        if not (
             np.issubdtype(prediction_arr.dtype, dtype)
             and np.issubdtype(reference_arr.dtype, dtype)
             # prediction_arr.dtype == dtype and reference_arr.dtype == dtype
-        ), f"prediction and/or reference are not dtype {dtype}, got {prediction_arr.dtype} and {reference_arr.dtype}"
+        ):
+            raise TypeError(
+                f"prediction and/or reference are not dtype {dtype}, got {prediction_arr.dtype} and {reference_arr.dtype}"
+            )
 
 
 class SemanticPair(_ProcessingPair):
@@ -466,41 +469,43 @@ class IntermediateStepsData:
         self.add_intermediate_data(type_name, processing_pair)
 
     def add_intermediate_data(self, key, value):
-        assert key not in self._intermediatesteps, f"key {key} already added"
+        if key in self._intermediatesteps:
+            raise KeyError(f"key {key} already added")
         self._intermediatesteps[key] = value
 
     @property
     def original_prediction_arr(self):
-        assert (
-            self._original_input is not None
-        ), "Original prediction_arr is None, there are no intermediate steps"
+        if self._original_input is None:
+            raise RuntimeError(
+                "Original prediction_arr is None, there are no intermediate steps"
+            )
         return self._original_input.prediction_arr
 
     @property
     def original_reference_arr(self):
-        assert (
-            self._original_input is not None
-        ), "Original reference_arr is None, there are no intermediate steps"
+        if self._original_input is None:
+            raise RuntimeError(
+                "Original reference_arr is None, there are no intermediate steps"
+            )
         return self._original_input.reference_arr
 
     def prediction_arr(self, inputtype: InputType):
         type_name = inputtype.name
         procpair = self[type_name]
-        assert isinstance(
-            procpair, _ProcessingPair
-        ), f"step {type_name} is not a processing pair, error"
+        if not isinstance(procpair, _ProcessingPair):
+            raise TypeError(f"step {type_name} is not a processing pair, error")
         return procpair.prediction_arr
 
     def reference_arr(self, inputtype: InputType):
         type_name = inputtype.name
         procpair = self[type_name]
-        assert isinstance(
-            procpair, _ProcessingPair
-        ), f"step {type_name} is not a processing pair, error"
+        if not isinstance(procpair, _ProcessingPair):
+            raise TypeError(f"step {type_name} is not a processing pair, error")
         return procpair.reference_arr
 
     def __getitem__(self, key):
-        assert (
-            key in self._intermediatesteps
-        ), f"key {key} not in intermediate steps, maybe the step was skipped?"
+        if key not in self._intermediatesteps:
+            raise KeyError(
+                f"key {key} not in intermediate steps, maybe the step was skipped?"
+            )
         return self._intermediatesteps[key]

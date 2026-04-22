@@ -70,7 +70,7 @@ class SegmentationClassGroups(SupportsConfig):
             bool: True if all labels are defined; False otherwise.
 
         Raises:
-            AssertionError: If an undefined label is found and raise_error is True.
+            ValueError: If an undefined label is found and raise_error is True.
         """
         if isinstance(arr, list):
             arr_labels = arr
@@ -79,7 +79,7 @@ class SegmentationClassGroups(SupportsConfig):
         for al in arr_labels:
             if al not in self.labels:
                 if raise_error:
-                    raise AssertionError(
+                    raise ValueError(
                         f"Input array has labels undefined in the SegmentationClassGroups, got label {al} the groups are defined as {str(self)}"
                     )
                 return False

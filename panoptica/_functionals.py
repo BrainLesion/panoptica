@@ -58,7 +58,8 @@ def _connected_components(
     """
     if cca_backend is None:
         cca_backend = CCABackend.cc3d if array.ndim >= 3 else CCABackend.scipy
-    assert cca_backend is not None
+    if cca_backend is None:
+        raise ValueError("cca_backend could not be determined")
 
     if cca_backend == CCABackend.cc3d:
         import cc3d
@@ -90,7 +91,10 @@ def _get_paired_crop(
     Returns:
         np.ndarray: The bounding box coordinates around the combined non-zero regions
     """
-    assert prediction_arr.shape == reference_arr.shape
+    if prediction_arr.shape != reference_arr.shape:
+        raise ValueError(
+            f"Shape mismatch between prediction and reference arrays: {prediction_arr.shape} vs {reference_arr.shape}"
+        )
 
     combined = prediction_arr + reference_arr
     if combined.sum() == 0:

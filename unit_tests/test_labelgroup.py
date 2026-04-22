@@ -77,13 +77,13 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
         self.assertEqual(len(group1_arr_ind), 0)
 
     def test_wrong_labelgroup_definitions(self):
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             group1 = LabelGroup([1, 2, 3, 4, 5], single_instance=True)
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             group1 = LabelGroup([], single_instance=False)
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             group1 = LabelGroup([1, 0, -1, 5], single_instance=False)
 
         group1 = LabelGroup([1, 1, 2, 3], single_instance=False)
@@ -136,9 +136,9 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
                 "ivds": LabelGroup([4, 5, 6]),
             }
         )
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             classgroups.has_defined_labels_for([0], raise_error=True)
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             classgroups.has_defined_labels_for([7], raise_error=True)
         classgroups.has_defined_labels_for([7], raise_error=False)
 
@@ -256,7 +256,7 @@ class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
             LabelPartGroup(thing_labels=[1], part_labels=[])
 
         # Single instance with multiple thing labels
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             LabelPartGroup(thing_labels=[1, 2], part_labels=[10], single_instance=True)
 
     def test_labelpartgroup_single_instance(self):
