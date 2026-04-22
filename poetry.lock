@@ -3449,4 +3449,4 @@ gpu = ["torch"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4.0"
-content-hash = "0c0eac1c61e0d23d69de4ed9bc49e3be2140565a800c148363dd77c77b260d26"
+content-hash = "dadc01c7271fb1cd2a7893b39bbf6b39985592847093c9918a1cb6aa306c859c"
