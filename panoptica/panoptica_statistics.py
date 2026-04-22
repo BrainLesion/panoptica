@@ -540,6 +540,10 @@ def make_autc_plots(
         groups = [groups]
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
+    if alternate_groupnames is not None and len(alternate_groupnames) != len(groups):
+        raise ValueError(
+            f"alternate_groupnames has length {len(alternate_groupnames)} but groups has length {len(groups)}; they must match."
+        )
 
     if fig is None:
         fig = go.Figure()
@@ -633,6 +637,10 @@ def make_curve_over_setups(
         groups = [groups]
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
+    if alternate_groupnames is not None and len(alternate_groupnames) != len(groups):
+        raise ValueError(
+            f"alternate_groupnames has length {len(alternate_groupnames)} but groups has length {len(groups)}; they must match."
+        )
 
     assert (
         plot_as_barchart or len(groups) == 1
