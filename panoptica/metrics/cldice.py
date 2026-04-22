@@ -83,7 +83,8 @@ def _compute_centerline_dice_coefficient(
     **kwargs,
 ) -> float:
     ndim = reference.ndim
-    assert 2 <= ndim <= 3, "clDice only implemented for 2D or 3D"
+    if not (2 <= ndim <= 3):
+        raise ValueError("clDice only implemented for 2D or 3D")
     tprec = cl_score(prediction, _get_skeleton(reference))
     tsens = cl_score(reference, _get_skeleton(prediction))
 

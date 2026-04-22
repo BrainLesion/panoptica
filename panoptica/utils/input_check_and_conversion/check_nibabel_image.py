@@ -46,9 +46,11 @@ class NibabelImageChecker(_InputDataTypeChecker):
             tuple[bool, tuple[np.ndarray, np.ndarray] | str]: A tuple where the first element is a boolean indicating if the images pass the sanity check, and the second element is either the numpy arrays of the images or an error message.
         """
         # assert correct datatype
-        assert isinstance(prediction_image, nib.Nifti1Image) and isinstance(
-            reference_image, nib.Nifti1Image
-        ), "Input images must be of type nibabel.Nifti1Image"
+        if not (
+            isinstance(prediction_image, nib.Nifti1Image)
+            and isinstance(reference_image, nib.Nifti1Image)
+        ):
+            raise TypeError("Input images must be of type nibabel.Nifti1Image")
         # start necessary comparisons
         # dimensions need to be exact
         if prediction_image.shape != reference_image.shape:

@@ -150,11 +150,11 @@ class Test_ProcessingPair(unittest.TestCase):
                 d = -b
 
                 if c.min() < 0:
-                    with self.assertRaises(AssertionError):
+                    with self.assertRaises(ValueError):
                         it(c, b)
                 if d.min() < 0:
-                    with self.assertRaises(AssertionError):
+                    with self.assertRaises(ValueError):
                         it(a, d)
                 if c.min() < 0 or d.min() < 0:
-                    with self.assertRaises(AssertionError):
+                    with self.assertRaises(ValueError):
                         it(c, d)

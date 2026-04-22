@@ -360,12 +360,14 @@ class Evaluation_Metric:
 
         # Calculate it
         try:
-            assert (
-                not self._was_calculated
-            ), f"Metric {self.id} was called to compute, but is set to have been already calculated"
-            assert (
-                self._calc_func is not None
-            ), f"Metric {self.id} was called to compute, but has no calculation function set"
+            if self._was_calculated:
+                raise RuntimeError(
+                    f"Metric {self.id} was called to compute, but is set to have been already calculated"
+                )
+            if self._calc_func is None:
+                raise RuntimeError(
+                    f"Metric {self.id} was called to compute, but has no calculation function set"
+                )
             value = self._calc_func(result_obj)
         except MetricCouldNotBeComputedException as e:
             value = e

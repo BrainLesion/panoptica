@@ -95,12 +95,14 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__save_group_times = save_group_times
         self.__per_region_evaluation = per_region_evaluation
         if self.__per_region_evaluation:
-            assert (
-                self.__decision_metric is None
-            ), "Decision metric not supported for region-wise evaluation, as there are no matched instances. Please set decision_metric to None."
-            assert (
-                self.__decision_threshold is None
-            ), "Decision threshold not supported for region-wise evaluation, as there are no matched instances. Please set decision_threshold to None."
+            if self.__decision_metric is not None:
+                raise ValueError(
+                    "Decision metric not supported for region-wise evaluation, as there are no matched instances. Please set decision_metric to None."
+                )
+            if self.__decision_threshold is not None:
+                raise ValueError(
+                    "Decision threshold not supported for region-wise evaluation, as there are no matched instances. Please set decision_threshold to None."
+                )
 
         if segmentation_class_groups is None:
             segmentation_class_groups = _NoSegmentationClassGroups()
@@ -110,9 +112,8 @@ class Panoptica_Evaluator(SupportsConfig):
             edge_case_handler if edge_case_handler is not None else EdgeCaseHandler()
         )
         if self.__decision_metric is not None:
-            assert (
-                self.__decision_threshold is not None
-            ), "decision metric set but no decision threshold for it"
+            if self.__decision_threshold is None:
+                raise ValueError("decision metric set but no decision threshold for it")
         #
         self.__log_times = log_times
         self.__verbose = verbose
@@ -184,9 +185,8 @@ class Panoptica_Evaluator(SupportsConfig):
         #
         # Take the numpy arrays and convert them to the panoptica internal data structure
         processing_pair = self.__expected_input(prediction_arr, reference_arr)
-        assert isinstance(
-            processing_pair, self.__expected_input.value
-        ), f"input not of expected type {self.__expected_input}"
+        if not isinstance(processing_pair, self.__expected_input.value):
+            raise TypeError(f"input not of expected type {self.__expected_input}")
 
         self.__segmentation_class_groups.has_defined_labels_for(
             processing_pair.prediction_arr, raise_error=True
@@ -258,7 +258,10 @@ class Panoptica_Evaluator(SupportsConfig):
         save_group_times: bool = False,
         **kwargs,
     ) -> PanopticaResult:
-        assert isinstance(label_group, LabelGroup)
+        if not isinstance(label_group, LabelGroup):
+            raise TypeError(
+                f"label_group must be a LabelGroup, got {type(label_group)}"
+            )
         if self.__save_group_times or save_group_times:
             start_time = perf_counter()
 

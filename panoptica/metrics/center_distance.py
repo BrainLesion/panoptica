@@ -67,6 +67,9 @@ def _compute_center_distance(
     Returns:
         float: Center Distance between the specified instances. Higher values
         indicate worse localization quality.
+
+    Raises:
+        ValueError: If voxelspacing does not have the same dimensionality as the input.
     """
     ref_com = _compute_center_of_mass(reference)
     pred_com = _compute_center_of_mass(prediction)
@@ -78,9 +81,10 @@ def _compute_center_distance(
     # Calculate metric
     diff_vector = np.subtract(pred_com, ref_com)
     if voxelspacing is not None:
-        assert len(voxelspacing) == len(
-            pred_com
-        ), "Voxelspacing must have same dimensionality than the input"
+        if len(voxelspacing) != len(pred_com):
+            raise ValueError(
+                f"Voxelspacing must have same dimensionality as the input (len(voxelspacing)={len(voxelspacing)}, len(input)={len(pred_com)})"
+            )
         diff_vector = np.multiply(diff_vector, voxelspacing)
     center_distance = float(np.linalg.norm(diff_vector))
     return center_distance
