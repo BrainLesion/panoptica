@@ -149,6 +149,11 @@ class Panoptica_Statistic:
     def instance_subjects(self) -> list[str]:
         """Returns only the individual instance rows."""
         return [sn for sn in self.__subj_names if is_instance_row(sn)]
+    
+    @property
+    def base_metric_names(self) -> list[str]:
+        """Returns metric names that are not thresholded"""
+        return [m for m in self.__metricnames if not is_threshold_key(m)]
 
     def master_values(self, values: list[float | None]) -> list[float]:
         """Pair each value with its subject name and filter out the instance rows."""
@@ -158,10 +163,6 @@ class Panoptica_Statistic:
             if not is_instance_row(sn) and val is not None
         ]
         
-    def base_metric_names(self) -> list[str]:
-        """Returns metric names that are not thresholded"""
-        return [m for m in self.__metricnames if not is_threshold_key(m)]
-
     def get_thresholds_for_metric(self, metric: str) -> list[float]:
         """Returns available thresholds for a specific metric (e.g. 'pq')."""
         return self.__threshold_map.get(metric, [])

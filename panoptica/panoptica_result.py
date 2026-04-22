@@ -940,11 +940,18 @@ class PanopticaAUTCResult(object):
 
         return float(np.trapezoid(y_arr, x=x_arr))
 
-    def to_dict(self) -> dict[str, float]:
+    def to_dict(
+        self, output_individual_instance_metrics: bool = False
+    ) -> dict[str, float]:
         """Flat dictionary containing AUTC metrics AND individual threshold metrics.
 
         AUTC is only computed for continuous ratio metrics that have a bounded domain from 0 to 1.
         """
+        if output_individual_instance_metrics:
+            raise NotImplementedError(
+                "PanopticaAUTCResult does not support per-instance output; "
+                "set output_individual_instance_metrics=False on the aggregator when using is_autc=True."
+            )
         result: dict[str, float] = {}
 
         first_res = next(iter(self._threshold_results.values()))
