@@ -169,8 +169,8 @@ class _ProcessingPair(ABC):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self.__prediction_arr,
-            reference_arr=self.__reference_arr,
+            prediction_arr=self.__prediction_arr.copy(),
+            reference_arr=self.__reference_arr.copy(),
         )  # type: ignore
 
 
@@ -227,8 +227,8 @@ class _ProcessingPairInstanced(_ProcessingPair):
         Creates an exact copy of this object
         """
         return type(self)(
-            prediction_arr=self.prediction_arr,
-            reference_arr=self.reference_arr,
+            prediction_arr=self.prediction_arr.copy(),
+            reference_arr=self.reference_arr.copy(),
             n_pred_instances=self.n_pred_instances,
             n_ref_instances=self.n_ref_instances,
         )  # type: ignore

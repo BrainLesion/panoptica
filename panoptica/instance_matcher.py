@@ -200,7 +200,70 @@ def map_instance_labels(
     return matched_instance_pair
 
 
-class NaiveThresholdMatching(InstanceMatchingAlgorithm):
+class ThresholdBasedMatching(InstanceMatchingAlgorithm):
+    """Base class for matchers that rely on a metric and a cutoff threshold."""
+
+    def __init__(
+        self, matching_metric: Metric = Metric.IOU, matching_threshold: float = 0.5
+    ):
+        self._matching_metric = matching_metric
+        self._matching_threshold = matching_threshold
+
+    @classmethod
+    def _yaml_repr(cls, node) -> dict:
+        return {
+            "matching_metric": node._matching_metric,
+            "matching_threshold": node._matching_threshold,
+        }
+
+    @abstractmethod
+    def _match_instances(
+        self,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        context: Optional[MatchingContext] = None,
+        *,
+        matching_threshold: float,
+        **kwargs,
+    ) -> InstanceLabelMap:
+        """
+        Abstract method to be implemented by subclasses for instance matching.
+
+        Args:
+            unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
+            context (Optional[MatchingContext]): Context information for matching. If None, a default context will be created.
+            matching_threshold (float): The threshold to use for matching instances in this operation.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            InstanceLabelMap: The result of the instance matching.
+        """
+        pass
+
+    def match_instances(
+        self,
+        unmatched_instance_pair: UnmatchedInstancePair,
+        label_group=None,
+        n_ref_labels=None,
+        processing_pair_orig_shape=None,
+        *,
+        matching_threshold: Optional[float] = None,
+        **kwargs,
+    ) -> MatchedInstancePair:
+        return super().match_instances(
+            unmatched_instance_pair,
+            label_group=label_group,
+            n_ref_labels=n_ref_labels,
+            processing_pair_orig_shape=processing_pair_orig_shape,
+            matching_threshold=(
+                matching_threshold
+                if matching_threshold is not None
+                else self._matching_threshold
+            ),
+            **kwargs,
+        )
+
+
+class NaiveThresholdMatching(ThresholdBasedMatching):
     """
     Instance matching algorithm that performs threshold-based matching.
 
@@ -224,14 +287,15 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
             matching_threshold (float): The threshold for matching instances.
             allow_many_to_one (bool): Whether to allow many-to-one matching.
         """
+        super().__init__(matching_metric, matching_threshold)
         self._allow_many_to_one = allow_many_to_one
-        self._matching_metric = matching_metric
-        self._matching_threshold = matching_threshold
 
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         context: Optional[MatchingContext] = None,
+        *,
+        matching_threshold: float,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -240,6 +304,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
             context (Optional[MatchingContext]): The matching context.
+            matching_threshold (float): The threshold for matching instances.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -263,7 +328,7 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
                 continue
 
             if self._matching_metric.score_beats_threshold(
-                matching_score, self._matching_threshold
+                matching_score, matching_threshold
             ):
                 # Match found, add entry to labelmap
                 labelmap.add_labelmap_entry(pred_label, ref_label)
@@ -279,32 +344,19 @@ class NaiveThresholdMatching(InstanceMatchingAlgorithm):
         }
 
 
-class MaxBipartiteMatching(InstanceMatchingAlgorithm):
+class MaxBipartiteMatching(ThresholdBasedMatching):
     """
     Instance matching algorithm that performs optimal one-to-one matching based on maximum bipartite graph matching.
 
     This implementation maximizes the global matching score between predictions and references.
     """
 
-    def __init__(
-        self,
-        matching_metric: Metric = Metric.IOU,
-        matching_threshold: float = 0.5,
-    ) -> None:
-        """
-        Initialize the MaxBipartiteMatching instance.
-
-        Args:
-            matching_metric (Metric): The metric to be used for matching.
-            matching_threshold (float): The metric threshold for matching instances.
-        """
-        self._matching_metric = matching_metric
-        self._matching_threshold = matching_threshold
-
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         context: Optional[MatchingContext] = None,
+        *,
+        matching_threshold: float,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -313,6 +365,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
             context (Optional[MatchingContext]): The matching context.
+            matching_threshold (float): The threshold for matching instances.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -330,7 +383,9 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         )
 
         # Create cost matrix for bipartite matching
-        cost_matrix = self._create_cost_matrix(ref_labels, pred_labels, mm_pairs)
+        cost_matrix = self._create_cost_matrix(
+            ref_labels, pred_labels, mm_pairs, matching_threshold
+        )
 
         # Apply maximum bipartite graph matching
         labelmap = self._solve_bipartite_matching(cost_matrix, ref_labels, pred_labels)
@@ -342,6 +397,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         ref_labels: List[int],
         pred_labels: List[int],
         mm_pairs: List[Tuple[float, Tuple[int, int]]],
+        matching_threshold: float,
     ) -> np.ndarray:
         """Create cost matrix for bipartite matching."""
         # Create label to index mappings
@@ -356,7 +412,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         # Fill in known costs for overlapping instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if not self._matching_metric.score_beats_threshold(
-                matching_score, self._matching_threshold
+                matching_score, matching_threshold
             ):
                 continue
 
@@ -391,7 +447,7 @@ class MaxBipartiteMatching(InstanceMatchingAlgorithm):
         }
 
 
-class MaximizeMergeMatching(InstanceMatchingAlgorithm):
+class MaximizeMergeMatching(ThresholdBasedMatching):
     """
     Instance matching algorithm that performs many-to-one matching based on metric. Will merge if combined instance metric is greater than individual one. Only matches if at least a single instance exceeds the threshold.
 
@@ -400,25 +456,12 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         matching_threshold (float): The threshold for matching instances.
     """
 
-    def __init__(
-        self,
-        matching_metric: Metric = Metric.IOU,
-        matching_threshold: float = 0.5,
-    ) -> None:
-        """
-        Initialize the MaximizeMergeMatching instance.
-
-        Args:
-            matching_metric (Metric): The metric to be used for matching.
-            matching_threshold (float): The threshold for matching instances.
-        """
-        self._matching_metric = matching_metric
-        self._matching_threshold = matching_threshold
-
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         context: Optional[MatchingContext] = None,
+        *,
+        matching_threshold: float,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -427,6 +470,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
         Args:
             unmatched_instance_pair (UnmatchedInstancePair): The unmatched instance pair to be matched.
             context (Optional[MatchingContext]): The matching context.
+            matching_threshold (float): The threshold for matching instances.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -464,7 +508,7 @@ class MaximizeMergeMatching(InstanceMatchingAlgorithm):
                     labelmap.add_labelmap_entry(pred_label, ref_label)
                     score_ref[ref_label] = new_score
             elif self._matching_metric.score_beats_threshold(
-                matching_score, self._matching_threshold
+                matching_score, matching_threshold
             ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)

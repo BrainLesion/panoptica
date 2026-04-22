@@ -1,3 +1,4 @@
+from typing import Optional
 from time import perf_counter
 from typing import TYPE_CHECKING
 
@@ -32,6 +33,7 @@ def _panoptic_evaluate(
     global_metrics: list[Metric] = [Metric.DSC],
     decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
+    matching_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
     result_all: bool = True,
@@ -106,6 +108,7 @@ def _panoptic_evaluate(
         global_metrics=global_metrics,
         edge_case_handler=edge_case_handler,
         instance_matcher=instance_matcher,
+        matching_threshold=matching_threshold,
         label_group=label_group,
         log_times=log_times,
         verbose=verbose,
@@ -416,7 +419,7 @@ def _panoptic_evaluate_region_wise(
 
 def _phase_instance_approximation(
     processing_pair: SemanticPair,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: Optional[IntermediateStepsData],
     instance_approximator: InstanceApproximator,
     instance_metadata: dict,
     label_group=None,
@@ -425,9 +428,10 @@ def _phase_instance_approximation(
 ):
     # First Phase: Instance Approximation
     if isinstance(processing_pair, SemanticPair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.SEMANTIC
-        )
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.SEMANTIC
+            )
         if instance_approximator is None:
             raise ValueError("Got SemanticPair but not InstanceApproximator")
         if verbose:
@@ -458,6 +462,7 @@ def _phase_instance_matching(
     global_metrics: list[Metric],
     edge_case_handler: EdgeCaseHandler,
     instance_matcher: InstanceMatchingAlgorithm,
+    matching_threshold: float | None = None,
     label_group=None,
     log_times=False,
     verbose=False,
@@ -484,12 +489,18 @@ def _phase_instance_matching(
             )
         start = perf_counter()
 
+        match_kwargs = {
+            "label_group": label_group,
+            "n_ref_labels": instance_metadata["n_ref_labels"],
+            "processing_pair_orig_shape": instance_metadata["original_shape"],
+            **kwargs,
+        }
+        if matching_threshold is not None:
+            match_kwargs["matching_threshold"] = matching_threshold
+
         processing_pair = instance_matcher.match_instances(
             processing_pair,
-            label_group=label_group,
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            **kwargs,
+            **match_kwargs,
         )
         if log_times:
             print(f"-- Matching took {perf_counter() - start} seconds")

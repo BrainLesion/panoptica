@@ -1,3 +1,7 @@
+from panoptica.utils import format_threshold_key
+from panoptica.utils import is_autc_key
+from panoptica.utils import is_threshold_key
+from panoptica.utils import parse_threshold_key
 import csv
 import numpy as np
 import warnings
@@ -99,6 +103,18 @@ class Panoptica_Statistic:
 
         self.__groupnames = list(value_dict.keys())
         self.__metricnames = list(value_dict[self.__groupnames[0]].keys())
+        self.__threshold_map: dict[str, list[float]] = {}
+
+        for m in self.__metricnames:
+            parsed = parse_threshold_key(m)
+            if parsed:
+                threshold_val, base_metric = parsed
+                if base_metric not in self.__threshold_map:
+                    self.__threshold_map[base_metric] = []
+                self.__threshold_map[base_metric].append(threshold_val)
+
+        for m in self.__threshold_map:
+            self.__threshold_map[m].sort()
 
         # check length of everything
         for g in self.groupnames:
@@ -123,6 +139,15 @@ class Panoptica_Statistic:
     @property
     def metricnames(self):
         return self.__metricnames
+
+    @property
+    def base_metric_names(self) -> list[str]:
+        """Returns metric names that are not thresholded"""
+        return [m for m in self.__metricnames if not is_threshold_key(m)]
+
+    def get_thresholds_for_metric(self, metric: str) -> list[float]:
+        """Returns available thresholds for a specific metric (e.g. 'pq')."""
+        return self.__threshold_map.get(metric, [])
 
     @classmethod
     def from_file(cls, file: str | Path, verbose: bool = True):
@@ -445,6 +470,7 @@ class Panoptica_Statistic:
         self,
         ndigits: int = 3,
         only_across_groups: bool = True,
+        include_thresholds: bool = False,
     ):
         summary = self.get_summary_dict(include_across_group=only_across_groups)
         print()
@@ -453,7 +479,10 @@ class Panoptica_Statistic:
             groups = ["across_groups"]
         for g in groups:
             print(f"Group {g}:")
-            for m in self.__metricnames:
+            metrics_to_show = (
+                self.__metricnames if include_thresholds else self.base_metric_names
+            )
+            for m in metrics_to_show:
                 avg, std = summary[g][m].avg, summary[g][m].std
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
             print()
@@ -510,8 +539,93 @@ def make_autc_plots(
     metric: str,
     groups: list[str] | str | None = None,
     alternate_groupnames: list[str] | str | None = None,
-):
-    raise NotImplementedError("AUTC plots currently in works")
+    fig: go.Figure | None = None,
+    plot_std: bool = True,
+    figure_title: str = "",
+    width: int = 850,
+    height: int = 1200,
+    xaxis_title: str | None = None,
+    yaxis_title: str | None = None,
+    manual_metric_range: None | tuple[float, float] = None,
+) -> go.Figure:
+    if groups is None:
+        groups = list(statistics_dict.values())[0].groupnames
+    if isinstance(groups, str):
+        groups = [groups]
+    if isinstance(alternate_groupnames, str):
+        alternate_groupnames = [alternate_groupnames]
+    if alternate_groupnames is not None and len(alternate_groupnames) != len(groups):
+        raise ValueError(
+            f"alternate_groupnames has length {len(alternate_groupnames)} but groups has length {len(groups)}; they must match."
+        )
+
+    if fig is None:
+        fig = go.Figure()
+
+    for setupname, stat in statistics_dict.items():
+        thresholds = stat.get_thresholds_for_metric(metric)
+
+        if not thresholds:
+            print(f"Warning: No threshold data found for '{metric}' in '{setupname}'.")
+            continue
+
+        X = thresholds
+        for idx, g in enumerate(groups):
+            name = g if alternate_groupnames is None else alternate_groupnames[idx]
+
+            if len(statistics_dict) == 1 and len(groups) == 1:
+                legend_name = str(name)
+            elif len(groups) == 1:
+                legend_name = str(setupname)
+            else:
+                legend_name = f"{setupname} - {name}"
+
+            Y = [
+                FloatDistribution(
+                    stat.get(g, format_threshold_key(t, metric), remove_nones=True)
+                ).avg
+                for t in thresholds
+            ]
+
+            if plot_std:
+                Ystd = [
+                    FloatDistribution(
+                        stat.get(g, format_threshold_key(t, metric), remove_nones=True)
+                    ).std
+                    for t in thresholds
+                ]
+                error_y = dict(type="data", array=Ystd)
+            else:
+                error_y = None
+
+            fig.add_trace(
+                go.Scatter(
+                    x=X,
+                    y=Y,
+                    mode="lines+markers",
+                    name=legend_name,
+                    error_y=error_y,
+                )
+            )
+
+    # Reuse the exact layout from make_curve_over_setups
+    fig.update_layout(
+        autosize=False,
+        width=width,
+        height=height,
+        showlegend=True,
+        yaxis_title=metric if yaxis_title is None else yaxis_title,
+        xaxis_title="Matching Threshold" if xaxis_title is None else xaxis_title,
+        font={"family": "Arial"},
+        title=figure_title,
+    )
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="gray")
+    fig.update_xaxes(range=[-0.05, 1.05])
+
+    if manual_metric_range is not None:
+        fig.update_yaxes(range=[manual_metric_range[0], manual_metric_range[1]])
+
+    return fig
 
 
 def make_curve_over_setups(
@@ -537,6 +651,10 @@ def make_curve_over_setups(
         groups = [groups]
     if isinstance(alternate_groupnames, str):
         alternate_groupnames = [alternate_groupnames]
+    if alternate_groupnames is not None and len(alternate_groupnames) != len(groups):
+        raise ValueError(
+            f"alternate_groupnames has length {len(alternate_groupnames)} but groups has length {len(groups)}; they must match."
+        )
 
     if not plot_as_barchart and len(groups) != 1:
         raise ValueError(
