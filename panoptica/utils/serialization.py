@@ -19,6 +19,7 @@ _SUBJECT_COLLISION_PATTERN = re.compile(
     rf".+{re.escape(_INST_SEP)}.+{re.escape(_INST_SUFFIX_BASE)}\d+$"
 )
 
+
 def validate_subject_name(name: str) -> None:
     """Raises ValueError if `name` is blank or would be misclassified as an instance row.
 
@@ -34,6 +35,7 @@ def validate_subject_name(name: str) -> None:
             f"suffix '<...>{_INST_SEP}<...>{_INST_SUFFIX_BASE}<int>'. "
             f"Rename the subject to avoid this suffix."
         )
+
 
 def validate_group_name(name: str) -> None:
     """Raises ValueError if `name` is blank or contains a reserved structural token.
@@ -55,6 +57,7 @@ def validate_group_name(name: str) -> None:
             f"Group names must not contain '_inst_'."
         )
 
+
 def format_instance_subject_name(
     subject_name: str, group_name: str, inst_idx: int
 ) -> str:
@@ -62,6 +65,7 @@ def format_instance_subject_name(
     validate_subject_name(subject_name)
     validate_group_name(group_name)
     return f"{subject_name}{_INST_SEP}{group_name}{_INST_SUFFIX_BASE}{inst_idx}"
+
 
 def parse_instance_subject_name(key: str) -> tuple[str, str, int] | None:
     """
@@ -76,11 +80,13 @@ def parse_instance_subject_name(key: str) -> tuple[str, str, int] | None:
             return None
     return None
 
+
 def is_instance_row(key: str) -> bool:
     """
     Returns True if the key strictly matches the generated instance row format.
     """
     return _INSTANCE_PATTERN.match(key) is not None
+
 
 def parse_autc_key(key: str) -> str | None:
     """Returns base_metric or None if not an AUTC key."""
@@ -95,14 +101,18 @@ _THRESHOLD_PREFIX = "t"
 _THRESHOLD_SEP = "_"
 _AUTC_PREFIX = "autc_"
 
+
 def format_threshold_key(threshold: float, metric: str) -> str:
     return f"{_THRESHOLD_PREFIX}{threshold:g}{_THRESHOLD_SEP}{metric}"
+
 
 def format_autc_key(metric: str) -> str:
     return f"{_AUTC_PREFIX}{metric}"
 
+
 # Allow e, E, +, and - in the capture group to support scientific notation
 _THRESHOLD_PATTERN = re.compile(r"^t([0-9\.eE+-]+)_(.+)$")
+
 
 def parse_threshold_key(key: str) -> tuple[float, str] | None:
     """Returns (threshold, base_metric) or None if not a threshold key."""
@@ -114,8 +124,10 @@ def parse_threshold_key(key: str) -> tuple[float, str] | None:
             return None
     return None
 
+
 def is_threshold_key(key: str) -> bool:
     return parse_threshold_key(key) is not None
+
 
 def is_autc_key(key: str) -> bool:
     return parse_autc_key(key) is not None
