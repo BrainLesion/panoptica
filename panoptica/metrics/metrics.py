@@ -52,6 +52,7 @@ class _Metric:
     decreasing: bool
     requires_spatial: bool
     _metric_function: Callable
+    suffix_override: str | None = None
 
     def __call__(
         self,
@@ -116,6 +117,15 @@ class _Metric:
         """
         return not self.decreasing
 
+    @property
+    def suffix(self) -> str:
+        """Returns the override if set, otherwise defaults to '_name'"""
+        return (
+            f"_{self.name.lower()}"
+            if self.suffix_override is None
+            else self.suffix_override
+        )
+
     def score_beats_threshold(
         self, matching_score: float, matching_threshold: float
     ) -> bool:
@@ -153,7 +163,14 @@ class Metric(_Enum_Compare):
     """
 
     DSC = _Metric("DSC", "Dice", False, False, _compute_instance_volumetric_dice)
-    IOU = _Metric("IOU", "Intersection over Union", False, False, _compute_instance_iou)
+    IOU = _Metric(
+        "IOU",
+        "Intersection over Union",
+        False,
+        False,
+        _compute_instance_iou,
+        suffix_override="",
+    )
     ASSD = _Metric(
         "ASSD",
         "Average Symmetric Surface Distance",
@@ -265,6 +282,17 @@ class Metric(_Enum_Compare):
     @property
     def requires_spatial(self):
         return self.value.requires_spatial
+
+    def get_result_key(self, prefix: str, is_std: bool = False) -> str:
+        """
+        Generates standard keys for PanopticaResult (e.g., 'sq', 'pq_dsc', 'sq_hd_std').
+        """
+        key = f"{prefix}{self.value.suffix}"
+
+        if is_std:
+            key += "_std"
+
+        return key
 
     def __hash__(self) -> int:
         return abs(hash(self.name)) % (10**8)

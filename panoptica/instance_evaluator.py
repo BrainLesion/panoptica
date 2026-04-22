@@ -33,7 +33,6 @@ def evaluate_matched_instance(
         if decision_threshold is None:
             raise ValueError("decision metric set but no threshold")
     # Initialize variables for True Positives (tp)
-    tp = len(matched_instance_pair.matched_instances)
     score_dict: dict[Metric, list[float]] = {m: [] for m in eval_metrics}
 
     reference_arr, prediction_arr = (
@@ -42,7 +41,7 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
-    metric_dicts: list[dict[Metric, float]] = [
+    per_instance_results: list[dict[Metric, float]] = [
         _evaluate_instance(
             reference_arr,
             prediction_arr,
@@ -61,17 +60,23 @@ def evaluate_matched_instance(
     #    )
 
     # TODO if instance matcher already gives matching metric, adapt here!
-    for metric_dict in metric_dicts:
-        if decision_metric is None or (
+    tp = 0
+    for instance_result in per_instance_results:
+        if not instance_result:
+            continue
+        accepted = decision_metric is None or (
             decision_threshold is not None
             and decision_metric.score_beats_threshold(
-                metric_dict[decision_metric], decision_threshold
+                instance_result[decision_metric], decision_threshold
             )
-        ):
-            for k, v in metric_dict.items():
-                score_dict[k].append(v)
+        )
+        if not accepted:
+            continue
+        tp += 1
+        for metric, score in instance_result.items():
+            score_dict[metric].append(score)
 
-    # Create and return the PanopticaResult object with computed metrics
+    # Create and return the EvaluateInstancePair object with computed metrics
     return EvaluateInstancePair(
         reference_arr=matched_instance_pair.reference_arr,
         prediction_arr=matched_instance_pair.prediction_arr,

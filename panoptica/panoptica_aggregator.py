@@ -1,3 +1,4 @@
+from panoptica.utils import format_instance_subject_name, validate_subject_name
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
@@ -44,6 +45,7 @@ class Panoptica_Aggregator:
         output_file: Path | str,
         log_times: bool = False,
         continue_file: bool = True,
+        output_individual_instance_metrics: bool = False,
         is_autc: bool = False,
         threshold_step_size: Optional[float] = None,
     ):
@@ -56,6 +58,7 @@ class Panoptica_Aggregator:
             log_times (bool, optional): If True, computation times will be logged. Defaults to False.
             continue_file (bool, optional): If True, results will continue from existing entries in the file.
                 Defaults to True.
+            output_individual_instance_metrics (bool, optional): If True, individual instance metrics will be output. Defaults to False.
             is_autc (bool, optional): If True, the aggregator will compute AUTC metrics. Defaults to False.
             threshold_step_size (Optional[float], optional): The step size for thresholding. Defaults to None.
 
@@ -67,6 +70,7 @@ class Panoptica_Aggregator:
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
         self.__autc = is_autc
         self.__log_times = log_times
+        self.__output_individual_instance_metrics = output_individual_instance_metrics
         self.__threshold_step_size = threshold_step_size
 
         if is_autc:
@@ -183,6 +187,7 @@ class Panoptica_Aggregator:
         Raises:
             ValueError: If the subject name has already been evaluated or is in process.
         """
+        validate_subject_name(subject_name)
         # Read tmp file to see which sample names are blocked
         with inevalfilelock:
             id_list = _load_first_column_entries(self.__output_buffer_file)
@@ -229,28 +234,56 @@ class Panoptica_Aggregator:
         self._save_one_subject(subject_name, res)
 
     def _save_one_subject(self, subject_name, result_grouped):
-        """Saves the evaluation results for a single subject.
-
-        Args:
-            subject_name (str): The name of the subject whose results are being saved.
-            result_grouped (dict): A dictionary of grouped results from the evaluation.
-        """
+        """Saves the evaluation results for a single subject."""
         with filelock:
-            #
-            content = [subject_name]
-            for groupname in self.__class_group_names:
-                result: PanopticaResult | PanopticaAUTCResult = result_grouped[
-                    groupname
-                ]
-                result_dict = result.to_dict()
-                if result.computation_time is not None:
-                    result_dict[COMPUTATION_TIME_KEY] = result.computation_time
-                del result
+            if self.__output_individual_instance_metrics:
+                all_rows = []
+                summary_row = [subject_name]
+                group_rows_as_dicts = {}
+                for groupname in self.__class_group_names:
+                    result: PanopticaResult = result_grouped[groupname]
+                    rows_as_dicts = result.to_dict(True)
+                    group_rows_as_dicts[groupname] = rows_as_dicts
+                    summary_dict = rows_as_dicts[0] if len(rows_as_dicts) > 0 else {}
+                    if result.computation_time is not None:
+                        summary_dict = dict(summary_dict)
+                        summary_dict[COMPUTATION_TIME_KEY] = result.computation_time
+                    for e in self.__evaluation_metrics:
+                        summary_row.append(summary_dict.get(e, ""))
+                all_rows.append(summary_row)
+                for groupname in self.__class_group_names:
+                    rows_as_dicts = group_rows_as_dicts[groupname]
+                    for inst_idx, r_dict in enumerate(rows_as_dicts[1:]):
+                        row = [
+                            format_instance_subject_name(
+                                subject_name, groupname, inst_idx
+                            )
+                        ]
+                        for current_groupname in self.__class_group_names:
+                            if current_groupname == groupname:
+                                for e in self.__evaluation_metrics:
+                                    row.append(r_dict.get(e, ""))
+                            else:
+                                for _ in self.__evaluation_metrics:
+                                    row.append("")
+                        all_rows.append(row)
 
-                for e in self.__evaluation_metrics:
-                    mvalue = result_dict[e] if e in result_dict else ""
-                    content.append(mvalue)
-            _write_content(self.__output_file, [content])
+                _write_content(self.__output_file, all_rows)
+            else:
+                content = [subject_name]
+                for groupname in self.__class_group_names:
+                    result: PanopticaResult | PanopticaAUTCResult = result_grouped[
+                        groupname
+                    ]
+                    result_dict = result.to_dict(False)
+
+                    if result.computation_time is not None:
+                        result_dict[COMPUTATION_TIME_KEY] = result.computation_time
+
+                    for e in self.__evaluation_metrics:
+                        content.append(result_dict.get(e, ""))
+                _write_content(self.__output_file, [content])
+
             print(f"Saved entry {subject_name} into {str(self.__output_file)}")
 
     @property
@@ -333,4 +366,4 @@ def _write_content(file: str | Path, content: list[list[str]]):
     with open(str(file), "a", encoding="utf8", newline="") as tsvfile:
         writer = csv.writer(tsvfile, delimiter="\t", lineterminator="\n")
         for c in content:
-            writer.writerow(c)
+            writer.writerow(["" if v is None else v for v in c])

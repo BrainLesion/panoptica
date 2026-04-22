@@ -25,6 +25,11 @@ from panoptica.utils.input_check_and_conversion.sanity_checker import (
     _InputDataTypeChecker,
 )
 from panoptica.utils.serialization import (
+    format_instance_subject_name,
+    parse_instance_subject_name,
+    is_instance_row,
+    validate_subject_name,
+    validate_group_name,
     format_threshold_key,
     format_autc_key,
     parse_threshold_key,

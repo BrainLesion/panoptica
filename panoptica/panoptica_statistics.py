@@ -1,5 +1,5 @@
+from panoptica.utils import is_instance_row
 from panoptica.utils import format_threshold_key
-from panoptica.utils import is_autc_key
 from panoptica.utils import is_threshold_key
 from panoptica.utils import parse_threshold_key
 import csv
@@ -141,9 +141,27 @@ class Panoptica_Statistic:
         return self.__metricnames
 
     @property
+    def master_subjects(self) -> list[str]:
+        """Returns only the primary subject names (ignoring instance rows)."""
+        return [sn for sn in self.__subj_names if not is_instance_row(sn)]
+
+    @property
+    def instance_subjects(self) -> list[str]:
+        """Returns only the individual instance rows."""
+        return [sn for sn in self.__subj_names if is_instance_row(sn)]
+
+    @property
     def base_metric_names(self) -> list[str]:
         """Returns metric names that are not thresholded"""
         return [m for m in self.__metricnames if not is_threshold_key(m)]
+
+    def master_values(self, values: list[float | None]) -> list[float]:
+        """Pair each value with its subject name and filter out the instance rows."""
+        return [
+            val
+            for sn, val in zip(self.__subj_names, values)
+            if not is_instance_row(sn) and val is not None
+        ]
 
     def get_thresholds_for_metric(self, metric: str) -> list[float]:
         """Returns available thresholds for a specific metric (e.g. 'pq')."""
@@ -462,10 +480,6 @@ class Panoptica_Statistic:
             summary_dict["across_groups"] = self.get_summary_across_groups()
         return summary_dict
 
-    def get_summary(self, group, metric) -> FloatDistribution:
-        values = self.get(group, metric, remove_nones=True)
-        return FloatDistribution(values)
-
     def print_summary(
         self,
         ndigits: int = 3,
@@ -487,6 +501,19 @@ class Panoptica_Statistic:
                 print(m, ":", round(avg, ndigits), "+-", round(std, ndigits))
             print()
 
+    def get_summary(self, group, metric, master_only: bool = True) -> FloatDistribution:
+        """Gets a FloatDistribution for a given group and metric.
+        If master_only is True, ignores individual instance rows to prevent double counting.
+        """
+        all_values = self.get(group, metric, remove_nones=False)
+
+        if master_only:
+            filtered_values = self.master_values(all_values)
+        else:
+            filtered_values = [val for val in all_values if val is not None]
+
+        return FloatDistribution(filtered_values)
+
     def get_summary_figure(
         self,
         metric: str,
@@ -496,23 +523,23 @@ class Panoptica_Statistic:
         horizontal: bool = True,
         sort: bool = True,
         title: str = "",
+        master_only: bool = True,
     ):
-        """Returns a figure object that shows the given metric for each group and its std
-
-        Args:
-            metric (str): _description_
-            horizontal (bool, optional): _description_. Defaults to True.
-
-        Returns:
-            _type_: _description_
-        """
+        """Returns a figure object that shows the given metric for each group and its std"""
         if groups is None:
             groups = self.__groupnames
         if isinstance(groups, str):
             groups = [groups]
-        data_plot = {
-            g: np.asarray(self.get(g, metric, remove_nones=True)) for g in groups
-        }
+
+        data_plot = {}
+        for g in groups:
+            all_values = self.get(g, metric, remove_nones=False)
+            if master_only:
+                filtered_values = self.master_values(all_values)
+            else:
+                filtered_values = [val for val in all_values if val is not None]
+            data_plot[g] = np.asarray(filtered_values)
+
         if manual_metric_range is not None:
             if manual_metric_range[0] >= manual_metric_range[1]:
                 raise ValueError(
