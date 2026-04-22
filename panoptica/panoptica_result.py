@@ -581,7 +581,7 @@ class PanopticaResult(object):
         if calc_func is None:
             if not was_calculated:
                 raise ValueError(
-                    "Tried to add a metric without a calc_function but that hasn't been calculated yet, how did you think this could works?"
+                    "Cannot add metric without a calc_func unless it is marked as already calculated (was_calculated=True)."
                 )
         eval_metric = Evaluation_Metric(
             name_id,
