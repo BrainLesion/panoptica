@@ -8,9 +8,9 @@ from multiprocessing import Lock, set_start_method
 import csv
 import os
 import atexit
-import tempfile
+from tempfile import NamedTemporaryFile
 import warnings
-from typing import Optional
+from typing import Optional, Literal, cast, get_args
 
 # Set start method based on the operating system
 try:
@@ -30,8 +30,9 @@ inevalfilelock = Lock()
 
 COMPUTATION_TIME_KEY = "computation_time"
 
+FileType = Literal["tsv", "jsonl"]
+supported_file_types: tuple[FileType, ...] = get_args(FileType)
 
-#
 class Panoptica_Aggregator:
     """Aggregator that manages evaluations and saves resulting metrics per sample.
 
@@ -45,6 +46,7 @@ class Panoptica_Aggregator:
         output_file: Path | str,
         log_times: bool = False,
         continue_file: bool = True,
+        file_type: FileType = "jsonl",
         output_individual_instance_metrics: bool = False,
         is_autc: bool = False,
         threshold_step_size: Optional[float] = None,
@@ -58,20 +60,24 @@ class Panoptica_Aggregator:
             log_times (bool, optional): If True, computation times will be logged. Defaults to False.
             continue_file (bool, optional): If True, results will continue from existing entries in the file.
                 Defaults to True.
+            file_type (FileType, optional): Format used when `output_file` has no extension. Ignored if `output_file` already has a supported suffix. Defaults to "jsonl".
             output_individual_instance_metrics (bool, optional): If True, individual instance metrics will be output. Defaults to False.
             is_autc (bool, optional): If True, the aggregator will compute AUTC metrics. Defaults to False.
             threshold_step_size (Optional[float], optional): The step size for thresholding. Defaults to None.
 
         Raises:
             FileNotFoundError: If the output directory does not exist.
-            ValueError: If the file extension is not `.tsv`, or if the header of the existing file does not match the expected header based on the evaluator's configuration.
+            ValueError: If the file extension is not supported, or if the header of the existing file does not match the expected header based on the evaluator's configuration.
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
+        self.__file_type = file_type
         self.__autc = is_autc
         self.__log_times = log_times
+        self.__continue_file = continue_file
         self.__output_individual_instance_metrics = output_individual_instance_metrics
         self.__threshold_step_size = threshold_step_size
+        self.__output_buffer_file = NamedTemporaryFile(delete=False).name
 
         if is_autc:
             if self.__threshold_step_size is None:
@@ -79,7 +85,7 @@ class Panoptica_Aggregator:
                     "threshold_step_size must be provided to build AUTC headers"
                 )
             self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
-                threshold_step_size
+                self.__threshold_step_size
             )
         else:
             self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
@@ -89,36 +95,43 @@ class Panoptica_Aggregator:
 
         if isinstance(output_file, str):
             output_file = Path(output_file)
-        # uses tsv
+
         if not output_file.parent.exists():
             raise FileNotFoundError(
                 f"Directory {str(output_file.parent)} does not exist"
             )
 
-        out_file_path = str(output_file)
-
-        # extension
-        if "." in out_file_path:
-            # extension exists
-            extension = out_file_path.split(".")[-1]
-            if extension != "tsv":
+        if output_file.suffix:
+            derived_file_type = output_file.suffix.removeprefix(".")
+            if derived_file_type not in supported_file_types:
                 raise ValueError(
-                    f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
+                    f"You provided the extension {output_file.suffix}, but currently only {', '.join(supported_file_types)} are supported. Either delete it or set a supported extension."
                 )
+
+            # Override preset file type if output file contains suffix
+            self.__file_type = cast(FileType, derived_file_type)
         else:
-            out_file_path += ".tsv"  # add extension
+            output_file = output_file.with_suffix(f".{self.__file_type}")
 
-        # buffer_file = tempfile.NamedTemporaryFile()
-        # out_buffer_file: Path = Path(out_file_path).parent.joinpath("panoptica_aggregator_tmp.tsv")
-        # self.tmpfile =
-        self.__output_buffer_file = tempfile.NamedTemporaryFile(
-            delete=False
-        ).name  # out_buffer_file
-        # print(self.__output_buffer_file)
+        self.__output_file = output_file
 
-        Path(out_file_path).parent.mkdir(parents=False, exist_ok=True)
-        self.__output_file = out_file_path
+        match self.__file_type:
+            case 'tsv':
+                self.__write_tsv()
+            case 'jsonl':
+                self.__write_jsonl()
 
+        atexit.register(self.__exist_handler)
+
+    @property
+    def panoptica_evaluator(self):
+        return self.__panoptica_evaluator
+
+    @property
+    def evaluation_metrics(self):
+        return self.__evaluation_metrics
+
+    def __write_tsv(self):
         header = ["subject_name"] + [
             f"{g}-{m}"
             for g in self.__class_group_names
@@ -126,18 +139,16 @@ class Panoptica_Aggregator:
         ]
         header_hash = hash("+".join(header))
 
-        if not output_file.exists():
-            # write header
-            _write_content(output_file, [header])
+        if not self.__output_file.exists():
+            _write_content(self.__output_file, [header])
         else:
-            header_list = _read_first_row(output_file)
+            header_list = _read_first_row(self.__output_file)
             if len(header_list) == 0:
-                # empty file
                 print(
                     f"{self.__output_file}: Output file given is empty, will start with header"
                 )
-                _write_content(output_file, [header])
-                continue_file = True
+                _write_content(self.__output_file, [header])
+                self.__continue_file = True
             else:
                 # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
                 if header_hash != hash("+".join(header_list)):
@@ -145,13 +156,14 @@ class Panoptica_Aggregator:
                         f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
                     )
 
-        if continue_file:
+        if self.__continue_file:
             with inevalfilelock:
                 with filelock:
                     id_list = _load_first_column_entries(self.__output_file)
                     _write_content(self.__output_buffer_file, [[s] for s in id_list])
 
-        atexit.register(self.__exist_handler)
+    def __write_jsonl(self):
+        raise NotImplementedError()
 
     def __exist_handler(self):
         """Handles cleanup upon program exit by removing the temporary output buffer file."""
@@ -231,9 +243,13 @@ class Panoptica_Aggregator:
             )
 
         # Add to file
-        self._save_one_subject(subject_name, res)
+        match self.__file_type:
+            case 'tsv':
+                self._save_one_subject_tsv(subject_name, res)
+            case 'jsonl':
+                self._save_one_subject_jsonl(subject_name, res)
 
-    def _save_one_subject(self, subject_name, result_grouped):
+    def _save_one_subject_tsv(self, subject_name, result_grouped):
         """Saves the evaluation results for a single subject."""
         with filelock:
             if self.__output_individual_instance_metrics:
@@ -286,13 +302,8 @@ class Panoptica_Aggregator:
 
             print(f"Saved entry {subject_name} into {str(self.__output_file)}")
 
-    @property
-    def panoptica_evaluator(self):
-        return self.__panoptica_evaluator
-
-    @property
-    def evaluation_metrics(self):
-        return self.__evaluation_metrics
+    def _save_one_subject_jsonl(self, subject_name, result_grouped):
+        raise NotImplementedError()
 
 
 def _read_first_row(file: str | Path):
