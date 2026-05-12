@@ -11,7 +11,7 @@ from tempfile import NamedTemporaryFile
 import warnings
 from typing import Optional
 
-from panoptica.utils.file_type import FileType
+from panoptica.utils import FileType
 from panoptica.utils.file_backend import COMPUTATION_TIME_KEY, get_backend
 
 # Set start method based on the operating system

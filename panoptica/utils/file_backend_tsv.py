@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from panoptica.utils import (
-    FileBackend,
-)
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+from panoptica.utils.file_backend import FileBackend
+from panoptica.utils.serialization import (
+    format_instance_subject_name, 
+    is_instance_row, 
+    parse_instance_subject_name
+)
+from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
 import numpy as np
 import csv
 

@@ -3,10 +3,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Literal, get_args
-from panoptica.utils import (
-    TSVBackend,
-    JSONLBackend
-)
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 
 COMPUTATION_TIME_KEY = "computation_time"
@@ -79,6 +75,9 @@ class FileBackend(ABC):
         aggregator.
         """
 
+
+from panoptica.utils.file_backend_tsv import TSVBackend
+from panoptica.utils.file_backend_jsonl import JSONLBackend
 
 _BACKENDS: dict[FileType, type[FileBackend]] = {
     "tsv": TSVBackend,

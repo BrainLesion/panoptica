@@ -95,8 +95,8 @@ class Panoptica_Statistic:
         subj_names: list[str],
         value_dict: dict[str, dict[str, list[float | None]]],
     ) -> None:
-        """_summary_
-
+        """A core container and analysis class for managing evaluation metrics across multiple subjects, groups, and metric types.
+        
         Args:
             subj_names (list[str]): List of subject names in the same order as the list of values passed in value_dict
             value_dict (dict[str, dict[str, list[float | None]]]): Mapping Group to Metric to list of values. ``None`` represents a missing value (e.g. an empty cell in the TSV).
