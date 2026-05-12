@@ -8,7 +8,7 @@ from panoptica.utils import (
 import numpy as np
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 try:
     import pandas as pd
@@ -193,6 +193,28 @@ class Panoptica_Statistic:
         subj_names, value_dict = backend.load_raw(verbose=verbose)
         return cls(subj_names=subj_names, value_dict=value_dict)
 
+    def to_file(self, file: str | Path) -> None:
+        """Writes the full statistic to disk, format chosen from the file
+        extension (``.tsv`` or ``.jsonl``). Overwrites any existing file.
+
+        Args:
+            file (str | Path): Path with a supported extension.
+
+        Raises:
+            ValueError: If the file has no extension or the extension is
+                not in ``supported_file_types``.
+        """
+        path = Path(file) if isinstance(file, str) else file
+        if path.exists():
+            path.unlink()
+        backend = get_backend(path)
+        backend.write_full(
+            self.__subj_names,
+            self.__value_dict,
+            self.__groupnames,
+            self.__metricnames,
+        )
+
 
     def _assertgroup(self, group):
         if group not in self.__groupnames:
@@ -220,7 +242,19 @@ class Panoptica_Statistic:
             for m in self.__metricnames:
                 self.__value_dict[g][m].pop(sidx)
 
-    def get(self, group, metric, remove_nones: bool = False) -> list[float | None]:
+    @overload
+    def get(
+        self, group: str, metric: str, remove_nones: Literal[True]
+    ) -> list[float]: ...
+    @overload
+    def get(
+        self, group: str, metric: str, remove_nones: Literal[False] = False
+    ) -> list[float | None]: ...
+    @overload
+    def get(
+        self, group: str, metric: str, remove_nones: bool
+    ) -> list[float | None]: ...
+    def get(self, group, metric, remove_nones: bool = False):
         """Returns the list of values for given group and metric.
 
         Missing values are returned as ``None`` unless ``remove_nones=True``.
@@ -247,7 +281,11 @@ class Panoptica_Statistic:
         else:
             vdict = {self.__subj_names[i]: values[i] for i in range(len(values))}
         vdict = dict(
-            sorted(vdict.items(), key=lambda x: x[1], reverse=not sort_ascending)
+            sorted(
+                vdict.items(),
+                key=lambda x: (x[1] is None, x[1]),
+                reverse=not sort_ascending,
+            )
         )
         return vdict
 

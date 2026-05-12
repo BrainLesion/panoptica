@@ -38,5 +38,6 @@ from panoptica.utils.serialization import (
     is_autc_key,
     _AUTC_PREFIX,
 )
-from panoptica.utils.file_type import FileType, supported_file_types, derive_file_type
-from panoptica.utils.file_backend import FileBackend, get_backend
+from panoptica.utils.file_backend import FileBackend, get_backend, FileType, supported_file_types, derive_file_type
+from panoptica.utils.file_backend_jsonl import JSONLBackend
+from panoptica.utils.file_backend_tsv import TSVBackend
