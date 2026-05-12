@@ -135,7 +135,7 @@ class TSVBackend(FileBackend):
     ) -> tuple[list[str], dict[str, dict[str, list[float | None]]]]:
         with open(self.path, "r", encoding="utf8", newline="") as tsvfile:
             rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
-            rows = [row for row in rd]
+            rows = list(rd)
 
         header = rows[0]
         if header[0] != "subject_name":

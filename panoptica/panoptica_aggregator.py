@@ -74,7 +74,9 @@ class Panoptica_Aggregator:
         self.__continue_file = continue_file
         self.__output_individual_instance_metrics = output_individual_instance_metrics
         self.__threshold_step_size = threshold_step_size
-        self.__output_buffer_file = NamedTemporaryFile(delete=False).name
+
+        with NamedTemporaryFile(delete=False) as tmp:
+            self.__output_buffer_file = tmp.name
 
         if is_autc:
             if self.__threshold_step_size is None:
