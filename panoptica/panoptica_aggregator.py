@@ -79,7 +79,7 @@ class Panoptica_Aggregator:
                     "threshold_step_size must be provided to build AUTC headers"
                 )
             self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
-                threshold_step_size
+                self.__threshold_step_size
             )
         else:
             self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys
