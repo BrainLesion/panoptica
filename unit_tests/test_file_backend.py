@@ -15,7 +15,6 @@ from panoptica.utils.file_backend import (
     get_backend,
 )
 
-
 _TMP_DIR = Path(__file__).parent
 
 
@@ -112,8 +111,30 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         backend = JSONLBackend(self.path)
         backend.prepare_for_append(["liver"], ["dice", "tp"])
         with open(self.path, "a", encoding="utf8") as f:
-            f.write(json.dumps({"subject_name": "subj_a", "groups": {"liver": {"dice": 0.9, "tp": 5.0}}}) + "\n")
-            f.write(json.dumps({"subject_name": "subj_b", "groups": {"liver": {"dice": 0.8, "tp": 4.0, "instances": [{"sq_dice": 0.95}]}}}) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {
+                            "liver": {
+                                "dice": 0.8,
+                                "tp": 4.0,
+                                "instances": [{"sq_dice": 0.95}],
+                            }
+                        },
+                    }
+                )
+                + "\n"
+            )
         backend2 = JSONLBackend(self.path)
         existing = backend2.prepare_for_append(["liver"], ["dice", "tp"])
         self.assertEqual(existing, ["subj_a", "subj_b", "subj_b-liver_inst_0"])
@@ -122,18 +143,38 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         backend = JSONLBackend(self.path)
         backend.prepare_for_append(["liver"], ["dice", "tp"])
         with open(self.path, "a", encoding="utf8") as f:
-            f.write(json.dumps({"subject_name": "subj_a", "groups": {"liver": {"dice": 0.9, "tp": 5.0}}}) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
         backend2 = JSONLBackend(self.path)
-        with self.assertRaisesRegex(ValueError, "schema of existing file does not match"):
+        with self.assertRaisesRegex(
+            ValueError, "schema of existing file does not match"
+        ):
             backend2.prepare_for_append(["liver", "spleen"], ["dice", "tp"])
 
     def test_prepare_for_append_raises_on_schema_mismatch_metrics(self):
         backend = JSONLBackend(self.path)
         backend.prepare_for_append(["liver"], ["dice", "tp"])
         with open(self.path, "a", encoding="utf8") as f:
-            f.write(json.dumps({"subject_name": "subj_a", "groups": {"liver": {"dice": 0.9, "tp": 5.0}}}) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
         backend2 = JSONLBackend(self.path)
-        with self.assertRaisesRegex(ValueError, "schema of existing file does not match"):
+        with self.assertRaisesRegex(
+            ValueError, "schema of existing file does not match"
+        ):
             backend2.prepare_for_append(["liver"], ["dice", "iou"])
 
     def test_aggregator_writes_one_jsonl_line_per_subject(self):
@@ -196,7 +237,15 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
     def test_load_raw_missing_value_round_trips_to_none(self):
         # Write a record with an explicit JSON null and verify it loads as None
         with open(self.path, "w", encoding="utf8") as f:
-            f.write(json.dumps({"subject_name": "subj_a", "groups": {"ungrouped": {"dice": None, "tp": 5.0}}}) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"ungrouped": {"dice": None, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
         backend = JSONLBackend(self.path)
         subj_names, value_dict = backend.load_raw(verbose=False)
         self.assertEqual(subj_names, ["subj_a"])

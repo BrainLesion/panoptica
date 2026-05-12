@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 from panoptica.utils.serialization import (
-    format_instance_subject_name, 
-    is_instance_row, 
-    parse_instance_subject_name
+    format_instance_subject_name,
+    is_instance_row,
+    parse_instance_subject_name,
 )
 from panoptica.utils.file_backend import FileBackend
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
@@ -73,9 +73,7 @@ class JSONLBackend(FileBackend):
                 inst_list = g_data.get("instances")
                 if inst_list:
                     for inst_idx in range(len(inst_list)):
-                        existing.append(
-                            format_instance_subject_name(sn, g, inst_idx)
-                        )
+                        existing.append(format_instance_subject_name(sn, g, inst_idx))
         return existing
 
     def append_subject(
@@ -246,6 +244,7 @@ def _parse_jsonl_value(v) -> float | None:
             return None
         return f
     return v
+
 
 def _read_first_jsonl_record(path: Path) -> dict | None:
     """Reads the first JSON record from a JSONL file, skipping blank lines.

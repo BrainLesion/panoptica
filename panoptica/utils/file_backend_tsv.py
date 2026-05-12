@@ -4,13 +4,14 @@ from pathlib import Path
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import FileBackend
 from panoptica.utils.serialization import (
-    format_instance_subject_name, 
-    is_instance_row, 
-    parse_instance_subject_name
+    format_instance_subject_name,
+    is_instance_row,
+    parse_instance_subject_name,
 )
 from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
 import numpy as np
 import csv
+
 
 class TSVBackend(FileBackend):
     """Tab-separated values format. One row per subject (plus optional
@@ -78,9 +79,7 @@ class TSVBackend(FileBackend):
                 rows_as_dicts = group_rows_as_dicts[groupname]
                 for inst_idx, r_dict in enumerate(rows_as_dicts[1:]):
                     row: list = [
-                        format_instance_subject_name(
-                            subject_name, groupname, inst_idx
-                        )
+                        format_instance_subject_name(subject_name, groupname, inst_idx)
                     ]
                     for current_groupname in class_group_names:
                         if current_groupname == groupname:
@@ -199,6 +198,7 @@ def _canonical_tsv_value(v):
             return ""
         return f
     return v
+
 
 def _read_first_tsv_row(path: Path) -> list[str]:
     """Reads the first row of a TSV file. NOT THREAD SAFE BY ITSELF."""

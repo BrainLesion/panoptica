@@ -7,6 +7,7 @@ from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 
 COMPUTATION_TIME_KEY = "computation_time"
 
+
 class FileBackend(ABC):
     """Strategy for reading/writing Panoptica aggregator results to a file.
 
@@ -84,12 +85,15 @@ _BACKENDS: dict[FileType, type[FileBackend]] = {
     "jsonl": JSONLBackend,
 }
 
+
 def get_backend(path: Path) -> FileBackend:
     """Resolves a ``FileBackend`` for the given path by its extension."""
     return _BACKENDS[derive_file_type(path)](path)
 
+
 FileType = Literal["tsv", "jsonl"]
 supported_file_types: tuple[FileType, ...] = get_args(FileType)
+
 
 def derive_file_type(file_path: Path) -> FileType:
     """Derives the supported file type from a path's extension.
