@@ -1,7 +1,4 @@
-from panoptica.utils import is_instance_row
-from panoptica.utils import format_threshold_key
-from panoptica.utils import is_threshold_key
-from panoptica.utils import parse_threshold_key
+from panoptica.utils import (is_threshold_key, parse_threshold_key, format_threshold_key, is_instance_row, derive_file_type)
 import csv
 import numpy as np
 import warnings
@@ -169,12 +166,54 @@ class Panoptica_Statistic:
 
     @classmethod
     def from_file(cls, file: str | Path, verbose: bool = True):
-        if isinstance(file, Path):
-            file = str(file)
-        if not file.endswith(".tsv"):
-            file += ".tsv"
+        """Loads a Panoptica_Statistic from a results file produced by ``Panoptica_Aggregator``.
+
+        Dispatches to the appropriate parser based on the file extension.
+
+        Args:
+            file (str | Path): Path to a TSV or JSONL results file.
+            verbose (bool, optional): If True, prints a short summary of
+                the metrics/groups discovered. Defaults to True.
+
+        Returns:
+            Panoptica_Statistic: Statistic populated from the file.
+
+        Raises:
+            ValueError: If the file has no extension or the extension is
+                not in ``supported_file_types``.
+        """
+        if isinstance(file, str):
+            file = Path(file)
+
+        if not file.suffix:
+            raise ValueError(f"File extension missing. Please specify an available file extension ({', '.join(supported_file_types)}).")
+
+        match derive_file_type(file):
+            case 'tsv':
+                return Panoptica_Statistic._from_tsv_file(str(file))
+            case 'jsonl':
+                return Panoptica_Statistic._from_jsonl_file(str(file))
+        
+    @classmethod
+    def _from_tsv_file(cls, file: str, verbose: bool = True):
+        """Parses a TSV results file into a Panoptica_Statistic.
+
+        Expects the header row to begin with ``subject_name`` followed by
+        ``"{group}-{metric}"`` columns. Empty cells are loaded as ``None``.
+
+        Args:
+            file (str): Path to the TSV file.
+            verbose (bool, optional): If True, prints the discovered
+                metrics and groups. Defaults to True.
+
+        Returns:
+            Panoptica_Statistic: Statistic populated from the file.
+
+        Raises:
+            ValueError: If the first column header is not ``subject_name``.
+        """
         # check integrity of header and so on
-        with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
+        with open(file, "r", encoding="utf8", newline="") as tsvfile:
             rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
 
             rows = [row for row in rd]
@@ -227,6 +266,28 @@ class Panoptica_Statistic:
 
         return Panoptica_Statistic(subj_names=subj_names, value_dict=value_dict)
 
+    @classmethod
+    def _from_jsonl_file(cls, file: str, verbose: bool = True):
+        """Parses a JSONL results file into a Panoptica_Statistic.
+
+        Each line is expected to be a JSON object describing one subject
+        with nested per-group summary and (optional) matched-instance
+        metrics, as produced by
+        ``Panoptica_Aggregator._save_one_subject_jsonl``.
+
+        Args:
+            file (str): Path to the JSONL file.
+            verbose (bool, optional): If True, prints the discovered
+                metrics and groups. Defaults to True.
+
+        Returns:
+            Panoptica_Statistic: Statistic populated from the file.
+
+        Raises:
+            NotImplementedError: JSONL reading is not yet implemented.
+        """
+        raise NotImplementedError()
+    
     def _assertgroup(self, group):
         if group not in self.__groupnames:
             raise KeyError(

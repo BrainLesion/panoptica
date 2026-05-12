@@ -10,7 +10,9 @@ import os
 import atexit
 from tempfile import NamedTemporaryFile
 import warnings
-from typing import Optional, Literal, cast, get_args
+from typing import Optional
+
+from panoptica.utils.file_type import FileType, derive_file_type
 
 # Set start method based on the operating system
 try:
@@ -29,9 +31,6 @@ filelock = Lock()
 inevalfilelock = Lock()
 
 COMPUTATION_TIME_KEY = "computation_time"
-
-FileType = Literal["tsv", "jsonl"]
-supported_file_types: tuple[FileType, ...] = get_args(FileType)
 
 class Panoptica_Aggregator:
     """Aggregator that manages evaluations and saves resulting metrics per sample.
@@ -102,14 +101,8 @@ class Panoptica_Aggregator:
             )
 
         if output_file.suffix:
-            derived_file_type = output_file.suffix.removeprefix(".")
-            if derived_file_type not in supported_file_types:
-                raise ValueError(
-                    f"You provided the extension {output_file.suffix}, but currently only {', '.join(supported_file_types)} are supported. Either delete it or set a supported extension."
-                )
-
             # Override preset file type if output file contains suffix
-            self.__file_type = cast(FileType, derived_file_type)
+            self.__file_type = derive_file_type(output_file)
         else:
             output_file = output_file.with_suffix(f".{self.__file_type}")
 
@@ -132,6 +125,17 @@ class Panoptica_Aggregator:
         return self.__evaluation_metrics
 
     def __write_tsv(self):
+        """Initializes the TSV output file.
+
+        Writes the header if the file is new or empty, validates header
+        consistency on continuation, and seeds the buffer file with the
+        subject names already present in the file when ``continue_file``
+        is True.
+
+        Raises:
+            ValueError: If the existing file's header hash differs from
+                the header derived from the current evaluator configuration.
+        """
         header = ["subject_name"] + [
             f"{g}-{m}"
             for g in self.__class_group_names
@@ -163,6 +167,16 @@ class Panoptica_Aggregator:
                     _write_content(self.__output_buffer_file, [[s] for s in id_list])
 
     def __write_jsonl(self):
+        """Initializes the JSONL output file.
+
+        JSONL counterpart to ``__write_tsv``: validates schema/config
+        compatibility with any existing file and seeds the buffer file
+        with previously written subject names when ``continue_file`` is
+        True.
+
+        Raises:
+            NotImplementedError: JSONL writing is not yet implemented.
+        """
         raise NotImplementedError()
 
     def __exist_handler(self):
@@ -303,6 +317,20 @@ class Panoptica_Aggregator:
             print(f"Saved entry {subject_name} into {str(self.__output_file)}")
 
     def _save_one_subject_jsonl(self, subject_name, result_grouped):
+        """Appends one nested JSON record for a single subject to the JSONL file.
+
+        Each record carries the per-group summary metrics and, for
+        ``PanopticaResult`` (non-AUTC) outputs, a list of matched-instance
+        metrics — mirroring the schema described in the JSONL design.
+
+        Args:
+            subject_name: Identifier for the evaluated subject.
+            result_grouped: Mapping from group name to ``PanopticaResult``
+                or ``PanopticaAUTCResult`` produced by the evaluator.
+
+        Raises:
+            NotImplementedError: JSONL saving is not yet implemented.
+        """
         raise NotImplementedError()
 
 
