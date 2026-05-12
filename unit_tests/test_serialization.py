@@ -1,3 +1,4 @@
+import csv
 import os
 import unittest
 from pathlib import Path
@@ -7,7 +8,6 @@ import numpy as np
 from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
-from panoptica.panoptica_aggregator import _write_content
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.utils.label_group import LabelGroup
 from panoptica.utils.segmentation_class import SegmentationClassGroups
@@ -151,7 +151,10 @@ class Test_Write_Content_None_Normalization(unittest.TestCase):
     def test_none_written_as_empty_and_read_back_as_none(self):
         header = ["subject_name", "liver-dice", "liver-tp"]
         row = ["subj_a", None, 5]
-        _write_content(self.tmp_file, [header, row])
+        with open(self.tmp_file, "w", encoding="utf8", newline="") as f:
+            writer = csv.writer(f, delimiter="\t", lineterminator="\n")
+            for r in (header, row):
+                writer.writerow(["" if v is None else v for v in r])
 
         stat = Panoptica_Statistic.from_file(self.tmp_file, verbose=False)
         # Missing value must round-trip to None, not blow up on float("None").

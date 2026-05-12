@@ -1,8 +1,14 @@
-from panoptica.utils import (is_threshold_key, parse_threshold_key, format_threshold_key, is_instance_row, derive_file_type)
-import csv
+from panoptica.utils import (
+    is_threshold_key,
+    parse_threshold_key,
+    format_threshold_key,
+    is_instance_row,
+    get_backend,
+)
 import numpy as np
 import warnings
 from pathlib import Path
+from typing import Any
 
 try:
     import pandas as pd
@@ -87,13 +93,13 @@ class Panoptica_Statistic:
     def __init__(
         self,
         subj_names: list[str],
-        value_dict: dict[str, dict[str, list[float]]],
+        value_dict: dict[str, dict[str, list[float | None]]],
     ) -> None:
         """_summary_
 
         Args:
             subj_names (list[str]): List of subject names in the same order as the list of values passed in value_dict
-            value_dict (dict[str, dict[str, list[float]]]): Mapping Group to Metric to list of values
+            value_dict (dict[str, dict[str, list[float | None]]]): Mapping Group to Metric to list of values. ``None`` represents a missing value (e.g. an empty cell in the TSV).
         """
         self.__subj_names = subj_names
         self.__value_dict = value_dict
@@ -168,7 +174,7 @@ class Panoptica_Statistic:
     def from_file(cls, file: str | Path, verbose: bool = True):
         """Loads a Panoptica_Statistic from a results file produced by ``Panoptica_Aggregator``.
 
-        Dispatches to the appropriate parser based on the file extension.
+        Dispatches to the appropriate backend based on the file extension.
 
         Args:
             file (str | Path): Path to a TSV or JSONL results file.
@@ -182,112 +188,12 @@ class Panoptica_Statistic:
             ValueError: If the file has no extension or the extension is
                 not in ``supported_file_types``.
         """
-        if isinstance(file, str):
-            file = Path(file)
+        path = Path(file) if isinstance(file, str) else file
+        backend = get_backend(path)
+        subj_names, value_dict = backend.load_raw(verbose=verbose)
+        return cls(subj_names=subj_names, value_dict=value_dict)
 
-        if not file.suffix:
-            raise ValueError(f"File extension missing. Please specify an available file extension ({', '.join(supported_file_types)}).")
 
-        match derive_file_type(file):
-            case 'tsv':
-                return Panoptica_Statistic._from_tsv_file(str(file))
-            case 'jsonl':
-                return Panoptica_Statistic._from_jsonl_file(str(file))
-        
-    @classmethod
-    def _from_tsv_file(cls, file: str, verbose: bool = True):
-        """Parses a TSV results file into a Panoptica_Statistic.
-
-        Expects the header row to begin with ``subject_name`` followed by
-        ``"{group}-{metric}"`` columns. Empty cells are loaded as ``None``.
-
-        Args:
-            file (str): Path to the TSV file.
-            verbose (bool, optional): If True, prints the discovered
-                metrics and groups. Defaults to True.
-
-        Returns:
-            Panoptica_Statistic: Statistic populated from the file.
-
-        Raises:
-            ValueError: If the first column header is not ``subject_name``.
-        """
-        # check integrity of header and so on
-        with open(file, "r", encoding="utf8", newline="") as tsvfile:
-            rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
-
-            rows = [row for row in rd]
-
-        header = rows[0]
-        if header[0] != "subject_name":
-            raise ValueError(
-                "First column is not subject_names, something wrong with the file?"
-            )
-
-        keys_in_order = list([tuple(c.split("-", maxsplit=1)) for c in header[1:]])
-        keys_in_order = list(
-            k if len(k) == 2 else ("ungrouped", k[0]) for k in keys_in_order
-        )
-        metric_names = []
-        for k in keys_in_order:
-            if k[1] not in metric_names:
-                metric_names.append(k[1])
-        group_names = list(set([k[0] for k in keys_in_order]))
-
-        if verbose:
-            print(f"Found {len(rows)-1} entries")
-            print(f"Found metrics: {metric_names}")
-            print(f"Found groups: {group_names}")
-
-        # initialize collection
-        subj_names = []
-        # list of floats in order fo subject_names
-        # from group to metric to list of values
-        value_dict: dict[str, dict[str, list[float]]] = {}
-
-        # now load entries
-        for r in rows[1:]:
-            sn = r[0]  # subject_name
-            subj_names.append(sn)
-
-            for idx, value in enumerate(r[1:]):
-                group_name, metric_name = keys_in_order[idx]
-                if group_name not in value_dict:
-                    value_dict[group_name] = {m: [] for m in metric_names}
-
-                if len(value) > 0:
-                    value = float(value)
-                    if value is not None and not np.isnan(value) and value != np.inf:
-                        value_dict[group_name][metric_name].append(float(value))
-                    else:
-                        value_dict[group_name][metric_name].append(None)
-                else:
-                    value_dict[group_name][metric_name].append(None)
-
-        return Panoptica_Statistic(subj_names=subj_names, value_dict=value_dict)
-
-    @classmethod
-    def _from_jsonl_file(cls, file: str, verbose: bool = True):
-        """Parses a JSONL results file into a Panoptica_Statistic.
-
-        Each line is expected to be a JSON object describing one subject
-        with nested per-group summary and (optional) matched-instance
-        metrics, as produced by
-        ``Panoptica_Aggregator._save_one_subject_jsonl``.
-
-        Args:
-            file (str): Path to the JSONL file.
-            verbose (bool, optional): If True, prints the discovered
-                metrics and groups. Defaults to True.
-
-        Returns:
-            Panoptica_Statistic: Statistic populated from the file.
-
-        Raises:
-            NotImplementedError: JSONL reading is not yet implemented.
-        """
-        raise NotImplementedError()
-    
     def _assertgroup(self, group):
         if group not in self.__groupnames:
             raise KeyError(
@@ -314,15 +220,10 @@ class Panoptica_Statistic:
             for m in self.__metricnames:
                 self.__value_dict[g][m].pop(sidx)
 
-    def get(self, group, metric, remove_nones: bool = False) -> list[float]:
-        """Returns the list of values for given group and metric
+    def get(self, group, metric, remove_nones: bool = False) -> list[float | None]:
+        """Returns the list of values for given group and metric.
 
-        Args:
-            group (_type_): _description_
-            metric (_type_): _description_
-
-        Returns:
-            list[float]: _description_
+        Missing values are returned as ``None`` unless ``remove_nones=True``.
         """
         self._assertgroup(group)
         self._assertmetric(metric)
@@ -429,15 +330,14 @@ class Panoptica_Statistic:
         for subj in self.__subj_names:
             subj_values = self.get_one_subject(subj)
             for g in self.__groupnames:
-                entry = {"subject_name": subj}
-                entry["group"] = g
+                entry: dict[str, Any] = {"subject_name": subj, "group": g}
                 for m in self.__metricnames:
                     entry[m] = subj_values[g][m]
                 data.append(entry)
         df = pd.DataFrame(data)
         return df
 
-    def get_across_groups(self, metric) -> list[float]:
+    def get_across_groups(self, metric) -> list[float | None]:
         """Given metric, gives list of all values (even across groups!) Treat with care!
 
         Args:
