@@ -175,3 +175,88 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
         # Cleanup
         if os.path.exists(str(output_test_dir)):
             os.remove(str(output_test_dir))
+
+    def test_aggregator_volume_voxelspacing(self):
+        import csv
+
+        # Two equal-sized 10x10 instances => 100 voxels each.
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy()
+        a[10:20, 10:20] = 1
+        b[10:20, 10:20] = 1
+        a[30:40, 30:40] = 2
+        b[30:40, 30:40] = 2
+
+        voxels_per_instance = 100
+        print("HALLO")
+
+        # Use a dedicated output file so a failure here cannot poison the
+        # other tests that share output_test_dir.
+        output_file = Path(__file__).parent.joinpath(
+            "unittest_volume_voxsp.tsv"
+        )
+
+        def _run_and_read(voxelspacing):
+            if output_file.exists():
+                os.remove(str(output_file))
+
+            evaluator = Panoptica_Evaluator(
+                expected_input=InputType.SEMANTIC,
+                instance_approximator=ConnectedComponentsInstanceApproximator(),
+                instance_matcher=NaiveThresholdMatching(),
+                instance_metrics=[Metric.DSC, Metric.IOU, Metric.VOLUME],
+            )
+            aggregator = Panoptica_Aggregator(
+                evaluator,
+                output_file=output_file,
+                output_individual_instance_metrics=True,
+            )
+            aggregator.evaluate(b, a, "vs_test", voxelspacing=voxelspacing)
+
+            with open(str(output_file), "r", encoding="utf8", newline="") as f:
+                rows = list(csv.reader(f, delimiter="\t"))
+            return rows
+
+        try:
+            for voxelspacing in [(1.0, 1.0), (2.0, 3.0)]:
+                expected_volume = voxels_per_instance * float(
+                    np.prod(voxelspacing)
+                )
+
+                rows = _run_and_read(voxelspacing)
+                # 1 header + 1 master row + 2 instance rows
+                self.assertEqual(len(rows), 4, f"Unexpected row count for {voxelspacing}")
+
+                header = rows[0]
+                master_row, inst_0_row, inst_1_row = rows[1], rows[2], rows[3]
+
+                vol_col = next(
+                    (i for i, name in enumerate(header) if name.endswith("-instance_volume_ref")),
+                    -1,
+                )
+                self.assertGreaterEqual(
+                    vol_col,
+                    0,
+                    f"Volume column not found in header for {voxelspacing}",
+                )
+
+                # Master row holds the average across instances; per-instance
+                # rows hold the individual volume in the same column.
+                self.assertAlmostEqual(
+                    float(master_row[vol_col]),
+                    expected_volume,
+                    msg=f"Master avg_volume mismatch for {voxelspacing}",
+                )
+                self.assertAlmostEqual(
+                    float(inst_0_row[vol_col]),
+                    expected_volume,
+                    msg=f"Instance 0 volume mismatch for {voxelspacing}",
+                )
+                self.assertAlmostEqual(
+                    float(inst_1_row[vol_col]),
+                    expected_volume,
+                    msg=f"Instance 1 volume mismatch for {voxelspacing}",
+                )
+        finally:
+            if output_file.exists():
+                os.remove(str(output_file))

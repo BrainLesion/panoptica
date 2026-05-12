@@ -10,7 +10,9 @@ from panoptica.metrics.dice import (
     _compute_dice_coefficient,
     _compute_instance_volumetric_dice,
 )
-
+from panoptica.metrics.volume import (
+    _compute_instance_physical_volume
+)
 from panoptica.metrics.relative_volume_difference import (
     _compute_instance_relative_volume_difference,
     _compute_relative_volume_difference,
