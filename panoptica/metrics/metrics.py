@@ -223,7 +223,7 @@ class Metric(_Enum_Compare):
         True,
         _compute_instance_normalized_surface_dice,
     )
-    # VOLUME is an informational quantity describing the reference instance, not a quality score. 
+    # VOLUME is an informational quantity describing the reference instance, not a quality score.
     # ``decreasing=False`` is arbitrary; do not use VOLUME as a ``decision_metric`` or ``matching_metric``.
     VOLUME = _Metric(
         "VOLUME",
