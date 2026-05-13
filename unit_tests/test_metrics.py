@@ -424,6 +424,49 @@ class Test_NSD(unittest.TestCase):
         self.assertEqual(mv, 1.0)
 
 
+class Test_VOLUME(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        return super().setUp()
+
+    def test_volume_unit_spacing_default(self):
+        # voxelspacing=None falls back to unit spacing matching reference_arr.ndim
+        pred_arr, ref_arr = case_simple_identical()
+        ref_voxels = int(np.count_nonzero(ref_arr == 1))
+        v = Metric.VOLUME(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+        )
+        self.assertEqual(v, float(ref_voxels))
+
+    def test_volume_3d_anisotropic_spacing(self):
+        # Non-unit, non-uniform 3D voxelspacing -> volume = count * prod(spacing)
+        ref_arr = np.zeros((10, 10, 10), dtype=np.uint8)
+        ref_arr[2:5, 2:5, 2:5] = 1  # 3*3*3 = 27 voxels
+        pred_arr = ref_arr.copy()
+        spacing = (0.5, 2.0, 3.0)  # prod = 3.0
+        v = Metric.VOLUME(
+            reference_arr=ref_arr,
+            prediction_arr=pred_arr,
+            ref_instance_idx=1,
+            pred_instance_idx=1,
+            voxelspacing=spacing,
+        )
+        self.assertAlmostEqual(v, 27 * 3.0)
+
+    def test_volume_dimension_mismatch_raises(self):
+        ref_arr = np.zeros((4, 4), dtype=np.uint8)
+        ref_arr[1:3, 1:3] = 1
+        with self.assertRaises(ValueError):
+            Metric.VOLUME(
+                reference_arr=ref_arr,
+                prediction_arr=ref_arr,
+                voxelspacing=(1.0, 1.0, 1.0),
+            )
+
+
 # class Test_ST(unittest.TestCase):
 #    def setUp(self) -> None:
 #        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"

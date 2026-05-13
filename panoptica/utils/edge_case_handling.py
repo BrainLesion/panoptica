@@ -206,6 +206,9 @@ class EdgeCaseHandler(SupportsConfig):
             Metric.RVAE: MetricZeroTPEdgeCaseHandling(
                 default_result=EdgeCaseResult.NAN,
             ),
+            Metric.VOLUME: MetricZeroTPEdgeCaseHandling(
+                default_result=EdgeCaseResult.NAN,
+            ),
         },
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,
     ) -> None:

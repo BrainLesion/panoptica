@@ -2,6 +2,7 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
+import csv
 import os
 import unittest
 
@@ -109,8 +110,6 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
         os.remove(str(output_test_dir))
 
     def test_aggregator_individual_instance_metrics(self):
-        import csv
-
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
 
@@ -177,8 +176,6 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             os.remove(str(output_test_dir))
 
     def test_aggregator_volume_voxelspacing(self):
-        import csv
-
         # Two equal-sized 10x10 instances => 100 voxels each.
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy()
@@ -256,6 +253,103 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                     expected_volume,
                     msg=f"Instance 1 volume mismatch for {voxelspacing}",
                 )
+        finally:
+            if output_file.exists():
+                os.remove(str(output_file))
+
+    def test_aggregator_volume_zero_tp(self):
+        # Reference has one instance; prediction is empty -> tp=0.
+        # Without the VOLUME edge-case handler this would raise NotImplementedError.
+        ref = np.zeros([50, 50], dtype=np.uint16)
+        pred = np.zeros_like(ref)
+        ref[10:20, 10:20] = 1
+
+        output_file = Path(__file__).parent.joinpath("unittest_volume_zerotp.tsv")
+        if output_file.exists():
+            os.remove(str(output_file))
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            instance_metrics=[Metric.DSC, Metric.IOU, Metric.VOLUME],
+        )
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=output_file,
+            output_individual_instance_metrics=True,
+        )
+        try:
+            aggregator.evaluate(pred, ref, "zero_tp_test")
+
+            with open(str(output_file), "r", encoding="utf8", newline="") as f:
+                rows = list(csv.reader(f, delimiter="\t"))
+
+            # 1 header + 1 master row, no per-instance rows because tp=0.
+            self.assertEqual(len(rows), 2)
+            header = rows[0]
+            master_row = rows[1]
+            vol_col = next(
+                (
+                    i
+                    for i, name in enumerate(header)
+                    if name.endswith("-instance_volume_ref")
+                ),
+                -1,
+            )
+            self.assertGreaterEqual(vol_col, 0)
+            # NaN edge-case default for tp=0
+            self.assertEqual(master_row[vol_col].lower(), "nan")
+        finally:
+            if output_file.exists():
+                os.remove(str(output_file))
+
+    def test_aggregator_volume_partial_match(self):
+        # Two reference instances; only one has a matching prediction.
+        # The per-instance volume list should contain exactly one entry.
+        ref = np.zeros([50, 50], dtype=np.uint16)
+        pred = np.zeros_like(ref)
+        ref[10:20, 10:20] = 1  # 100 voxels, matched
+        ref[30:40, 30:40] = 2  # 100 voxels, unmatched
+        pred[10:20, 10:20] = 1
+
+        output_file = Path(__file__).parent.joinpath("unittest_volume_partial.tsv")
+        if output_file.exists():
+            os.remove(str(output_file))
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            instance_metrics=[Metric.DSC, Metric.IOU, Metric.VOLUME],
+        )
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=output_file,
+            output_individual_instance_metrics=True,
+        )
+        try:
+            aggregator.evaluate(pred, ref, "partial_test", voxelspacing=(2.0, 2.0))
+
+            with open(str(output_file), "r", encoding="utf8", newline="") as f:
+                rows = list(csv.reader(f, delimiter="\t"))
+
+            # 1 header + 1 master + 1 per-instance (only the matched instance)
+            self.assertEqual(len(rows), 3)
+            header = rows[0]
+            master_row, inst_row = rows[1], rows[2]
+            vol_col = next(
+                (
+                    i
+                    for i, name in enumerate(header)
+                    if name.endswith("-instance_volume_ref")
+                ),
+                -1,
+            )
+            self.assertGreaterEqual(vol_col, 0)
+            expected = 100 * 4.0  # 100 voxels * prod((2.0, 2.0))
+            self.assertAlmostEqual(float(master_row[vol_col]), expected)
+            self.assertAlmostEqual(float(inst_row[vol_col]), expected)
         finally:
             if output_file.exists():
                 os.remove(str(output_file))

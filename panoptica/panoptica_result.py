@@ -352,7 +352,7 @@ class PanopticaResult(object):
         # region Reference Instances
         self.instance_volume_ref: float
         self._add_metric(
-            "instance_volume_ref",
+            Metric.VOLUME.get_result_key("sq"),
             MetricType.INSTANCE,
             volume_avg,
             long_name="Average Instance Physical Volume",
@@ -733,11 +733,7 @@ class PanopticaResult(object):
                 continue
 
             val_list = list_metric_obj.ALL
-            key_instance = (
-                "instance_volume_ref"
-                if metric_enum == Metric.VOLUME
-                else metric_enum.get_result_key("sq")
-            )
+            key_instance = metric_enum.get_result_key("sq")
 
             for i in range(n_instances):
                 # val_list may be shorter than n_instances if this metric hit a partial calculation error

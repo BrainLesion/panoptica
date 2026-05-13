@@ -54,6 +54,7 @@ class _Metric:
     requires_spatial: bool
     _metric_function: Callable
     suffix_override: str | None = None
+    result_key_override: str | None = None
 
     def __call__(
         self,
@@ -222,12 +223,16 @@ class Metric(_Enum_Compare):
         True,
         _compute_instance_normalized_surface_dice,
     )
+    # VOLUME is an informational quantity describing the reference instance,
+    # not a quality score. ``decreasing=False`` is arbitrary; do not use VOLUME
+    # as a ``decision_metric`` or ``matching_metric``.
     VOLUME = _Metric(
         "VOLUME",
         "Physical Volume",
         False,
         False,
         _compute_instance_physical_volume,
+        result_key_override="instance_volume_ref",
     )
 
     def __call__(
@@ -294,8 +299,14 @@ class Metric(_Enum_Compare):
     def get_result_key(self, prefix: str, is_std: bool = False) -> str:
         """
         Generates standard keys for PanopticaResult (e.g., 'sq', 'pq_dsc', 'sq_hd_std').
+
+        When ``result_key_override`` is set on the underlying ``_Metric``, the prefix is ignored and the override is used as the full key.
+        This permits metrics whose key does not follow the ``<prefix>_<name>`` convention (e.g. VOLUME → ``instance_volume_ref``).
         """
-        key = f"{prefix}{self.value.suffix}"
+        if self.value.result_key_override is not None:
+            key = self.value.result_key_override
+        else:
+            key = f"{prefix}{self.value.suffix}"
 
         if is_std:
             key += "_std"

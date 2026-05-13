@@ -25,13 +25,14 @@ def _compute_instance_physical_volume(
     if voxelspacing is None:
         voxelspacing = (1.0,) * reference_arr.ndim
 
-    # Allow mismatched lengths if the reference array is flattened (1D)
+    # 1D inputs come from the flattened one-hot path (instance_evaluator), where the caller already reconciled voxelspacing against the original spatial shape — so we skip the dimension check rather than reject those inputs.
     if len(voxelspacing) != reference_arr.ndim and reference_arr.ndim != 1:
         raise ValueError(
             f"Voxelspacing dimension ({len(voxelspacing)}) does not match "
             f"reference_arr dimensionality ({reference_arr.ndim})."
         )
 
+    # reference_arr may be a pre-cropped boolean mask; tight crops do not drop any True voxels, so np.count_nonzero is invariant to the crop.
     voxel_count = np.count_nonzero(reference_arr)
     unit_volume = float(np.prod(voxelspacing))
 
