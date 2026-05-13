@@ -4,6 +4,7 @@ from panoptica.utils import (
     format_threshold_key,
     is_instance_row,
     get_backend,
+    FileType,
 )
 import numpy as np
 import warnings
@@ -171,7 +172,12 @@ class Panoptica_Statistic:
         return self.__threshold_map.get(metric, [])
 
     @classmethod
-    def from_file(cls, file: str | Path, verbose: bool = True):
+    def from_file(
+        cls,
+        file: str | Path,
+        verbose: bool = True,
+        file_type: FileType = "jsonl",
+    ):
         """Loads a Panoptica_Statistic from a results file produced by ``Panoptica_Aggregator``.
 
         Dispatches to the appropriate backend based on the file extension.
@@ -180,31 +186,40 @@ class Panoptica_Statistic:
             file (str | Path): Path to a TSV or JSONL results file.
             verbose (bool, optional): If True, prints a short summary of
                 the metrics/groups discovered. Defaults to True.
+            file_type (FileType, optional): Format used when ``file`` has
+                no extension. An explicit ``.tsv`` / ``.jsonl`` suffix on
+                ``file`` always takes precedence. Defaults to ``"jsonl"``.
 
         Returns:
             Panoptica_Statistic: Statistic populated from the file.
 
         Raises:
-            ValueError: If the file has no extension or the extension is
-                not in ``supported_file_types``.
+            ValueError: If the resolved path has an unsupported extension.
         """
         path = Path(file) if isinstance(file, str) else file
+        if not path.suffix:
+            path = path.with_suffix(f".{file_type}")
         backend = get_backend(path)
         subj_names, value_dict = backend.load_raw(verbose=verbose)
         return cls(subj_names=subj_names, value_dict=value_dict)
 
-    def to_file(self, file: str | Path) -> None:
+    def to_file(self, file: str | Path, file_type: FileType = "jsonl") -> None:
         """Writes the full statistic to disk, format chosen from the file
         extension (``.tsv`` or ``.jsonl``). Overwrites any existing file.
 
         Args:
-            file (str | Path): Path with a supported extension.
+            file (str | Path): Path with a supported extension, or without
+                one — in which case ``file_type`` decides the format.
+            file_type (FileType, optional): Format used when ``file`` has
+                no extension. An explicit ``.tsv`` / ``.jsonl`` suffix on
+                ``file`` always takes precedence. Defaults to ``"jsonl"``.
 
         Raises:
-            ValueError: If the file has no extension or the extension is
-                not in ``supported_file_types``.
+            ValueError: If the resolved path has an unsupported extension.
         """
         path = Path(file) if isinstance(file, str) else file
+        if not path.suffix:
+            path = path.with_suffix(f".{file_type}")
         if path.exists():
             path.unlink()
         backend = get_backend(path)

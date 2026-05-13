@@ -30,7 +30,6 @@ class TSVBackend(FileBackend):
         header = ["subject_name"] + [
             f"{g}-{m}" for g in class_group_names for m in evaluation_metrics
         ]
-        header_hash = hash("+".join(header))
 
         if not self.path.exists():
             _append_tsv_rows(self.path, [header])
@@ -43,9 +42,9 @@ class TSVBackend(FileBackend):
                 _append_tsv_rows(self.path, [header])
             else:
                 # TODO should also hash panoptica_evaluator to be safe, and save into header of file
-                if header_hash != hash("+".join(existing_header)):
+                if header != existing_header:
                     raise ValueError(
-                        f"{self.path}: Hash of header not the same! You are using a different setup!"
+                        f"{self.path}: Header does not match! You are using a different setup!"
                     )
 
         # Return existing subject names from the file (excluding the header

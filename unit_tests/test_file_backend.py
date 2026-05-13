@@ -59,7 +59,7 @@ class Test_TSVBackend_Direct(unittest.TestCase):
         backend = TSVBackend(self.path)
         backend.prepare_for_append(["liver"], ["dice", "tp"])
         backend2 = TSVBackend(self.path)
-        with self.assertRaisesRegex(ValueError, "Hash of header not the same"):
+        with self.assertRaisesRegex(ValueError, "Header does not match"):
             backend2.prepare_for_append(["liver"], ["dice", "iou"])
 
     def test_get_backend_dispatches_by_extension(self):
@@ -347,3 +347,65 @@ class Test_Roundtrip_TSV_JSONL(unittest.TestCase):
         aggregator2.evaluate(b, a, "subj_a")
         size_after = self.before_jsonl.stat().st_size
         self.assertEqual(size_before, size_after)
+
+
+class Test_Statistic_File_Suffix_Defaulting(unittest.TestCase):
+    """`Panoptica_Statistic.from_file` / `to_file` should auto-append
+    ``.{file_type}`` (default ``jsonl``) when the given path has no suffix,
+    mirroring `Panoptica_Aggregator.__init__`."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.stem = _TMP_DIR.joinpath("unittest_suffix_default")
+        self.candidates = [
+            self.stem,
+            self.stem.with_suffix(".jsonl"),
+            self.stem.with_suffix(".tsv"),
+        ]
+        for p in self.candidates:
+            if p.exists():
+                os.remove(p)
+
+    def tearDown(self) -> None:
+        for p in self.candidates:
+            if p.exists():
+                os.remove(p)
+
+    def _seed_jsonl(self) -> Panoptica_Statistic:
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.stem.with_suffix(".jsonl"),
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "subj_a")
+        return Panoptica_Statistic.from_file(
+            self.stem.with_suffix(".jsonl"), verbose=False
+        )
+
+    def test_from_file_appends_jsonl_by_default(self):
+        self._seed_jsonl()
+        # Pass the bare stem; should resolve to .jsonl
+        stat = Panoptica_Statistic.from_file(self.stem, verbose=False)
+        self.assertIn("subj_a", stat.subjectnames)
+
+    def test_from_file_appends_explicit_file_type(self):
+        # Write a TSV and load it via stem + file_type="tsv"
+        stat = self._seed_jsonl()
+        stat.to_file(self.stem.with_suffix(".tsv"))
+        stat2 = Panoptica_Statistic.from_file(
+            self.stem, verbose=False, file_type="tsv"
+        )
+        self.assertIn("subj_a", stat2.subjectnames)
+
+    def test_to_file_appends_jsonl_by_default(self):
+        stat = self._seed_jsonl()
+        stat.to_file(self.stem)
+        self.assertTrue(self.stem.with_suffix(".jsonl").exists())
+        self.assertFalse(self.stem.with_suffix(".tsv").exists())
+
+    def test_explicit_suffix_beats_file_type_kwarg(self):
+        # Explicit .tsv suffix on the path must win over file_type="jsonl"
+        stat = self._seed_jsonl()
+        stat.to_file(self.stem.with_suffix(".tsv"), file_type="jsonl")
+        self.assertTrue(self.stem.with_suffix(".tsv").exists())
