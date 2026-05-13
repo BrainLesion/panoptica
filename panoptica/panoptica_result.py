@@ -359,10 +359,6 @@ class PanopticaResult(object):
             volume_avg,
             long_name="Average Instance Physical Volume",
         )
-        # Per-instance count of prediction labels merged into each matched ref;
-        # the master-row value is the average across matched references, mirroring
-        # `instance_volume_ref`. Always 1.0 for one-to-one matchers; can exceed 1
-        # for MaximizeMergeMatching / NaiveThresholdMatching(allow_many_to_one=True).
         self.n_matched_preds: float
         self._add_metric(
             "n_matched_preds",
