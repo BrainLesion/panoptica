@@ -733,11 +733,9 @@ class PanopticaResult(object):
                 continue
 
             val_list = list_metric_obj.ALL
-            key_instance = metric_enum.get_result_key("sq")
-
             for i in range(n_instances):
                 # val_list may be shorter than n_instances if this metric hit a partial calculation error
-                results[i + 1][key_instance] = (
+                results[i + 1][metric_enum.get_result_key("sq")] = (
                     val_list[i] if i < len(val_list) else None
                 )
 
