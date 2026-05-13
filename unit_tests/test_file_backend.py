@@ -393,9 +393,7 @@ class Test_Statistic_File_Suffix_Defaulting(unittest.TestCase):
         # Write a TSV and load it via stem + file_type="tsv"
         stat = self._seed_jsonl()
         stat.to_file(self.stem.with_suffix(".tsv"))
-        stat2 = Panoptica_Statistic.from_file(
-            self.stem, verbose=False, file_type="tsv"
-        )
+        stat2 = Panoptica_Statistic.from_file(self.stem, verbose=False, file_type="tsv")
         self.assertIn("subj_a", stat2.subjectnames)
 
     def test_to_file_appends_jsonl_by_default(self):
