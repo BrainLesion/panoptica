@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Literal, get_args
+
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 
 COMPUTATION_TIME_KEY = "computation_time"

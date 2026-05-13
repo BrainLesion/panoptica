@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 from panoptica.utils.serialization import (
     format_instance_subject_name,
     is_instance_row,

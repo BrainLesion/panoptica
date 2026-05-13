@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import FileBackend
 from panoptica.utils.serialization import (
