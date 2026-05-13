@@ -24,7 +24,7 @@ def _compute_instance_physical_volume(
     """
     if voxelspacing is None:
         voxelspacing = (1.0,) * reference_arr.ndim
-    
+
     # Allow mismatched lengths if the reference array is flattened (1D)
     if len(voxelspacing) != reference_arr.ndim and reference_arr.ndim != 1:
         raise ValueError(
