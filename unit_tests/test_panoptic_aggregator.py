@@ -189,9 +189,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
 
         voxels_per_instance = 100
 
-        output_file = Path(__file__).parent.joinpath(
-            "unittest_volume_voxsp.tsv"
-        )
+        output_file = Path(__file__).parent.joinpath("unittest_volume_voxsp.tsv")
 
         def _run_and_read(voxelspacing):
             if output_file.exists():
@@ -216,19 +214,23 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
 
         try:
             for voxelspacing in [(1.0, 1.0), (2.0, 3.0)]:
-                expected_volume = voxels_per_instance * float(
-                    np.prod(voxelspacing)
-                )
+                expected_volume = voxels_per_instance * float(np.prod(voxelspacing))
 
                 rows = _run_and_read(voxelspacing)
                 # 1 header + 1 master row + 2 instance rows
-                self.assertEqual(len(rows), 4, f"Unexpected row count for {voxelspacing}")
+                self.assertEqual(
+                    len(rows), 4, f"Unexpected row count for {voxelspacing}"
+                )
 
                 header = rows[0]
                 master_row, inst_0_row, inst_1_row = rows[1], rows[2], rows[3]
 
                 vol_col = next(
-                    (i for i, name in enumerate(header) if name.endswith("-instance_volume_ref")),
+                    (
+                        i
+                        for i, name in enumerate(header)
+                        if name.endswith("-instance_volume_ref")
+                    ),
                     -1,
                 )
                 self.assertGreaterEqual(

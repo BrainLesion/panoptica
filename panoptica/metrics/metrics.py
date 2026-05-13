@@ -17,7 +17,7 @@ from panoptica.metrics import (
     # _compute_instance_segmentation_tendency,
     _compute_instance_normalized_surface_dice,
     _compute_normalized_surface_dice,
-    _compute_instance_physical_volume
+    _compute_instance_physical_volume,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -223,8 +223,8 @@ class Metric(_Enum_Compare):
         _compute_instance_normalized_surface_dice,
     )
     VOLUME = _Metric(
-        "VOLUME", 
-        "Physical Volume", 
+        "VOLUME",
+        "Physical Volume",
         False,
         False,
         _compute_instance_physical_volume,

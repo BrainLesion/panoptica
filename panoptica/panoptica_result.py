@@ -358,7 +358,7 @@ class PanopticaResult(object):
             long_name="Average Instance Physical Volume",
         )
         # endregion
-        
+
         # region Global
         self.global_bin_volume_pred = np.count_nonzero(prediction_arr)
         self._add_metric(
@@ -733,7 +733,11 @@ class PanopticaResult(object):
                 continue
 
             val_list = list_metric_obj.ALL
-            key_instance = "instance_volume_ref" if metric_enum == Metric.VOLUME else metric_enum.get_result_key("sq")
+            key_instance = (
+                "instance_volume_ref"
+                if metric_enum == Metric.VOLUME
+                else metric_enum.get_result_key("sq")
+            )
 
             for i in range(n_instances):
                 # val_list may be shorter than n_instances if this metric hit a partial calculation error
@@ -1195,7 +1199,9 @@ def sq_nsd_std(res: PanopticaResult):
 
 # region VOLUME
 
+
 def volume_avg(res: PanopticaResult):
     return res.get_list_metric(Metric.VOLUME, mode=MetricMode.AVG)
+
 
 # endregion

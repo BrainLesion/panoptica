@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def _compute_instance_physical_volume(
     reference_arr: np.ndarray,
     prediction_arr: np.ndarray,
@@ -33,5 +34,5 @@ def _compute_instance_physical_volume(
 
     voxel_count = np.count_nonzero(reference_arr)
     unit_volume = float(np.prod(voxelspacing))
-    
+
     return voxel_count * unit_volume
