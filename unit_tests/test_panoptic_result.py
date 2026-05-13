@@ -191,3 +191,48 @@ class Test_Panoptica_Results(unittest.TestCase):
         self.assertEqual(inst_1_dict["sq"], 0.9)
         self.assertEqual(inst_0_dict["sq_dsc"], 0.85)
         self.assertEqual(inst_1_dict["sq_dsc"], 0.95)
+
+    def test_n_matched_preds_per_instance(self):
+        # num_preds_per_match aligns with per-instance order in list_metrics:
+        # 1 pred merged into instance 0, 3 preds merged into instance 1.
+        result = PanopticaResult(
+            prediction_arr=None,
+            reference_arr=None,
+            n_ref_instances=2,
+            n_pred_instances=4,
+            tp=2,
+            list_metrics={Metric.IOU: [0.8, 0.9]},
+            edge_case_handler=EdgeCaseHandler(),
+            num_preds_per_match=[1, 3],
+        )
+        result.calculate_all(print_errors=False)
+
+        result_dicts = result.to_dict(output_individual_instance_metrics=True)
+        master_dict, inst_0_dict, inst_1_dict = result_dicts
+
+        # Column is registered so it appears in master keys (always-present rule),
+        # but master value is None (rendered as empty by the aggregator).
+        self.assertIn("n_matched_preds", master_dict)
+        self.assertIsNone(master_dict["n_matched_preds"])
+
+        # Per-instance counts are populated.
+        self.assertEqual(inst_0_dict["n_matched_preds"], 1)
+        self.assertEqual(inst_1_dict["n_matched_preds"], 3)
+
+    def test_n_matched_preds_absent_when_not_provided(self):
+        # If the matcher path didn't supply num_preds_per_match (e.g., direct
+        # construction without pipeline), per-instance dicts should not include
+        # the key.
+        result = PanopticaResult(
+            prediction_arr=None,
+            reference_arr=None,
+            n_ref_instances=1,
+            n_pred_instances=1,
+            tp=1,
+            list_metrics={Metric.IOU: [0.5]},
+            edge_case_handler=EdgeCaseHandler(),
+        )
+        result.calculate_all(print_errors=False)
+
+        _, inst_0_dict = result.to_dict(output_individual_instance_metrics=True)
+        self.assertNotIn("n_matched_preds", inst_0_dict)

@@ -409,6 +409,35 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertEqual(result.sq, 0.85)
         self.assertEqual(result.pq, 0.85)
 
+        # Both prediction blobs are merged into the single reference → 2.
+        per_instance = result.to_dict(output_individual_instance_metrics=True)
+        self.assertEqual(len(per_instance), 2)  # master + 1 instance
+        self.assertEqual(per_instance[1]["n_matched_preds"], 2)
+
+    def test_n_matched_preds_one_to_one(self):
+        # Two reference instances, each matched by exactly one prediction.
+        # n_matched_preds must be 1 per matched ref.
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy().astype(a.dtype)
+        a[10:20, 10:20] = 1
+        b[10:20, 10:20] = 1
+        a[30:40, 30:40] = 2
+        b[30:40, 30:40] = 2
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+
+        result = evaluator.evaluate(b, a)["ungrouped"]
+        self.assertEqual(result.tp, 2)
+
+        per_instance = result.to_dict(output_individual_instance_metrics=True)
+        self.assertEqual(len(per_instance), 3)  # master + 2 instances
+        self.assertEqual(per_instance[1]["n_matched_preds"], 1)
+        self.assertEqual(per_instance[2]["n_matched_preds"], 1)
+
     def test_simple_evaluation_maximize_matcher_overlap(self):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)

@@ -36,6 +36,7 @@ class PanopticaResult(object):
         label_group: LabelGroup | None = None,
         intermediate_steps_data: IntermediateStepsData | None = None,
         computation_time: float | None = None,
+        num_preds_per_match: list[int] | None = None,
         **kwargs,
     ):
         """Result object for Panoptica, contains all calculatable metrics
@@ -55,6 +56,7 @@ class PanopticaResult(object):
         self._global_metrics: list[Metric] = global_metrics
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
+        self._num_preds_per_match = num_preds_per_match
         self.metadata: dict[str, Any] = kwargs
 
         if isinstance(label_group, LabelPartGroup):
@@ -356,6 +358,15 @@ class PanopticaResult(object):
             MetricType.INSTANCE,
             volume_avg,
             long_name="Average Instance Physical Volume",
+        )
+        self.n_matched_preds: int | None
+        self._add_metric(
+            "n_matched_preds",
+            MetricType.NO_PRINT,
+            None,
+            long_name="Number of prediction instances matched to each reference",
+            default_value=None,
+            was_calculated=True,
         )
         # endregion
 
@@ -744,6 +755,11 @@ class PanopticaResult(object):
                 results[i + 1][key_instance] = (
                     val_list[i] if i < len(val_list) else None
                 )
+
+        if self._num_preds_per_match is not None:
+            for i in range(n_instances):
+                if i < len(self._num_preds_per_match):
+                    results[i + 1]["n_matched_preds"] = self._num_preds_per_match[i]
 
         return results
 

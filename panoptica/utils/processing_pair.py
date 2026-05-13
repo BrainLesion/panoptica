@@ -321,11 +321,16 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         missed_reference_labels (list[int]): Reference labels with no matching prediction.
         missed_prediction_labels (list[int]): Prediction labels with no matching reference.
         matched_instances (list[int]): Labels matched between prediction and reference arrays.
+        num_preds_per_ref (dict[int, int] | None): For each matched reference label, the
+            number of original prediction labels merged into it. Set by `map_instance_labels`
+            so downstream evaluation can report many-to-one merge granularity. None when
+            constructed directly from user-supplied matched arrays.
     """
 
     missed_reference_labels: list[int]
     missed_prediction_labels: list[int]
     matched_instances: list[int]
+    num_preds_per_ref: dict[int, int] | None
 
     def __init__(
         self,
@@ -336,6 +341,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         matched_instances: list[int] | None = None,
         n_pred_instances: int | None = None,
         n_ref_instances: int | None = None,
+        num_preds_per_ref: dict[int, int] | None = None,
     ) -> None:
         """Initializes a MatchedInstancePair
 
@@ -372,6 +378,8 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             )
         self.missed_prediction_labels = missed_prediction_labels
 
+        self.num_preds_per_ref = num_preds_per_ref
+
     @property
     def n_matched_instances(self):
         return len(self.matched_instances)
@@ -388,6 +396,11 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             missed_reference_labels=self.missed_reference_labels,
             missed_prediction_labels=self.missed_prediction_labels,
             matched_instances=self.matched_instances,
+            num_preds_per_ref=(
+                dict(self.num_preds_per_ref)
+                if self.num_preds_per_ref is not None
+                else None
+            ),
         )
 
 
@@ -414,6 +427,7 @@ class EvaluateInstancePair:
     n_ref_instances: int
     tp: int
     list_metrics: dict[Metric, list[float]]
+    num_preds_per_match: list[int] | None = None
 
 
 class InputType(_Enum_Compare):

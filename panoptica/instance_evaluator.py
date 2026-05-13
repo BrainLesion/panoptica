@@ -40,6 +40,7 @@ def evaluate_matched_instance(
         matched_instance_pair.prediction_arr,
     )
     ref_matched_labels = matched_instance_pair.matched_instances
+    num_preds_per_ref = matched_instance_pair.num_preds_per_ref
 
     per_instance_results: list[dict[Metric, float]] = [
         _evaluate_instance(
@@ -61,7 +62,8 @@ def evaluate_matched_instance(
 
     # TODO if instance matcher already gives matching metric, adapt here!
     tp = 0
-    for instance_result in per_instance_results:
+    num_preds_per_match: list[int] = []
+    for ref_idx, instance_result in zip(ref_matched_labels, per_instance_results):
         if not instance_result:
             continue
         accepted = decision_metric is None or (
@@ -75,6 +77,9 @@ def evaluate_matched_instance(
         tp += 1
         for metric, score in instance_result.items():
             score_dict[metric].append(score)
+        num_preds_per_match.append(
+            num_preds_per_ref.get(ref_idx, 1) if num_preds_per_ref is not None else 1
+        )
 
     # Create and return the EvaluateInstancePair object with computed metrics
     return EvaluateInstancePair(
@@ -84,6 +89,7 @@ def evaluate_matched_instance(
         n_ref_instances=matched_instance_pair.n_ref_instances,
         tp=tp,
         list_metrics=score_dict,
+        num_preds_per_match=num_preds_per_match,
     )
 
 

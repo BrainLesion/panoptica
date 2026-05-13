@@ -180,6 +180,14 @@ def map_instance_labels(
     label_counter = int(max(ref_labels) + 1)
     pred_labelmap = labelmap.get_one_to_one_dictionary()
 
+    # Count how many original prediction labels were merged into each matched
+    # reference. For one-to-one matchers this is always 1; for many-to-one
+    # (MaximizeMergeMatching, NaiveThresholdMatching(allow_many_to_one=True))
+    # it can be >1. Captured before missed-pred labels are appended below.
+    num_preds_per_ref: dict[int, int] = {}
+    for ref_label in pred_labelmap.values():
+        num_preds_per_ref[ref_label] = num_preds_per_ref.get(ref_label, 0) + 1
+
     # assign missed instances to next unused labels sequentially
     missed_pred_labels = [p for p in pred_labels if p not in pred_labelmap]
     for p in missed_pred_labels:
@@ -196,6 +204,7 @@ def map_instance_labels(
     matched_instance_pair = MatchedInstancePair(
         prediction_arr=prediction_arr_relabeled,
         reference_arr=processing_pair.reference_arr,
+        num_preds_per_ref=num_preds_per_ref,
     )
     return matched_instance_pair
 

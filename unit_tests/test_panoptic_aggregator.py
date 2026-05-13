@@ -172,9 +172,66 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
         self.assertEqual(inst_0_row[tp_index], "")
         self.assertEqual(inst_1_row[tp_index], "")
 
+        # n_matched_preds: column always present; master blank; per-instance == 1
+        # for this one-to-one matcher.
+        n_preds_index = next(
+            (i for i, c in enumerate(header) if c.endswith("-n_matched_preds")),
+            -1,
+        )
+        self.assertGreaterEqual(n_preds_index, 0, "n_matched_preds column missing")
+        self.assertEqual(master_row[n_preds_index], "")
+        self.assertEqual(inst_0_row[n_preds_index], "1")
+        self.assertEqual(inst_1_row[n_preds_index], "1")
+
         # Cleanup
         if os.path.exists(str(output_test_dir)):
             os.remove(str(output_test_dir))
+
+    def test_aggregator_n_matched_preds_many_to_one(self):
+        import csv
+
+        # Two prediction blobs (labels 2, 3) overlapping a single reference
+        # instance (label 1). MaximizeMergeMatching merges both preds into the
+        # single ref, so n_matched_preds for that instance should be 2.
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy().astype(a.dtype)
+        a[20:40, 10:20] = 1
+        b[20:35, 10:20] = 2
+        b[36:38, 10:20] = 3
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=MaximizeMergeMatching(),
+        )
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=output_test_dir,
+            output_individual_instance_metrics=True,
+        )
+
+        try:
+            aggregator.evaluate(b, a, "merge_subject")
+
+            with open(str(output_test_dir), "r", encoding="utf8", newline="") as f:
+                rows = list(csv.reader(f, delimiter="\t"))
+
+            # 1 header + 1 master + 1 instance row (tp=1)
+            self.assertEqual(len(rows), 3, f"Expected 3 rows, got {len(rows)}")
+            header, master_row, inst_0_row = rows
+
+            n_preds_index = next(
+                (i for i, c in enumerate(header) if c.endswith("-n_matched_preds")),
+                -1,
+            )
+            self.assertGreaterEqual(
+                n_preds_index, 0, "n_matched_preds column missing"
+            )
+            self.assertEqual(master_row[n_preds_index], "")
+            self.assertEqual(inst_0_row[n_preds_index], "2")
+        finally:
+            if os.path.exists(str(output_test_dir)):
+                os.remove(str(output_test_dir))
 
     def test_aggregator_volume_voxelspacing(self):
         import csv
