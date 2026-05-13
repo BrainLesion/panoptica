@@ -349,8 +349,8 @@ class PanopticaResult(object):
         )
         # endregion
 
-        # region Volume
-        self.avg_volume: float
+        # region Reference Instances
+        self.instance_volume_ref: float
         self._add_metric(
             "instance_volume_ref",
             MetricType.INSTANCE,

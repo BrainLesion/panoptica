@@ -188,10 +188,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
         b[30:40, 30:40] = 2
 
         voxels_per_instance = 100
-        print("HALLO")
 
-        # Use a dedicated output file so a failure here cannot poison the
-        # other tests that share output_test_dir.
         output_file = Path(__file__).parent.joinpath(
             "unittest_volume_voxsp.tsv"
         )
