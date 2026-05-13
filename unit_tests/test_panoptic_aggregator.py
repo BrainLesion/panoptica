@@ -172,14 +172,14 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
         self.assertEqual(inst_0_row[tp_index], "")
         self.assertEqual(inst_1_row[tp_index], "")
 
-        # n_matched_preds: column always present; master blank; per-instance == 1
-        # for this one-to-one matcher.
+        # n_matched_preds: master holds the average across matched refs; per-instance
+        # rows hold individual counts (all 1 for this one-to-one matcher).
         n_preds_index = next(
             (i for i, c in enumerate(header) if c.endswith("-n_matched_preds")),
             -1,
         )
         self.assertGreaterEqual(n_preds_index, 0, "n_matched_preds column missing")
-        self.assertEqual(master_row[n_preds_index], "")
+        self.assertAlmostEqual(float(master_row[n_preds_index]), 1.0)
         self.assertEqual(inst_0_row[n_preds_index], "1")
         self.assertEqual(inst_1_row[n_preds_index], "1")
 
@@ -227,7 +227,8 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             self.assertGreaterEqual(
                 n_preds_index, 0, "n_matched_preds column missing"
             )
-            self.assertEqual(master_row[n_preds_index], "")
+            # One matched ref absorbed both preds → mean is 2.0.
+            self.assertAlmostEqual(float(master_row[n_preds_index]), 2.0)
             self.assertEqual(inst_0_row[n_preds_index], "2")
         finally:
             if os.path.exists(str(output_test_dir)):

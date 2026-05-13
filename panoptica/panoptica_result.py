@@ -359,14 +359,16 @@ class PanopticaResult(object):
             volume_avg,
             long_name="Average Instance Physical Volume",
         )
-        self.n_matched_preds: int | None
+        # Per-instance count of prediction labels merged into each matched ref;
+        # the master-row value is the average across matched references, mirroring
+        # `instance_volume_ref`. Always 1.0 for one-to-one matchers; can exceed 1
+        # for MaximizeMergeMatching / NaiveThresholdMatching(allow_many_to_one=True).
+        self.n_matched_preds: float
         self._add_metric(
             "n_matched_preds",
-            MetricType.NO_PRINT,
-            None,
-            long_name="Number of prediction instances matched to each reference",
-            default_value=None,
-            was_calculated=True,
+            MetricType.INSTANCE,
+            n_matched_preds_avg,
+            long_name="Average Number of Prediction Instances Matched per Reference",
         )
         # endregion
 
@@ -1218,6 +1220,19 @@ def sq_nsd_std(res: PanopticaResult):
 
 def volume_avg(res: PanopticaResult):
     return res.get_list_metric(Metric.VOLUME, mode=MetricMode.AVG)
+
+
+# endregion
+
+# region N_MATCHED_PREDS
+
+
+def n_matched_preds_avg(res: PanopticaResult):
+    if res._num_preds_per_match is None or len(res._num_preds_per_match) == 0:
+        raise MetricCouldNotBeComputedException(
+            "n_matched_preds requires a matched evaluation with at least one TP"
+        )
+    return float(np.mean(res._num_preds_per_match))
 
 
 # endregion

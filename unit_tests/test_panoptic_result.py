@@ -210,12 +210,11 @@ class Test_Panoptica_Results(unittest.TestCase):
         result_dicts = result.to_dict(output_individual_instance_metrics=True)
         master_dict, inst_0_dict, inst_1_dict = result_dicts
 
-        # Column is registered so it appears in master keys (always-present rule),
-        # but master value is None (rendered as empty by the aggregator).
+        # Master row holds the average count across matched refs (mirrors
+        # instance_volume_ref); per-instance rows hold individual counts.
         self.assertIn("n_matched_preds", master_dict)
-        self.assertIsNone(master_dict["n_matched_preds"])
+        self.assertAlmostEqual(master_dict["n_matched_preds"], 2.0)
 
-        # Per-instance counts are populated.
         self.assertEqual(inst_0_dict["n_matched_preds"], 1)
         self.assertEqual(inst_1_dict["n_matched_preds"], 3)
 
