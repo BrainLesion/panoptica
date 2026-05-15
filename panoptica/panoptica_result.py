@@ -36,6 +36,8 @@ class PanopticaResult(object):
         label_group: LabelGroup | None = None,
         intermediate_steps_data: IntermediateStepsData | None = None,
         computation_time: float | None = None,
+        instance_voxel_count_ref: list[int] | None = None,
+        instance_volume_ref: list[float] | None = None,
         **kwargs,
     ):
         """Result object for Panoptica, contains all calculatable metrics
@@ -350,12 +352,36 @@ class PanopticaResult(object):
         # endregion
 
         # region Reference Instances
+        # Voxel count and physical volume of each matched reference instance.
+        self.instance_voxel_count_ref_list: list[int] = list(
+            instance_voxel_count_ref or []
+        )
+        self.instance_volume_ref_list: list[float] = list(instance_volume_ref or [])
+        self.instance_voxel_count_ref: float
+        self._add_metric(
+            "instance_voxel_count_ref",
+            MetricType.INSTANCE,
+            None,
+            long_name="Average Matched Reference Instance Voxel Count",
+            default_value=(
+                float(np.mean(self.instance_voxel_count_ref_list))
+                if self.instance_voxel_count_ref_list
+                else float("nan")
+            ),
+            was_calculated=True,
+        )
         self.instance_volume_ref: float
         self._add_metric(
-            Metric.VOLUME.get_result_key("sq"),
+            "instance_volume_ref",
             MetricType.INSTANCE,
-            volume_avg,
-            long_name="Average Instance Physical Volume",
+            None,
+            long_name="Average Matched Reference Instance Physical Volume",
+            default_value=(
+                float(np.mean(self.instance_volume_ref_list))
+                if self.instance_volume_ref_list
+                else float("nan")
+            ),
+            was_calculated=True,
         )
         # endregion
 
@@ -738,6 +764,14 @@ class PanopticaResult(object):
                 results[i + 1][metric_enum.get_result_key("sq")] = (
                     val_list[i] if i < len(val_list) else None
                 )
+
+        # Per-instance voxel counts and physical volumes are stored as direct attributes
+        for key, val_list in (
+            ("instance_voxel_count_ref", self.instance_voxel_count_ref_list),
+            ("instance_volume_ref", self.instance_volume_ref_list),
+        ):
+            for i in range(n_instances):
+                results[i + 1][key] = val_list[i] if i < len(val_list) else None
 
         return results
 
@@ -1187,15 +1221,6 @@ def sq_nsd(res: PanopticaResult):
 
 def sq_nsd_std(res: PanopticaResult):
     return res.get_list_metric(Metric.NSD, mode=MetricMode.STD)
-
-
-# endregion
-
-# region VOLUME
-
-
-def volume_avg(res: PanopticaResult):
-    return res.get_list_metric(Metric.VOLUME, mode=MetricMode.AVG)
 
 
 # endregion

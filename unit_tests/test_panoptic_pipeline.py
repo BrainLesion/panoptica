@@ -271,7 +271,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         # a[20:40, 10:20] = 1
         # b[20:40, 10:20] = 1
 
-        result = _evaluate_instance(a, b, ref_idx=1, eval_metrics=[Metric.DSC])
+        result = _evaluate_instance(a, b, ref_idx=1, eval_metrics=[Metric.DSC]).metrics
         print()
         print(result)
         self.assertEqual(len(result), 0)
@@ -282,7 +282,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        result = _evaluate_instance(a, b, ref_idx=1, eval_metrics=[Metric.DSC])
+        result = _evaluate_instance(a, b, ref_idx=1, eval_metrics=[Metric.DSC]).metrics
         print()
         print(result)
         self.assertEqual(len(result), 0)
@@ -293,7 +293,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:35, 10:20] = 2
 
-        result = _evaluate_instance(a, b, ref_idx=3, eval_metrics=[Metric.DSC])
+        result = _evaluate_instance(a, b, ref_idx=3, eval_metrics=[Metric.DSC]).metrics
         print()
         print(result)
         self.assertEqual(len(result), 0)
@@ -309,8 +309,10 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         a[20:40, 10:20] = 1
         b[20:40, 10:20] = 1
 
-        result = _evaluate_instance(a, b, ref_idx=1, eval_metrics=[Metric.DSC])
+        eval_result = _evaluate_instance(a, b, ref_idx=1, eval_metrics=[Metric.DSC])
         print()
-        print(result)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[Metric.DSC], 1.0)
+        print(eval_result)
+        self.assertEqual(len(eval_result.metrics), 1)
+        self.assertEqual(eval_result.metrics[Metric.DSC], 1.0)
+        self.assertEqual(eval_result.voxel_count_ref, int(np.count_nonzero(a == 1)))
+        self.assertEqual(eval_result.volume_ref, float(eval_result.voxel_count_ref))

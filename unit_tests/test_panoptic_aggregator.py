@@ -196,7 +196,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                 expected_input=InputType.SEMANTIC,
                 instance_approximator=ConnectedComponentsInstanceApproximator(),
                 instance_matcher=NaiveThresholdMatching(),
-                instance_metrics=[Metric.DSC, Metric.IOU, Metric.VOLUME],
+                instance_metrics=[Metric.DSC, Metric.IOU],
             )
             aggregator = Panoptica_Aggregator(
                 evaluator,
@@ -236,6 +236,20 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                     f"Volume column not found in header for {voxelspacing}",
                 )
 
+                count_col = next(
+                    (
+                        i
+                        for i, name in enumerate(header)
+                        if name.endswith("-instance_voxel_count_ref")
+                    ),
+                    -1,
+                )
+                self.assertGreaterEqual(
+                    count_col,
+                    0,
+                    f"Voxel-count column not found in header for {voxelspacing}",
+                )
+
                 # Master row holds the average across instances; per-instance
                 # rows hold the individual volume in the same column.
                 self.assertAlmostEqual(
@@ -253,13 +267,30 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                     expected_volume,
                     msg=f"Instance 1 volume mismatch for {voxelspacing}",
                 )
+
+                # Voxel counts are spacing-invariant.
+                self.assertAlmostEqual(
+                    float(master_row[count_col]),
+                    float(voxels_per_instance),
+                    msg=f"Master avg voxel count mismatch for {voxelspacing}",
+                )
+                self.assertAlmostEqual(
+                    float(inst_0_row[count_col]),
+                    float(voxels_per_instance),
+                    msg=f"Instance 0 voxel count mismatch for {voxelspacing}",
+                )
+                self.assertAlmostEqual(
+                    float(inst_1_row[count_col]),
+                    float(voxels_per_instance),
+                    msg=f"Instance 1 voxel count mismatch for {voxelspacing}",
+                )
         finally:
             if output_file.exists():
                 os.remove(str(output_file))
 
     def test_aggregator_volume_zero_tp(self):
         # Reference has one instance; prediction is empty -> tp=0.
-        # Without the VOLUME edge-case handler this would raise NotImplementedError.
+        # With no matched references the per-instance lists are empty -> NaN default.
         ref = np.zeros([50, 50], dtype=np.uint16)
         pred = np.zeros_like(ref)
         ref[10:20, 10:20] = 1
@@ -272,7 +303,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            instance_metrics=[Metric.DSC, Metric.IOU, Metric.VOLUME],
+            instance_metrics=[Metric.DSC, Metric.IOU],
         )
         aggregator = Panoptica_Aggregator(
             evaluator,
@@ -297,9 +328,19 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                 ),
                 -1,
             )
+            count_col = next(
+                (
+                    i
+                    for i, name in enumerate(header)
+                    if name.endswith("-instance_voxel_count_ref")
+                ),
+                -1,
+            )
             self.assertGreaterEqual(vol_col, 0)
-            # NaN edge-case default for tp=0
+            self.assertGreaterEqual(count_col, 0)
+            # NaN default for tp=0
             self.assertEqual(master_row[vol_col].lower(), "nan")
+            self.assertEqual(master_row[count_col].lower(), "nan")
         finally:
             if output_file.exists():
                 os.remove(str(output_file))
@@ -321,7 +362,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            instance_metrics=[Metric.DSC, Metric.IOU, Metric.VOLUME],
+            instance_metrics=[Metric.DSC, Metric.IOU],
         )
         aggregator = Panoptica_Aggregator(
             evaluator,
@@ -346,10 +387,21 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                 ),
                 -1,
             )
+            count_col = next(
+                (
+                    i
+                    for i, name in enumerate(header)
+                    if name.endswith("-instance_voxel_count_ref")
+                ),
+                -1,
+            )
             self.assertGreaterEqual(vol_col, 0)
+            self.assertGreaterEqual(count_col, 0)
             expected = 100 * 4.0  # 100 voxels * prod((2.0, 2.0))
             self.assertAlmostEqual(float(master_row[vol_col]), expected)
             self.assertAlmostEqual(float(inst_row[vol_col]), expected)
+            self.assertAlmostEqual(float(master_row[count_col]), 100.0)
+            self.assertAlmostEqual(float(inst_row[count_col]), 100.0)
         finally:
             if output_file.exists():
                 os.remove(str(output_file))

@@ -60,7 +60,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
             n_ref_labels=self.n_ref_labels,
-        )
+        ).metrics
 
         # Evaluate each spatial metric individually (no caching benefit)
         individual_results = {}
@@ -73,7 +73,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
                 voxelspacing=self.voxelspacing,
                 processing_pair_orig_shape=self.processing_pair_orig_shape,
                 n_ref_labels=self.n_ref_labels,
-            )
+            ).metrics
             individual_results[metric] = result[metric]
 
         # Compare results - they should be identical
@@ -100,7 +100,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
             n_ref_labels=self.n_ref_labels,
-        )
+        ).metrics
 
         # Verify all metrics computed successfully
         self.assertEqual(len(mixed_result), len(self.mixed_metrics))
@@ -130,7 +130,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
             n_ref_labels=self.n_ref_labels,
-        )
+        ).metrics
 
         # Verify results are computed and reasonable
         self.assertEqual(len(non_spatial_result), len(self.non_spatial_metrics))
@@ -154,7 +154,7 @@ class Test_Spatial_Caching_Optimization(unittest.TestCase):
             voxelspacing=self.voxelspacing,
             processing_pair_orig_shape=self.processing_pair_orig_shape,
             n_ref_labels=self.n_ref_labels,
-        )
+        ).metrics
 
         # Should return empty dict
         self.assertEqual(len(empty_result), 0)
