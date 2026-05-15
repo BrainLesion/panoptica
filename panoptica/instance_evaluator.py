@@ -128,7 +128,7 @@ def _evaluate_instance(
         iou_threshold (float): The IoU threshold for considering a match.
 
     Returns:
-        _InstanceEvaluation: Per-metric scores, raw voxel count of the reference instance, and physical volume (voxel count * prod(voxelspacing)). 
+        _InstanceEvaluation: Per-metric scores, raw voxel count of the reference instance, and physical volume (voxel count * prod(voxelspacing)).
         If the instance has no overlap, returns the default ``_InstanceEvaluation()`` (empty metrics, zero count and volume).
     """
     ref_arr = reference_arr == ref_idx
