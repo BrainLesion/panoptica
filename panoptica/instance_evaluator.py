@@ -1,9 +1,25 @@
+from dataclasses import dataclass, field
 from multiprocessing import Pool
 import numpy as np
 
 from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
 from panoptica._functionals import _get_paired_crop, _get_orig_onehotcc_structure
+
+
+@dataclass(frozen=True)
+class _InstanceEvaluation:
+    """Result of evaluating a single matched reference instance.
+
+    Attributes:
+        metrics: Per-metric scores keyed by ``Metric``. Empty dict signals no overlap (the instance is filtered out by the caller's ``if not metrics`` check).
+        voxel_count_ref: Raw voxel count of the reference instance (``np.count_nonzero`` of the cropped reference mask).
+        volume_ref: Physical volume of the reference instance, computed as ``voxel_count_ref * prod(voxelspacing)``.
+    """
+
+    metrics: dict[Metric, float] = field(default_factory=dict)
+    voxel_count_ref: int = 0
+    volume_ref: float = 0.0
 
 
 def evaluate_matched_instance(
@@ -41,7 +57,7 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
-    per_instance_results: list[dict[Metric, float]] = [
+    per_instance_results: list[_InstanceEvaluation] = [
         _evaluate_instance(
             reference_arr,
             prediction_arr,
@@ -55,25 +71,29 @@ def evaluate_matched_instance(
     ]
     # instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
     # with Pool() as pool:
-    #    metric_dicts: list[dict[Metric, float]] = pool.starmap(
+    #    metric_dicts: list[_InstanceEvaluation] = pool.starmap(
     #        _evaluate_instance, instance_pairs
     #    )
 
     # TODO if instance matcher already gives matching metric, adapt here!
     tp = 0
+    instance_voxel_count_ref: list[int] = []
+    instance_volume_ref: list[float] = []
     for instance_result in per_instance_results:
-        if not instance_result:
+        if not instance_result.metrics:
             continue
         accepted = decision_metric is None or (
             decision_threshold is not None
             and decision_metric.score_beats_threshold(
-                instance_result[decision_metric], decision_threshold
+                instance_result.metrics[decision_metric], decision_threshold
             )
         )
         if not accepted:
             continue
         tp += 1
-        for metric, score in instance_result.items():
+        instance_voxel_count_ref.append(instance_result.voxel_count_ref)
+        instance_volume_ref.append(instance_result.volume_ref)
+        for metric, score in instance_result.metrics.items():
             score_dict[metric].append(score)
 
     # Create and return the EvaluateInstancePair object with computed metrics
@@ -84,6 +104,8 @@ def evaluate_matched_instance(
         n_ref_instances=matched_instance_pair.n_ref_instances,
         tp=tp,
         list_metrics=score_dict,
+        instance_voxel_count_ref=instance_voxel_count_ref,
+        instance_volume_ref=instance_volume_ref,
     )
 
 
@@ -95,7 +117,7 @@ def _evaluate_instance(
     voxelspacing: tuple[float, ...] | None = None,
     processing_pair_orig_shape: tuple[int, ...] | None = None,
     n_ref_labels: int | None = None,
-) -> dict[Metric, float]:
+) -> _InstanceEvaluation:
     """
     Evaluate a single instance.
 
@@ -106,7 +128,8 @@ def _evaluate_instance(
         iou_threshold (float): The IoU threshold for considering a match.
 
     Returns:
-        Tuple[int, float, float]: Tuple containing True Positives (int), Dice coefficient (float), and IoU (float).
+        _InstanceEvaluation: Per-metric scores, raw voxel count of the reference instance, and physical volume (voxel count * prod(voxelspacing)).
+        If the instance has no overlap, returns the default ``_InstanceEvaluation()`` (empty metrics, zero count and volume).
     """
     ref_arr = reference_arr == ref_idx
     pred_arr = prediction_arr == ref_idx
@@ -126,7 +149,7 @@ def _evaluate_instance(
             voxelspacing = (1.0,) * reference_arr.ndim
 
     if ref_arr.sum() == 0 or pred_arr.sum() == 0:
-        return {}
+        return _InstanceEvaluation()
 
     # Crop down for speedup
     crop = _get_paired_crop(
@@ -136,6 +159,9 @@ def _evaluate_instance(
 
     ref_arr = ref_arr[crop]
     pred_arr = pred_arr[crop]
+
+    voxel_count_ref = int(np.count_nonzero(ref_arr))
+    volume_ref = float(voxel_count_ref * np.prod(voxelspacing))
 
     result: dict[Metric, float] = {}
 
@@ -194,4 +220,8 @@ def _evaluate_instance(
 
         result[metric] = metric_value
 
-    return result
+    return _InstanceEvaluation(
+        metrics=result,
+        voxel_count_ref=voxel_count_ref,
+        volume_ref=volume_ref,
+    )

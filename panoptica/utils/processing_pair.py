@@ -5,7 +5,7 @@ import numpy as np
 from panoptica._functionals import _get_paired_crop
 from panoptica.utils import _count_unique_without_zeros, _unique_without_zeros
 from panoptica.utils.constants import _Enum_Compare
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from panoptica.metrics import Metric
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
@@ -406,6 +406,9 @@ class EvaluateInstancePair:
         tp (int): The number of true positive matches between predicted and reference instances.
         list_metrics (dict[Metric, list[float]]): Dictionary of metric calculations, where each key is a `Metric`
             object, and each value is a list of metric scores (floats).
+        instance_voxel_count_ref (list[int]): Raw voxel count of each matched reference instance (one entry per TP).
+        instance_volume_ref (list[float]): Physical volume of each matched reference instance, computed as
+            voxel count times ``prod(voxelspacing)`` (one entry per TP).
     """
 
     reference_arr: np.ndarray
@@ -414,6 +417,8 @@ class EvaluateInstancePair:
     n_ref_instances: int
     tp: int
     list_metrics: dict[Metric, list[float]]
+    instance_voxel_count_ref: list[int] = field(default_factory=list)
+    instance_volume_ref: list[float] = field(default_factory=list)
 
 
 class InputType(_Enum_Compare):
