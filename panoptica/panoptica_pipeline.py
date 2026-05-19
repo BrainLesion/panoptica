@@ -613,8 +613,7 @@ def _handle_zero_instances_cases(
         n_reference_instance = n_reference_instance
         n_prediction_instance = 0
         is_edge_case = True
-        # Surface each reference instance as an unmatched-ref row so downstream
-        # consumers see the FN volumes even when the matcher is bypassed.
+        # Report each reference instance as an unmatched ref
         unmatched_voxel_counts: list[int] = []
         unmatched_volumes: list[float] = []
         for ref_label in np.unique(processing_pair.reference_arr):

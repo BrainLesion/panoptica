@@ -747,9 +747,7 @@ class PanopticaResult(object):
 
         if not output_individual_instance_metrics:
             return master_dict
-        else:
-            master_dict["is_matched"] = None
-
+        
         # allocate the results list: 1 Master Dict + 1 Empty Dict per instance row (matched + unmatched references)
         n_matched_from_list_metrics = max(
             (
@@ -783,15 +781,13 @@ class PanopticaResult(object):
                     val_list[i] if i < len(val_list) else None
                 )
 
-        # Per-instance voxel counts and physical volumes for matched references.
+        # Per-instance voxel counts and physical volumes.
         for key, val_list in (
             ("instance_voxel_count_ref", self.instance_voxel_count_matched_ref_list),
             ("instance_volume_ref", self.instance_volume_matched_ref_list),
         ):
             for i in range(n_matched):
                 results[i + 1][key] = val_list[i] if i < len(val_list) else None
-
-        # Per-instance voxel counts and physical volumes for unmatched references.    
         for key, val_list in (
             (
                 "instance_voxel_count_ref",
@@ -804,6 +800,7 @@ class PanopticaResult(object):
                     val_list[i] if i < len(val_list) else None
                 )
 
+        master_dict["is_matched"] = None
         for i in range(n_matched):
             results[i + 1]["is_matched"] = 1
         for i in range(n_matched, n_total):
