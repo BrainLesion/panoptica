@@ -2,10 +2,12 @@ from __future__ import annotations
 from typing import Any, Callable
 import numpy as np
 from panoptica.metrics import MetricMode
-from panoptica.utils import _AUTC_PREFIX
-from panoptica.utils import is_autc_key
-from panoptica.utils import format_autc_key
-from panoptica.utils import format_threshold_key
+from panoptica.utils.serialization import (
+    _AUTC_PREFIX,
+    format_autc_key,
+    format_threshold_key,
+    is_autc_key,
+)
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
@@ -13,7 +15,7 @@ from panoptica.metrics import (
     MetricCouldNotBeComputedException,
     MetricType,
 )
-from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.edge_case_handling import EdgeCaseHandler
 from panoptica.utils.processing_pair import IntermediateStepsData
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 from panoptica._functionals import _get_orig_onehotcc_structure

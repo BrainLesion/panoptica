@@ -1,0 +1,411 @@
+import json
+import os
+import unittest
+from pathlib import Path
+
+import numpy as np
+
+from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
+from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.utils.file_backend import (
+    JSONLBackend,
+    TSVBackend,
+    get_backend,
+)
+
+_TMP_DIR = Path(__file__).parent
+
+
+def _make_simple_evaluator() -> Panoptica_Evaluator:
+    return Panoptica_Evaluator(
+        expected_input=InputType.SEMANTIC,
+        instance_approximator=ConnectedComponentsInstanceApproximator(),
+        instance_matcher=NaiveThresholdMatching(),
+    )
+
+
+def _two_instance_arrays() -> tuple[np.ndarray, np.ndarray]:
+    a = np.zeros([50, 50], dtype=np.uint16)
+    b = a.copy()
+    a[10:20, 10:20] = 1
+    b[10:20, 10:20] = 1
+    a[30:40, 30:40] = 2
+    b[30:40, 30:40] = 2
+    return a, b
+
+
+class Test_TSVBackend_Direct(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.path = _TMP_DIR.joinpath("unittest_backend_direct.tsv")
+        if self.path.exists():
+            os.remove(self.path)
+
+    def tearDown(self) -> None:
+        if self.path.exists():
+            os.remove(self.path)
+
+    def test_prepare_for_append_creates_file_with_header(self):
+        backend = TSVBackend(self.path)
+        existing = backend.prepare_for_append(["liver"], ["dice", "tp"])
+        self.assertEqual(existing, [])
+        self.assertTrue(self.path.exists())
+        with open(self.path, "r", encoding="utf8") as f:
+            self.assertEqual(f.read().strip(), "subject_name\tliver-dice\tliver-tp")
+
+    def test_prepare_for_append_raises_on_header_mismatch(self):
+        backend = TSVBackend(self.path)
+        backend.prepare_for_append(["liver"], ["dice", "tp"])
+        backend2 = TSVBackend(self.path)
+        with self.assertRaisesRegex(ValueError, "Header does not match"):
+            backend2.prepare_for_append(["liver"], ["dice", "iou"])
+
+    def test_get_backend_dispatches_by_extension(self):
+        self.assertIsInstance(get_backend(self.path), TSVBackend)
+        self.assertIsInstance(
+            get_backend(_TMP_DIR.joinpath("dummy.jsonl")), JSONLBackend
+        )
+
+    def test_get_backend_unknown_extension_raises(self):
+        with self.assertRaises(ValueError):
+            get_backend(_TMP_DIR.joinpath("dummy.xyz"))
+
+    def test_write_full_then_load_raw_roundtrip(self):
+        backend = TSVBackend(self.path)
+        subj_names = ["subj_a", "subj_b"]
+        value_dict = {
+            "liver": {"dice": [0.9, 0.8], "tp": [5.0, None]},
+            "spleen": {"dice": [None, 0.7], "tp": [3.0, 2.0]},
+        }
+        backend.write_full(subj_names, value_dict, ["liver", "spleen"], ["dice", "tp"])
+
+        loaded_subj, loaded_dict = backend.load_raw(verbose=False)
+        self.assertEqual(loaded_subj, subj_names)
+        self.assertEqual(loaded_dict["liver"]["dice"], [0.9, 0.8])
+        self.assertEqual(loaded_dict["liver"]["tp"], [5.0, None])
+        self.assertEqual(loaded_dict["spleen"]["dice"], [None, 0.7])
+        self.assertEqual(loaded_dict["spleen"]["tp"], [3.0, 2.0])
+
+
+class Test_JSONLBackend_Direct(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.path = _TMP_DIR.joinpath("unittest_backend_direct.jsonl")
+        if self.path.exists():
+            os.remove(self.path)
+
+    def tearDown(self) -> None:
+        if self.path.exists():
+            os.remove(self.path)
+
+    def test_prepare_for_append_creates_empty_file(self):
+        backend = JSONLBackend(self.path)
+        existing = backend.prepare_for_append(["liver"], ["dice", "tp"])
+        self.assertEqual(existing, [])
+        self.assertTrue(self.path.exists())
+        self.assertEqual(self.path.stat().st_size, 0)
+
+    def test_prepare_for_append_returns_existing_subjects(self):
+        backend = JSONLBackend(self.path)
+        backend.prepare_for_append(["liver"], ["dice", "tp"])
+        with open(self.path, "a", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {
+                            "liver": {
+                                "dice": 0.8,
+                                "tp": 4.0,
+                                "instances": [{"sq_dice": 0.95}],
+                            }
+                        },
+                    }
+                )
+                + "\n"
+            )
+        backend2 = JSONLBackend(self.path)
+        existing = backend2.prepare_for_append(["liver"], ["dice", "tp"])
+        self.assertEqual(existing, ["subj_a", "subj_b", "subj_b-liver_inst_0"])
+
+    def test_prepare_for_append_raises_on_schema_mismatch_groups(self):
+        backend = JSONLBackend(self.path)
+        backend.prepare_for_append(["liver"], ["dice", "tp"])
+        with open(self.path, "a", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+        backend2 = JSONLBackend(self.path)
+        with self.assertRaisesRegex(
+            ValueError, "schema of existing file does not match"
+        ):
+            backend2.prepare_for_append(["liver", "spleen"], ["dice", "tp"])
+
+    def test_prepare_for_append_raises_on_schema_mismatch_metrics(self):
+        backend = JSONLBackend(self.path)
+        backend.prepare_for_append(["liver"], ["dice", "tp"])
+        with open(self.path, "a", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+        backend2 = JSONLBackend(self.path)
+        with self.assertRaisesRegex(
+            ValueError, "schema of existing file does not match"
+        ):
+            backend2.prepare_for_append(["liver"], ["dice", "iou"])
+
+    def test_aggregator_writes_one_jsonl_line_per_subject(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(evaluator, output_file=self.path)
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "test_subject_0")
+        aggregator.evaluate(b, a, "test_subject_1")
+
+        with open(self.path, "r", encoding="utf8") as f:
+            lines = [line for line in f if line.strip()]
+        self.assertEqual(len(lines), 2)
+        rec0 = json.loads(lines[0])
+        self.assertEqual(rec0["subject_name"], "test_subject_0")
+        self.assertIn("ungrouped", rec0["groups"])
+        self.assertIn("tp", rec0["groups"]["ungrouped"])
+        # No instances key when output_individual_instance_metrics=False
+        self.assertNotIn("instances", rec0["groups"]["ungrouped"])
+
+    def test_aggregator_writes_instances_when_enabled(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.path,
+            output_individual_instance_metrics=True,
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "test_subject")
+
+        with open(self.path, "r", encoding="utf8") as f:
+            line = f.readline().strip()
+        rec = json.loads(line)
+        # Two matched instances → instances list of length 2
+        self.assertIn("instances", rec["groups"]["ungrouped"])
+        self.assertEqual(len(rec["groups"]["ungrouped"]["instances"]), 2)
+
+    def test_load_raw_flattens_instances_into_synthetic_subj_names(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.path,
+            output_individual_instance_metrics=True,
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "test_subject")
+
+        backend = JSONLBackend(self.path)
+        subj_names, value_dict = backend.load_raw(verbose=False)
+        # Master row + 2 instance rows
+        self.assertEqual(len(subj_names), 3)
+        self.assertEqual(subj_names[0], "test_subject")
+        self.assertEqual(subj_names[1], "test_subject-ungrouped_inst_0")
+        self.assertEqual(subj_names[2], "test_subject-ungrouped_inst_1")
+        # Master row has a tp count, instance rows have None (since 'tp' is a
+        # summary metric, not an instance-level key)
+        self.assertIsNotNone(value_dict["ungrouped"]["tp"][0])
+        self.assertIsNone(value_dict["ungrouped"]["tp"][1])
+        self.assertIsNone(value_dict["ungrouped"]["tp"][2])
+
+    def test_load_raw_missing_value_round_trips_to_none(self):
+        # Write a record with an explicit JSON null and verify it loads as None
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"ungrouped": {"dice": None, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        subj_names, value_dict = backend.load_raw(verbose=False)
+        self.assertEqual(subj_names, ["subj_a"])
+        self.assertEqual(value_dict["ungrouped"]["dice"], [None])
+        self.assertEqual(value_dict["ungrouped"]["tp"], [5.0])
+
+
+class Test_Roundtrip_TSV_JSONL(unittest.TestCase):
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.before_tsv = _TMP_DIR.joinpath("unittest_roundtrip_before.tsv")
+        self.middle_jsonl = _TMP_DIR.joinpath("unittest_roundtrip_middle.jsonl")
+        self.after_tsv = _TMP_DIR.joinpath("unittest_roundtrip_after.tsv")
+        self.before_jsonl = _TMP_DIR.joinpath("unittest_roundtrip_before.jsonl")
+        self.middle_tsv = _TMP_DIR.joinpath("unittest_roundtrip_middle.tsv")
+        self.after_jsonl = _TMP_DIR.joinpath("unittest_roundtrip_after.jsonl")
+        for p in (
+            self.before_tsv,
+            self.middle_jsonl,
+            self.after_tsv,
+            self.before_jsonl,
+            self.middle_tsv,
+            self.after_jsonl,
+        ):
+            if p.exists():
+                os.remove(p)
+
+    def tearDown(self) -> None:
+        for p in (
+            self.before_tsv,
+            self.middle_jsonl,
+            self.after_tsv,
+            self.before_jsonl,
+            self.middle_tsv,
+            self.after_jsonl,
+        ):
+            if p.exists():
+                os.remove(p)
+
+    def test_tsv_jsonl_tsv_byte_identical(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.before_tsv,
+            output_individual_instance_metrics=True,
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "subj_a")
+
+        stat = Panoptica_Statistic.from_file(self.before_tsv, verbose=False)
+        stat.to_file(self.middle_jsonl)
+
+        stat2 = Panoptica_Statistic.from_file(self.middle_jsonl, verbose=False)
+        stat2.to_file(self.after_tsv)
+
+        self.assertEqual(
+            self.before_tsv.read_bytes(),
+            self.after_tsv.read_bytes(),
+            "TSV → JSONL → TSV roundtrip must be byte-identical",
+        )
+
+    def test_jsonl_tsv_jsonl_byte_identical(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.before_jsonl,
+            output_individual_instance_metrics=True,
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "subj_a")
+
+        stat = Panoptica_Statistic.from_file(self.before_jsonl, verbose=False)
+        stat.to_file(self.middle_tsv)
+
+        stat2 = Panoptica_Statistic.from_file(self.middle_tsv, verbose=False)
+        stat2.to_file(self.after_jsonl)
+
+        self.assertEqual(
+            self.before_jsonl.read_bytes(),
+            self.after_jsonl.read_bytes(),
+            "JSONL → TSV → JSONL roundtrip must be byte-identical",
+        )
+
+    def test_continue_file_jsonl_blocks_duplicate_subject(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator, output_file=self.before_jsonl, continue_file=False
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "subj_a")
+
+        # New aggregator with continue_file=True picks up the existing subject
+        aggregator2 = Panoptica_Aggregator(
+            evaluator, output_file=self.before_jsonl, continue_file=True
+        )
+        # evaluate() on the same subject_name prints a warning and returns;
+        # the file is unchanged.
+        size_before = self.before_jsonl.stat().st_size
+        aggregator2.evaluate(b, a, "subj_a")
+        size_after = self.before_jsonl.stat().st_size
+        self.assertEqual(size_before, size_after)
+
+
+class Test_Statistic_File_Suffix_Defaulting(unittest.TestCase):
+    """`Panoptica_Statistic.from_file` / `to_file` should auto-append
+    ``.{file_type}`` (default ``jsonl``) when the given path has no suffix,
+    mirroring `Panoptica_Aggregator.__init__`."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.stem = _TMP_DIR.joinpath("unittest_suffix_default")
+        self.candidates = [
+            self.stem,
+            self.stem.with_suffix(".jsonl"),
+            self.stem.with_suffix(".tsv"),
+        ]
+        for p in self.candidates:
+            if p.exists():
+                os.remove(p)
+
+    def tearDown(self) -> None:
+        for p in self.candidates:
+            if p.exists():
+                os.remove(p)
+
+    def _seed_jsonl(self) -> Panoptica_Statistic:
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.stem.with_suffix(".jsonl"),
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "subj_a")
+        return Panoptica_Statistic.from_file(
+            self.stem.with_suffix(".jsonl"), verbose=False
+        )
+
+    def test_from_file_appends_jsonl_by_default(self):
+        self._seed_jsonl()
+        # Pass the bare stem; should resolve to .jsonl
+        stat = Panoptica_Statistic.from_file(self.stem, verbose=False)
+        self.assertIn("subj_a", stat.subjectnames)
+
+    def test_from_file_appends_explicit_file_type(self):
+        # Write a TSV and load it via stem + file_type="tsv"
+        stat = self._seed_jsonl()
+        stat.to_file(self.stem.with_suffix(".tsv"))
+        stat2 = Panoptica_Statistic.from_file(
+            self.stem, verbose=False, file_type="tsv"
+        )
+        self.assertIn("subj_a", stat2.subjectnames)
+
+    def test_to_file_appends_jsonl_by_default(self):
+        stat = self._seed_jsonl()
+        stat.to_file(self.stem)
+        self.assertTrue(self.stem.with_suffix(".jsonl").exists())
+        self.assertFalse(self.stem.with_suffix(".tsv").exists())
+
+    def test_explicit_suffix_beats_file_type_kwarg(self):
+        # Explicit .tsv suffix on the path must win over file_type="jsonl"
+        stat = self._seed_jsonl()
+        stat.to_file(self.stem.with_suffix(".tsv"), file_type="jsonl")
+        self.assertTrue(self.stem.with_suffix(".tsv").exists())
