@@ -354,16 +354,13 @@ class PanopticaResult(object):
         # endregion
 
         # region Reference Instances
-        # Voxel count and physical volume of each matched reference instance.
+        # Per-instance voxel count and physical volume of each matched (TP) reference instance.
         self.instance_voxel_count_matched_ref_list: list[int] = list(
             instance_voxel_count_matched_ref or []
         )
         self.instance_volume_matched_ref_list: list[float] = list(
             instance_volume_matched_ref or []
         )
-        # The metric key strings ("instance_voxel_count_ref" / "instance_volume_ref")
-        # are kept as-is because they double as TSV column names that downstream
-        # consumers depend on; unmatched-ref rows reuse the same columns.
         self.instance_voxel_count_ref: float
         self._add_metric(
             "instance_voxel_count_ref",
@@ -397,15 +394,7 @@ class PanopticaResult(object):
         self.instance_volume_unmatched_ref_list: list[float] = list(
             instance_volume_unmatched_ref or []
         )
-        self.is_matched: float
-        self._add_metric(
-            "is_matched",
-            MetricType.INSTANCE,
-            None,
-            long_name="Instance Matched Flag (1=matched, 0=unmatched ref)",
-            default_value=float("nan"),
-            was_calculated=True,
-        )
+        self.is_matched: float = float("nan")
         # endregion
 
         # region Global
@@ -755,12 +744,11 @@ class PanopticaResult(object):
             for k, v in self._evaluation_metrics.items()
             if (not v._error and v._was_calculated)
         }
-        # is_matched is a per-instance flag; the master row leaves it empty
-        if "is_matched" in master_dict:
-            master_dict["is_matched"] = None
 
         if not output_individual_instance_metrics:
             return master_dict
+        else:
+            master_dict["is_matched"] = None
 
         # allocate the results list: 1 Master Dict + 1 Empty Dict per instance row (matched + unmatched references)
         n_matched_from_list_metrics = max(
@@ -796,8 +784,6 @@ class PanopticaResult(object):
                 )
 
         # Per-instance voxel counts and physical volumes for matched references.
-        # Column names ("instance_voxel_count_ref" / "instance_volume_ref") are reused
-        # for both matched and unmatched rows; the is_matched column distinguishes them.
         for key, val_list in (
             ("instance_voxel_count_ref", self.instance_voxel_count_matched_ref_list),
             ("instance_volume_ref", self.instance_volume_matched_ref_list),
@@ -805,7 +791,7 @@ class PanopticaResult(object):
             for i in range(n_matched):
                 results[i + 1][key] = val_list[i] if i < len(val_list) else None
 
-        # Same columns, additional rows for unmatched (FN) references.
+        # Per-instance voxel counts and physical volumes for unmatched references.    
         for key, val_list in (
             (
                 "instance_voxel_count_ref",

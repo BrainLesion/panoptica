@@ -3,14 +3,14 @@ from time import perf_counter
 from typing import TYPE_CHECKING
 
 from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_evaluator import (
-    evaluate_matched_instance,
-    _compute_ref_voxel_count_and_volume,
-)
+from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult
-from panoptica.utils import EdgeCaseHandler
+from panoptica.utils import (
+    EdgeCaseHandler, 
+    compute_ref_voxel_count_and_volume
+    )
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
@@ -620,7 +620,7 @@ def _handle_zero_instances_cases(
         for ref_label in np.unique(processing_pair.reference_arr):
             if ref_label == 0:
                 continue
-            voxel_count, volume = _compute_ref_voxel_count_and_volume(
+            voxel_count, volume = compute_ref_voxel_count_and_volume(
                 processing_pair.reference_arr, int(ref_label), voxelspacing
             )
             unmatched_voxel_counts.append(voxel_count)

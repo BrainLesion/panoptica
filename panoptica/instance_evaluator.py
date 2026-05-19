@@ -5,6 +5,7 @@ import numpy as np
 from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
 from panoptica._functionals import _get_paired_crop, _get_orig_onehotcc_structure
+from panoptica.utils import compute_ref_voxel_count_and_volume
 
 
 @dataclass(frozen=True)
@@ -99,7 +100,7 @@ def evaluate_matched_instance(
     instance_voxel_count_unmatched_ref: list[int] = []
     instance_volume_unmatched_ref: list[float] = []
     for ref_idx in matched_instance_pair.missed_reference_labels:
-        voxel_count, volume = _compute_ref_voxel_count_and_volume(
+        voxel_count, volume = compute_ref_voxel_count_and_volume(
             reference_arr, ref_idx, voxelspacing
         )
         instance_voxel_count_unmatched_ref.append(voxel_count)
@@ -236,19 +237,3 @@ def _evaluate_instance(
         voxel_count_ref=voxel_count_ref,
         volume_ref=volume_ref,
     )
-
-
-def _compute_ref_voxel_count_and_volume(
-    reference_arr: np.ndarray,
-    ref_idx: int,
-    voxelspacing: tuple[float, ...] | None = None,
-) -> tuple[int, float]:
-    """Compute voxel count and physical volume of a single reference instance.
-
-    Used for unmatched reference instances, where no prediction comparison is needed.
-    """
-    if voxelspacing is None:
-        voxelspacing = (1.0,) * reference_arr.ndim
-    voxel_count = int(np.count_nonzero(reference_arr == ref_idx))
-    volume = float(voxel_count * np.prod(voxelspacing))
-    return voxel_count, volume
