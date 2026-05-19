@@ -82,10 +82,8 @@ class Panoptica_Aggregator:
                 threshold_step_size
             )
         else:
-            self.__evaluation_metrics = list(
-                panoptica_evaluator.resulting_metric_keys(
-                    output_individual_instance_metrics=output_individual_instance_metrics
-                )
+            self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys(
+                output_individual_instance_metrics=output_individual_instance_metrics
             )
 
         if log_times and COMPUTATION_TIME_KEY not in self.__evaluation_metrics:
