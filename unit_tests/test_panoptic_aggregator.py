@@ -419,9 +419,11 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             self.assertGreaterEqual(is_matched_col, 0)
             self.assertGreaterEqual(dsc_col, 0)
             expected = 100 * 4.0  # 100 voxels * prod((2.0, 2.0))
-            # Master row's volume/count averages reflect only matched refs.
+            # Master row's volume/count averages reflect only matched refs;
+            # is_matched is a per-instance flag and is empty on the master row.
             self.assertAlmostEqual(float(master_row[vol_col]), expected)
             self.assertAlmostEqual(float(master_row[count_col]), 100.0)
+            self.assertEqual(master_row[is_matched_col], "")
             # Matched row
             self.assertEqual(int(float(matched_row[is_matched_col])), 1)
             self.assertAlmostEqual(float(matched_row[vol_col]), expected)

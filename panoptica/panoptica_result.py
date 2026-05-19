@@ -755,6 +755,9 @@ class PanopticaResult(object):
             for k, v in self._evaluation_metrics.items()
             if (not v._error and v._was_calculated)
         }
+        # is_matched is a per-instance flag; the master row leaves it empty
+        if "is_matched" in master_dict:
+            master_dict["is_matched"] = None
 
         if not output_individual_instance_metrics:
             return master_dict
