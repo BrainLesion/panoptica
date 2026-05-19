@@ -38,6 +38,4 @@ from panoptica.utils.serialization import (
     is_autc_key,
     _AUTC_PREFIX,
 )
-from panoptica.utils.volume import (
-    compute_ref_voxel_count_and_volume
-)
+from panoptica.utils.volume import compute_ref_voxel_count_and_volume

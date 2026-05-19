@@ -747,7 +747,7 @@ class PanopticaResult(object):
 
         if not output_individual_instance_metrics:
             return master_dict
-        
+
         # allocate the results list: 1 Master Dict + 1 Empty Dict per instance row (matched + unmatched references)
         n_matched_from_list_metrics = max(
             (
