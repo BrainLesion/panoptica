@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def compute_ref_voxel_count_and_volume(
     reference_arr: np.ndarray,
     ref_idx: int,

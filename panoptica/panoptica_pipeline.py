@@ -7,10 +7,7 @@ from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult
-from panoptica.utils import (
-    EdgeCaseHandler, 
-    compute_ref_voxel_count_and_volume
-    )
+from panoptica.utils import EdgeCaseHandler, compute_ref_voxel_count_and_volume
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
