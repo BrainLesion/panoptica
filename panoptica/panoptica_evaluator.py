@@ -89,7 +89,6 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__global_metrics = global_metrics
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
-        self.__resulting_metric_keys = None
         self.__save_group_times = save_group_times
         self.__per_region_evaluation = per_region_evaluation
         if self.__per_region_evaluation:
@@ -391,12 +390,24 @@ class Panoptica_Evaluator(SupportsConfig):
     def segmentation_class_groups_names(self) -> list[str]:
         return self.__segmentation_class_groups.keys()
 
-    @property
-    def resulting_metric_keys(self) -> list[str]:
-        if self.__resulting_metric_keys is None:
-            res = self._get_dummy_result()
-            self.__resulting_metric_keys = list(res.to_dict().keys())
-        return self.__resulting_metric_keys
+    def resulting_metric_keys(
+        self, output_individual_instance_metrics: bool = False
+    ) -> list[str]:
+        res = self._get_dummy_result()
+        dicts = res.to_dict(
+            output_individual_instance_metrics=output_individual_instance_metrics
+        )
+        if not isinstance(dicts, list):
+            dicts = [dicts]
+        # Union of all row keys, preserving insertion order.
+        keys: list[str] = []
+        seen: set[str] = set()
+        for d in dicts:
+            for k in d:
+                if k not in seen:
+                    keys.append(k)
+                    seen.add(k)
+        return keys
 
     def set_log_group_times(self, should_save: bool):
         self.__save_group_times = should_save
@@ -429,7 +440,7 @@ class Panoptica_Evaluator(SupportsConfig):
         res = self._get_dummy_result()
         keys = [format_autc_key(m) for m in sorted(res.autc_metrics)]
 
-        base_keys = self.resulting_metric_keys
+        base_keys = self.resulting_metric_keys()
         for t in self.generate_thresholds(threshold_step_size):
             for m in base_keys:
                 keys.append(format_threshold_key(t, m))
