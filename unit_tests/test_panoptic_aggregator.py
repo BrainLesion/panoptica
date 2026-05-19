@@ -290,7 +290,8 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
 
     def test_aggregator_volume_zero_tp(self):
         # Reference has one instance; prediction is empty -> tp=0.
-        # With no matched references the per-instance lists are empty -> NaN default.
+        # Matched-average columns are NaN, but the unmatched ref is reported
+        # as a single FN row.
         ref = np.zeros([50, 50], dtype=np.uint16)
         pred = np.zeros_like(ref)
         ref[10:20, 10:20] = 1
@@ -316,10 +317,11 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             with open(str(output_file), "r", encoding="utf8", newline="") as f:
                 rows = list(csv.reader(f, delimiter="\t"))
 
-            # 1 header + 1 master row, no per-instance rows because tp=0.
-            self.assertEqual(len(rows), 2)
+            # 1 header + 1 master + 1 FN row for the unmatched reference.
+            self.assertEqual(len(rows), 3)
             header = rows[0]
             master_row = rows[1]
+            fn_row = rows[2]
             vol_col = next(
                 (
                     i
@@ -336,18 +338,27 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                 ),
                 -1,
             )
+            is_matched_col = next(
+                (i for i, name in enumerate(header) if name.endswith("-is_matched")),
+                -1,
+            )
             self.assertGreaterEqual(vol_col, 0)
             self.assertGreaterEqual(count_col, 0)
-            # NaN default for tp=0
+            self.assertGreaterEqual(is_matched_col, 0)
+            # Matched-average columns are NaN because no instance was matched.
             self.assertEqual(master_row[vol_col].lower(), "nan")
             self.assertEqual(master_row[count_col].lower(), "nan")
+            # FN row carries the geometry of the unmatched reference.
+            self.assertEqual(int(float(fn_row[is_matched_col])), 0)
+            self.assertAlmostEqual(float(fn_row[count_col]), 100.0)
+            self.assertAlmostEqual(float(fn_row[vol_col]), 100.0)
         finally:
             if output_file.exists():
                 os.remove(str(output_file))
 
     def test_aggregator_volume_partial_match(self):
         # Two reference instances; only one has a matching prediction.
-        # The per-instance volume list should contain exactly one entry.
+        # Expect a matched row and an unmatched row, distinguished by is_matched.
         ref = np.zeros([50, 50], dtype=np.uint16)
         pred = np.zeros_like(ref)
         ref[10:20, 10:20] = 1  # 100 voxels, matched
@@ -375,10 +386,10 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             with open(str(output_file), "r", encoding="utf8", newline="") as f:
                 rows = list(csv.reader(f, delimiter="\t"))
 
-            # 1 header + 1 master + 1 per-instance (only the matched instance)
-            self.assertEqual(len(rows), 3)
+            # 1 header + 1 master + 1 matched row + 1 unmatched row
+            self.assertEqual(len(rows), 4)
             header = rows[0]
-            master_row, inst_row = rows[1], rows[2]
+            master_row, matched_row, unmatched_row = rows[1], rows[2], rows[3]
             vol_col = next(
                 (
                     i
@@ -395,13 +406,76 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                 ),
                 -1,
             )
+            is_matched_col = next(
+                (i for i, name in enumerate(header) if name.endswith("-is_matched")),
+                -1,
+            )
+            dsc_col = next(
+                (i for i, name in enumerate(header) if name.endswith("-sq_dsc")),
+                -1,
+            )
             self.assertGreaterEqual(vol_col, 0)
             self.assertGreaterEqual(count_col, 0)
+            self.assertGreaterEqual(is_matched_col, 0)
+            self.assertGreaterEqual(dsc_col, 0)
             expected = 100 * 4.0  # 100 voxels * prod((2.0, 2.0))
+            # Master row's volume/count averages reflect only matched refs.
             self.assertAlmostEqual(float(master_row[vol_col]), expected)
-            self.assertAlmostEqual(float(inst_row[vol_col]), expected)
             self.assertAlmostEqual(float(master_row[count_col]), 100.0)
-            self.assertAlmostEqual(float(inst_row[count_col]), 100.0)
+            # Matched row
+            self.assertEqual(int(float(matched_row[is_matched_col])), 1)
+            self.assertAlmostEqual(float(matched_row[vol_col]), expected)
+            self.assertAlmostEqual(float(matched_row[count_col]), 100.0)
+            self.assertNotEqual(matched_row[dsc_col], "")
+            # Unmatched row
+            self.assertEqual(int(float(unmatched_row[is_matched_col])), 0)
+            self.assertAlmostEqual(float(unmatched_row[vol_col]), expected)
+            self.assertAlmostEqual(float(unmatched_row[count_col]), 100.0)
+            self.assertEqual(unmatched_row[dsc_col], "")
+        finally:
+            if output_file.exists():
+                os.remove(str(output_file))
+
+    def test_aggregator_all_matched_no_unmatched_rows(self):
+        # Regression guard: if every reference is matched, only matched rows are emitted.
+        ref = np.zeros([50, 50], dtype=np.uint16)
+        pred = np.zeros_like(ref)
+        ref[10:20, 10:20] = 1
+        ref[30:40, 30:40] = 2
+        pred[10:20, 10:20] = 1
+        pred[30:40, 30:40] = 2
+
+        output_file = Path(__file__).parent.joinpath("unittest_all_matched.tsv")
+        if output_file.exists():
+            os.remove(str(output_file))
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            instance_metrics=[Metric.DSC, Metric.IOU],
+        )
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=output_file,
+            output_individual_instance_metrics=True,
+        )
+        try:
+            aggregator.evaluate(pred, ref, "all_matched_test")
+
+            with open(str(output_file), "r", encoding="utf8", newline="") as f:
+                rows = list(csv.reader(f, delimiter="\t"))
+
+            # 1 header + 1 master + 2 matched rows, no FN rows
+            self.assertEqual(len(rows), 4)
+            header = rows[0]
+            is_matched_col = next(
+                (i for i, name in enumerate(header) if name.endswith("-is_matched")),
+                -1,
+            )
+            self.assertGreaterEqual(is_matched_col, 0)
+            self.assertEqual(int(float(rows[2][is_matched_col])), 1)
+            self.assertEqual(int(float(rows[3][is_matched_col])), 1)
         finally:
             if output_file.exists():
                 os.remove(str(output_file))

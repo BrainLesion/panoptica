@@ -36,8 +36,10 @@ class PanopticaResult(object):
         label_group: LabelGroup | None = None,
         intermediate_steps_data: IntermediateStepsData | None = None,
         computation_time: float | None = None,
-        instance_voxel_count_ref: list[int] | None = None,
-        instance_volume_ref: list[float] | None = None,
+        instance_voxel_count_matched_ref: list[int] | None = None,
+        instance_volume_matched_ref: list[float] | None = None,
+        instance_voxel_count_unmatched_ref: list[int] | None = None,
+        instance_volume_unmatched_ref: list[float] | None = None,
         **kwargs,
     ):
         """Result object for Panoptica, contains all calculatable metrics
@@ -353,10 +355,15 @@ class PanopticaResult(object):
 
         # region Reference Instances
         # Voxel count and physical volume of each matched reference instance.
-        self.instance_voxel_count_ref_list: list[int] = list(
-            instance_voxel_count_ref or []
+        self.instance_voxel_count_matched_ref_list: list[int] = list(
+            instance_voxel_count_matched_ref or []
         )
-        self.instance_volume_ref_list: list[float] = list(instance_volume_ref or [])
+        self.instance_volume_matched_ref_list: list[float] = list(
+            instance_volume_matched_ref or []
+        )
+        # The metric key strings ("instance_voxel_count_ref" / "instance_volume_ref")
+        # are kept as-is because they double as TSV column names that downstream
+        # consumers depend on; unmatched-ref rows reuse the same columns.
         self.instance_voxel_count_ref: float
         self._add_metric(
             "instance_voxel_count_ref",
@@ -364,8 +371,8 @@ class PanopticaResult(object):
             None,
             long_name="Average Matched Reference Instance Voxel Count",
             default_value=(
-                float(np.mean(self.instance_voxel_count_ref_list))
-                if self.instance_voxel_count_ref_list
+                float(np.mean(self.instance_voxel_count_matched_ref_list))
+                if self.instance_voxel_count_matched_ref_list
                 else float("nan")
             ),
             was_calculated=True,
@@ -377,10 +384,26 @@ class PanopticaResult(object):
             None,
             long_name="Average Matched Reference Instance Physical Volume",
             default_value=(
-                float(np.mean(self.instance_volume_ref_list))
-                if self.instance_volume_ref_list
+                float(np.mean(self.instance_volume_matched_ref_list))
+                if self.instance_volume_matched_ref_list
                 else float("nan")
             ),
+            was_calculated=True,
+        )
+        # Per-instance voxel count and physical volume of unmatched (FN) reference instances.
+        self.instance_voxel_count_unmatched_ref_list: list[int] = list(
+            instance_voxel_count_unmatched_ref or []
+        )
+        self.instance_volume_unmatched_ref_list: list[float] = list(
+            instance_volume_unmatched_ref or []
+        )
+        self.is_matched: float
+        self._add_metric(
+            "is_matched",
+            MetricType.INSTANCE,
+            None,
+            long_name="Instance Matched Flag (1=matched, 0=unmatched ref)",
+            default_value=float("nan"),
             was_calculated=True,
         )
         # endregion
@@ -736,8 +759,8 @@ class PanopticaResult(object):
         if not output_individual_instance_metrics:
             return master_dict
 
-        # allocate the results list: 1 Master Dict + 1 Empty Dict per True Positive
-        n_instances = max(
+        # allocate the results list: 1 Master Dict + 1 Empty Dict per instance row (matched + unmatched references)
+        n_matched_from_list_metrics = max(
             (
                 len(lm.ALL)
                 for lm in self._list_metrics.values()
@@ -747,31 +770,55 @@ class PanopticaResult(object):
         )
 
         if not (isinstance(self.tp, float) and np.isnan(self.tp)):
-            assert n_instances == self.tp, (
-                f"tp={self.tp} but list metric lengths={n_instances}; "
+            assert n_matched_from_list_metrics == self.tp, (
+                f"tp={self.tp} but list metric lengths={n_matched_from_list_metrics}; "
                 "possible decision-threshold filtering mismatch"
             )
 
-        results = [master_dict] + [{} for _ in range(n_instances)]
+        n_matched = n_matched_from_list_metrics
+        n_unmatched = len(self.instance_volume_unmatched_ref_list)
+        n_total = n_matched + n_unmatched
+
+        results = [master_dict] + [{} for _ in range(n_total)]
 
         for metric_enum, list_metric_obj in self._list_metrics.items():
             if list_metric_obj.error or list_metric_obj.ALL is None:
                 continue
 
             val_list = list_metric_obj.ALL
-            for i in range(n_instances):
-                # val_list may be shorter than n_instances if this metric hit a partial calculation error
+            for i in range(n_matched):
+                # val_list may be shorter than n_matched if this metric hit a partial calculation error
                 results[i + 1][metric_enum.get_result_key("sq")] = (
                     val_list[i] if i < len(val_list) else None
                 )
 
-        # Per-instance voxel counts and physical volumes are stored as direct attributes
+        # Per-instance voxel counts and physical volumes for matched references.
+        # Column names ("instance_voxel_count_ref" / "instance_volume_ref") are reused
+        # for both matched and unmatched rows; the is_matched column distinguishes them.
         for key, val_list in (
-            ("instance_voxel_count_ref", self.instance_voxel_count_ref_list),
-            ("instance_volume_ref", self.instance_volume_ref_list),
+            ("instance_voxel_count_ref", self.instance_voxel_count_matched_ref_list),
+            ("instance_volume_ref", self.instance_volume_matched_ref_list),
         ):
-            for i in range(n_instances):
+            for i in range(n_matched):
                 results[i + 1][key] = val_list[i] if i < len(val_list) else None
+
+        # Same columns, additional rows for unmatched (FN) references.
+        for key, val_list in (
+            (
+                "instance_voxel_count_ref",
+                self.instance_voxel_count_unmatched_ref_list,
+            ),
+            ("instance_volume_ref", self.instance_volume_unmatched_ref_list),
+        ):
+            for i in range(n_unmatched):
+                results[n_matched + i + 1][key] = (
+                    val_list[i] if i < len(val_list) else None
+                )
+
+        for i in range(n_matched):
+            results[i + 1]["is_matched"] = 1
+        for i in range(n_matched, n_total):
+            results[i + 1]["is_matched"] = 0
 
         return results
 
