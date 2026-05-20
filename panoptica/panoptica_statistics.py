@@ -294,14 +294,14 @@ class Panoptica_Statistic:
             }
         else:
             vdict = {self.__subj_names[i]: values[i] for i in range(len(values))}
-        vdict = dict(
-            sorted(
-                vdict.items(),
-                key=lambda x: (x[1] is None, x[1]),
-                reverse=not sort_ascending,
-            )
-        )
-        return vdict
+        # Sort non-None values and append None entries at the end so missing
+        # values always sort last regardless of direction. A single sort with
+        # key=(x[1] is None, x[1]) flips the None partition to the front when
+        # reverse=True, which is rarely what callers want.
+        non_none_items = [(k, v) for k, v in vdict.items() if v is not None]
+        none_items = [(k, v) for k, v in vdict.items() if v is None]
+        non_none_items.sort(key=lambda x: x[1], reverse=not sort_ascending)
+        return dict(non_none_items + none_items)
 
     def get_best_worst_k_entries(
         self,

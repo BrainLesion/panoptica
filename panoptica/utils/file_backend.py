@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
-from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+if TYPE_CHECKING:
+    from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 
 COMPUTATION_TIME_KEY = "computation_time"
 
@@ -25,6 +26,7 @@ class FileBackend(ABC):
         self,
         class_group_names: list[str],
         evaluation_metrics: list[str],
+        collect_existing: bool = True,
     ) -> list[str]:
         """Initialize the file for appending and return existing subject names.
 
@@ -33,6 +35,11 @@ class FileBackend(ABC):
         current evaluator configuration. Returns the list of subject names
         already present in the file so the aggregator can seed its dedup
         buffer.
+
+        When ``collect_existing`` is False, schema validation still runs but
+        the subject-name list is not materialised — useful for the
+        ``continue_file=False`` aggregator path, where the list would be
+        discarded anyway. Returns ``[]`` in that case.
 
         Raises:
             ValueError: If existing content is incompatible with the current

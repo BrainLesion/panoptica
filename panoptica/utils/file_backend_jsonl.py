@@ -34,6 +34,7 @@ class JSONLBackend(FileBackend):
         self,
         class_group_names: list[str],
         evaluation_metrics: list[str],
+        collect_existing: bool = True,
     ) -> list[str]:
         expected_metrics = set(evaluation_metrics)
         expected_groups = set(class_group_names)
@@ -47,6 +48,8 @@ class JSONLBackend(FileBackend):
         for record in _iter_jsonl_records(self.path):
             seen_any = True
             self._validate_record_schema(record, expected_groups, expected_metrics)
+            if not collect_existing:
+                continue
             sn = record["subject_name"]
             existing.append(sn)
             for g, g_data in record.get("groups", {}).items():

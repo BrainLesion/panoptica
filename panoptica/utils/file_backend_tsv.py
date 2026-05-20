@@ -26,6 +26,7 @@ class TSVBackend(FileBackend):
         self,
         class_group_names: list[str],
         evaluation_metrics: list[str],
+        collect_existing: bool = True,
     ) -> list[str]:
         header = ["subject_name"] + [
             f"{g}-{m}" for g in class_group_names for m in evaluation_metrics
@@ -47,8 +48,10 @@ class TSVBackend(FileBackend):
                         f"{self.path}: Header does not match! You are using a different setup!"
                     )
 
-        # Return existing subject names from the file (excluding the header
-        # row). On a fresh file this list is empty.
+        # Skip the full subject-column scan when the caller has signalled
+        # that the result will be discarded (continue_file=False).
+        if not collect_existing:
+            return []
         all_first_column = _load_first_tsv_column(self.path)
         return [s for s in all_first_column if s != "subject_name"]
 

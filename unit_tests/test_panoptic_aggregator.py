@@ -3,8 +3,10 @@
 # coverage report
 # coverage html
 import csv
+import json
 import os
 import unittest
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
@@ -14,6 +16,7 @@ from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatc
 from panoptica.metrics import Metric
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.panoptica_result import MetricCouldNotBeComputedException
+from panoptica.utils import NonDaemonicPool
 from panoptica.utils.processing_pair import SemanticPair
 from panoptica.utils.segmentation_class import SegmentationClassGroups
 import sys
@@ -599,3 +602,233 @@ class Test_Panoptica_Aggregator_Init_Errors(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 Panoptica_Aggregator(evaluator, output_file=bad_path)
             mock_tempfile.assert_not_called()
+
+
+class Test_Panoptica_Aggregator_Init_Locking_And_Lazy_Load(unittest.TestCase):
+    """`Panoptica_Aggregator.__init__` should hold ``filelock`` while it
+    initialises the backend, and should skip the full existing-subjects
+    scan when ``continue_file=False`` (since the result is discarded
+    anyway)."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.output_file = Path(__file__).parent.joinpath(
+            "unittest_aggregator_init.jsonl"
+        )
+        if self.output_file.exists():
+            os.remove(self.output_file)
+
+    def tearDown(self) -> None:
+        if self.output_file.exists():
+            os.remove(self.output_file)
+
+    def _make_evaluator(self) -> Panoptica_Evaluator:
+        return Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+
+    def test_prepare_for_append_called_under_filelock(self):
+        from unittest.mock import MagicMock, patch
+
+        evaluator = self._make_evaluator()
+
+        # Wrap the real filelock with a MagicMock that records __enter__/__exit__
+        # so we can assert the lock was actively held across prepare_for_append.
+        order: list[str] = []
+
+        mock_lock = MagicMock()
+        mock_lock.__enter__.side_effect = lambda: order.append("lock_enter")
+        mock_lock.__exit__.side_effect = lambda *a, **kw: order.append("lock_exit")
+
+        def _record_prepare(*args, **kwargs):
+            order.append("prepare_for_append")
+            return []
+
+        with patch("panoptica.panoptica_aggregator.filelock", mock_lock):
+            with patch(
+                "panoptica.utils.file_backend_jsonl.JSONLBackend.prepare_for_append",
+                side_effect=_record_prepare,
+            ):
+                Panoptica_Aggregator(evaluator, output_file=self.output_file)
+
+        # filelock entered, prepare_for_append ran, then filelock exited.
+        self.assertEqual(order[:3], ["lock_enter", "prepare_for_append", "lock_exit"])
+
+    def test_continue_file_false_skips_existing_scan(self):
+        # Seed a file with one subject so that — if collect_existing were
+        # honoured wrongly — the call would return ["subj_seed"].
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy()
+        a[10:20, 10:20] = 1
+        b[10:20, 10:20] = 1
+
+        evaluator = self._make_evaluator()
+        Panoptica_Aggregator(
+            evaluator, output_file=self.output_file, continue_file=True
+        ).evaluate(b, a, "subj_seed")
+
+        from unittest.mock import patch
+
+        seen_kwargs: dict = {}
+
+        original = __import__(
+            "panoptica.utils.file_backend_jsonl",
+            fromlist=["JSONLBackend"],
+        ).JSONLBackend.prepare_for_append
+
+        def _spy(self, class_group_names, evaluation_metrics, collect_existing=True):
+            seen_kwargs["collect_existing"] = collect_existing
+            return original(
+                self,
+                class_group_names,
+                evaluation_metrics,
+                collect_existing=collect_existing,
+            )
+
+        with patch(
+            "panoptica.utils.file_backend_jsonl.JSONLBackend.prepare_for_append",
+            _spy,
+        ):
+            Panoptica_Aggregator(
+                evaluator, output_file=self.output_file, continue_file=False
+            )
+
+        self.assertEqual(seen_kwargs["collect_existing"], False)
+
+    def test_continue_file_true_collects_existing(self):
+        # Symmetric assertion: continue_file=True must forward collect_existing=True
+        # (default) so the dedup buffer is seeded with prior subjects.
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy()
+        a[10:20, 10:20] = 1
+        b[10:20, 10:20] = 1
+
+        evaluator = self._make_evaluator()
+        Panoptica_Aggregator(
+            evaluator, output_file=self.output_file, continue_file=True
+        ).evaluate(b, a, "subj_seed")
+
+        from unittest.mock import patch
+
+        seen_kwargs: dict = {}
+        original = __import__(
+            "panoptica.utils.file_backend_jsonl",
+            fromlist=["JSONLBackend"],
+        ).JSONLBackend.prepare_for_append
+
+        def _spy(self, class_group_names, evaluation_metrics, collect_existing=True):
+            seen_kwargs["collect_existing"] = collect_existing
+            return original(
+                self,
+                class_group_names,
+                evaluation_metrics,
+                collect_existing=collect_existing,
+            )
+
+        with patch(
+            "panoptica.utils.file_backend_jsonl.JSONLBackend.prepare_for_append",
+            _spy,
+        ):
+            Panoptica_Aggregator(
+                evaluator, output_file=self.output_file, continue_file=True
+            )
+
+        self.assertEqual(seen_kwargs["collect_existing"], True)
+
+
+class Test_Panoptica_Aggregator_Parallel_JSONL(unittest.TestCase):
+    """Parallel evaluation against the JSONL backend. Mirrors the parallel
+    paths exercised for TSV via `Test_Example_Scripts.test_example_scripts_pool`
+    / `test_example_scripts_future` but uses synthetic 50×50 arrays so the
+    suite stays fast and hermetic. Closes a coverage hole that opened when
+    the default backend on this branch flipped from TSV to JSONL: without
+    these, the `filelock`-guarded init and append paths only ran serially
+    or under mocks in the JSONL configuration."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.output_file = Path(__file__).parent.joinpath(
+            "unittest_parallel_jsonl.jsonl"
+        )
+        if self.output_file.exists():
+            os.remove(self.output_file)
+
+    def tearDown(self) -> None:
+        if self.output_file.exists():
+            os.remove(self.output_file)
+
+    def _make_inputs(self):
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy()
+        a[20:40, 10:20] = 1
+        b[20:35, 10:20] = 2
+        return a, b
+
+    def _make_aggregator(self) -> Panoptica_Aggregator:
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        return Panoptica_Aggregator(evaluator, output_file=self.output_file)
+
+    def _assert_jsonl_round_trip(self, expected_subjects: list[str]) -> None:
+        # Each line must parse standalone — a torn / interleaved write
+        # under concurrency would surface here as a JSONDecodeError.
+        with open(self.output_file, "r", encoding="utf8") as f:
+            records = [json.loads(line) for line in f if line.strip()]
+        written = [r["subject_name"] for r in records]
+        # No losses, no duplicates, exactly the submitted set.
+        self.assertEqual(sorted(written), sorted(expected_subjects))
+        self.assertEqual(len(written), len(set(written)))
+
+        # Statistic round-trip carries the same subjects.
+        stat = Panoptica_Statistic.from_file(self.output_file, verbose=False)
+        self.assertEqual(sorted(stat.subjectnames), sorted(expected_subjects))
+
+        # Re-opening with continue_file=True picks the existing subjects up
+        # via `prepare_for_append`'s collect_existing branch, so a duplicate
+        # evaluate is a no-op (file size unchanged).
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        agg2 = Panoptica_Aggregator(
+            evaluator, output_file=self.output_file, continue_file=True
+        )
+        a, b = self._make_inputs()
+        size_before = self.output_file.stat().st_size
+        agg2.evaluate(b, a, expected_subjects[0])
+        self.assertEqual(self.output_file.stat().st_size, size_before)
+
+    def test_parallel_jsonl_with_process_pool_executor(self):
+        # Mirrors examples/example_spine_statistics.py:56-69 (parallel_opt
+        # "future"), against JSONL instead of TSV.
+        aggregator = self._make_aggregator()
+        a, b = self._make_inputs()
+        subjects = [f"subj_future_{i}" for i in range(6)]
+
+        with ProcessPoolExecutor(max_workers=4) as executor:
+            futures = [
+                executor.submit(aggregator.evaluate, b, a, sn) for sn in subjects
+            ]
+            for fut in futures:
+                fut.result()
+
+        self._assert_jsonl_round_trip(subjects)
+
+    def test_parallel_jsonl_with_nondaemonic_pool(self):
+        # Mirrors examples/example_spine_statistics.py:39-47 (parallel_opt
+        # "pool"), against JSONL instead of TSV.
+        aggregator = self._make_aggregator()
+        a, b = self._make_inputs()
+        subjects = [f"subj_pool_{i}" for i in range(6)]
+        args = [(b, a, sn) for sn in subjects]
+
+        with NonDaemonicPool() as pool:
+            pool.starmap(aggregator.evaluate, args)
+
+        self._assert_jsonl_round_trip(subjects)

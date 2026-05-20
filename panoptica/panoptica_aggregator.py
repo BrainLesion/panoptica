@@ -103,11 +103,18 @@ class Panoptica_Aggregator:
             output_file = output_file.with_suffix(f".{file_type}")
 
         self.__output_file = output_file
-        self.__backend = get_backend(self.__output_file)
+        self.__file_backend = get_backend(self.__output_file)
 
-        existing_subjects = self.__backend.prepare_for_append(
-            self.__class_group_names, self.__evaluation_metrics
-        )
+        # Serialise file init across forked workers so concurrent Aggregator
+        # construction on the same output file can't race on header
+        # creation / schema validation. Also skip the full existing-subjects
+        # scan when continue_file=False — the result would be discarded.
+        with filelock:
+            existing_subjects = self.__file_backend.prepare_for_append(
+                self.__class_group_names,
+                self.__evaluation_metrics,
+                collect_existing=self.__continue_file,
+            )
 
         # Temp-file creation is the last side-effecting step so any earlier
         # raise (AUTC config check, missing parent dir, unsupported suffix,
@@ -208,7 +215,7 @@ class Panoptica_Aggregator:
             )
 
         with filelock:
-            self.__backend.append_subject(
+            self.__file_backend.append_subject(
                 subject_name,
                 res,
                 self.__class_group_names,
