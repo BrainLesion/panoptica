@@ -406,9 +406,10 @@ class EvaluateInstancePair:
         tp (int): The number of true positive matches between predicted and reference instances.
         list_metrics (dict[Metric, list[float]]): Dictionary of metric calculations, where each key is a `Metric`
             object, and each value is a list of metric scores (floats).
-        instance_voxel_count_ref (list[int]): Raw voxel count of each matched reference instance (one entry per TP).
-        instance_volume_ref (list[float]): Physical volume of each matched reference instance, computed as
-            voxel count times ``prod(voxelspacing)`` (one entry per TP).
+        instance_voxel_count_matched_ref (list[int]): Raw voxel count of each matched (TP) reference instance.
+        instance_volume_matched_ref (list[float]): Physical volume of each matched (TP) reference instance, computed as voxel count times ``prod(voxelspacing)``.
+        instance_voxel_count_unmatched_ref (list[int]): Raw voxel count of each unmatched (FN) reference instance.
+        instance_volume_unmatched_ref (list[float]): Physical volume of each unmatched (FN) reference instance.
     """
 
     reference_arr: np.ndarray
@@ -417,8 +418,10 @@ class EvaluateInstancePair:
     n_ref_instances: int
     tp: int
     list_metrics: dict[Metric, list[float]]
-    instance_voxel_count_ref: list[int] = field(default_factory=list)
-    instance_volume_ref: list[float] = field(default_factory=list)
+    instance_voxel_count_matched_ref: list[int] = field(default_factory=list)
+    instance_volume_matched_ref: list[float] = field(default_factory=list)
+    instance_voxel_count_unmatched_ref: list[int] = field(default_factory=list)
+    instance_volume_unmatched_ref: list[float] = field(default_factory=list)
 
 
 class InputType(_Enum_Compare):

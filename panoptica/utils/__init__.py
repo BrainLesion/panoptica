@@ -47,3 +47,4 @@ from panoptica.utils.file_backend import (
 )
 from panoptica.utils.file_backend_jsonl import JSONLBackend
 from panoptica.utils.file_backend_tsv import TSVBackend
+from panoptica.utils.volume import compute_ref_voxel_count_and_volume
