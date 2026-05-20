@@ -406,7 +406,6 @@ class PanopticaResult(object):
             raise ValueError(
                 "unmatched ref voxel-count and volume lists must have equal length"
             )
-        self.is_matched: float = float("nan")
         # endregion
 
         # region Global
