@@ -416,7 +416,9 @@ class Panoptica_Evaluator(SupportsConfig):
                     if k not in seen:
                         keys.append(k)
                         seen.add(k)
-            self.__resulting_metric_keys_cache[output_individual_instance_metrics] = keys
+            self.__resulting_metric_keys_cache[output_individual_instance_metrics] = (
+                keys
+            )
         return list(
             self.__resulting_metric_keys_cache[output_individual_instance_metrics]
         )

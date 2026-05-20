@@ -319,7 +319,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         self.assertEqual(eval_result.volume_ref, float(eval_result.voxel_count_ref))
 
     def test_decision_threshold_rejection_reported_as_unmatched(self):
-        # Reference instance 1 and prediction instance 1 overlap at IoU ~0.33 below the 0.5 decision_threshold. 
+        # Reference instance 1 and prediction instance 1 overlap at IoU ~0.33 below the 0.5 decision_threshold.
         # The match must be reported as unmatched (FN) rather than silently dropped.
         prediction_arr = np.zeros([4, 4], dtype=np.uint16)
         reference_arr = np.zeros([4, 4], dtype=np.uint16)
@@ -344,16 +344,14 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         self.assertEqual(result.tp, 0)
         self.assertEqual(len(result.instance_voxel_count_matched_ref), 0)
         self.assertEqual(len(result.instance_voxel_count_unmatched_ref), 1)
-        self.assertEqual(
-            result.instance_voxel_count_unmatched_ref[0], ref_voxel_count
-        )
+        self.assertEqual(result.instance_voxel_count_unmatched_ref[0], ref_voxel_count)
         self.assertEqual(
             result.instance_volume_unmatched_ref[0], float(ref_voxel_count)
         )
         self.assertEqual(result.list_metrics[Metric.IOU], [])
 
     def test_no_overlap_instance_reported_as_unmatched(self):
-        # Matcher paired ref label 1 with a prediction label that has no voxels: `_evaluate_instance` returns the empty-metrics default. 
+        # Matcher paired ref label 1 with a prediction label that has no voxels: `_evaluate_instance` returns the empty-metrics default.
         # The ref must still be reported as unmatched (FN), with its true voxel count.
         prediction_arr = np.zeros([4, 4], dtype=np.uint16)
         reference_arr = np.zeros([4, 4], dtype=np.uint16)
@@ -377,9 +375,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         self.assertEqual(result.tp, 0)
         self.assertEqual(len(result.instance_voxel_count_matched_ref), 0)
         self.assertEqual(len(result.instance_voxel_count_unmatched_ref), 1)
-        self.assertEqual(
-            result.instance_voxel_count_unmatched_ref[0], ref_voxel_count
-        )
+        self.assertEqual(result.instance_voxel_count_unmatched_ref[0], ref_voxel_count)
         self.assertEqual(
             result.instance_volume_unmatched_ref[0], float(ref_voxel_count)
         )
