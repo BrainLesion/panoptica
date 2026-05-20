@@ -406,11 +406,22 @@ class Panoptica_Evaluator(SupportsConfig):
             result = res.to_dict(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
-            # `reference_instances` is a nested list, not a metric column; the
-            # row-local keys it carries are normalized into master keys by the
-            # file backends via INSTANCE_KEY_TO_MASTER, so the master keys are
-            # already a superset of the column set.
-            keys = [k for k in result if k != "reference_instances"]
+            rows = (
+                result.pop("reference_instances", [])
+                if output_individual_instance_metrics
+                else []
+            )
+            # Master keys first, then row-only keys (translated to the master
+            # schema via PanopticaResult.normalize_row_to_master_schema) so
+            # row-only fields like `is_matched` still get a TSV column / JSONL
+            # row field.
+            keys: list[str] = list(result.keys())
+            seen: set[str] = set(keys)
+            for row in rows:
+                for k in PanopticaResult.normalize_row_to_master_schema(row):
+                    if k not in seen:
+                        keys.append(k)
+                        seen.add(k)
             self.__resulting_metric_keys_cache[output_individual_instance_metrics] = (
                 keys
             )

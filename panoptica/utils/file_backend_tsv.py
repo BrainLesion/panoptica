@@ -5,7 +5,6 @@ from pathlib import Path
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import FileBackend
 from panoptica.utils.serialization import (
-    INSTANCE_KEY_TO_MASTER,
     format_instance_subject_name,
     is_instance_row,
     parse_instance_subject_name,
@@ -70,8 +69,8 @@ class TSVBackend(FileBackend):
                 summary_dict = result.to_dict(True)
                 # Row keys live under "reference_instances"; pop so they don't
                 # bleed into the summary loop below.
-                group_instance_rows[groupname] = list(
-                    summary_dict.pop("reference_instances", [])
+                group_instance_rows[groupname] = summary_dict.pop(
+                    "reference_instances", []
                 )
                 if result.computation_time is not None:
                     summary_dict = dict(summary_dict)
@@ -84,9 +83,7 @@ class TSVBackend(FileBackend):
                 for inst_idx, r_dict in enumerate(instance_rows):
                     # Normalize row keys to master keys so they line up with the
                     # TSV column schema (which is master-keyed).
-                    r_dict = {
-                        INSTANCE_KEY_TO_MASTER.get(k, k): v for k, v in r_dict.items()
-                    }
+                    r_dict = PanopticaResult.normalize_row_to_master_schema(r_dict)
                     row: list = [
                         format_instance_subject_name(subject_name, groupname, inst_idx)
                     ]

@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from panoptica.utils.serialization import (
-    INSTANCE_KEY_TO_MASTER,
     format_instance_subject_name,
     is_instance_row,
     parse_instance_subject_name,
@@ -23,12 +22,12 @@ class JSONLBackend(FileBackend):
 
         {"subject_name": "subj_a",
          "groups": {"liver": {"dice": 0.9, "tp": 5.0,
-                              "instances": [{"sq_dice": 0.95}, ...]}}}
+                              "reference_instances": [{"sq_dice": 0.95}, ...]}}}
 
     Missing values serialize as JSON ``null`` and round-trip to Python
-    ``None``. The ``"instances"`` key is only present when the aggregator
-    is run with ``output_individual_instance_metrics=True`` and the result
-    yielded at least one matched instance.
+    ``None``. The ``"reference_instances"`` key is only present when the
+    aggregator is run with ``output_individual_instance_metrics=True`` and
+    the result yielded at least one reference instance.
     """
 
     def prepare_for_append(
@@ -58,7 +57,9 @@ class JSONLBackend(FileBackend):
             )
         for g in first_record.get("groups", {}):
             existing_metrics = {
-                k for k in first_record["groups"][g].keys() if k != "instances"
+                k
+                for k in first_record["groups"][g].keys()
+                if k != "reference_instances"
             }
             if existing_metrics != expected_metrics:
                 raise ValueError(
@@ -72,7 +73,7 @@ class JSONLBackend(FileBackend):
             sn = record["subject_name"]
             existing.append(sn)
             for g, g_data in record.get("groups", {}).items():
-                inst_list = g_data.get("instances")
+                inst_list = g_data.get("reference_instances")
                 if inst_list:
                     for inst_idx in range(len(inst_list)):
                         existing.append(format_instance_subject_name(sn, g, inst_idx))
@@ -92,7 +93,7 @@ class JSONLBackend(FileBackend):
             group_obj: dict = {}
             if output_individual_instance_metrics:
                 summary_dict = result.to_dict(True)
-                instance_dicts = list(summary_dict.pop("reference_instances", []))
+                instance_dicts = summary_dict.pop("reference_instances", [])
             else:
                 summary_dict = result.to_dict(False)
                 instance_dicts = []
@@ -111,14 +112,14 @@ class JSONLBackend(FileBackend):
                 # the inst-dict shape matches what write_full produces from a
                 # roundtripped Panoptica_Statistic. Row keys are normalized
                 # to master keys so they match the JSONL/TSV schema.
-                group_obj["instances"] = [
+                group_obj["reference_instances"] = [
                     {
                         e: _canonical_jsonl_value(r_norm.get(e))
                         for e in evaluation_metrics
                         if r_norm.get(e) is not None
                     }
                     for r_norm in (
-                        {INSTANCE_KEY_TO_MASTER.get(k, k): v for k, v in r.items()}
+                        PanopticaResult.normalize_row_to_master_schema(r)
                         for r in instance_dicts
                     )
                 ]
@@ -166,7 +167,7 @@ class JSONLBackend(FileBackend):
                     group_obj[m] = _canonical_jsonl_value(value_dict[g][m][i])
                 inst_list = instances_by_master.get(i, {}).get(g)
                 if inst_list:
-                    group_obj["instances"] = inst_list
+                    group_obj["reference_instances"] = inst_list
                 record["groups"][g] = group_obj
             records.append(record)
 
@@ -184,7 +185,7 @@ class JSONLBackend(FileBackend):
         metric_names: list[str] = []
         for g in group_names:
             for k in first["groups"][g].keys():
-                if k == "instances":
+                if k == "reference_instances":
                     continue
                 if k not in metric_names:
                     metric_names.append(k)
@@ -208,7 +209,7 @@ class JSONLBackend(FileBackend):
                     value_dict[g][m].append(_parse_jsonl_value(g_data.get(m)))
 
             for g in group_names:
-                inst_list = record["groups"][g].get("instances") or []
+                inst_list = record["groups"][g].get("reference_instances") or []
                 for inst_idx, inst_dict in enumerate(inst_list):
                     subj_names.append(format_instance_subject_name(sn, g, inst_idx))
                     for inner_g in group_names:

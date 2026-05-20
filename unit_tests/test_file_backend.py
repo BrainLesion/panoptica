@@ -128,7 +128,7 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
                             "liver": {
                                 "dice": 0.8,
                                 "tp": 4.0,
-                                "instances": [{"sq_dice": 0.95}],
+                                "reference_instances": [{"sq_dice": 0.95}],
                             }
                         },
                     }
@@ -192,7 +192,7 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         self.assertIn("ungrouped", rec0["groups"])
         self.assertIn("tp", rec0["groups"]["ungrouped"])
         # No instances key when output_individual_instance_metrics=False
-        self.assertNotIn("instances", rec0["groups"]["ungrouped"])
+        self.assertNotIn("reference_instances", rec0["groups"]["ungrouped"])
 
     def test_aggregator_writes_instances_when_enabled(self):
         evaluator = _make_simple_evaluator()
@@ -208,8 +208,8 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
             line = f.readline().strip()
         rec = json.loads(line)
         # Two matched instances → instances list of length 2
-        self.assertIn("instances", rec["groups"]["ungrouped"])
-        self.assertEqual(len(rec["groups"]["ungrouped"]["instances"]), 2)
+        self.assertIn("reference_instances", rec["groups"]["ungrouped"])
+        self.assertEqual(len(rec["groups"]["ungrouped"]["reference_instances"]), 2)
 
     def test_load_raw_flattens_instances_into_synthetic_subj_names(self):
         evaluator = _make_simple_evaluator()

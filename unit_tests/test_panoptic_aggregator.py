@@ -345,9 +345,11 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             self.assertGreaterEqual(vol_col, 0)
             self.assertGreaterEqual(count_col, 0)
             self.assertGreaterEqual(is_matched_col, 0)
-            # Matched-average columns are NaN because no instance was matched.
-            self.assertEqual(master_row[vol_col].lower(), "nan")
-            self.assertEqual(master_row[count_col].lower(), "nan")
+            # Matched-average columns are NaN because no instance was matched;
+            # per the TSV canonical encoding (file_backend_tsv._canonical_tsv_value),
+            # NaN/Inf/None all write as an empty cell.
+            self.assertEqual(master_row[vol_col], "")
+            self.assertEqual(master_row[count_col], "")
             # FN row carries the geometry of the unmatched reference.
             self.assertEqual(int(float(fn_row[is_matched_col])), 0)
             self.assertAlmostEqual(float(fn_row[count_col]), 100.0)

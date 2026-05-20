@@ -23,6 +23,20 @@ from panoptica._functionals import _get_orig_onehotcc_structure
 
 class PanopticaResult(object):
 
+    # Row-local keys (used inside `reference_instances` rows) → master-level keys.
+    # File backends call `normalize_row_to_master_schema` to align row dicts with the
+    # master-keyed on-disk schema. Keys present only on rows (e.g. `is_matched`) map
+    # to themselves implicitly via the `.get(k, k)` fallback.
+    ROW_KEY_TO_MASTER_KEY: dict[str, str] = {
+        "voxel_count": "instance_voxel_count_ref",
+        "volume": "instance_volume_ref",
+    }
+
+    @classmethod
+    def normalize_row_to_master_schema(cls, row: dict) -> dict:
+        """Rewrite a ``reference_instances`` row dict so its keys match the master schema."""
+        return {cls.ROW_KEY_TO_MASTER_KEY.get(k, k): v for k, v in row.items()}
+
     def __init__(
         self,
         reference_arr: np.ndarray,
@@ -750,16 +764,18 @@ class PanopticaResult(object):
         When ``output_individual_instance_metrics`` is False, returns a flat
         ``dict`` of subject-level (master) metrics.
 
-        When True, returns the same master dict augmented with two extra keys:
+        When True, returns the same master dict augmented with one extra key:
 
-        - ``"is_matched"``: ``None`` at the master level (the flag is per-instance).
         - ``"reference_instances"``: list of per-instance dicts, one per
           reference instance. Matched instances appear first, followed by
           unmatched (FN) instances. Each row carries ``"is_matched"`` (``1``
-          or ``0``), ``"voxel_count"``, ``"volume"``, and, for matched rows,
-          the per-instance segmentation-quality metrics (``sq_iou``,
+          or ``0``) — this flag is row-only and is not mirrored on master.
+          Rows also carry ``"voxel_count"``, ``"volume"``, and, for matched
+          rows, the per-instance segmentation-quality metrics (``sq_iou``,
           ``sq_dsc``, ...). The ``_ref`` suffix is dropped inside rows because
-          all rows live under ``reference_instances`` already.
+          all rows live under ``reference_instances`` already; file backends
+          translate them back to master keys via
+          ``normalize_row_to_master_schema``.
         """
         # Base dictionary (Master row with averages and globals)
         master_dict = {
@@ -824,7 +840,6 @@ class PanopticaResult(object):
         for i in range(n_matched, n_total):
             rows[i]["is_matched"] = 0
 
-        master_dict["is_matched"] = None
         master_dict["reference_instances"] = rows
         return master_dict
 
