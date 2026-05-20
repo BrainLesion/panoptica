@@ -7,7 +7,7 @@ from panoptica.instance_evaluator import evaluate_matched_instance
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult
-from panoptica.utils import EdgeCaseHandler, compute_ref_voxel_count_and_volume
+from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
@@ -610,17 +610,25 @@ def _handle_zero_instances_cases(
         n_reference_instance = n_reference_instance
         n_prediction_instance = 0
         is_edge_case = True
-        # Report each reference instance as an unmatched ref
+        # Report each reference instance as an unmatched ref. Single np.unique pass
+        # so we don't scan the whole array once per label.
+        unique_labels, counts = np.unique(
+            processing_pair.reference_arr, return_counts=True
+        )
+        voxel_size = float(
+            np.prod(
+                voxelspacing
+                if voxelspacing is not None
+                else (1.0,) * processing_pair.reference_arr.ndim
+            )
+        )
         unmatched_voxel_counts: list[int] = []
         unmatched_volumes: list[float] = []
-        for ref_label in np.unique(processing_pair.reference_arr):
-            if ref_label == 0:
+        for label, count in zip(unique_labels, counts):
+            if label == 0:
                 continue
-            voxel_count, volume = compute_ref_voxel_count_and_volume(
-                processing_pair.reference_arr, int(ref_label), voxelspacing
-            )
-            unmatched_voxel_counts.append(voxel_count)
-            unmatched_volumes.append(volume)
+            unmatched_voxel_counts.append(int(count))
+            unmatched_volumes.append(float(count) * voxel_size)
         panoptica_result_args["instance_voxel_count_unmatched_ref"] = (
             unmatched_voxel_counts
         )

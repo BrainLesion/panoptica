@@ -82,7 +82,7 @@ class Panoptica_Aggregator:
                 threshold_step_size
             )
         else:
-            self.__evaluation_metrics = panoptica_evaluator.resulting_metric_keys(
+            self.__evaluation_metrics = panoptica_evaluator.get_resulting_metric_keys(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
 

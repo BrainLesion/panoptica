@@ -392,7 +392,13 @@ class Panoptica_Evaluator(SupportsConfig):
     def segmentation_class_groups_names(self) -> list[str]:
         return self.__segmentation_class_groups.keys()
 
-    def resulting_metric_keys(
+    @property
+    def resulting_metric_keys(self) -> list[str]:
+        # Kept as a property for backward compatibility with v2.0.0 callers.
+        # Use get_resulting_metric_keys(...) when the per-instance flag is needed.
+        return self.get_resulting_metric_keys(output_individual_instance_metrics=False)
+
+    def get_resulting_metric_keys(
         self, output_individual_instance_metrics: bool = False
     ) -> list[str]:
         if output_individual_instance_metrics not in self.__resulting_metric_keys_cache:
@@ -446,7 +452,7 @@ class Panoptica_Evaluator(SupportsConfig):
         res = self._get_dummy_result()
         keys = [format_autc_key(m) for m in sorted(res.autc_metrics)]
 
-        base_keys = self.resulting_metric_keys()
+        base_keys = self.resulting_metric_keys
         for t in self.generate_thresholds(threshold_step_size):
             for m in base_keys:
                 keys.append(format_threshold_key(t, m))
