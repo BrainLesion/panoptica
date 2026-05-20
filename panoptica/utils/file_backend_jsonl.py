@@ -14,20 +14,32 @@ import numpy as np
 import json
 
 
+_MATCHED_KEY = "references_matched"
+_UNMATCHED_KEY = "references_unmatched"
+_BUCKET_KEYS = (_MATCHED_KEY, _UNMATCHED_KEY)
+_IS_MATCHED = "is_matched"
+
+
 class JSONLBackend(FileBackend):
     """JSON-lines format. One nested JSON object per subject, with nested
-    per-group summary and (optional) matched-instance metrics.
+    per-group summary and (optional) split matched / unmatched reference
+    instance metrics.
 
     Each line looks like::
 
         {"subject_name": "subj_a",
          "groups": {"liver": {"dice": 0.9, "tp": 5.0,
-                              "instances": [{"sq_dice": 0.95}, ...]}}}
+                              "references_matched":   [{"sq_dice": 0.95, ...}, ...],
+                              "references_unmatched": [{"instance_volume_ref": 50.0}, ...]}}}
 
     Missing values serialize as JSON ``null`` and round-trip to Python
-    ``None``. The ``"instances"`` key is only present when the aggregator
-    is run with ``output_individual_instance_metrics=True`` and the result
-    yielded at least one matched instance.
+    ``None``. The ``references_matched`` / ``references_unmatched`` keys
+    are each only present when the aggregator is run with
+    ``output_individual_instance_metrics=True`` and the result yielded at
+    least one row of the respective kind. The ``is_matched`` flag is not
+    serialised — it is implied by the bucket key and synthesised on read
+    so the value_dict shape matches what ``TSVBackend.load_raw`` produces
+    (preserving byte-identical TSV ↔ JSONL roundtrip).
     """
 
     def prepare_for_append(
@@ -35,7 +47,9 @@ class JSONLBackend(FileBackend):
         class_group_names: list[str],
         evaluation_metrics: list[str],
     ) -> list[str]:
-        expected_metrics = set(evaluation_metrics)
+        # is_matched is carried as a TSV column but is implicit in the JSONL
+        # bucket key; exclude it when comparing against on-disk metric set.
+        expected_metrics = set(evaluation_metrics) - {_IS_MATCHED}
         expected_groups = set(class_group_names)
 
         if not self.path.exists():
@@ -57,7 +71,9 @@ class JSONLBackend(FileBackend):
             )
         for g in first_record.get("groups", {}):
             existing_metrics = {
-                k for k in first_record["groups"][g].keys() if k != "instances"
+                k
+                for k in first_record["groups"][g].keys()
+                if k not in _BUCKET_KEYS
             }
             if existing_metrics != expected_metrics:
                 raise ValueError(
@@ -71,10 +87,9 @@ class JSONLBackend(FileBackend):
             sn = record["subject_name"]
             existing.append(sn)
             for g, g_data in record.get("groups", {}).items():
-                inst_list = g_data.get("instances")
-                if inst_list:
-                    for inst_idx in range(len(inst_list)):
-                        existing.append(format_instance_subject_name(sn, g, inst_idx))
+                n_inst = sum(len(g_data.get(k) or []) for k in _BUCKET_KEYS)
+                for inst_idx in range(n_inst):
+                    existing.append(format_instance_subject_name(sn, g, inst_idx))
         return existing
 
     def append_subject(
@@ -102,22 +117,33 @@ class JSONLBackend(FileBackend):
                 summary_dict[COMPUTATION_TIME_KEY] = result.computation_time
 
             for e in evaluation_metrics:
+                if e == _IS_MATCHED:
+                    continue
                 group_obj[e] = _canonical_jsonl_value(summary_dict.get(e))
 
-            if instance_dicts:
-                # Restrict to evaluation_metrics so the JSONL inst-dict set
-                # matches what TSV columns can hold — required for symmetric
-                # TSV<->JSONL roundtrip byte-identity. Drop None entries so
-                # the inst-dict shape matches what write_full produces from a
-                # roundtripped Panoptica_Statistic.
-                group_obj["instances"] = [
+            matched = [d for d in instance_dicts if d.get(_IS_MATCHED) == 1]
+            unmatched = [d for d in instance_dicts if d.get(_IS_MATCHED) == 0]
+
+            # Restrict to evaluation_metrics so the JSONL inst-dict set
+            # matches what TSV columns can hold — required for symmetric
+            # TSV<->JSONL roundtrip byte-identity. Drop None entries so
+            # the inst-dict shape matches what write_full produces from a
+            # roundtripped Panoptica_Statistic. Skip is_matched: the bucket
+            # key already encodes it.
+            def _project(rows):
+                return [
                     {
                         e: _canonical_jsonl_value(r.get(e))
                         for e in evaluation_metrics
-                        if r.get(e) is not None
+                        if e != _IS_MATCHED and r.get(e) is not None
                     }
-                    for r in instance_dicts
+                    for r in rows
                 ]
+
+            if matched:
+                group_obj[_MATCHED_KEY] = _project(matched)
+            if unmatched:
+                group_obj[_UNMATCHED_KEY] = _project(unmatched)
             record["groups"][groupname] = group_obj
 
         _append_jsonl_record(self.path, record)
@@ -131,25 +157,32 @@ class JSONLBackend(FileBackend):
         evaluation_metrics: list[str],
     ) -> None:
         master_indices: list[int] = []
-        instances_by_master: dict[int, dict[str, list[dict]]] = {}
+        # group -> bucket_key -> list[inst_dict], keyed by master subject index.
+        instances_by_master: dict[int, dict[str, dict[str, list[dict]]]] = {}
         for i, sn in enumerate(subj_names):
             if is_instance_row(sn):
                 parsed = parse_instance_subject_name(sn)
                 if parsed is None:
                     continue
-                orig_subj, orig_group, inst_idx = parsed
+                orig_subj, orig_group, _ = parsed
                 try:
                     master_i = subj_names.index(orig_subj)
                 except ValueError:
                     continue
+                is_matched_col = value_dict[orig_group].get(_IS_MATCHED)
+                is_matched_val = is_matched_col[i] if is_matched_col else None
+                bucket_key = (
+                    _MATCHED_KEY if is_matched_val == 1 else _UNMATCHED_KEY
+                )
                 inst_dict = {
                     m: value_dict[orig_group][m][i]
                     for m in evaluation_metrics
-                    if value_dict[orig_group][m][i] is not None
+                    if m != _IS_MATCHED and value_dict[orig_group][m][i] is not None
                 }
-                instances_by_master.setdefault(master_i, {}).setdefault(
-                    orig_group, []
-                ).append(inst_dict)
+                buckets = instances_by_master.setdefault(master_i, {}).setdefault(
+                    orig_group, {_MATCHED_KEY: [], _UNMATCHED_KEY: []}
+                )
+                buckets[bucket_key].append(inst_dict)
             else:
                 master_indices.append(i)
 
@@ -159,10 +192,15 @@ class JSONLBackend(FileBackend):
             for g in class_group_names:
                 group_obj: dict = {}
                 for m in evaluation_metrics:
+                    if m == _IS_MATCHED:
+                        continue
                     group_obj[m] = _canonical_jsonl_value(value_dict[g][m][i])
-                inst_list = instances_by_master.get(i, {}).get(g)
-                if inst_list:
-                    group_obj["instances"] = inst_list
+                buckets = instances_by_master.get(i, {}).get(g)
+                if buckets:
+                    if buckets[_MATCHED_KEY]:
+                        group_obj[_MATCHED_KEY] = buckets[_MATCHED_KEY]
+                    if buckets[_UNMATCHED_KEY]:
+                        group_obj[_UNMATCHED_KEY] = buckets[_UNMATCHED_KEY]
                 record["groups"][g] = group_obj
             records.append(record)
 
@@ -180,10 +218,14 @@ class JSONLBackend(FileBackend):
         metric_names: list[str] = []
         for g in group_names:
             for k in first["groups"][g].keys():
-                if k == "instances":
+                if k in _BUCKET_KEYS:
                     continue
                 if k not in metric_names:
                     metric_names.append(k)
+        # is_matched is not serialised in JSONL; synthesise it as a column so
+        # the returned value_dict has the same shape as TSVBackend.load_raw.
+        if _IS_MATCHED not in metric_names:
+            metric_names.append(_IS_MATCHED)
 
         if verbose:
             print(f"Found {len(records)} entries")
@@ -201,20 +243,38 @@ class JSONLBackend(FileBackend):
             for g in group_names:
                 g_data = record["groups"][g]
                 for m in metric_names:
-                    value_dict[g][m].append(_parse_jsonl_value(g_data.get(m)))
+                    if m == _IS_MATCHED:
+                        # Master row: is_matched is None (matches TSV's empty cell).
+                        value_dict[g][m].append(None)
+                    else:
+                        value_dict[g][m].append(_parse_jsonl_value(g_data.get(m)))
 
             for g in group_names:
-                inst_list = record["groups"][g].get("instances") or []
-                for inst_idx, inst_dict in enumerate(inst_list):
-                    subj_names.append(format_instance_subject_name(sn, g, inst_idx))
-                    for inner_g in group_names:
-                        for m in metric_names:
-                            if inner_g == g:
-                                value_dict[inner_g][m].append(
-                                    _parse_jsonl_value(inst_dict.get(m))
-                                )
-                            else:
-                                value_dict[inner_g][m].append(None)
+                g_data = record["groups"][g]
+                matched_list = g_data.get(_MATCHED_KEY) or []
+                unmatched_list = g_data.get(_UNMATCHED_KEY) or []
+                # Sequential inst_idx across matched-then-unmatched mirrors the
+                # ordering TSV produces from result.to_dict(True)[1:].
+                inst_idx = 0
+                for bucket, flag in (
+                    (matched_list, 1),
+                    (unmatched_list, 0),
+                ):
+                    for inst_dict in bucket:
+                        subj_names.append(
+                            format_instance_subject_name(sn, g, inst_idx)
+                        )
+                        inst_idx += 1
+                        for inner_g in group_names:
+                            for m in metric_names:
+                                if inner_g != g:
+                                    value_dict[inner_g][m].append(None)
+                                elif m == _IS_MATCHED:
+                                    value_dict[inner_g][m].append(flag)
+                                else:
+                                    value_dict[inner_g][m].append(
+                                        _parse_jsonl_value(inst_dict.get(m))
+                                    )
 
         return subj_names, value_dict
 

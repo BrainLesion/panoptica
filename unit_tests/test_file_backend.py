@@ -36,6 +36,17 @@ def _two_instance_arrays() -> tuple[np.ndarray, np.ndarray]:
     return a, b
 
 
+def _one_matched_one_unmatched_arrays() -> tuple[np.ndarray, np.ndarray]:
+    """Reference has two instances; prediction has only one (covering ref
+    instance 1). Yields one matched + one unmatched reference."""
+    ref = np.zeros([50, 50], dtype=np.uint16)
+    pred = ref.copy()
+    ref[10:20, 10:20] = 1
+    pred[10:20, 10:20] = 1
+    ref[30:40, 30:40] = 2
+    return ref, pred
+
+
 class Test_TSVBackend_Direct(unittest.TestCase):
     def setUp(self) -> None:
         os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
@@ -128,7 +139,7 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
                             "liver": {
                                 "dice": 0.8,
                                 "tp": 4.0,
-                                "instances": [{"sq_dice": 0.95}],
+                                "references_matched": [{"sq_dice": 0.95}],
                             }
                         },
                     }
@@ -191,8 +202,9 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         self.assertEqual(rec0["subject_name"], "test_subject_0")
         self.assertIn("ungrouped", rec0["groups"])
         self.assertIn("tp", rec0["groups"]["ungrouped"])
-        # No instances key when output_individual_instance_metrics=False
-        self.assertNotIn("instances", rec0["groups"]["ungrouped"])
+        # No instance bucket keys when output_individual_instance_metrics=False
+        self.assertNotIn("references_matched", rec0["groups"]["ungrouped"])
+        self.assertNotIn("references_unmatched", rec0["groups"]["ungrouped"])
 
     def test_aggregator_writes_instances_when_enabled(self):
         evaluator = _make_simple_evaluator()
@@ -207,9 +219,11 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         with open(self.path, "r", encoding="utf8") as f:
             line = f.readline().strip()
         rec = json.loads(line)
-        # Two matched instances → instances list of length 2
-        self.assertIn("instances", rec["groups"]["ungrouped"])
-        self.assertEqual(len(rec["groups"]["ungrouped"]["instances"]), 2)
+        # Two matched instances, zero unmatched → matched list of length 2,
+        # no unmatched key.
+        self.assertIn("references_matched", rec["groups"]["ungrouped"])
+        self.assertEqual(len(rec["groups"]["ungrouped"]["references_matched"]), 2)
+        self.assertNotIn("references_unmatched", rec["groups"]["ungrouped"])
 
     def test_load_raw_flattens_instances_into_synthetic_subj_names(self):
         evaluator = _make_simple_evaluator()
@@ -233,6 +247,41 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         self.assertIsNotNone(value_dict["ungrouped"]["tp"][0])
         self.assertIsNone(value_dict["ungrouped"]["tp"][1])
         self.assertIsNone(value_dict["ungrouped"]["tp"][2])
+
+    def test_matched_and_unmatched_buckets_round_trip(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.path,
+            output_individual_instance_metrics=True,
+        )
+        ref, pred = _one_matched_one_unmatched_arrays()
+        aggregator.evaluate(pred, ref, "subj")
+
+        # On disk: one matched, one unmatched bucket; is_matched not present.
+        with open(self.path, "r", encoding="utf8") as f:
+            rec = json.loads(f.readline().strip())
+        group_obj = rec["groups"]["ungrouped"]
+        self.assertEqual(len(group_obj["references_matched"]), 1)
+        self.assertEqual(len(group_obj["references_unmatched"]), 1)
+        self.assertNotIn("is_matched", group_obj)
+        for inst in (
+            group_obj["references_matched"][0],
+            group_obj["references_unmatched"][0],
+        ):
+            self.assertNotIn("is_matched", inst)
+            # Voxel count + volume should appear in both buckets.
+            self.assertIn("instance_voxel_count_ref", inst)
+            self.assertIn("instance_volume_ref", inst)
+
+        # On read: is_matched column is synthesised, matched-then-unmatched.
+        backend = JSONLBackend(self.path)
+        subj_names, value_dict = backend.load_raw(verbose=False)
+        self.assertEqual(
+            subj_names,
+            ["subj", "subj-ungrouped_inst_0", "subj-ungrouped_inst_1"],
+        )
+        self.assertEqual(value_dict["ungrouped"]["is_matched"], [None, 1, 0])
 
     def test_load_raw_missing_value_round_trips_to_none(self):
         # Write a record with an explicit JSON null and verify it loads as None
