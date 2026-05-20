@@ -5,6 +5,7 @@ from pathlib import Path
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import FileBackend
 from panoptica.utils.serialization import (
+    INSTANCE_KEY_TO_MASTER,
     format_instance_subject_name,
     is_instance_row,
     parse_instance_subject_name,
@@ -63,12 +64,15 @@ class TSVBackend(FileBackend):
         if output_individual_instance_metrics:
             all_rows: list[list] = []
             summary_row: list = [subject_name]
-            group_rows_as_dicts: dict[str, list[dict]] = {}
+            group_instance_rows: dict[str, list[dict]] = {}
             for groupname in class_group_names:
                 result = result_grouped[groupname]
-                rows_as_dicts = result.to_dict(True)
-                group_rows_as_dicts[groupname] = rows_as_dicts
-                summary_dict = rows_as_dicts[0] if len(rows_as_dicts) > 0 else {}
+                summary_dict = result.to_dict(True)
+                # Row keys live under "reference_instances"; pop so they don't
+                # bleed into the summary loop below.
+                group_instance_rows[groupname] = list(
+                    summary_dict.pop("reference_instances", [])
+                )
                 if result.computation_time is not None:
                     summary_dict = dict(summary_dict)
                     summary_dict[COMPUTATION_TIME_KEY] = result.computation_time
@@ -76,8 +80,13 @@ class TSVBackend(FileBackend):
                     summary_row.append(_canonical_tsv_value(summary_dict.get(e)))
             all_rows.append(summary_row)
             for groupname in class_group_names:
-                rows_as_dicts = group_rows_as_dicts[groupname]
-                for inst_idx, r_dict in enumerate(rows_as_dicts[1:]):
+                instance_rows = group_instance_rows[groupname]
+                for inst_idx, r_dict in enumerate(instance_rows):
+                    # Normalize row keys to master keys so they line up with the
+                    # TSV column schema (which is master-keyed).
+                    r_dict = {
+                        INSTANCE_KEY_TO_MASTER.get(k, k): v for k, v in r_dict.items()
+                    }
                     row: list = [
                         format_instance_subject_name(subject_name, groupname, inst_idx)
                     ]

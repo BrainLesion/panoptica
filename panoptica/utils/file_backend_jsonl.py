@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from panoptica.utils.serialization import (
+    INSTANCE_KEY_TO_MASTER,
     format_instance_subject_name,
     is_instance_row,
     parse_instance_subject_name,
@@ -90,9 +91,8 @@ class JSONLBackend(FileBackend):
             result = result_grouped[groupname]
             group_obj: dict = {}
             if output_individual_instance_metrics:
-                rows_as_dicts = result.to_dict(True)
-                summary_dict = rows_as_dicts[0] if len(rows_as_dicts) > 0 else {}
-                instance_dicts = list(rows_as_dicts[1:])
+                summary_dict = result.to_dict(True)
+                instance_dicts = list(summary_dict.pop("reference_instances", []))
             else:
                 summary_dict = result.to_dict(False)
                 instance_dicts = []
@@ -109,14 +109,18 @@ class JSONLBackend(FileBackend):
                 # matches what TSV columns can hold — required for symmetric
                 # TSV<->JSONL roundtrip byte-identity. Drop None entries so
                 # the inst-dict shape matches what write_full produces from a
-                # roundtripped Panoptica_Statistic.
+                # roundtripped Panoptica_Statistic. Row keys are normalized
+                # to master keys so they match the JSONL/TSV schema.
                 group_obj["instances"] = [
                     {
-                        e: _canonical_jsonl_value(r.get(e))
+                        e: _canonical_jsonl_value(r_norm.get(e))
                         for e in evaluation_metrics
-                        if r.get(e) is not None
+                        if r_norm.get(e) is not None
                     }
-                    for r in instance_dicts
+                    for r_norm in (
+                        {INSTANCE_KEY_TO_MASTER.get(k, k): v for k, v in r.items()}
+                        for r in instance_dicts
+                    )
                 ]
             record["groups"][groupname] = group_obj
 

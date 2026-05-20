@@ -1,5 +1,17 @@
 import re
 
+########### Per-instance row key mapping
+
+# Maps row-local keys inside `reference_instances` (where the `_ref` suffix is
+# redundant) to their master-level counterparts. Used by file backends to write
+# per-instance rows into the master-keyed schema (TSV columns / JSONL metric
+# entries), so the on-disk schema stays symmetric between master and row data.
+INSTANCE_KEY_TO_MASTER: dict[str, str] = {
+    "voxel_count": "instance_voxel_count_ref",
+    "volume": "instance_volume_ref",
+}
+
+
 ########### Instance serialization and validation
 
 _INST_SEP = "-"

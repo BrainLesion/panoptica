@@ -403,19 +403,14 @@ class Panoptica_Evaluator(SupportsConfig):
     ) -> list[str]:
         if output_individual_instance_metrics not in self.__resulting_metric_keys_cache:
             res = self._get_dummy_result()
-            dicts = res.to_dict(
+            result = res.to_dict(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
-            if not isinstance(dicts, list):
-                dicts = [dicts]
-            # Union of all row keys, preserving insertion order.
-            keys: list[str] = []
-            seen: set[str] = set()
-            for d in dicts:
-                for k in d:
-                    if k not in seen:
-                        keys.append(k)
-                        seen.add(k)
+            # `reference_instances` is a nested list, not a metric column; the
+            # row-local keys it carries are normalized into master keys by the
+            # file backends via INSTANCE_KEY_TO_MASTER, so the master keys are
+            # already a superset of the column set.
+            keys = [k for k in result if k != "reference_instances"]
             self.__resulting_metric_keys_cache[output_individual_instance_metrics] = (
                 keys
             )

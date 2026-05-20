@@ -744,13 +744,22 @@ class PanopticaResult(object):
                     text += "\n"
         return text
 
-    def to_dict(
-        self, output_individual_instance_metrics: bool = False
-    ) -> dict | list[dict]:
-        """
-        Converts the metrics to a dictionary format.
-        If output_individual_instance_metrics is True, returns a list of dictionaries:
-        [Master_Dict, Instance_0_Dict, Instance_1_Dict, ...].
+    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Converts the metrics to a dictionary format.
+
+        When ``output_individual_instance_metrics`` is False, returns a flat
+        ``dict`` of subject-level (master) metrics.
+
+        When True, returns the same master dict augmented with two extra keys:
+
+        - ``"is_matched"``: ``None`` at the master level (the flag is per-instance).
+        - ``"reference_instances"``: list of per-instance dicts, one per
+          reference instance. Matched instances appear first, followed by
+          unmatched (FN) instances. Each row carries ``"is_matched"`` (``1``
+          or ``0``), ``"voxel_count"``, ``"volume"``, and, for matched rows,
+          the per-instance segmentation-quality metrics (``sq_iou``,
+          ``sq_dsc``, ...). The ``_ref`` suffix is dropped inside rows because
+          all rows live under ``reference_instances`` already.
         """
         # Base dictionary (Master row with averages and globals)
         master_dict = {
@@ -762,7 +771,6 @@ class PanopticaResult(object):
         if not output_individual_instance_metrics:
             return master_dict
 
-        # allocate the results list: 1 Master Dict + 1 Empty Dict per instance row (matched + unmatched references)
         n_matched_from_list_metrics = max(
             (
                 len(lm.ALL)
@@ -782,7 +790,7 @@ class PanopticaResult(object):
         n_unmatched = len(self.instance_volume_unmatched_ref_list)
         n_total = n_matched + n_unmatched
 
-        results = [master_dict] + [{} for _ in range(n_total)]
+        rows: list[dict] = [{} for _ in range(n_total)]
 
         for metric_enum, list_metric_obj in self._list_metrics.items():
             if list_metric_obj.error or list_metric_obj.ALL is None:
@@ -791,36 +799,34 @@ class PanopticaResult(object):
             val_list = list_metric_obj.ALL
             for i in range(n_matched):
                 # val_list may be shorter than n_matched if this metric hit a partial calculation error
-                results[i + 1][metric_enum.get_result_key("sq")] = (
+                rows[i][metric_enum.get_result_key("sq")] = (
                     val_list[i] if i < len(val_list) else None
                 )
 
-        # Per-instance voxel counts and physical volumes.
+        # Per-instance voxel counts and physical volumes. Row-local keys drop the
+        # `_ref` suffix because the parent `reference_instances` already conveys
+        # that these are reference-instance values.
         for key, val_list in (
-            ("instance_voxel_count_ref", self.instance_voxel_count_matched_ref_list),
-            ("instance_volume_ref", self.instance_volume_matched_ref_list),
+            ("voxel_count", self.instance_voxel_count_matched_ref_list),
+            ("volume", self.instance_volume_matched_ref_list),
         ):
             for i in range(n_matched):
-                results[i + 1][key] = val_list[i] if i < len(val_list) else None
+                rows[i][key] = val_list[i] if i < len(val_list) else None
         for key, val_list in (
-            (
-                "instance_voxel_count_ref",
-                self.instance_voxel_count_unmatched_ref_list,
-            ),
-            ("instance_volume_ref", self.instance_volume_unmatched_ref_list),
+            ("voxel_count", self.instance_voxel_count_unmatched_ref_list),
+            ("volume", self.instance_volume_unmatched_ref_list),
         ):
             for i in range(n_unmatched):
-                results[n_matched + i + 1][key] = (
-                    val_list[i] if i < len(val_list) else None
-                )
+                rows[n_matched + i][key] = val_list[i] if i < len(val_list) else None
+
+        for i in range(n_matched):
+            rows[i]["is_matched"] = 1
+        for i in range(n_matched, n_total):
+            rows[i]["is_matched"] = 0
 
         master_dict["is_matched"] = None
-        for i in range(n_matched):
-            results[i + 1]["is_matched"] = 1
-        for i in range(n_matched, n_total):
-            results[i + 1]["is_matched"] = 0
-
-        return results
+        master_dict["reference_instances"] = rows
+        return master_dict
 
     @property
     def evaluation_metrics(self):
