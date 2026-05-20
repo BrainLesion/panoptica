@@ -114,6 +114,8 @@ class Panoptica_Evaluator(SupportsConfig):
         #
         self.__log_times = log_times
         self.__verbose = verbose
+        # Cache of resulting_metric_keys output keyed by output_individual_instance_metrics.
+        self.__resulting_metric_keys_cache: dict[bool, list[str]] = {}
 
     @classmethod
     def _yaml_repr(cls, node) -> dict:
@@ -393,21 +395,25 @@ class Panoptica_Evaluator(SupportsConfig):
     def resulting_metric_keys(
         self, output_individual_instance_metrics: bool = False
     ) -> list[str]:
-        res = self._get_dummy_result()
-        dicts = res.to_dict(
-            output_individual_instance_metrics=output_individual_instance_metrics
+        if output_individual_instance_metrics not in self.__resulting_metric_keys_cache:
+            res = self._get_dummy_result()
+            dicts = res.to_dict(
+                output_individual_instance_metrics=output_individual_instance_metrics
+            )
+            if not isinstance(dicts, list):
+                dicts = [dicts]
+            # Union of all row keys, preserving insertion order.
+            keys: list[str] = []
+            seen: set[str] = set()
+            for d in dicts:
+                for k in d:
+                    if k not in seen:
+                        keys.append(k)
+                        seen.add(k)
+            self.__resulting_metric_keys_cache[output_individual_instance_metrics] = keys
+        return list(
+            self.__resulting_metric_keys_cache[output_individual_instance_metrics]
         )
-        if not isinstance(dicts, list):
-            dicts = [dicts]
-        # Union of all row keys, preserving insertion order.
-        keys: list[str] = []
-        seen: set[str] = set()
-        for d in dicts:
-            for k in d:
-                if k not in seen:
-                    keys.append(k)
-                    seen.add(k)
-        return keys
 
     def set_log_group_times(self, should_save: bool):
         self.__save_group_times = should_save

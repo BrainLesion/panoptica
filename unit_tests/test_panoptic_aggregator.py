@@ -438,6 +438,73 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             if output_file.exists():
                 os.remove(str(output_file))
 
+    def test_aggregator_decision_threshold_rejection_as_unmatched(self):
+        # Reference and prediction overlap at IoU == 0.5: the matcher pairs them (matching_threshold 0.5), but decision_threshold 0.8 rejects the pair.
+        # The ref must show up as an is_matched=0 row in the per-instance TSV, not silently disappear.
+        ref = np.zeros([50, 50], dtype=np.uint16)
+        pred = np.zeros_like(ref)
+        ref[10:20, 10:20] = 1  # 100 voxels
+        pred[10:20, 10:15] = 1  # 50 voxels, fully inside ref → IoU = 50/100 = 0.5
+
+        output_file = Path(__file__).parent.joinpath(
+            "unittest_decision_threshold_reject.tsv"
+        )
+        if output_file.exists():
+            os.remove(str(output_file))
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            instance_metrics=[Metric.DSC, Metric.IOU],
+            decision_metric=Metric.IOU,
+            decision_threshold=0.8,
+        )
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=output_file,
+            output_individual_instance_metrics=True,
+        )
+        try:
+            aggregator.evaluate(pred, ref, "decision_reject_test")
+
+            with open(str(output_file), "r", encoding="utf8", newline="") as f:
+                rows = list(csv.reader(f, delimiter="\t"))
+
+            # 1 header + 1 master + 1 unmatched row (no matched rows)
+            self.assertEqual(len(rows), 3)
+            header = rows[0]
+            master_row, unmatched_row = rows[1], rows[2]
+            is_matched_col = next(
+                (i for i, name in enumerate(header) if name.endswith("-is_matched")),
+                -1,
+            )
+            count_col = next(
+                (
+                    i
+                    for i, name in enumerate(header)
+                    if name.endswith("-instance_voxel_count_ref")
+                ),
+                -1,
+            )
+            dsc_col = next(
+                (i for i, name in enumerate(header) if name.endswith("-sq_dsc")),
+                -1,
+            )
+            self.assertGreaterEqual(is_matched_col, 0)
+            self.assertGreaterEqual(count_col, 0)
+            self.assertGreaterEqual(dsc_col, 0)
+            # Master row: is_matched empty, no matched instances contributed to it.
+            self.assertEqual(master_row[is_matched_col], "")
+            # Unmatched row: is_matched=0, voxel count matches the rejected ref,
+            # per-instance DSC column empty.
+            self.assertEqual(int(float(unmatched_row[is_matched_col])), 0)
+            self.assertAlmostEqual(float(unmatched_row[count_col]), 100.0)
+            self.assertEqual(unmatched_row[dsc_col], "")
+        finally:
+            if output_file.exists():
+                os.remove(str(output_file))
+
     def test_aggregator_all_matched_no_unmatched_rows(self):
         # Regression guard: if every reference is matched, only matched rows are emitted.
         ref = np.zeros([50, 50], dtype=np.uint16)
