@@ -75,9 +75,6 @@ class Panoptica_Aggregator:
         self.__output_individual_instance_metrics = output_individual_instance_metrics
         self.__threshold_step_size = threshold_step_size
 
-        with NamedTemporaryFile(delete=False) as tmp:
-            self.__output_buffer_file = tmp.name
-
         if is_autc:
             if self.__threshold_step_size is None:
                 raise ValueError(
@@ -111,12 +108,19 @@ class Panoptica_Aggregator:
         existing_subjects = self.__backend.prepare_for_append(
             self.__class_group_names, self.__evaluation_metrics
         )
+
+        # Temp-file creation is the last side-effecting step so any earlier
+        # raise (AUTC config check, missing parent dir, unsupported suffix,
+        # backend schema mismatch) doesn't leak a buffer file — atexit isn't
+        # registered yet at those points.
+        with NamedTemporaryFile(delete=False) as tmp:
+            self.__output_buffer_file = tmp.name
+        atexit.register(self.__exist_handler)
+
         if self.__continue_file and existing_subjects:
             with inevalfilelock:
                 with filelock:
                     _append_buffer_entries(self.__output_buffer_file, existing_subjects)
-
-        atexit.register(self.__exist_handler)
 
     @property
     def panoptica_evaluator(self):

@@ -550,3 +550,52 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
         finally:
             if output_file.exists():
                 os.remove(str(output_file))
+
+
+class Test_Panoptica_Aggregator_Init_Errors(unittest.TestCase):
+    """`Panoptica_Aggregator.__init__` should not leave a buffer temp file
+    on disk if it raises before reaching the `atexit.register` step."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+
+    def test_no_tempfile_leak_on_autc_misconfiguration(self):
+        # is_autc=True without threshold_step_size raises early. Patch
+        # NamedTemporaryFile to verify it's never reached — equivalently,
+        # any temp file that *is* created during a failing init would leak.
+        from unittest.mock import patch
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        with patch(
+            "panoptica.panoptica_aggregator.NamedTemporaryFile"
+        ) as mock_tempfile:
+            with self.assertRaises(ValueError):
+                Panoptica_Aggregator(
+                    evaluator,
+                    output_file=Path(__file__).parent.joinpath(
+                        "unittest_init_leak.jsonl"
+                    ),
+                    is_autc=True,
+                    threshold_step_size=None,
+                )
+            mock_tempfile.assert_not_called()
+
+    def test_no_tempfile_leak_on_missing_output_directory(self):
+        from unittest.mock import patch
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        bad_path = Path("/nonexistent_dir_for_test_leak_47c92/out.jsonl")
+        with patch(
+            "panoptica.panoptica_aggregator.NamedTemporaryFile"
+        ) as mock_tempfile:
+            with self.assertRaises(FileNotFoundError):
+                Panoptica_Aggregator(evaluator, output_file=bad_path)
+            mock_tempfile.assert_not_called()

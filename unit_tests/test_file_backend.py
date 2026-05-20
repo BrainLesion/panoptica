@@ -14,6 +14,8 @@ from panoptica.utils.file_backend import (
     TSVBackend,
     get_backend,
 )
+from panoptica.utils.file_backend_jsonl import _canonical_jsonl_value
+from panoptica.utils.file_backend_tsv import _canonical_tsv_value
 
 _TMP_DIR = Path(__file__).parent
 
@@ -407,3 +409,150 @@ class Test_Statistic_File_Suffix_Defaulting(unittest.TestCase):
         stat = self._seed_jsonl()
         stat.to_file(self.stem.with_suffix(".tsv"), file_type="jsonl")
         self.assertTrue(self.stem.with_suffix(".tsv").exists())
+
+
+class Test_Canonical_Value_Numpy_Scalars(unittest.TestCase):
+    """Both canonicalizers must accept NumPy scalar dtypes — not just
+    built-in ``int``/``float``. Otherwise ``np.float32`` / ``np.int*``
+    would either crash ``json.dumps`` (JSONL) or escape as the literal
+    string ``"nan"`` / ``"inf"`` via ``csv.writer`` (TSV), breaking the
+    byte-identical roundtrip."""
+
+    def test_canonical_jsonl_value_numpy_scalars(self):
+        self.assertIsNone(_canonical_jsonl_value(np.float32(np.nan)))
+        self.assertIsNone(_canonical_jsonl_value(np.float64(np.inf)))
+        self.assertEqual(_canonical_jsonl_value(np.int32(5)), 5.0)
+        self.assertEqual(_canonical_jsonl_value(np.int64(7)), 7.0)
+        self.assertEqual(_canonical_jsonl_value(np.float32(1.5)), 1.5)
+        # And the canonicalised values must be JSON-serialisable.
+        json.dumps(
+            [
+                _canonical_jsonl_value(np.float32(np.nan)),
+                _canonical_jsonl_value(np.float64(np.inf)),
+                _canonical_jsonl_value(np.int32(5)),
+                _canonical_jsonl_value(np.int64(7)),
+                _canonical_jsonl_value(np.float32(1.5)),
+            ]
+        )
+
+    def test_canonical_tsv_value_numpy_scalars(self):
+        self.assertEqual(_canonical_tsv_value(np.float32(np.nan)), "")
+        self.assertEqual(_canonical_tsv_value(np.float64(np.inf)), "")
+        self.assertEqual(_canonical_tsv_value(np.int32(5)), 5.0)
+        self.assertEqual(_canonical_tsv_value(np.int64(7)), 7.0)
+        self.assertEqual(_canonical_tsv_value(np.float32(1.5)), 1.5)
+
+
+class Test_JSONL_Schema_Drift(unittest.TestCase):
+    """`prepare_for_append` must reject mid-file schema drift, not only a
+    mismatch on the very first record (which a hand-edit or concatenation
+    could easily slip past)."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.path = _TMP_DIR.joinpath("unittest_jsonl_drift.jsonl")
+        if self.path.exists():
+            os.remove(self.path)
+
+    def tearDown(self) -> None:
+        if self.path.exists():
+            os.remove(self.path)
+
+    def test_prepare_for_append_rejects_midfile_group_drift(self):
+        # First record matches expected schema; second introduces a new group.
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {
+                            "liver": {"dice": 0.8, "tp": 4.0},
+                            "spleen": {"dice": 0.7, "tp": 3.0},
+                        },
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        with self.assertRaisesRegex(
+            ValueError, "schema of existing file does not match"
+        ):
+            backend.prepare_for_append(["liver"], ["dice", "tp"])
+
+    def test_prepare_for_append_rejects_midfile_metric_drift(self):
+        # First record matches expected schema; second has a different metric set.
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {"liver": {"dice": 0.8, "iou": 0.6}},
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        with self.assertRaisesRegex(
+            ValueError, "schema of existing file does not match"
+        ):
+            backend.prepare_for_append(["liver"], ["dice", "tp"])
+
+
+class Test_JSONL_Write_Full_Instance_Ordering(unittest.TestCase):
+    """`write_full` must place instances by their parsed ``inst_idx``, not
+    by their encounter order in ``subj_names`` — so a stat built with a
+    non-monotonic subject ordering still rewrites with instances in their
+    declared index order."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.path = _TMP_DIR.joinpath("unittest_jsonl_order.jsonl")
+        if self.path.exists():
+            os.remove(self.path)
+
+    def tearDown(self) -> None:
+        if self.path.exists():
+            os.remove(self.path)
+
+    def test_write_full_preserves_instance_order_by_inst_idx(self):
+        # Master "subj_a" followed by instance rows _inst_2, _inst_0, _inst_1
+        # (i.e. non-monotonic encounter order). The metric value encodes the
+        # inst_idx so we can assert the written order without parsing names.
+        subj_names = [
+            "subj_a",
+            "subj_a-liver_inst_2",
+            "subj_a-liver_inst_0",
+            "subj_a-liver_inst_1",
+        ]
+        value_dict = {
+            "liver": {
+                "dice": [0.9, 0.2, 0.0, 0.1],
+                "tp": [3.0, None, None, None],
+            }
+        }
+        backend = JSONLBackend(self.path)
+        backend.write_full(subj_names, value_dict, ["liver"], ["dice", "tp"])
+
+        with open(self.path, "r", encoding="utf8") as f:
+            record = json.loads(f.readline())
+        inst_list = record["groups"]["liver"]["reference_instances"]
+        # Ordered by inst_idx 0, 1, 2 — not by encounter order 2, 0, 1.
+        self.assertEqual([r["dice"] for r in inst_list], [0.0, 0.1, 0.2])

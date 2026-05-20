@@ -42,34 +42,11 @@ class JSONLBackend(FileBackend):
             self.path.touch()
             return []
 
-        first_record = _read_first_jsonl_record(self.path)
-        if first_record is None:
-            print(
-                f"{self.path}: Output file given is empty, will start with first subject"
-            )
-            return []
-
-        existing_groups = set(first_record.get("groups", {}).keys())
-        if existing_groups != expected_groups:
-            raise ValueError(
-                f"{self.path}: schema of existing file does not match current evaluator setup! "
-                f"Expected groups {sorted(expected_groups)}, found {sorted(existing_groups)}."
-            )
-        for g in first_record.get("groups", {}):
-            existing_metrics = {
-                k
-                for k in first_record["groups"][g].keys()
-                if k != "reference_instances"
-            }
-            if existing_metrics != expected_metrics:
-                raise ValueError(
-                    f"{self.path}: schema of existing file does not match current evaluator setup! "
-                    f"Group {g!r}: expected metrics {sorted(expected_metrics)}, "
-                    f"found {sorted(existing_metrics)}."
-                )
-
         existing: list[str] = []
+        seen_any = False
         for record in _iter_jsonl_records(self.path):
+            seen_any = True
+            self._validate_record_schema(record, expected_groups, expected_metrics)
             sn = record["subject_name"]
             existing.append(sn)
             for g, g_data in record.get("groups", {}).items():
@@ -77,7 +54,39 @@ class JSONLBackend(FileBackend):
                 if inst_list:
                     for inst_idx in range(len(inst_list)):
                         existing.append(format_instance_subject_name(sn, g, inst_idx))
+
+        if not seen_any:
+            print(
+                f"{self.path}: Output file given is empty, will start with first subject"
+            )
         return existing
+
+    def _validate_record_schema(
+        self,
+        record: dict,
+        expected_groups: set[str],
+        expected_metrics: set[str],
+    ) -> None:
+        """Raises ValueError if a record's groups or per-group metric set
+        diverges from the evaluator setup. Run on every record so mid-file
+        schema drift (e.g. from hand-edits or concatenated runs) is caught,
+        not just the first row."""
+        existing_groups = set(record.get("groups", {}).keys())
+        if existing_groups != expected_groups:
+            raise ValueError(
+                f"{self.path}: schema of existing file does not match current evaluator setup! "
+                f"Expected groups {sorted(expected_groups)}, found {sorted(existing_groups)}."
+            )
+        for g, g_data in record.get("groups", {}).items():
+            existing_metrics = {
+                k for k in g_data.keys() if k != "reference_instances"
+            }
+            if existing_metrics != expected_metrics:
+                raise ValueError(
+                    f"{self.path}: schema of existing file does not match current evaluator setup! "
+                    f"Group {g!r}: expected metrics {sorted(expected_metrics)}, "
+                    f"found {sorted(existing_metrics)}."
+                )
 
     def append_subject(
         self,
@@ -135,17 +144,23 @@ class JSONLBackend(FileBackend):
         class_group_names: list[str],
         evaluation_metrics: list[str],
     ) -> None:
+        # Map subject name -> position in subj_names, so the per-instance
+        # master lookup is O(1) instead of O(n) per instance row.
+        name_to_index = {sn: i for i, sn in enumerate(subj_names)}
+
         master_indices: list[int] = []
-        instances_by_master: dict[int, dict[str, list[dict]]] = {}
+        # {master_idx: {group: {inst_idx: inst_dict}}}; using an inner dict
+        # keyed by inst_idx makes ordering depend on the parsed index, not
+        # on the encounter order of subj_names.
+        instances_by_master: dict[int, dict[str, dict[int, dict]]] = {}
         for i, sn in enumerate(subj_names):
             if is_instance_row(sn):
                 parsed = parse_instance_subject_name(sn)
                 if parsed is None:
                     continue
                 orig_subj, orig_group, inst_idx = parsed
-                try:
-                    master_i = subj_names.index(orig_subj)
-                except ValueError:
+                master_i = name_to_index.get(orig_subj)
+                if master_i is None:
                     continue
                 inst_dict = {
                     m: value_dict[orig_group][m][i]
@@ -153,8 +168,8 @@ class JSONLBackend(FileBackend):
                     if value_dict[orig_group][m][i] is not None
                 }
                 instances_by_master.setdefault(master_i, {}).setdefault(
-                    orig_group, []
-                ).append(inst_dict)
+                    orig_group, {}
+                )[inst_idx] = inst_dict
             else:
                 master_indices.append(i)
 
@@ -165,9 +180,11 @@ class JSONLBackend(FileBackend):
                 group_obj: dict = {}
                 for m in evaluation_metrics:
                     group_obj[m] = _canonical_jsonl_value(value_dict[g][m][i])
-                inst_list = instances_by_master.get(i, {}).get(g)
-                if inst_list:
-                    group_obj["reference_instances"] = inst_list
+                inst_by_idx = instances_by_master.get(i, {}).get(g)
+                if inst_by_idx:
+                    group_obj["reference_instances"] = [
+                        inst_by_idx[k] for k in sorted(inst_by_idx)
+                    ]
                 record["groups"][g] = group_obj
             records.append(record)
 
@@ -227,10 +244,12 @@ class JSONLBackend(FileBackend):
 def _canonical_jsonl_value(v):
     """Canonicalize a value for JSONL output. Symmetric with the TSV path:
     numerics cast to ``float``; ``None`` / NaN / Inf serialize as JSON
-    ``null``."""
+    ``null``. NumPy scalar dtypes (``np.float32``, ``np.int64``, ...) are
+    cast through ``float`` too — without this, ``json.dumps`` would raise
+    on any non-``float64`` NumPy scalar that leaks through from a metric."""
     if v is None:
         return None
-    if isinstance(v, (int, float)):
+    if isinstance(v, (int, float, np.integer, np.floating)):
         f = float(v)
         if np.isnan(f) or f == np.inf:
             return None
@@ -244,23 +263,12 @@ def _parse_jsonl_value(v) -> float | None:
     to ``None``)."""
     if v is None:
         return None
-    if isinstance(v, (int, float)):
+    if isinstance(v, (int, float, np.integer, np.floating)):
         f = float(v)
         if np.isnan(f) or f == np.inf:
             return None
         return f
     return v
-
-
-def _read_first_jsonl_record(path: Path) -> dict | None:
-    """Reads the first JSON record from a JSONL file, skipping blank lines.
-    Returns ``None`` for an empty file. NOT THREAD SAFE BY ITSELF."""
-    with open(path, "r", encoding="utf8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                return json.loads(line)
-    return None
 
 
 def _iter_jsonl_records(path: Path):

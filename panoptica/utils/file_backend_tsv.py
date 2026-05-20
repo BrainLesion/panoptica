@@ -194,11 +194,15 @@ def _canonical_tsv_value(v):
     produce the same on-disk byte representation — required for the TSV
     <-> JSONL byte-identical roundtrip after values have been re-typed
     by ``load_raw``. ``None``, ``NaN`` and ``Inf`` all map to ``""``
-    (matching the read path which drops NaN/Inf to ``None``).
+    (matching the read path which drops NaN/Inf to ``None``). NumPy
+    scalar dtypes (``np.float32``, ``np.int64``, ...) are normalised
+    through the same path so they don't escape as the literal strings
+    ``"nan"`` / ``"inf"`` via ``csv.writer``'s default ``str(...)``,
+    which would break the byte-identical roundtrip.
     """
     if v is None:
         return ""
-    if isinstance(v, (int, float)):
+    if isinstance(v, (int, float, np.integer, np.floating)):
         f = float(v)
         if np.isnan(f) or f == np.inf:
             return ""
