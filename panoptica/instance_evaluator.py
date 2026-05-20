@@ -154,7 +154,8 @@ def _evaluate_instance(
 
     Returns:
         _InstanceEvaluation: Per-metric scores, raw voxel count of the reference instance, and physical volume (voxel count * prod(voxelspacing)).
-        If the instance has no overlap, returns the default ``_InstanceEvaluation()`` (empty metrics, zero count and volume).
+        If the reference label is absent from ``reference_arr`` (``voxel_count_ref == 0``), the result has empty metrics and zero count/volume.
+        If the reference is present but the prediction has no voxels for this label, the result has empty metrics but still carries the reference's true voxel count and volume, so the caller can record the ref as unmatched with its actual size.
     """
     ref_arr = reference_arr == ref_idx
     pred_arr = prediction_arr == ref_idx
