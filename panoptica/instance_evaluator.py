@@ -77,10 +77,16 @@ def evaluate_matched_instance(
 
     # TODO if instance matcher already gives matching metric, adapt here!
     tp = 0
-    instance_voxel_count_ref: list[int] = []
-    instance_volume_ref: list[float] = []
+    instance_voxel_count_matched_ref: list[int] = []
+    instance_volume_matched_ref: list[float] = []
+    instance_voxel_count_unmatched_ref: list[int] = []
+    instance_volume_unmatched_ref: list[float] = []
     for instance_result in per_instance_results:
+        # Decision-threshold rejection and the no-overlap safety guard both demote
+        # the ref to unmatched, so n_matched + n_unmatched == n_ref_instances.
         if not instance_result.metrics:
+            instance_voxel_count_unmatched_ref.append(instance_result.voxel_count_ref)
+            instance_volume_unmatched_ref.append(instance_result.volume_ref)
             continue
         accepted = decision_metric is None or (
             decision_threshold is not None
@@ -89,12 +95,29 @@ def evaluate_matched_instance(
             )
         )
         if not accepted:
+            instance_voxel_count_unmatched_ref.append(instance_result.voxel_count_ref)
+            instance_volume_unmatched_ref.append(instance_result.volume_ref)
             continue
         tp += 1
-        instance_voxel_count_ref.append(instance_result.voxel_count_ref)
-        instance_volume_ref.append(instance_result.volume_ref)
+        instance_voxel_count_matched_ref.append(instance_result.voxel_count_ref)
+        instance_volume_matched_ref.append(instance_result.volume_ref)
         for metric, score in instance_result.metrics.items():
             score_dict[metric].append(score)
+
+    if matched_instance_pair.missed_reference_labels:
+        unique_labels, counts = np.unique(reference_arr, return_counts=True)
+        label_to_count = dict(zip(unique_labels.tolist(), counts.tolist()))
+        missed_voxel_size = float(
+            np.prod(
+                voxelspacing
+                if voxelspacing is not None
+                else (1.0,) * reference_arr.ndim
+            )
+        )
+        for ref_idx in matched_instance_pair.missed_reference_labels:
+            voxel_count = int(label_to_count.get(ref_idx, 0))
+            instance_voxel_count_unmatched_ref.append(voxel_count)
+            instance_volume_unmatched_ref.append(float(voxel_count) * missed_voxel_size)
 
     # Create and return the EvaluateInstancePair object with computed metrics
     return EvaluateInstancePair(
@@ -104,8 +127,10 @@ def evaluate_matched_instance(
         n_ref_instances=matched_instance_pair.n_ref_instances,
         tp=tp,
         list_metrics=score_dict,
-        instance_voxel_count_ref=instance_voxel_count_ref,
-        instance_volume_ref=instance_volume_ref,
+        instance_voxel_count_matched_ref=instance_voxel_count_matched_ref,
+        instance_volume_matched_ref=instance_volume_matched_ref,
+        instance_voxel_count_unmatched_ref=instance_voxel_count_unmatched_ref,
+        instance_volume_unmatched_ref=instance_volume_unmatched_ref,
     )
 
 
@@ -148,8 +173,15 @@ def _evaluate_instance(
         else:
             voxelspacing = (1.0,) * reference_arr.ndim
 
-    if ref_arr.sum() == 0 or pred_arr.sum() == 0:
-        return _InstanceEvaluation()
+    voxel_size = float(np.prod(voxelspacing))
+    voxel_count_ref = int(ref_arr.sum())
+    volume_ref = float(voxel_count_ref) * voxel_size
+
+    if voxel_count_ref == 0 or pred_arr.sum() == 0:
+        return _InstanceEvaluation(
+            voxel_count_ref=voxel_count_ref,
+            volume_ref=volume_ref,
+        )
 
     # Crop down for speedup
     crop = _get_paired_crop(
@@ -159,9 +191,6 @@ def _evaluate_instance(
 
     ref_arr = ref_arr[crop]
     pred_arr = pred_arr[crop]
-
-    voxel_count_ref = int(np.count_nonzero(ref_arr))
-    volume_ref = float(voxel_count_ref * np.prod(voxelspacing))
 
     result: dict[Metric, float] = {}
 

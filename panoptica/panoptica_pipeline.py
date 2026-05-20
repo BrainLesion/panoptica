@@ -165,8 +165,10 @@ def _panoptic_evaluate(
             label_group=label_group,
             tp=processing_pair.tp,
             list_metrics=processing_pair.list_metrics,
-            instance_voxel_count_ref=processing_pair.instance_voxel_count_ref,
-            instance_volume_ref=processing_pair.instance_volume_ref,
+            instance_voxel_count_matched_ref=processing_pair.instance_voxel_count_matched_ref,
+            instance_volume_matched_ref=processing_pair.instance_volume_matched_ref,
+            instance_voxel_count_unmatched_ref=processing_pair.instance_voxel_count_unmatched_ref,
+            instance_volume_unmatched_ref=processing_pair.instance_volume_unmatched_ref,
             global_metrics=global_metrics,
             edge_case_handler=edge_case_handler,
             intermediate_steps_data=intermediate_steps_data,
@@ -258,6 +260,7 @@ def _panoptic_evaluate_region_wise(
         eval_metrics=instance_metrics,
         global_metrics=global_metrics,
         edge_case_handler=edge_case_handler,
+        voxelspacing=kwargs.get("voxelspacing"),
     )
 
     # proceed if pipeline only if no edge case handling necessary
@@ -357,8 +360,10 @@ def _panoptic_evaluate_region_wise(
                     label_group=label_group,
                     tp=processing_pair_r.tp,
                     list_metrics=processing_pair_r.list_metrics,
-                    instance_voxel_count_ref=processing_pair_r.instance_voxel_count_ref,
-                    instance_volume_ref=processing_pair_r.instance_volume_ref,
+                    instance_voxel_count_matched_ref=processing_pair_r.instance_voxel_count_matched_ref,
+                    instance_volume_matched_ref=processing_pair_r.instance_volume_matched_ref,
+                    instance_voxel_count_unmatched_ref=processing_pair_r.instance_voxel_count_unmatched_ref,
+                    instance_volume_unmatched_ref=processing_pair_r.instance_volume_unmatched_ref,
                     global_metrics=global_metrics,
                     edge_case_handler=edge_case_handler,
                     intermediate_steps_data=intermediate_steps_data_r,
@@ -482,6 +487,7 @@ def _phase_instance_matching(
             eval_metrics=instance_metrics,
             global_metrics=global_metrics,
             edge_case_handler=edge_case_handler,
+            voxelspacing=kwargs.get("voxelspacing"),
         )
 
     if isinstance(processing_pair, UnmatchedInstancePair):
@@ -534,6 +540,7 @@ def _phase_instance_evaluation(
             eval_metrics=instance_metrics,
             global_metrics=global_metrics,
             edge_case_handler=edge_case_handler,
+            voxelspacing=kwargs.get("voxelspacing"),
         )
 
     if isinstance(processing_pair, MatchedInstancePair):
@@ -559,6 +566,7 @@ def _handle_zero_instances_cases(
     edge_case_handler: EdgeCaseHandler,
     global_metrics: list[Metric],
     eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    voxelspacing: tuple[float, ...] | None = None,
 ) -> UnmatchedInstancePair | MatchedInstancePair | PanopticaResult:
     """
     Handle edge cases when comparing reference and prediction masks.
@@ -568,6 +576,7 @@ def _handle_zero_instances_cases(
         edge_case_handler: Handler for edge cases.
         global_metrics: List of global metrics to calculate.
         eval_metrics: List of evaluation metrics to calculate for instances.
+        voxelspacing: Physical spacing used to compute unmatched-ref volumes.
 
     Returns:
         UnmatchedInstancePair | MatchedInstancePair | PanopticaResult: The processed processing pair or evaluation result.
@@ -601,6 +610,29 @@ def _handle_zero_instances_cases(
         n_reference_instance = n_reference_instance
         n_prediction_instance = 0
         is_edge_case = True
+        # Report each reference instance as an unmatched ref. Single np.unique pass
+        # so we don't scan the whole array once per label.
+        unique_labels, counts = np.unique(
+            processing_pair.reference_arr, return_counts=True
+        )
+        voxel_size = float(
+            np.prod(
+                voxelspacing
+                if voxelspacing is not None
+                else (1.0,) * processing_pair.reference_arr.ndim
+            )
+        )
+        unmatched_voxel_counts: list[int] = []
+        unmatched_volumes: list[float] = []
+        for label, count in zip(unique_labels, counts):
+            if label == 0:
+                continue
+            unmatched_voxel_counts.append(int(count))
+            unmatched_volumes.append(float(count) * voxel_size)
+        panoptica_result_args["instance_voxel_count_unmatched_ref"] = (
+            unmatched_voxel_counts
+        )
+        panoptica_result_args["instance_volume_unmatched_ref"] = unmatched_volumes
 
     if is_edge_case:
         panoptica_result_args["global_metrics"] = global_metrics
