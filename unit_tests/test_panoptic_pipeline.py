@@ -24,6 +24,7 @@ from panoptica.instance_evaluator import (
     evaluate_matched_instance,
     _evaluate_instance,
 )
+from panoptica.utils.processing_pair import MatchedInstancePair
 from unit_tests.unit_test_utils import (
     case_simple_identical,
     case_simple_nooverlap,
@@ -316,3 +317,65 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         self.assertEqual(eval_result.metrics[Metric.DSC], 1.0)
         self.assertEqual(eval_result.voxel_count_ref, int(np.count_nonzero(a == 1)))
         self.assertEqual(eval_result.volume_ref, float(eval_result.voxel_count_ref))
+
+    def test_decision_threshold_rejection_reported_as_unmatched(self):
+        # Reference instance 1 and prediction instance 1 overlap at IoU ~0.33 below the 0.5 decision_threshold.
+        # The match must be reported as unmatched (FN) rather than silently dropped.
+        prediction_arr = np.zeros([4, 4], dtype=np.uint16)
+        reference_arr = np.zeros([4, 4], dtype=np.uint16)
+        prediction_arr[:, 0:2] = 1
+        reference_arr[:, 1:3] = 1
+        pair = MatchedInstancePair(
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
+            matched_instances=[1],
+            missed_reference_labels=[],
+            missed_prediction_labels=[],
+        )
+
+        result = evaluate_matched_instance(
+            pair,
+            eval_metrics=[Metric.IOU],
+            decision_metric=Metric.IOU,
+            decision_threshold=0.5,
+        )
+
+        ref_voxel_count = int(np.count_nonzero(reference_arr == 1))
+        self.assertEqual(result.tp, 0)
+        self.assertEqual(len(result.instance_voxel_count_matched_ref), 0)
+        self.assertEqual(len(result.instance_voxel_count_unmatched_ref), 1)
+        self.assertEqual(result.instance_voxel_count_unmatched_ref[0], ref_voxel_count)
+        self.assertEqual(
+            result.instance_volume_unmatched_ref[0], float(ref_voxel_count)
+        )
+        self.assertEqual(result.list_metrics[Metric.IOU], [])
+
+    def test_no_overlap_instance_reported_as_unmatched(self):
+        # Matcher paired ref label 1 with a prediction label that has no voxels: `_evaluate_instance` returns the empty-metrics default.
+        # The ref must still be reported as unmatched (FN), with its true voxel count.
+        prediction_arr = np.zeros([4, 4], dtype=np.uint16)
+        reference_arr = np.zeros([4, 4], dtype=np.uint16)
+        reference_arr[1:3, 1:3] = 1
+        pair = MatchedInstancePair(
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
+            matched_instances=[1],
+            missed_reference_labels=[],
+            missed_prediction_labels=[],
+        )
+
+        result = evaluate_matched_instance(
+            pair,
+            eval_metrics=[Metric.IOU],
+            decision_metric=None,
+            decision_threshold=None,
+        )
+
+        ref_voxel_count = int(np.count_nonzero(reference_arr == 1))
+        self.assertEqual(result.tp, 0)
+        self.assertEqual(len(result.instance_voxel_count_matched_ref), 0)
+        self.assertEqual(len(result.instance_voxel_count_unmatched_ref), 1)
+        self.assertEqual(result.instance_voxel_count_unmatched_ref[0], ref_voxel_count)
+        self.assertEqual(
+            result.instance_volume_unmatched_ref[0], float(ref_voxel_count)
+        )
