@@ -5,7 +5,6 @@ import numpy as np
 from panoptica.metrics import Metric
 from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
 from panoptica._functionals import _get_paired_crop, _get_orig_onehotcc_structure
-from panoptica.utils import compute_ref_voxel_count_and_volume
 
 
 @dataclass(frozen=True)
@@ -105,12 +104,20 @@ def evaluate_matched_instance(
         for metric, score in instance_result.metrics.items():
             score_dict[metric].append(score)
 
-    for ref_idx in matched_instance_pair.missed_reference_labels:
-        voxel_count, volume = compute_ref_voxel_count_and_volume(
-            reference_arr, ref_idx, voxelspacing
+    if matched_instance_pair.missed_reference_labels:
+        unique_labels, counts = np.unique(reference_arr, return_counts=True)
+        label_to_count = dict(zip(unique_labels.tolist(), counts.tolist()))
+        missed_voxel_size = float(
+            np.prod(
+                voxelspacing
+                if voxelspacing is not None
+                else (1.0,) * reference_arr.ndim
+            )
         )
-        instance_voxel_count_unmatched_ref.append(voxel_count)
-        instance_volume_unmatched_ref.append(volume)
+        for ref_idx in matched_instance_pair.missed_reference_labels:
+            voxel_count = int(label_to_count.get(ref_idx, 0))
+            instance_voxel_count_unmatched_ref.append(voxel_count)
+            instance_volume_unmatched_ref.append(float(voxel_count) * missed_voxel_size)
 
     # Create and return the EvaluateInstancePair object with computed metrics
     return EvaluateInstancePair(
@@ -166,10 +173,11 @@ def _evaluate_instance(
         else:
             voxelspacing = (1.0,) * reference_arr.ndim
 
-    voxel_count_ref = int(np.count_nonzero(ref_arr))
-    volume_ref = float(voxel_count_ref * np.prod(voxelspacing))
+    voxel_size = float(np.prod(voxelspacing))
+    voxel_count_ref = int(ref_arr.sum())
+    volume_ref = float(voxel_count_ref) * voxel_size
 
-    if ref_arr.sum() == 0 or pred_arr.sum() == 0:
+    if voxel_count_ref == 0 or pred_arr.sum() == 0:
         return _InstanceEvaluation(
             voxel_count_ref=voxel_count_ref,
             volume_ref=volume_ref,

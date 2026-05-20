@@ -361,6 +361,12 @@ class PanopticaResult(object):
         self.instance_volume_matched_ref_list: list[float] = list(
             instance_volume_matched_ref or []
         )
+        if len(self.instance_voxel_count_matched_ref_list) != len(
+            self.instance_volume_matched_ref_list
+        ):
+            raise ValueError(
+                "matched ref voxel-count and volume lists must have equal length"
+            )
         self.instance_voxel_count_ref: float
         self._add_metric(
             "instance_voxel_count_ref",
@@ -394,6 +400,12 @@ class PanopticaResult(object):
         self.instance_volume_unmatched_ref_list: list[float] = list(
             instance_volume_unmatched_ref or []
         )
+        if len(self.instance_voxel_count_unmatched_ref_list) != len(
+            self.instance_volume_unmatched_ref_list
+        ):
+            raise ValueError(
+                "unmatched ref voxel-count and volume lists must have equal length"
+            )
         self.is_matched: float = float("nan")
         # endregion
 
