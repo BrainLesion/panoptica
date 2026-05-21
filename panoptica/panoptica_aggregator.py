@@ -124,8 +124,7 @@ class Panoptica_Aggregator:
 
         if self.__continue_file and existing_subjects:
             with inevalfilelock:
-                with filelock:
-                    _append_buffer_entries(self.__output_buffer_file, existing_subjects)
+                _append_buffer_entries(self.__output_buffer_file, existing_subjects)
 
     @property
     def panoptica_evaluator(self):

@@ -145,6 +145,9 @@ class TSVBackend(FileBackend):
             rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
             rows = list(rd)
 
+        if not rows:
+            return [], {}
+
         header = rows[0]
         if header[0] != "subject_name":
             raise ValueError(
@@ -230,10 +233,6 @@ def _load_first_tsv_column(path: Path) -> list[str]:
     """Loads the entries from the first column of a TSV file.
 
     NOT THREAD SAFE BY ITSELF.
-
-    Cost is O(N) in rows on every aggregator construction (full file scan plus
-    a set for duplicate detection). Fine for typical study sizes; if a TSV ever
-    grows to hundreds of thousands of instance-level rows, prefer streaming.
 
     Raises:
         ValueError: If the file contains duplicate entries.

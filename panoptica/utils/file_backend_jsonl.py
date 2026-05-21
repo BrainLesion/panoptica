@@ -28,6 +28,10 @@ class JSONLBackend(FileBackend):
     ``None``. The ``"reference_instances"`` key is only present when the
     aggregator is run with ``output_individual_instance_metrics=True`` and
     the result yielded at least one reference instance.
+
+    Crash recovery: a process killed mid-write can leave a truncated last
+    line. Re-opening such a file raises ``ValueError("malformed JSON on
+    line N")``; delete the last partial line manually to recover.
     """
 
     def prepare_for_append(
@@ -49,7 +53,7 @@ class JSONLBackend(FileBackend):
             seen_any = True
             self._validate_record_schema(record, expected_groups, expected_metrics)
             if not collect_existing:
-                continue
+                return []
             sn = record["subject_name"]
             existing.append(sn)
             for g, g_data in record.get("groups", {}).items():
@@ -213,16 +217,24 @@ class JSONLBackend(FileBackend):
             g: {m: [] for m in metric_names} for g in group_names
         }
 
-        for record in records:
+        expected_groups = set(group_names)
+        for record_idx, record in enumerate(records):
             sn = record["subject_name"]
             subj_names.append(sn)
+            record_groups = record.get("groups", {})
+            missing = expected_groups - record_groups.keys()
+            if missing:
+                raise ValueError(
+                    f"{self.path}: record {record_idx} (subject {sn!r}) "
+                    f"is missing group(s) {sorted(missing)} present in record 0."
+                )
             for g in group_names:
-                g_data = record["groups"][g]
+                g_data = record_groups[g]
                 for m in metric_names:
                     value_dict[g][m].append(_parse_jsonl_value(g_data.get(m)))
 
             for g in group_names:
-                inst_list = record["groups"][g].get("reference_instances") or []
+                inst_list = record_groups[g].get("reference_instances") or []
                 for inst_idx, inst_dict in enumerate(inst_list):
                     subj_names.append(format_instance_subject_name(sn, g, inst_idx))
                     for inner_g in group_names:

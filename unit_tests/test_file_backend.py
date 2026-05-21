@@ -80,6 +80,12 @@ class Test_TSVBackend_Direct(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_backend(_TMP_DIR.joinpath("dummy.xyz"))
 
+    def test_get_backend_extension_case_insensitive(self):
+        self.assertIsInstance(get_backend(_TMP_DIR.joinpath("dummy.TSV")), TSVBackend)
+        self.assertIsInstance(
+            get_backend(_TMP_DIR.joinpath("dummy.JSONL")), JSONLBackend
+        )
+
     def test_write_full_then_load_raw_roundtrip(self):
         backend = TSVBackend(self.path)
         subj_names = ["subj_a", "subj_b"]
@@ -100,6 +106,14 @@ class Test_TSVBackend_Direct(unittest.TestCase):
         # Header-only TSV
         backend = TSVBackend(self.path)
         backend.prepare_for_append(["liver"], ["dice", "tp"])
+        loaded_subj, loaded_dict = backend.load_raw(verbose=False)
+        self.assertEqual(loaded_subj, [])
+        self.assertEqual(loaded_dict, {})
+
+    def test_load_raw_zero_byte_file_returns_empty(self):
+        self.path.touch()
+        self.assertEqual(self.path.stat().st_size, 0)
+        backend = TSVBackend(self.path)
         loaded_subj, loaded_dict = backend.load_raw(verbose=False)
         self.assertEqual(loaded_subj, [])
         self.assertEqual(loaded_dict, {})
@@ -227,6 +241,28 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         self.assertIn("reference_instances", rec["groups"]["ungrouped"])
         self.assertEqual(len(rec["groups"]["ungrouped"]["reference_instances"]), 2)
 
+    def test_aggregator_records_unmatched_instance(self):
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=self.path,
+            output_individual_instance_metrics=True,
+        )
+        ref = np.zeros([50, 50], dtype=np.uint16)
+        pred = np.zeros_like(ref)
+        ref[10:20, 10:20] = 1
+        ref[30:40, 30:40] = 2
+        pred[10:20, 10:20] = 1
+        aggregator.evaluate(pred, ref, "partial_subject")
+
+        with open(self.path, "r", encoding="utf8") as f:
+            rec = json.loads(f.readline().strip())
+        instances = rec["groups"]["ungrouped"]["reference_instances"]
+        self.assertEqual(len(instances), 2)
+        matched_flags = [inst.get("is_matched") for inst in instances]
+        self.assertIn(1.0, matched_flags)
+        self.assertIn(0.0, matched_flags)
+
     def test_load_raw_flattens_instances_into_synthetic_subj_names(self):
         evaluator = _make_simple_evaluator()
         aggregator = Panoptica_Aggregator(
@@ -249,6 +285,33 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         self.assertIsNotNone(value_dict["ungrouped"]["tp"][0])
         self.assertIsNone(value_dict["ungrouped"]["tp"][1])
         self.assertIsNone(value_dict["ungrouped"]["tp"][2])
+
+    def test_load_raw_raises_when_record_missing_group(self):
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {
+                            "liver": {"dice": 0.9, "tp": 5.0},
+                            "spleen": {"dice": 0.8, "tp": 4.0},
+                        },
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {"liver": {"dice": 0.7, "tp": 3.0}},
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        with self.assertRaisesRegex(ValueError, r"record 1.*missing group.*spleen"):
+            backend.load_raw(verbose=False)
 
     def test_load_raw_missing_value_round_trips_to_none(self):
         # Write a record with an explicit JSON null and verify it loads as None

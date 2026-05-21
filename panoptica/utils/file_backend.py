@@ -29,7 +29,7 @@ def derive_file_type(file_path: Path) -> FileType:
         raise ValueError(
             f"No file extension on {file_path}. Use one of: {', '.join(supported_file_types)}."
         )
-    file_type = file_path.suffix.removeprefix(".")
+    file_type = file_path.suffix.removeprefix(".").lower()
     if file_type not in supported_file_types:
         raise ValueError(
             f"You provided the extension {file_path.suffix}, but currently only {', '.join(supported_file_types)} are supported. Either delete it or set a supported extension."
