@@ -310,8 +310,101 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
                 + "\n"
             )
         backend = JSONLBackend(self.path)
-        with self.assertRaisesRegex(ValueError, r"record 1.*missing group.*spleen"):
+        with self.assertRaisesRegex(
+            ValueError, r"record 1.*group set diverges.*Missing.*spleen"
+        ):
             backend.load_raw(verbose=False)
+
+    def test_load_raw_raises_when_record_has_extra_group(self):
+        # Symmetric to the missing-group case: an extra group on a later
+        # record must also be rejected, since record 0 fixes the schema.
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {
+                            "liver": {"dice": 0.7, "tp": 3.0},
+                            "spleen": {"dice": 0.8, "tp": 4.0},
+                        },
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        with self.assertRaisesRegex(
+            ValueError, r"record 1.*group set diverges.*extra.*spleen"
+        ):
+            backend.load_raw(verbose=False)
+
+    def test_load_raw_raises_when_record_has_metric_drift(self):
+        # A later record with a different per-group metric key set (extra
+        # or missing) is silent data drift; load_raw must reject it.
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {"liver": {"dice": 0.7, "iou": 0.6}},
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        with self.assertRaisesRegex(
+            ValueError, r"record 1.*metric set diverges.*Missing.*tp.*extra.*iou"
+        ):
+            backend.load_raw(verbose=False)
+
+    def test_prepare_for_append_validates_all_records_without_collect(self):
+        # Regression: when collect_existing=False, schema validation must still
+        # run on every record, not just record 0. Record 1 has a drifted metric
+        # set that should trip the validator even though we don't want the
+        # subject-name list back.
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_b",
+                        "groups": {"liver": {"dice": 0.7, "iou": 0.6}},
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        with self.assertRaisesRegex(
+            ValueError, "schema of existing file does not match"
+        ):
+            backend.prepare_for_append(
+                ["liver"], ["dice", "tp"], collect_existing=False
+            )
 
     def test_load_raw_missing_value_round_trips_to_none(self):
         # Write a record with an explicit JSON null and verify it loads as None

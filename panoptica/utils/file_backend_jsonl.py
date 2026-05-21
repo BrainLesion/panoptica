@@ -53,7 +53,8 @@ class JSONLBackend(FileBackend):
             seen_any = True
             self._validate_record_schema(record, expected_groups, expected_metrics)
             if not collect_existing:
-                return []
+                # Skip subject-name collection but keep iterating so every record gets schema-validated 
+                continue
             sn = record["subject_name"]
             existing.append(sn)
             for g, g_data in record.get("groups", {}).items():
@@ -216,16 +217,32 @@ class JSONLBackend(FileBackend):
         }
 
         expected_groups = set(group_names)
+        expected_metrics = set(metric_names)
         for record_idx, record in enumerate(records):
             sn = record["subject_name"]
             subj_names.append(sn)
             record_groups = record.get("groups", {})
-            missing = expected_groups - record_groups.keys()
-            if missing:
+            actual_groups = set(record_groups.keys())
+            if actual_groups != expected_groups:
+                missing = expected_groups - actual_groups
+                extra = actual_groups - expected_groups
                 raise ValueError(
                     f"{self.path}: record {record_idx} (subject {sn!r}) "
-                    f"is missing group(s) {sorted(missing)} present in record 0."
+                    f"group set diverges from record 0. "
+                    f"Missing: {sorted(missing)}, extra: {sorted(extra)}."
                 )
+            for g in group_names:
+                actual_metrics = {
+                    k for k in record_groups[g].keys() if k != "reference_instances"
+                }
+                if actual_metrics != expected_metrics:
+                    missing_m = expected_metrics - actual_metrics
+                    extra_m = actual_metrics - expected_metrics
+                    raise ValueError(
+                        f"{self.path}: record {record_idx} (subject {sn!r}) "
+                        f"group {g!r} metric set diverges from record 0. "
+                        f"Missing: {sorted(missing_m)}, extra: {sorted(extra_m)}."
+                    )
             for g in group_names:
                 g_data = record_groups[g]
                 for m in metric_names:
@@ -302,11 +319,15 @@ _JSONL_SEPARATORS = (",", ":")
 
 
 def _append_jsonl_record(path: Path, record: dict) -> None:
-    """Appends a single JSON record as one line to a JSONL file.
-    NOT THREAD SAFE BY ITSELF."""
+    """Appends a single JSON record as one line to a JSONL file. The
+    record payload and trailing newline are emitted in a single
+    ``write()`` so that, when combined with ``O_APPEND``, lines from
+    concurrent writers can't interleave below the OS' atomic-write
+    threshold. Concurrent writers above that threshold still need an
+    external lock — see ``FileLock`` in the aggregator."""
+    line = json.dumps(record, ensure_ascii=False, separators=_JSONL_SEPARATORS) + "\n"
     with open(path, "a", encoding="utf8") as f:
-        f.write(json.dumps(record, ensure_ascii=False, separators=_JSONL_SEPARATORS))
-        f.write("\n")
+        f.write(line)
 
 
 def _write_jsonl_records(path: Path, records: list[dict]) -> None:
@@ -316,5 +337,5 @@ def _write_jsonl_records(path: Path, records: list[dict]) -> None:
         for record in records:
             f.write(
                 json.dumps(record, ensure_ascii=False, separators=_JSONL_SEPARATORS)
+                + "\n"
             )
-            f.write("\n")
