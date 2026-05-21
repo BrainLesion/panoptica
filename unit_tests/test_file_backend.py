@@ -706,9 +706,7 @@ class Test_Log_Times_Roundtrip(unittest.TestCase):
 
     def _run_for_path(self, path: Path) -> None:
         evaluator = _make_simple_evaluator()
-        aggregator = Panoptica_Aggregator(
-            evaluator, output_file=path, log_times=True
-        )
+        aggregator = Panoptica_Aggregator(evaluator, output_file=path, log_times=True)
         a, b = _two_instance_arrays()
         aggregator.evaluate(b, a, "subj_a")
 

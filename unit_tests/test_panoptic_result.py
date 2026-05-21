@@ -224,12 +224,8 @@ class Test_Panoptica_Results(unittest.TestCase):
         n_matched, n_unmatched = 1, 1
         self.assertEqual(len(rows), n_matched + n_unmatched)
         # Matched first, unmatched after.
-        self.assertEqual(
-            [r["is_matched"] for r in rows[:n_matched]], [1] * n_matched
-        )
-        self.assertEqual(
-            [r["is_matched"] for r in rows[n_matched:]], [0] * n_unmatched
-        )
+        self.assertEqual([r["is_matched"] for r in rows[:n_matched]], [1] * n_matched)
+        self.assertEqual([r["is_matched"] for r in rows[n_matched:]], [0] * n_unmatched)
         # Matched rows carry sq metrics; unmatched rows do not.
         self.assertIn("sq", rows[0])
         self.assertNotIn("sq", rows[1])

@@ -85,9 +85,7 @@ class JSONLBackend(FileBackend):
                 f"Expected groups {sorted(expected_groups)}, found {sorted(existing_groups)}."
             )
         for g, g_data in record.get("groups", {}).items():
-            existing_metrics = {
-                k for k in g_data.keys() if k != "reference_instances"
-            }
+            existing_metrics = {k for k in g_data.keys() if k != "reference_instances"}
             if existing_metrics != expected_metrics:
                 raise ValueError(
                     f"{self.path}: schema of existing file does not match current evaluator setup! "
@@ -167,9 +165,9 @@ class JSONLBackend(FileBackend):
                     for m in evaluation_metrics
                     if value_dict[orig_group][m][i] is not None
                 }
-                instances_by_master.setdefault(master_i, {}).setdefault(
-                    orig_group, {}
-                )[inst_idx] = inst_dict
+                instances_by_master.setdefault(master_i, {}).setdefault(orig_group, {})[
+                    inst_idx
+                ] = inst_dict
             else:
                 master_indices.append(i)
 
@@ -316,5 +314,7 @@ def _write_jsonl_records(path: Path, records: list[dict]) -> None:
     NOT THREAD SAFE BY ITSELF."""
     with open(path, "w", encoding="utf8") as f:
         for record in records:
-            f.write(json.dumps(record, ensure_ascii=False, separators=_JSONL_SEPARATORS))
+            f.write(
+                json.dumps(record, ensure_ascii=False, separators=_JSONL_SEPARATORS)
+            )
             f.write("\n")

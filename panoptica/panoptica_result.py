@@ -527,7 +527,7 @@ class PanopticaResult(object):
     def normalize_row_to_master_schema(cls, row: dict) -> dict:
         """Rewrite a ``reference_instances`` row dict so its keys match the master schema."""
         return {cls.ROW_KEY_TO_MASTER_KEY.get(k, k): v for k, v in row.items()}
-    
+
     @property
     def autc_metrics(self) -> list[str]:
         return [
