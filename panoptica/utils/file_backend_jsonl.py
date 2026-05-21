@@ -108,6 +108,7 @@ class JSONLBackend(FileBackend):
                 instance_dicts = summary_dict.pop("reference_instances", [])
             else:
                 summary_dict = result.to_dict(False)
+                instance_dicts = []
 
             if result.computation_time is not None:
                 summary_dict[COMPUTATION_TIME_KEY] = result.computation_time
