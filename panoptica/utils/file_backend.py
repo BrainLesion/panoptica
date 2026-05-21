@@ -9,6 +9,34 @@ if TYPE_CHECKING:
 
 COMPUTATION_TIME_KEY = "computation_time"
 
+FileType = Literal["tsv", "jsonl"]
+supported_file_types: tuple[FileType, ...] = get_args(FileType)
+
+
+def derive_file_type(file_path: Path) -> FileType:
+    """Derives the supported file type from a path's extension.
+
+    Args:
+        file_path (Path): Path whose suffix (e.g. ``.tsv``) identifies the format.
+
+    Returns:
+        FileType: The detected file type literal, one of ``supported_file_types``.
+
+    Raises:
+        ValueError: If the extension is missing or not in ``supported_file_types``.
+    """
+    if not file_path.suffix:
+        raise ValueError(
+            f"No file extension on {file_path}. Use one of: {', '.join(supported_file_types)}."
+        )
+    file_type = file_path.suffix.removeprefix(".")
+    if file_type not in supported_file_types:
+        raise ValueError(
+            f"You provided the extension {file_path.suffix}, but currently only {', '.join(supported_file_types)} are supported. Either delete it or set a supported extension."
+        )
+
+    return file_type
+
 
 class FileBackend(ABC):
     """Strategy for reading/writing Panoptica aggregator results to a file.
@@ -19,7 +47,11 @@ class FileBackend(ABC):
     """
 
     def __init__(self, path: Path):
-        self.path = path
+        self._path = path
+
+    @property
+    def path(self) -> Path:
+        return self._path
 
     @abstractmethod
     def prepare_for_append(
@@ -40,6 +72,10 @@ class FileBackend(ABC):
         the subject-name list is not materialised — useful for the
         ``continue_file=False`` aggregator path, where the list would be
         discarded anyway. Returns ``[]`` in that case.
+
+        ``log_times=True`` adds the ``computation_time`` key to the schema; a
+        file opened with one ``log_times`` setting cannot be continued with
+        the other (the resulting schema mismatch raises ``ValueError``).
 
         Raises:
             ValueError: If existing content is incompatible with the current
@@ -85,6 +121,7 @@ class FileBackend(ABC):
         """
 
 
+# Concrete backend imports live at the bottom to break the import cycle
 from panoptica.utils.file_backend_tsv import TSVBackend
 from panoptica.utils.file_backend_jsonl import JSONLBackend
 
@@ -97,32 +134,3 @@ _BACKENDS: dict[FileType, type[FileBackend]] = {
 def get_backend(path: Path) -> FileBackend:
     """Resolves a ``FileBackend`` for the given path by its extension."""
     return _BACKENDS[derive_file_type(path)](path)
-
-
-FileType = Literal["tsv", "jsonl"]
-supported_file_types: tuple[FileType, ...] = get_args(FileType)
-
-
-def derive_file_type(file_path: Path) -> FileType:
-    """Derives the supported file type from a path's extension.
-
-    Args:
-        file_path (Path): Path whose suffix (e.g. ``.tsv``) identifies the format.
-
-    Returns:
-        FileType: The detected file type literal, one of ``supported_file_types``.
-
-    Raises:
-        ValueError: If the extension is missing or not in ``supported_file_types``.
-    """
-    if not file_path.suffix:
-        raise ValueError(
-            f"No file extension on {file_path}. Use one of: {', '.join(supported_file_types)}."
-        )
-    file_type = file_path.suffix.removeprefix(".")
-    if file_type not in supported_file_types:
-        raise ValueError(
-            f"You provided the extension {file_path.suffix}, but currently only {', '.join(supported_file_types)} are supported. Either delete it or set a supported extension."
-        )
-
-    return file_type

@@ -161,12 +161,17 @@ class TSVBackend(FileBackend):
         for k in keys_in_order:
             if k[1] not in metric_names:
                 metric_names.append(k[1])
-        group_names = list({k[0] for k in keys_in_order})
+        # Preserve column ordering — a set comprehension drops it.
+        group_names = list(dict.fromkeys(k[0] for k in keys_in_order))
 
         if verbose:
             print(f"Found {len(rows) - 1} entries")
             print(f"Found metrics: {metric_names}")
             print(f"Found groups: {group_names}")
+
+        # Header-only file
+        if len(rows) == 1:
+            return [], {}
 
         subj_names: list[str] = []
         value_dict: dict[str, dict[str, list[float | None]]] = {}
@@ -180,7 +185,7 @@ class TSVBackend(FileBackend):
                     value_dict[group_name] = {m: [] for m in metric_names}
                 if len(value) > 0:
                     parsed = float(value)
-                    if not np.isnan(parsed) and parsed != np.inf:
+                    if not np.isnan(parsed) and not np.isinf(parsed):
                         value_dict[group_name][metric_name].append(parsed)
                     else:
                         value_dict[group_name][metric_name].append(None)
@@ -196,7 +201,7 @@ def _canonical_tsv_value(v):
     Casts ``int`` / ``float`` through ``float`` so that ``5`` and ``5.0``
     produce the same on-disk byte representation — required for the TSV
     <-> JSONL byte-identical roundtrip after values have been re-typed
-    by ``load_raw``. ``None``, ``NaN`` and ``Inf`` all map to ``""``
+    by ``load_raw``. ``None``, ``NaN`` and +/-``Inf`` all map to ``""``
     (matching the read path which drops NaN/Inf to ``None``). NumPy
     scalar dtypes (``np.float32``, ``np.int64``, ...) are normalised
     through the same path so they don't escape as the literal strings
@@ -207,7 +212,7 @@ def _canonical_tsv_value(v):
         return ""
     if isinstance(v, (int, float, np.integer, np.floating)):
         f = float(v)
-        if np.isnan(f) or f == np.inf:
+        if np.isnan(f) or np.isinf(f):
             return ""
         return f
     return v
@@ -225,6 +230,10 @@ def _load_first_tsv_column(path: Path) -> list[str]:
     """Loads the entries from the first column of a TSV file.
 
     NOT THREAD SAFE BY ITSELF.
+
+    Cost is O(N) in rows on every aggregator construction (full file scan plus
+    a set for duplicate detection). Fine for typical study sizes; if a TSV ever
+    grows to hundreds of thousands of instance-level rows, prefer streaming.
 
     Raises:
         ValueError: If the file contains duplicate entries.

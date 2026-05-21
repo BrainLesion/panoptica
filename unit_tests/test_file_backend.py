@@ -1,5 +1,8 @@
+import atexit
 import json
 import os
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -17,7 +20,10 @@ from panoptica.utils.file_backend import (
 from panoptica.utils.file_backend_jsonl import _canonical_jsonl_value
 from panoptica.utils.file_backend_tsv import _canonical_tsv_value
 
-_TMP_DIR = Path(__file__).parent
+# Write artifacts to an isolated tempdir so a crash in tearDown can't leave
+# .tsv/.jsonl debris in the source tree.
+_TMP_DIR = Path(tempfile.mkdtemp(prefix="panoptica_test_file_backend_"))
+atexit.register(shutil.rmtree, _TMP_DIR, ignore_errors=True)
 
 
 def _make_simple_evaluator() -> Panoptica_Evaluator:
@@ -89,6 +95,14 @@ class Test_TSVBackend_Direct(unittest.TestCase):
         self.assertEqual(loaded_dict["liver"]["tp"], [5.0, None])
         self.assertEqual(loaded_dict["spleen"]["dice"], [None, 0.7])
         self.assertEqual(loaded_dict["spleen"]["tp"], [3.0, 2.0])
+
+    def test_load_raw_header_only_returns_empty(self):
+        # Header-only TSV
+        backend = TSVBackend(self.path)
+        backend.prepare_for_append(["liver"], ["dice", "tp"])
+        loaded_subj, loaded_dict = backend.load_raw(verbose=False)
+        self.assertEqual(loaded_subj, [])
+        self.assertEqual(loaded_dict, {})
 
 
 class Test_JSONLBackend_Direct(unittest.TestCase):
@@ -442,6 +456,17 @@ class Test_Canonical_Value_Numpy_Scalars(unittest.TestCase):
         self.assertEqual(_canonical_tsv_value(np.int64(7)), 7.0)
         self.assertEqual(_canonical_tsv_value(np.float32(1.5)), 1.5)
 
+    def test_canonical_values_filter_negative_infinity(self):
+        # Both +inf and -inf must canonicalise to the missing-value
+        # representation. The JSONL serializer in particular must not emit
+        # the literal "Infinity" / "-Infinity", since neither is valid JSON
+        # and most non-Python parsers (JS JSON.parse, jq) reject them.
+        self.assertIsNone(_canonical_jsonl_value(-np.inf))
+        self.assertIsNone(_canonical_jsonl_value(np.float64(-np.inf)))
+        self.assertIsNone(_canonical_jsonl_value(np.float32(-np.inf)))
+        self.assertEqual(_canonical_tsv_value(-np.inf), "")
+        self.assertEqual(_canonical_tsv_value(np.float32(-np.inf)), "")
+
 
 class Test_JSONL_Schema_Drift(unittest.TestCase):
     """`prepare_for_append` must reject mid-file schema drift, not only a
@@ -488,6 +513,23 @@ class Test_JSONL_Schema_Drift(unittest.TestCase):
         ):
             backend.prepare_for_append(["liver"], ["dice", "tp"])
 
+    def test_prepare_for_append_raises_with_line_number_on_malformed_line(self):
+        # Hand-write a file with valid line 1 and a corrupt line 2.
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": 0.9, "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+            f.write("{not valid json\n")
+        backend = JSONLBackend(self.path)
+        with self.assertRaisesRegex(ValueError, "malformed JSON on line 2"):
+            backend.prepare_for_append(["liver"], ["dice", "tp"])
+
     def test_prepare_for_append_rejects_midfile_metric_drift(self):
         # First record matches expected schema; second has a different metric set.
         with open(self.path, "w", encoding="utf8") as f:
@@ -514,6 +556,120 @@ class Test_JSONL_Schema_Drift(unittest.TestCase):
             ValueError, "schema of existing file does not match"
         ):
             backend.prepare_for_append(["liver"], ["dice", "tp"])
+
+
+class Test_AUTC_Backend_Roundtrip(unittest.TestCase):
+    """AUTC writes a different key namespace (``autc_<metric>`` plus per-
+    threshold ``t<threshold>_<metric>`` keys), so the round-trip path is
+    not covered by the non-AUTC tests above."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.paths = [
+            _TMP_DIR.joinpath("unittest_autc_backend.jsonl"),
+            _TMP_DIR.joinpath("unittest_autc_backend.tsv"),
+        ]
+        for p in self.paths:
+            if p.exists():
+                os.remove(p)
+
+    def tearDown(self) -> None:
+        for p in self.paths:
+            if p.exists():
+                os.remove(p)
+
+    def _evaluator(self) -> Panoptica_Evaluator:
+        return Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+
+    def _run_for_path(self, path: Path) -> None:
+        evaluator = self._evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator,
+            output_file=path,
+            is_autc=True,
+            threshold_step_size=0.5,
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "subj_a")
+
+        # Re-open with continue_file=True and append a second subject; the
+        # schema validation must accept the AUTC key namespace.
+        aggregator2 = Panoptica_Aggregator(
+            self._evaluator(),
+            output_file=path,
+            is_autc=True,
+            threshold_step_size=0.5,
+            continue_file=True,
+        )
+        aggregator2.evaluate(b, a, "subj_b")
+
+        stat = Panoptica_Statistic.from_file(path, verbose=False)
+        self.assertIn("subj_a", stat.subjectnames)
+        self.assertIn("subj_b", stat.subjectnames)
+        self.assertIn("autc_pq", stat.metricnames)
+        self.assertIn("t0.5_pq", stat.metricnames)
+        self.assertIn("t1_pq", stat.metricnames)
+
+    def test_autc_roundtrip_jsonl(self):
+        self._run_for_path(self.paths[0])
+
+    def test_autc_roundtrip_tsv(self):
+        self._run_for_path(self.paths[1])
+
+
+class Test_Log_Times_Roundtrip(unittest.TestCase):
+    """``log_times=True`` injects ``computation_time`` into the schema.
+    Reopening the same file with ``continue_file=True`` and ``log_times=True``
+    again must not trip the schema-validation path on either backend."""
+
+    def setUp(self) -> None:
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        self.paths = [
+            _TMP_DIR.joinpath("unittest_logtimes.jsonl"),
+            _TMP_DIR.joinpath("unittest_logtimes.tsv"),
+        ]
+        for p in self.paths:
+            if p.exists():
+                os.remove(p)
+
+    def tearDown(self) -> None:
+        for p in self.paths:
+            if p.exists():
+                os.remove(p)
+
+    def _run_for_path(self, path: Path) -> None:
+        evaluator = _make_simple_evaluator()
+        aggregator = Panoptica_Aggregator(
+            evaluator, output_file=path, log_times=True
+        )
+        a, b = _two_instance_arrays()
+        aggregator.evaluate(b, a, "subj_a")
+
+        # Reopen with continue_file=True and log_times=True — must accept the
+        # existing file (computation_time is part of the schema for both
+        # sessions) and append a second subject.
+        aggregator2 = Panoptica_Aggregator(
+            _make_simple_evaluator(),
+            output_file=path,
+            log_times=True,
+            continue_file=True,
+        )
+        aggregator2.evaluate(b, a, "subj_b")
+
+        stat = Panoptica_Statistic.from_file(path, verbose=False)
+        self.assertIn("subj_a", stat.subjectnames)
+        self.assertIn("subj_b", stat.subjectnames)
+        self.assertIn("computation_time", stat.metricnames)
+
+    def test_log_times_roundtrip_jsonl(self):
+        self._run_for_path(self.paths[0])
+
+    def test_log_times_roundtrip_tsv(self):
+        self._run_for_path(self.paths[1])
 
 
 class Test_JSONL_Write_Full_Instance_Ordering(unittest.TestCase):

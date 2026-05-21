@@ -587,6 +587,35 @@ class Test_Panoptica_Aggregator_Init_Errors(unittest.TestCase):
                 )
             mock_tempfile.assert_not_called()
 
+    def test_autc_with_individual_instance_metrics_raises_at_init(self):
+        # PanopticaAUTCResult.to_dict(output_individual_instance_metrics=True)
+        # raises NotImplementedError. The aggregator must reject this combination
+        # up front rather than crashing on the first evaluate() call.
+        from unittest.mock import patch
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        with patch(
+            "panoptica.panoptica_aggregator.NamedTemporaryFile"
+        ) as mock_tempfile:
+            with self.assertRaisesRegex(
+                ValueError,
+                "output_individual_instance_metrics is not supported with is_autc=True",
+            ):
+                Panoptica_Aggregator(
+                    evaluator,
+                    output_file=Path(__file__).parent.joinpath(
+                        "unittest_autc_instance_guard.jsonl"
+                    ),
+                    is_autc=True,
+                    threshold_step_size=0.5,
+                    output_individual_instance_metrics=True,
+                )
+            mock_tempfile.assert_not_called()
+
     def test_no_tempfile_leak_on_missing_output_directory(self):
         from unittest.mock import patch
 

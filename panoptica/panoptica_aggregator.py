@@ -80,6 +80,10 @@ class Panoptica_Aggregator:
                 raise ValueError(
                     "threshold_step_size must be provided to build AUTC headers"
                 )
+            if output_individual_instance_metrics:
+                raise ValueError(
+                    "output_individual_instance_metrics is not supported with is_autc=True"
+                )
             self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
                 self.__threshold_step_size
             )

@@ -239,7 +239,7 @@ class JSONLBackend(FileBackend):
 
 def _canonical_jsonl_value(v):
     """Canonicalize a value for JSONL output. Symmetric with the TSV path:
-    numerics cast to ``float``; ``None`` / NaN / Inf serialize as JSON
+    numerics cast to ``float``; ``None`` / NaN / +/-Inf serialize as JSON
     ``null``. NumPy scalar dtypes (``np.float32``, ``np.int64``, ...) are
     cast through ``float`` too — without this, ``json.dumps`` would raise
     on any non-``float64`` NumPy scalar that leaks through from a metric."""
@@ -247,21 +247,21 @@ def _canonical_jsonl_value(v):
         return None
     if isinstance(v, (int, float, np.integer, np.floating)):
         f = float(v)
-        if np.isnan(f) or f == np.inf:
+        if np.isnan(f) or np.isinf(f):
             return None
         return f
     return v
 
 
 def _parse_jsonl_value(v) -> float | None:
-    """Inverse of ``_canonical_jsonl_value``: JSON ``null`` and NaN/Inf
+    """Inverse of ``_canonical_jsonl_value``: JSON ``null`` and NaN/+/-Inf
     map to ``None`` (matching TSV semantics where empty cells round-trip
     to ``None``)."""
     if v is None:
         return None
     if isinstance(v, (int, float, np.integer, np.floating)):
         f = float(v)
-        if np.isnan(f) or f == np.inf:
+        if np.isnan(f) or np.isinf(f):
             return None
         return f
     return v
@@ -269,19 +269,33 @@ def _parse_jsonl_value(v) -> float | None:
 
 def _iter_jsonl_records(path: Path):
     """Yields parsed JSON records from a JSONL file, skipping blank lines.
-    NOT THREAD SAFE BY ITSELF."""
+    NOT THREAD SAFE BY ITSELF.
+
+    Raises ``ValueError`` (with file path and 1-based line number) on a
+    malformed line, so a partial write from a crash or a hand-edit gets
+    pinpointed rather than surfacing as a context-free ``JSONDecodeError``.
+    """
     with open(path, "r", encoding="utf8") as f:
-        for line in f:
+        for line_number, line in enumerate(f, start=1):
             stripped = line.strip()
-            if stripped:
+            if not stripped:
+                continue
+            try:
                 yield json.loads(stripped)
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"{path}: malformed JSON on line {line_number}: {e.msg}"
+                ) from e
+
+
+_JSONL_SEPARATORS = (",", ":")
 
 
 def _append_jsonl_record(path: Path, record: dict) -> None:
     """Appends a single JSON record as one line to a JSONL file.
     NOT THREAD SAFE BY ITSELF."""
     with open(path, "a", encoding="utf8") as f:
-        f.write(json.dumps(record, ensure_ascii=False, separators=(", ", ": ")))
+        f.write(json.dumps(record, ensure_ascii=False, separators=_JSONL_SEPARATORS))
         f.write("\n")
 
 
@@ -290,5 +304,5 @@ def _write_jsonl_records(path: Path, records: list[dict]) -> None:
     NOT THREAD SAFE BY ITSELF."""
     with open(path, "w", encoding="utf8") as f:
         for record in records:
-            f.write(json.dumps(record, ensure_ascii=False, separators=(", ", ": ")))
+            f.write(json.dumps(record, ensure_ascii=False, separators=_JSONL_SEPARATORS))
             f.write("\n")
