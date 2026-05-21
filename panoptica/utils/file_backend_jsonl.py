@@ -108,22 +108,15 @@ class JSONLBackend(FileBackend):
                 instance_dicts = summary_dict.pop("reference_instances", [])
             else:
                 summary_dict = result.to_dict(False)
-                instance_dicts = []
 
             if result.computation_time is not None:
-                summary_dict = dict(summary_dict)
                 summary_dict[COMPUTATION_TIME_KEY] = result.computation_time
 
             for e in evaluation_metrics:
                 group_obj[e] = _canonical_jsonl_value(summary_dict.get(e))
 
             if instance_dicts:
-                # Restrict to evaluation_metrics so the JSONL inst-dict set
-                # matches what TSV columns can hold — required for symmetric
-                # TSV<->JSONL roundtrip byte-identity. Drop None entries so
-                # the inst-dict shape matches what write_full produces from a
-                # roundtripped Panoptica_Statistic. Row keys are normalized
-                # to master keys so they match the JSONL/TSV schema.
+                # Row keys are normalize row keys to master keys so they match the JSONL/TSV schema.
                 group_obj["reference_instances"] = [
                     {
                         e: _canonical_jsonl_value(r_norm.get(e))
@@ -147,8 +140,7 @@ class JSONLBackend(FileBackend):
         class_group_names: list[str],
         evaluation_metrics: list[str],
     ) -> None:
-        # Map subject name -> position in subj_names, so the per-instance
-        # master lookup is O(1) instead of O(n) per instance row.
+        # Map subject name -> position in subj_names, so the per-instance master lookup is O(1)
         name_to_index = {sn: i for i, sn in enumerate(subj_names)}
 
         master_indices: list[int] = []

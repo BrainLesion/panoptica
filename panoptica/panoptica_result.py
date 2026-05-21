@@ -23,20 +23,6 @@ from panoptica._functionals import _get_orig_onehotcc_structure
 
 class PanopticaResult(object):
 
-    # Row-local keys (used inside `reference_instances` rows) → master-level keys.
-    # File backends call `normalize_row_to_master_schema` to align row dicts with the
-    # master-keyed on-disk schema. Keys present only on rows (e.g. `is_matched`) map
-    # to themselves implicitly via the `.get(k, k)` fallback.
-    ROW_KEY_TO_MASTER_KEY: dict[str, str] = {
-        "voxel_count": "instance_voxel_count_ref",
-        "volume": "instance_volume_ref",
-    }
-
-    @classmethod
-    def normalize_row_to_master_schema(cls, row: dict) -> dict:
-        """Rewrite a ``reference_instances`` row dict so its keys match the master schema."""
-        return {cls.ROW_KEY_TO_MASTER_KEY.get(k, k): v for k, v in row.items()}
-
     def __init__(
         self,
         reference_arr: np.ndarray,
@@ -531,6 +517,17 @@ class PanopticaResult(object):
                 was_calculated=False,
             )
 
+    # File backends call `normalize_row_to_master_schema` to align row dicts with the master-keyed on-disk schema.
+    ROW_KEY_TO_MASTER_KEY: dict[str, str] = {
+        "voxel_count": "instance_voxel_count_ref",
+        "volume": "instance_volume_ref",
+    }
+
+    @classmethod
+    def normalize_row_to_master_schema(cls, row: dict) -> dict:
+        """Rewrite a ``reference_instances`` row dict so its keys match the master schema."""
+        return {cls.ROW_KEY_TO_MASTER_KEY.get(k, k): v for k, v in row.items()}
+    
     @property
     def autc_metrics(self) -> list[str]:
         return [
@@ -818,9 +815,6 @@ class PanopticaResult(object):
                     val_list[i] if i < len(val_list) else None
                 )
 
-        # Per-instance voxel counts and physical volumes. Row-local keys drop the
-        # `_ref` suffix because the parent `reference_instances` already conveys
-        # that these are reference-instance values.
         for key, val_list in (
             ("voxel_count", self.instance_voxel_count_matched_ref_list),
             ("volume", self.instance_volume_matched_ref_list),

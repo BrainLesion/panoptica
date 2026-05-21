@@ -394,8 +394,7 @@ class Panoptica_Evaluator(SupportsConfig):
 
     @property
     def resulting_metric_keys(self) -> list[str]:
-        # Kept as a property for backward compatibility with v2.0.0 callers.
-        # Use get_resulting_metric_keys(...) when the per-instance flag is needed.
+        # Kept as a property for backward compatibility, we may introduce a deprecation warning here
         return self.get_resulting_metric_keys(output_individual_instance_metrics=False)
 
     def get_resulting_metric_keys(
@@ -406,6 +405,8 @@ class Panoptica_Evaluator(SupportsConfig):
             result = res.to_dict(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
+            # For now reference_instances is the only nested dict.
+            # If we add other nested dicts in the future, we might generalize this
             rows = (
                 result.pop("reference_instances", [])
                 if output_individual_instance_metrics

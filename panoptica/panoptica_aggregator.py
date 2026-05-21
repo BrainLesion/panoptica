@@ -105,10 +105,7 @@ class Panoptica_Aggregator:
         self.__output_file = output_file
         self.__file_backend = get_backend(self.__output_file)
 
-        # Serialise file init across forked workers so concurrent Aggregator
-        # construction on the same output file can't race on header
-        # creation / schema validation. Also skip the full existing-subjects
-        # scan when continue_file=False — the result would be discarded.
+        # Serialise file init across forked workers so concurrent Aggregator construction on the same output file can't race
         with filelock:
             existing_subjects = self.__file_backend.prepare_for_append(
                 self.__class_group_names,
@@ -116,10 +113,7 @@ class Panoptica_Aggregator:
                 collect_existing=self.__continue_file,
             )
 
-        # Temp-file creation is the last side-effecting step so any earlier
-        # raise (AUTC config check, missing parent dir, unsupported suffix,
-        # backend schema mismatch) doesn't leak a buffer file — atexit isn't
-        # registered yet at those points.
+        # register exist handler after last side-effecting step so any earlier raise doesn't leak a buffer file
         with NamedTemporaryFile(delete=False) as tmp:
             self.__output_buffer_file = tmp.name
         atexit.register(self.__exist_handler)
