@@ -53,7 +53,7 @@ class JSONLBackend(FileBackend):
             seen_any = True
             self._validate_record_schema(record, expected_groups, expected_metrics)
             if not collect_existing:
-                # Skip subject-name collection but keep iterating so every record gets schema-validated 
+                # Skip subject-name collection but keep iterating so every record gets schema-validated
                 continue
             sn = record["subject_name"]
             existing.append(sn)
