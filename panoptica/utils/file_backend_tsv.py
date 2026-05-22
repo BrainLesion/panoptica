@@ -225,8 +225,7 @@ def _read_first_tsv_row(path: Path) -> list[str]:
     """Reads the first row of a TSV file. NOT THREAD SAFE BY ITSELF."""
     with open(path, "r", encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
-        rows = list(rd)
-        return rows[0] if rows else []
+        return next(rd, [])
 
 
 def _load_first_tsv_column(path: Path) -> list[str]:
