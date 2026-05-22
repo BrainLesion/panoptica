@@ -161,11 +161,11 @@ class JSONLBackend(FileBackend):
                 master_i = name_to_index.get(orig_subj)
                 if master_i is None:
                     continue
-                inst_dict = {
-                    m: value_dict[orig_group][m][i]
-                    for m in evaluation_metrics
-                    if value_dict[orig_group][m][i] is not None
-                }
+                inst_dict = {}
+                for m in evaluation_metrics:
+                    canonical = _canonical_jsonl_value(value_dict[orig_group][m][i])
+                    if canonical is not None:
+                        inst_dict[m] = canonical
                 instances_by_master.setdefault(master_i, {}).setdefault(orig_group, {})[
                     inst_idx
                 ] = inst_dict
