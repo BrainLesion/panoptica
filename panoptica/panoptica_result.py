@@ -2,10 +2,12 @@ from __future__ import annotations
 from typing import Any, Callable
 import numpy as np
 from panoptica.metrics import MetricMode
-from panoptica.utils import _AUTC_PREFIX
-from panoptica.utils import is_autc_key
-from panoptica.utils import format_autc_key
-from panoptica.utils import format_threshold_key
+from panoptica.utils.serialization import (
+    _AUTC_PREFIX,
+    format_autc_key,
+    format_threshold_key,
+    is_autc_key,
+)
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
@@ -13,7 +15,7 @@ from panoptica.metrics import (
     MetricCouldNotBeComputedException,
     MetricType,
 )
-from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.edge_case_handling import EdgeCaseHandler
 from panoptica.utils.processing_pair import IntermediateStepsData
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 from panoptica._functionals import _get_orig_onehotcc_structure
@@ -515,6 +517,17 @@ class PanopticaResult(object):
                 was_calculated=False,
             )
 
+    # File backends call `normalize_row_to_master_schema` to align row dicts with the master-keyed on-disk schema.
+    ROW_KEY_TO_MASTER_KEY: dict[str, str] = {
+        "voxel_count": "instance_voxel_count_ref",
+        "volume": "instance_volume_ref",
+    }
+
+    @classmethod
+    def normalize_row_to_master_schema(cls, row: dict) -> dict:
+        """Rewrite a ``reference_instances`` row dict so its keys match the master schema."""
+        return {cls.ROW_KEY_TO_MASTER_KEY.get(k, k): v for k, v in row.items()}
+
     @property
     def autc_metrics(self) -> list[str]:
         return [
@@ -741,13 +754,24 @@ class PanopticaResult(object):
                     text += "\n"
         return text
 
-    def to_dict(
-        self, output_individual_instance_metrics: bool = False
-    ) -> dict | list[dict]:
-        """
-        Converts the metrics to a dictionary format.
-        If output_individual_instance_metrics is True, returns a list of dictionaries:
-        [Master_Dict, Instance_0_Dict, Instance_1_Dict, ...].
+    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Converts the metrics to a dictionary format.
+
+        When ``output_individual_instance_metrics`` is False, returns a flat
+        ``dict`` of subject-level (master) metrics.
+
+        When True, returns the same master dict augmented with one extra key:
+
+        - ``"reference_instances"``: list of per-instance dicts, one per
+          reference instance. Matched instances appear first, followed by
+          unmatched (FN) instances. Each row carries ``"is_matched"`` (``1``
+          or ``0``) — this flag is row-only and is not mirrored on master.
+          Rows also carry ``"voxel_count"``, ``"volume"``, and, for matched
+          rows, the per-instance segmentation-quality metrics (``sq_iou``,
+          ``sq_dsc``, ...). The ``_ref`` suffix is dropped inside rows because
+          all rows live under ``reference_instances`` already; file backends
+          translate them back to master keys via
+          ``normalize_row_to_master_schema``.
         """
         # Base dictionary (Master row with averages and globals)
         master_dict = {
@@ -759,27 +783,17 @@ class PanopticaResult(object):
         if not output_individual_instance_metrics:
             return master_dict
 
-        # allocate the results list: 1 Master Dict + 1 Empty Dict per instance row (matched + unmatched references)
-        n_matched_from_list_metrics = max(
-            (
-                len(lm.ALL)
-                for lm in self._list_metrics.values()
-                if not lm.error and lm.ALL is not None
-            ),
-            default=0,
-        )
+        if isinstance(self.tp, float) and np.isnan(self.tp):
+            # Voronoi region-wise combined result: per-instance rows are not propagated to the combined result.
+            # TODO: Refactor region2result_map to use instance wise reporting
+            n_matched = 0
+        else:
+            n_matched = int(self.tp)
 
-        if not (isinstance(self.tp, float) and np.isnan(self.tp)):
-            assert n_matched_from_list_metrics == self.tp, (
-                f"tp={self.tp} but list metric lengths={n_matched_from_list_metrics}; "
-                "possible decision-threshold filtering mismatch"
-            )
-
-        n_matched = n_matched_from_list_metrics
         n_unmatched = len(self.instance_volume_unmatched_ref_list)
         n_total = n_matched + n_unmatched
 
-        results = [master_dict] + [{} for _ in range(n_total)]
+        rows: list[dict] = [{} for _ in range(n_total)]
 
         for metric_enum, list_metric_obj in self._list_metrics.items():
             if list_metric_obj.error or list_metric_obj.ALL is None:
@@ -788,36 +802,30 @@ class PanopticaResult(object):
             val_list = list_metric_obj.ALL
             for i in range(n_matched):
                 # val_list may be shorter than n_matched if this metric hit a partial calculation error
-                results[i + 1][metric_enum.get_result_key("sq")] = (
+                rows[i][metric_enum.get_result_key("sq")] = (
                     val_list[i] if i < len(val_list) else None
                 )
 
-        # Per-instance voxel counts and physical volumes.
         for key, val_list in (
-            ("instance_voxel_count_ref", self.instance_voxel_count_matched_ref_list),
-            ("instance_volume_ref", self.instance_volume_matched_ref_list),
+            ("voxel_count", self.instance_voxel_count_matched_ref_list),
+            ("volume", self.instance_volume_matched_ref_list),
         ):
             for i in range(n_matched):
-                results[i + 1][key] = val_list[i] if i < len(val_list) else None
+                rows[i][key] = val_list[i] if i < len(val_list) else None
         for key, val_list in (
-            (
-                "instance_voxel_count_ref",
-                self.instance_voxel_count_unmatched_ref_list,
-            ),
-            ("instance_volume_ref", self.instance_volume_unmatched_ref_list),
+            ("voxel_count", self.instance_voxel_count_unmatched_ref_list),
+            ("volume", self.instance_volume_unmatched_ref_list),
         ):
             for i in range(n_unmatched):
-                results[n_matched + i + 1][key] = (
-                    val_list[i] if i < len(val_list) else None
-                )
+                rows[n_matched + i][key] = val_list[i] if i < len(val_list) else None
 
-        master_dict["is_matched"] = None
         for i in range(n_matched):
-            results[i + 1]["is_matched"] = 1
+            rows[i]["is_matched"] = 1
         for i in range(n_matched, n_total):
-            results[i + 1]["is_matched"] = 0
+            rows[i]["is_matched"] = 0
 
-        return results
+        master_dict["reference_instances"] = rows
+        return master_dict
 
     @property
     def evaluation_metrics(self):

@@ -394,8 +394,7 @@ class Panoptica_Evaluator(SupportsConfig):
 
     @property
     def resulting_metric_keys(self) -> list[str]:
-        # Kept as a property for backward compatibility with v2.0.0 callers.
-        # Use get_resulting_metric_keys(...) when the per-instance flag is needed.
+        # Kept as a property for backward compatibility, we may introduce a deprecation warning here
         return self.get_resulting_metric_keys(output_individual_instance_metrics=False)
 
     def get_resulting_metric_keys(
@@ -403,16 +402,24 @@ class Panoptica_Evaluator(SupportsConfig):
     ) -> list[str]:
         if output_individual_instance_metrics not in self.__resulting_metric_keys_cache:
             res = self._get_dummy_result()
-            dicts = res.to_dict(
+            result = res.to_dict(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
-            if not isinstance(dicts, list):
-                dicts = [dicts]
-            # Union of all row keys, preserving insertion order.
-            keys: list[str] = []
-            seen: set[str] = set()
-            for d in dicts:
-                for k in d:
+            # For now reference_instances is the only nested dict.
+            # If we add other nested dicts in the future, we might generalize this
+            rows = (
+                result.pop("reference_instances", [])
+                if output_individual_instance_metrics
+                else []
+            )
+            # Master keys first, then row-only keys (translated to the master
+            # schema via PanopticaResult.normalize_row_to_master_schema) so
+            # row-only fields like `is_matched` still get a TSV column / JSONL
+            # row field.
+            keys: list[str] = list(result.keys())
+            seen: set[str] = set(keys)
+            for row in rows:
+                for k in PanopticaResult.normalize_row_to_master_schema(row):
                     if k not in seen:
                         keys.append(k)
                         seen.add(k)

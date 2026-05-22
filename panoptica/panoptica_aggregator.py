@@ -2,15 +2,18 @@ from panoptica.utils import format_instance_subject_name, validate_subject_name
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from pathlib import Path
 from multiprocessing import Lock, set_start_method
 import csv
 import os
 import atexit
-import tempfile
+from tempfile import NamedTemporaryFile
 import warnings
 from typing import Optional
+
+from panoptica.utils import FileType
+from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
+from panoptica.utils.file_backend_registry import get_backend
 
 # Set start method based on the operating system
 try:
@@ -28,10 +31,7 @@ except RuntimeError:
 filelock = Lock()
 inevalfilelock = Lock()
 
-COMPUTATION_TIME_KEY = "computation_time"
 
-
-#
 class Panoptica_Aggregator:
     """Aggregator that manages evaluations and saves resulting metrics per sample.
 
@@ -45,6 +45,7 @@ class Panoptica_Aggregator:
         output_file: Path | str,
         log_times: bool = False,
         continue_file: bool = True,
+        file_type: FileType = "jsonl",
         output_individual_instance_metrics: bool = False,
         is_autc: bool = False,
         threshold_step_size: Optional[float] = None,
@@ -58,18 +59,20 @@ class Panoptica_Aggregator:
             log_times (bool, optional): If True, computation times will be logged. Defaults to False.
             continue_file (bool, optional): If True, results will continue from existing entries in the file.
                 Defaults to True.
+            file_type (FileType, optional): Format used when `output_file` has no extension. Ignored if `output_file` already has a supported suffix. Defaults to "jsonl".
             output_individual_instance_metrics (bool, optional): If True, individual instance metrics will be output. Defaults to False.
             is_autc (bool, optional): If True, the aggregator will compute AUTC metrics. Defaults to False.
             threshold_step_size (Optional[float], optional): The step size for thresholding. Defaults to None.
 
         Raises:
             FileNotFoundError: If the output directory does not exist.
-            ValueError: If the file extension is not `.tsv`, or if the header of the existing file does not match the expected header based on the evaluator's configuration.
+            ValueError: If the file extension is not supported, or if the existing file is incompatible with the evaluator's configuration.
         """
         self.__panoptica_evaluator = panoptica_evaluator
         self.__class_group_names = panoptica_evaluator.segmentation_class_groups_names
         self.__autc = is_autc
         self.__log_times = log_times
+        self.__continue_file = continue_file
         self.__output_individual_instance_metrics = output_individual_instance_metrics
         self.__threshold_step_size = threshold_step_size
 
@@ -78,8 +81,12 @@ class Panoptica_Aggregator:
                 raise ValueError(
                     "threshold_step_size must be provided to build AUTC headers"
                 )
+            if output_individual_instance_metrics:
+                raise ValueError(
+                    "output_individual_instance_metrics is not supported with is_autc=True"
+                )
             self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
-                threshold_step_size
+                self.__threshold_step_size
             )
         else:
             self.__evaluation_metrics = panoptica_evaluator.get_resulting_metric_keys(
@@ -91,69 +98,42 @@ class Panoptica_Aggregator:
 
         if isinstance(output_file, str):
             output_file = Path(output_file)
-        # uses tsv
+
         if not output_file.parent.exists():
             raise FileNotFoundError(
                 f"Directory {str(output_file.parent)} does not exist"
             )
 
-        out_file_path = str(output_file)
+        if not output_file.suffix:
+            output_file = output_file.with_suffix(f".{file_type}")
 
-        # extension
-        if "." in out_file_path:
-            # extension exists
-            extension = out_file_path.split(".")[-1]
-            if extension != "tsv":
-                raise ValueError(
-                    f"You gave the extension {extension}, but currently only .tsv is supported. Either delete it or give .tsv as extension"
-                )
-        else:
-            out_file_path += ".tsv"  # add extension
+        self.__output_file = output_file
+        self.__file_backend = get_backend(self.__output_file)
 
-        # buffer_file = tempfile.NamedTemporaryFile()
-        # out_buffer_file: Path = Path(out_file_path).parent.joinpath("panoptica_aggregator_tmp.tsv")
-        # self.tmpfile =
-        self.__output_buffer_file = tempfile.NamedTemporaryFile(
-            delete=False
-        ).name  # out_buffer_file
-        # print(self.__output_buffer_file)
+        # Serialise file init across forked workers so concurrent Aggregator construction on the same output file can't race
+        with filelock:
+            existing_subjects = self.__file_backend.prepare_for_append(
+                self.__class_group_names,
+                self.__evaluation_metrics,
+                collect_existing=self.__continue_file,
+            )
 
-        Path(out_file_path).parent.mkdir(parents=False, exist_ok=True)
-        self.__output_file = out_file_path
-
-        header = ["subject_name"] + [
-            f"{g}-{m}"
-            for g in self.__class_group_names
-            for m in self.__evaluation_metrics
-        ]
-        header_hash = hash("+".join(header))
-
-        if not output_file.exists():
-            # write header
-            _write_content(output_file, [header])
-        else:
-            header_list = _read_first_row(output_file)
-            if len(header_list) == 0:
-                # empty file
-                print(
-                    f"{self.__output_file}: Output file given is empty, will start with header"
-                )
-                _write_content(output_file, [header])
-                continue_file = True
-            else:
-                # TODO should also hash panoptica_evaluator just to make sure! and then save into header of file
-                if header_hash != hash("+".join(header_list)):
-                    raise ValueError(
-                        f"{self.__output_file}: Hash of header not the same! You are using a different setup!"
-                    )
-
-        if continue_file:
-            with inevalfilelock:
-                with filelock:
-                    id_list = _load_first_column_entries(self.__output_file)
-                    _write_content(self.__output_buffer_file, [[s] for s in id_list])
-
+        # register exist handler after last side-effecting step so any earlier raise doesn't leak a buffer file
+        with NamedTemporaryFile(delete=False) as tmp:
+            self.__output_buffer_file = tmp.name
         atexit.register(self.__exist_handler)
+
+        if self.__continue_file and existing_subjects:
+            with inevalfilelock:
+                _append_buffer_entries(self.__output_buffer_file, existing_subjects)
+
+    @property
+    def panoptica_evaluator(self):
+        return self.__panoptica_evaluator
+
+    @property
+    def evaluation_metrics(self):
+        return self.__evaluation_metrics
 
     def __exist_handler(self):
         """Handles cleanup upon program exit by removing the temporary output buffer file."""
@@ -192,7 +172,7 @@ class Panoptica_Aggregator:
         validate_subject_name(subject_name)
         # Read tmp file to see which sample names are blocked
         with inevalfilelock:
-            id_list = _load_first_column_entries(self.__output_buffer_file)
+            id_list = _load_buffer_entries(self.__output_buffer_file)
 
             if subject_name in id_list:
                 print(
@@ -200,7 +180,7 @@ class Panoptica_Aggregator:
                     flush=True,
                 )
                 return
-            _write_content(self.__output_buffer_file, [[subject_name]])
+            _append_buffer_entries(self.__output_buffer_file, [subject_name])
 
         # Run Evaluation (allowed in parallel)
         print(f"Call evaluate on {subject_name}")
@@ -232,140 +212,37 @@ class Panoptica_Aggregator:
                 **kwargs,
             )
 
-        # Add to file
-        self._save_one_subject(subject_name, res)
-
-    def _save_one_subject(self, subject_name, result_grouped):
-        """Saves the evaluation results for a single subject."""
         with filelock:
-            if self.__output_individual_instance_metrics:
-                all_rows = []
-                summary_row = [subject_name]
-                group_rows_as_dicts = {}
-                for groupname in self.__class_group_names:
-                    result: PanopticaResult = result_grouped[groupname]
-                    rows_as_dicts = result.to_dict(True)
-                    group_rows_as_dicts[groupname] = rows_as_dicts
-                    summary_dict = rows_as_dicts[0] if len(rows_as_dicts) > 0 else {}
-                    if result.computation_time is not None:
-                        summary_dict = dict(summary_dict)
-                        summary_dict[COMPUTATION_TIME_KEY] = result.computation_time
-                    for e in self.__evaluation_metrics:
-                        summary_row.append(summary_dict.get(e, ""))
-                all_rows.append(summary_row)
-                for groupname in self.__class_group_names:
-                    rows_as_dicts = group_rows_as_dicts[groupname]
-                    for inst_idx, r_dict in enumerate(rows_as_dicts[1:]):
-                        row = [
-                            format_instance_subject_name(
-                                subject_name, groupname, inst_idx
-                            )
-                        ]
-                        for current_groupname in self.__class_group_names:
-                            if current_groupname == groupname:
-                                for e in self.__evaluation_metrics:
-                                    row.append(r_dict.get(e, ""))
-                            else:
-                                for _ in self.__evaluation_metrics:
-                                    row.append("")
-                        all_rows.append(row)
-
-                _write_content(self.__output_file, all_rows)
-            else:
-                content = [subject_name]
-                for groupname in self.__class_group_names:
-                    result: PanopticaResult | PanopticaAUTCResult = result_grouped[
-                        groupname
-                    ]
-                    result_dict = result.to_dict(False)
-
-                    if result.computation_time is not None:
-                        result_dict[COMPUTATION_TIME_KEY] = result.computation_time
-
-                    for e in self.__evaluation_metrics:
-                        content.append(result_dict.get(e, ""))
-                _write_content(self.__output_file, [content])
-
-            print(f"Saved entry {subject_name} into {str(self.__output_file)}")
-
-    @property
-    def panoptica_evaluator(self):
-        return self.__panoptica_evaluator
-
-    @property
-    def evaluation_metrics(self):
-        return self.__evaluation_metrics
+            self.__file_backend.append_subject(
+                subject_name,
+                res,
+                self.__class_group_names,
+                self.__evaluation_metrics,
+                self.__output_individual_instance_metrics,
+            )
 
 
-def _read_first_row(file: str | Path):
-    """Reads the first row of a TSV file.
+def _load_buffer_entries(file: str | Path) -> list[str]:
+    """Loads buffer file entries (one subject name per row).
 
-    NOT THREAD SAFE BY ITSELF!
-
-    Args:
-        file (str | Path): The path to the file from which to read the first row.
-
-    Returns:
-        list: The first row of the file as a list of strings.
-    """
-    if isinstance(file, Path):
-        file = str(file)
-    #
-    with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
-        rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
-
-        rows = [row for row in rd]
-        if len(rows) == 0:
-            row = []
-        else:
-            row = rows[0]
-
-    return row
-
-
-def _load_first_column_entries(file: str | Path):
-    """Loads the entries from the first column of a TSV file.
-
-    NOT THREAD SAFE BY ITSELF!
-
-    Args:
-        file (str | Path): The path to the file from which to load entries.
-
-    Returns:
-        list: A list of entries from the first column of the file.
+    NOT THREAD SAFE BY ITSELF. The buffer file is the aggregator's scratch
+    file for tracking which subjects are in-flight or already done — it is
+    not the user-visible output file.
 
     Raises:
-        ValueError: If the file contains duplicate entries.
+        ValueError: If the buffer file contains duplicate entries.
     """
-    if isinstance(file, Path):
-        file = str(file)
-    with open(str(file), "r", encoding="utf8", newline="") as tsvfile:
-        rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
-
-        rows = [row for row in rd]
-        if len(rows) == 0:
-            id_list = []
-        else:
-            id_list = list([row[0] for row in rows])
-
-    n_id = len(id_list)
-    if n_id != len(list(set(id_list))):
-        raise ValueError(f"{file}: file has duplicate entries!")
-
-    return id_list
+    with open(str(file), "r", encoding="utf8", newline="") as f:
+        rows = list(csv.reader(f, delimiter="\t", lineterminator="\n"))
+    entries = [row[0] for row in rows if row]
+    if len(entries) != len(set(entries)):
+        raise ValueError(f"{file}: buffer has duplicate entries!")
+    return entries
 
 
-def _write_content(file: str | Path, content: list[list[str]]):
-    """Writes content to a TSV file.
-
-    Args:
-        file (str | Path): The path to the file where content will be written.
-        content (list[list[str]]): A list of lists containing the rows of data to write.
-    """
-    if isinstance(file, Path):
-        file = str(file)
-    # NOT THREAD SAFE BY ITSELF!
-    with open(str(file), "a", encoding="utf8", newline="") as tsvfile:
-        writer = csv.writer(tsvfile, delimiter="\t", lineterminator="\n")
-        for c in content:
-            writer.writerow(["" if v is None else v for v in c])
+def _append_buffer_entries(file: str | Path, entries: list[str]) -> None:
+    """Appends subject names to the buffer file. NOT THREAD SAFE BY ITSELF."""
+    with open(str(file), "a", encoding="utf8", newline="") as f:
+        writer = csv.writer(f, delimiter="\t", lineterminator="\n")
+        for name in entries:
+            writer.writerow([name])

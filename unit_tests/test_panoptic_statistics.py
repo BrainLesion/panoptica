@@ -189,7 +189,7 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         agg_regular.evaluate(a, a, "test_regular")
 
         # Try to resume/append to the same file but with an AUTC setup
-        with self.assertRaisesRegex(ValueError, "Hash of header not the same"):
+        with self.assertRaisesRegex(ValueError, "Header does not match"):
             agg_autc = Panoptica_Aggregator(
                 panoptica_evaluator=evaluator_regular,
                 output_file=output_test_dir,
@@ -199,6 +199,50 @@ class Test_Panoptica_Statistics(unittest.TestCase):
 
         if output_test_dir.exists():
             os.remove(str(output_test_dir))
+
+    def test_get_dict_nones_always_last_descending(self):
+        # Constructed directly to keep the test independent of the evaluator.
+        # Mixed None/float values; with sort_ascending=False, None must still
+        # appear at the end (regression guard for the (x[1] is None, x[1])
+        # key flipping None to the front under reverse=True).
+        stat = Panoptica_Statistic(
+            subj_names=["a", "b", "c", "d", "e"],
+            value_dict={"g": {"m": [0.5, None, 0.3, None, 0.7]}},
+        )
+        d = stat.get_dict("g", "m", remove_nones=False, sort_ascending=False)
+        keys = list(d.keys())
+        values = list(d.values())
+        # Non-None entries first, in descending order
+        self.assertEqual(keys[:3], ["e", "a", "c"])
+        self.assertEqual(values[:3], [0.7, 0.5, 0.3])
+        # None entries trail
+        self.assertEqual(set(keys[3:]), {"b", "d"})
+        self.assertTrue(all(v is None for v in values[3:]))
+
+    def test_get_dict_nones_always_last_ascending(self):
+        stat = Panoptica_Statistic(
+            subj_names=["a", "b", "c", "d", "e"],
+            value_dict={"g": {"m": [0.5, None, 0.3, None, 0.7]}},
+        )
+        d = stat.get_dict("g", "m", remove_nones=False, sort_ascending=True)
+        keys = list(d.keys())
+        values = list(d.values())
+        self.assertEqual(keys[:3], ["c", "a", "e"])
+        self.assertEqual(values[:3], [0.3, 0.5, 0.7])
+        self.assertEqual(set(keys[3:]), {"b", "d"})
+        self.assertTrue(all(v is None for v in values[3:]))
+
+    def test_get_dict_remove_nones_drops_them_entirely(self):
+        stat = Panoptica_Statistic(
+            subj_names=["a", "b", "c", "d", "e"],
+            value_dict={"g": {"m": [0.5, None, 0.3, None, 0.7]}},
+        )
+        d_desc = stat.get_dict("g", "m", remove_nones=True, sort_ascending=False)
+        self.assertEqual(list(d_desc.keys()), ["e", "a", "c"])
+        self.assertEqual(list(d_desc.values()), [0.7, 0.5, 0.3])
+        d_asc = stat.get_dict("g", "m", remove_nones=True, sort_ascending=True)
+        self.assertEqual(list(d_asc.keys()), ["c", "a", "e"])
+        self.assertEqual(list(d_asc.values()), [0.3, 0.5, 0.7])
 
     def test_make_autc_plots_graceful_on_regular_stats(self):
         """

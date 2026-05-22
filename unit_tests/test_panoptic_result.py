@@ -167,27 +167,101 @@ class Test_Panoptica_Results(unittest.TestCase):
         )
         result.calculate_all(print_errors=False)
 
-        result_dicts = result.to_dict(output_individual_instance_metrics=True)
+        result_dict = result.to_dict(output_individual_instance_metrics=True)
 
-        self.assertIsInstance(result_dicts, list)
-        self.assertEqual(len(result_dicts), 3)
+        # Single root dict with reference_instances nested.
+        self.assertIsInstance(result_dict, dict)
+        self.assertIn("reference_instances", result_dict)
+        instances = result_dict["reference_instances"]
+        self.assertEqual(len(instances), 2)
 
-        master_dict = result_dicts[0]
-        inst_0_dict = result_dicts[1]
-        inst_1_dict = result_dicts[2]
+        # Master-level metrics live at the root.
+        self.assertIn("tp", result_dict)
+        self.assertIn("sq", result_dict)
+        self.assertIn("sq_std", result_dict)
+        self.assertEqual(result_dict["tp"], 2)
+        # is_matched is a per-instance flag; master does not carry it.
+        self.assertNotIn("is_matched", result_dict)
 
-        self.assertIn("tp", master_dict)
-        self.assertIn("sq", master_dict)
-        self.assertIn("sq_std", master_dict)
-        self.assertEqual(master_dict["tp"], 2)
-
+        inst_0_dict, inst_1_dict = instances[0], instances[1]
         self.assertIn("sq", inst_0_dict)
         self.assertIn("sq_dsc", inst_0_dict)
         self.assertNotIn("tp", inst_0_dict)
         self.assertNotIn("sq_std", inst_0_dict)
         self.assertNotIn("fp", inst_0_dict)
+        # `reference_instances` should not be nested inside its own rows.
+        self.assertNotIn("reference_instances", inst_0_dict)
 
         self.assertEqual(inst_0_dict["sq"], 0.8)
         self.assertEqual(inst_1_dict["sq"], 0.9)
         self.assertEqual(inst_0_dict["sq_dsc"], 0.85)
         self.assertEqual(inst_1_dict["sq_dsc"], 0.95)
+
+        # Both instances were matched (tp=2, n_ref=2).
+        self.assertEqual(inst_0_dict["is_matched"], 1)
+        self.assertEqual(inst_1_dict["is_matched"], 1)
+
+    def test_to_dict_matched_first_then_unmatched(self):
+        # tp=1 matched, plus one unmatched (FN) reference instance.
+        result = PanopticaResult(
+            prediction_arr=None,
+            reference_arr=None,
+            n_ref_instances=2,
+            n_pred_instances=1,
+            tp=1,
+            list_metrics={Metric.IOU: [0.8], Metric.DSC: [0.85]},
+            edge_case_handler=EdgeCaseHandler(),
+            instance_voxel_count_matched_ref=[111],
+            instance_volume_matched_ref=[1.11],
+            instance_voxel_count_unmatched_ref=[222],
+            instance_volume_unmatched_ref=[2.22],
+        )
+        result.calculate_all(print_errors=False)
+
+        rows = result.to_dict(output_individual_instance_metrics=True)[
+            "reference_instances"
+        ]
+        n_matched, n_unmatched = 1, 1
+        self.assertEqual(len(rows), n_matched + n_unmatched)
+        # Matched first, unmatched after.
+        self.assertEqual([r["is_matched"] for r in rows[:n_matched]], [1] * n_matched)
+        self.assertEqual([r["is_matched"] for r in rows[n_matched:]], [0] * n_unmatched)
+        # Matched rows carry sq metrics; unmatched rows do not.
+        self.assertIn("sq", rows[0])
+        self.assertNotIn("sq", rows[1])
+        # Voxel/volume present on both, drawn from the right list.
+        self.assertEqual(rows[0]["voxel_count"], 111)
+        self.assertEqual(rows[1]["voxel_count"], 222)
+
+    def test_row_keys_are_either_master_or_remappable(self):
+        """Guard: every row-local key must round-trip to a master key
+        (directly or via ROW_KEY_TO_MASTER_KEY), otherwise file backends
+        silently drop it. `is_matched` is the documented row-only exception."""
+        result = PanopticaResult(
+            prediction_arr=None,
+            reference_arr=None,
+            n_ref_instances=2,
+            n_pred_instances=1,
+            tp=1,
+            list_metrics={Metric.IOU: [0.8], Metric.DSC: [0.85]},
+            edge_case_handler=EdgeCaseHandler(),
+            instance_voxel_count_matched_ref=[111],
+            instance_volume_matched_ref=[1.11],
+            instance_voxel_count_unmatched_ref=[222],
+            instance_volume_unmatched_ref=[2.22],
+        )
+        result.calculate_all(print_errors=False)
+
+        result_dict = result.to_dict(output_individual_instance_metrics=True)
+        rows = result_dict.pop("reference_instances")
+        master_keys = set(result_dict.keys())
+        remap = PanopticaResult.ROW_KEY_TO_MASTER_KEY
+        ROW_ONLY_ALLOWED = {"is_matched"}
+        for row in rows:
+            for k in row:
+                normalized = remap.get(k, k)
+                self.assertTrue(
+                    normalized in master_keys or k in ROW_ONLY_ALLOWED,
+                    f"row key {k!r} (remapped to {normalized!r}) is neither a master "
+                    f"key nor a recognised row-only field — backends will silently drop it",
+                )
