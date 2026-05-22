@@ -114,6 +114,23 @@ class Test_TSVBackend_Direct(unittest.TestCase):
         self.assertEqual(loaded_subj, [])
         self.assertEqual(loaded_dict, {})
 
+    def test_load_raw_raises_with_context_on_non_numeric_cell(self):
+        # Hand-edited TSV with a non-numeric string in a metric cell must
+        # raise a contextual ValueError naming the file, row, subject, and
+        # column
+        self.path.write_text(
+            "subject_name\tliver-dice\tliver-tp\n" "subj_a\toops\t5.0\n",
+            encoding="utf8",
+        )
+        backend = TSVBackend(self.path)
+        with self.assertRaises(ValueError) as cm:
+            backend.load_raw(verbose=False)
+        msg = str(cm.exception)
+        self.assertIn(str(self.path), msg)
+        self.assertIn("row 0", msg)
+        self.assertIn("'subj_a'", msg)
+        self.assertIn("'liver-dice'", msg)
+
 
 class Test_JSONLBackend_Direct(unittest.TestCase):
     def setUp(self) -> None:
@@ -419,6 +436,28 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
         self.assertEqual(subj_names, ["subj_a"])
         self.assertEqual(value_dict["ungrouped"]["dice"], [None])
         self.assertEqual(value_dict["ungrouped"]["tp"], [5.0])
+
+    def test_load_raw_raises_with_context_on_non_numeric_metric(self):
+        # Hand-edited JSONL with a string in a metric slot must raise a contextual ValueError
+        with open(self.path, "w", encoding="utf8") as f:
+            f.write(
+                json.dumps(
+                    {
+                        "subject_name": "subj_a",
+                        "groups": {"liver": {"dice": "oops", "tp": 5.0}},
+                    }
+                )
+                + "\n"
+            )
+        backend = JSONLBackend(self.path)
+        with self.assertRaises(ValueError) as cm:
+            backend.load_raw(verbose=False)
+        msg = str(cm.exception)
+        self.assertIn(str(self.path), msg)
+        self.assertIn("record 0", msg)
+        self.assertIn("'subj_a'", msg)
+        self.assertIn("'liver'", msg)
+        self.assertIn("'dice'", msg)
 
 
 class Test_Roundtrip_TSV_JSONL(unittest.TestCase):

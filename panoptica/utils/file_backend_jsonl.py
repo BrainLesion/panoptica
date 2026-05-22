@@ -246,7 +246,14 @@ class JSONLBackend(FileBackend):
             for g in group_names:
                 g_data = record_groups[g]
                 for m in metric_names:
-                    value_dict[g][m].append(_parse_jsonl_value(g_data.get(m)))
+                    try:
+                        parsed = _parse_jsonl_value(g_data.get(m))
+                    except ValueError as e:
+                        raise ValueError(
+                            f"{self.path}: record {record_idx} (subject {sn!r}) "
+                            f"group {g!r} metric {m!r}: {e}"
+                        ) from e
+                    value_dict[g][m].append(parsed)
 
             for g in group_names:
                 inst_list = record_groups[g].get("reference_instances") or []
@@ -255,9 +262,14 @@ class JSONLBackend(FileBackend):
                     for inner_g in group_names:
                         for m in metric_names:
                             if inner_g == g:
-                                value_dict[inner_g][m].append(
-                                    _parse_jsonl_value(inst_dict.get(m))
-                                )
+                                try:
+                                    parsed = _parse_jsonl_value(inst_dict.get(m))
+                                except ValueError as e:
+                                    raise ValueError(
+                                        f"{self.path}: record {record_idx} (subject {sn!r}) "
+                                        f"group {g!r} instance {inst_idx} metric {m!r}: {e}"
+                                    ) from e
+                                value_dict[inner_g][m].append(parsed)
                             else:
                                 value_dict[inner_g][m].append(None)
 
@@ -283,7 +295,8 @@ def _canonical_jsonl_value(v):
 def _parse_jsonl_value(v) -> float | None:
     """Inverse of ``_canonical_jsonl_value``: JSON ``null`` and NaN/+/-Inf
     map to ``None`` (matching TSV semantics where empty cells round-trip
-    to ``None``)."""
+    to ``None``). Anything else raises ``ValueError`` — callers in 
+    ``load_raw`` re-raise with file and record context."""
     if v is None:
         return None
     if isinstance(v, (int, float, np.integer, np.floating)):
@@ -291,7 +304,10 @@ def _parse_jsonl_value(v) -> float | None:
         if np.isnan(f) or np.isinf(f):
             return None
         return f
-    return v
+    raise ValueError(
+        f"unsupported value {v!r} of type {type(v).__name__}; "
+        f"expected number or null"
+    )
 
 
 def _iter_jsonl_records(path: Path):

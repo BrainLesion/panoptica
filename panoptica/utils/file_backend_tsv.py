@@ -179,7 +179,7 @@ class TSVBackend(FileBackend):
         subj_names: list[str] = []
         value_dict: dict[str, dict[str, list[float | None]]] = {}
 
-        for r in rows[1:]:
+        for row_idx, r in enumerate(rows[1:]):
             sn = r[0]
             subj_names.append(sn)
             for idx, value in enumerate(r[1:]):
@@ -187,7 +187,14 @@ class TSVBackend(FileBackend):
                 if group_name not in value_dict:
                     value_dict[group_name] = {m: [] for m in metric_names}
                 if len(value) > 0:
-                    parsed = float(value)
+                    try:
+                        parsed = float(value)
+                    except ValueError as e:
+                        raise ValueError(
+                            f"{self.path}: row {row_idx} (subject {sn!r}) "
+                            f"column {header[idx + 1]!r}: "
+                            f"could not parse {value!r} as float"
+                        ) from e
                     if not np.isnan(parsed) and not np.isinf(parsed):
                         value_dict[group_name][metric_name].append(parsed)
                     else:
