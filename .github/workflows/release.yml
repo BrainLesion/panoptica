@@ -20,6 +20,8 @@ jobs:
         run: |
           pip install build
           pip install twine
+      - name: Add dynamic versioning
+        run: poetry self add "poetry-dynamic-versioning[plugin]"
       - name: Build package
         run: python -m build
       - name: Upload to PyPI
