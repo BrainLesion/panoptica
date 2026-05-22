@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 
 COMPUTATION_TIME_KEY = "computation_time"
 
+
 FileType = Literal["tsv", "jsonl"]
 supported_file_types: tuple[FileType, ...] = get_args(FileType)
 
@@ -119,18 +120,3 @@ class FileBackend(ABC):
         complements the incremental ``append_subject`` path used by the
         aggregator.
         """
-
-
-# Concrete backend imports live at the bottom to break the import cycle
-from panoptica.utils.file_backend_tsv import TSVBackend
-from panoptica.utils.file_backend_jsonl import JSONLBackend
-
-_BACKENDS: dict[FileType, type[FileBackend]] = {
-    "tsv": TSVBackend,
-    "jsonl": JSONLBackend,
-}
-
-
-def get_backend(path: Path) -> FileBackend:
-    """Resolves a ``FileBackend`` for the given path by its extension."""
-    return _BACKENDS[derive_file_type(path)](path)

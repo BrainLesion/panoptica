@@ -194,18 +194,24 @@ class Panoptica_Statistic:
             Panoptica_Statistic: Statistic populated from the file.
 
         Raises:
-            ValueError: If the resolved path has an unsupported extension.
+            ValueError: If the resolved path has an unsupported extension,
+                or if the file contains no records (e.g. header-only TSV
+                or empty JSONL produced by an aborted run).
         """
         path = Path(file) if isinstance(file, str) else file
         if not path.suffix:
             path = path.with_suffix(f".{file_type}")
         backend = get_backend(path)
         subj_names, value_dict = backend.load_raw(verbose=verbose)
+        if not subj_names or not value_dict:
+            raise ValueError(f"{path}: no records found")
         return cls(subj_names=subj_names, value_dict=value_dict)
 
     def to_file(self, file: str | Path, file_type: FileType = "jsonl") -> None:
         """Writes the full statistic to disk, format chosen from the file
-        extension (``.tsv`` or ``.jsonl``). Overwrites any existing file.
+        extension (``.tsv`` or ``.jsonl``). Overwrites any existing file at
+        the resolved path; raises before touching disk if the extension is
+        unsupported.
 
         Args:
             file (str | Path): Path with a supported extension, or without
@@ -220,8 +226,6 @@ class Panoptica_Statistic:
         path = Path(file) if isinstance(file, str) else file
         if not path.suffix:
             path = path.with_suffix(f".{file_type}")
-        if path.exists():
-            path.unlink()
         backend = get_backend(path)
         backend.write_full(
             self.__subj_names,

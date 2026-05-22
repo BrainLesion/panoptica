@@ -12,13 +12,9 @@ from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.utils.file_backend import (
-    JSONLBackend,
-    TSVBackend,
-    get_backend,
-)
-from panoptica.utils.file_backend_jsonl import _canonical_jsonl_value
-from panoptica.utils.file_backend_tsv import _canonical_tsv_value
+from panoptica.utils.file_backend_jsonl import JSONLBackend, _canonical_jsonl_value
+from panoptica.utils.file_backend_tsv import TSVBackend, _canonical_tsv_value
+from panoptica.utils.file_backend_registry import get_backend
 
 # Write artifacts to an isolated tempdir so a crash in tearDown can't leave
 # .tsv/.jsonl debris in the source tree.

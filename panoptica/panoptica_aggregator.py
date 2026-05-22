@@ -12,7 +12,8 @@ import warnings
 from typing import Optional
 
 from panoptica.utils import FileType
-from panoptica.utils.file_backend import COMPUTATION_TIME_KEY, get_backend
+from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
+from panoptica.utils.file_backend_registry import get_backend
 
 # Set start method based on the operating system
 try:

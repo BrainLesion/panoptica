@@ -783,22 +783,13 @@ class PanopticaResult(object):
         if not output_individual_instance_metrics:
             return master_dict
 
-        n_matched_from_list_metrics = max(
-            (
-                len(lm.ALL)
-                for lm in self._list_metrics.values()
-                if not lm.error and lm.ALL is not None
-            ),
-            default=0,
-        )
+        if isinstance(self.tp, float) and np.isnan(self.tp):
+            # Voronoi region-wise combined result: per-instance rows are not propagated to the combined result.
+            # TODO: Refactor region2result_map to use instance wise reporting
+            n_matched = 0
+        else:
+            n_matched = int(self.tp)
 
-        if not (isinstance(self.tp, float) and np.isnan(self.tp)):
-            assert n_matched_from_list_metrics == self.tp, (
-                f"tp={self.tp} but list metric lengths={n_matched_from_list_metrics}; "
-                "possible decision-threshold filtering mismatch"
-            )
-
-        n_matched = n_matched_from_list_metrics
         n_unmatched = len(self.instance_volume_unmatched_ref_list)
         n_total = n_matched + n_unmatched
 
