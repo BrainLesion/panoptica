@@ -295,7 +295,7 @@ def _canonical_jsonl_value(v):
 def _parse_jsonl_value(v) -> float | None:
     """Inverse of ``_canonical_jsonl_value``: JSON ``null`` and NaN/+/-Inf
     map to ``None`` (matching TSV semantics where empty cells round-trip
-    to ``None``). Anything else raises ``ValueError`` — callers in 
+    to ``None``). Anything else raises ``ValueError`` — callers in
     ``load_raw`` re-raise with file and record context."""
     if v is None:
         return None
