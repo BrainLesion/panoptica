@@ -25,7 +25,9 @@ jobs:
           pip install poetry
           poetry self add "poetry-dynamic-versioning[plugin]"
       - name: Build package
-        run: python -m build
+        run: |
+          poetry build --format=sdist  # results in properly versioned sdist 
+          # python -m build
       - name: Upload to PyPI
         env:
           TWINE_USERNAME: __token__
