@@ -11,6 +11,7 @@ exclude = ["examples", "benchmark"]
 [project]
 name = "panoptica"
 version = "0.0.0"
+dynamic = ["version"]
 description = "Panoptic Quality (PQ) computation for binary masks."
 authors = [
     { name = "Hendrik Möller", email = "hendrik.moeller@tum.de" },
