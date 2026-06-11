@@ -1,11 +1,12 @@
-from typing import TYPE_CHECKING
-from multiprocessing import Pool
-import numpy as np
 import math
-from panoptica.utils.constants import CCABackend
-from panoptica.utils.numpy_utils import _get_bbox_nd
+from typing import TYPE_CHECKING
+
+import numpy as np
 from scipy import ndimage
 from scipy.ndimage import distance_transform_edt
+
+from panoptica.utils.constants import CCABackend
+from panoptica.utils.numpy_utils import _get_bbox_nd
 
 if TYPE_CHECKING:
     from panoptica.metrics import Metric
@@ -172,6 +173,55 @@ def _calc_overlapping_labels(
     ]
 
 
+def _calc_count_matching_metric_of_overlapping_labels(
+    prediction_arr: np.ndarray,
+    reference_arr: np.ndarray,
+    ref_labels: tuple[int, ...],
+    matching_metric: "Metric",
+) -> list[tuple[float, tuple[int, int]]]:
+    """
+    Vectorized IoU / Dice for every overlapping (ref_label, pred_label) pair.
+
+    Both metrics are pure functions of the per-pair intersection count and the two
+    per-label areas. Encoding each voxel's (pred, ref) pair as ``pred * max_ref + ref``
+    turns ``np.unique(..., return_counts=True)`` into the full table of intersection
+    counts in a single pass, and ``np.bincount`` gives the per-label areas. This
+    replaces one full-array metric evaluation per overlapping pair (O(pairs * voxels))
+    with O(voxels + pairs), producing identical scores.
+
+    Args:
+        prediction_arr: Array containing prediction labels
+        reference_arr: Array containing reference labels
+        ref_labels: Unique reference labels
+        matching_metric: Either ``Metric.IOU`` or ``Metric.DSC``
+
+    Returns:
+        list: Unsorted list of (metric_value, (ref_label, pred_label)) pairs
+    """
+    max_ref = max(ref_labels) + 1
+    encoded = reference_arr.astype(np.int64) + prediction_arr.astype(np.int64) * max_ref
+    encoded[reference_arr == 0] = 0
+
+    values, intersections = np.unique(encoded, return_counts=True)
+    keep = values > max_ref  # both pred and ref are foreground for these
+    values = values[keep]
+    intersection = intersections[keep].astype(np.float64)
+    pair_ref = values % max_ref
+    pair_pred = values // max_ref
+
+    ref_area = np.bincount(reference_arr.ravel())[pair_ref].astype(np.float64)
+    pred_area = np.bincount(prediction_arr.ravel())[pair_pred].astype(np.float64)
+
+    if matching_metric.name == "IOU":
+        scores = intersection / (ref_area + pred_area - intersection)
+    else:  # DSC
+        scores = 2.0 * intersection / (ref_area + pred_area)
+
+    return [
+        (float(s), (int(r), int(p))) for s, r, p in zip(scores, pair_ref, pair_pred)
+    ]
+
+
 def _calc_matching_metric_of_overlapping_labels(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
@@ -190,16 +240,25 @@ def _calc_matching_metric_of_overlapping_labels(
     Returns:
         list: Sorted list of (metric_value, (ref_label, pred_label)) pairs
     """
-    overlapping_labels = _calc_overlapping_labels(
-        prediction_arr=prediction_arr,
-        reference_arr=reference_arr,
-        ref_labels=ref_labels,
-    )
-
-    mm_pairs = [
-        (matching_metric.value(reference_arr, prediction_arr, i[0], i[1]), (i[0], i[1]))
-        for i in overlapping_labels
-    ]
+    # IoU and Dice have a closed form over the overlap table and can score every pair
+    # at once; other (e.g. spatial) metrics still need a per-pair evaluation.
+    if matching_metric.name in ("IOU", "DSC"):
+        mm_pairs = _calc_count_matching_metric_of_overlapping_labels(
+            prediction_arr, reference_arr, ref_labels, matching_metric
+        )
+    else:
+        overlapping_labels = _calc_overlapping_labels(
+            prediction_arr=prediction_arr,
+            reference_arr=reference_arr,
+            ref_labels=ref_labels,
+        )
+        mm_pairs = [
+            (
+                matching_metric.value(reference_arr, prediction_arr, i[0], i[1]),
+                (i[0], i[1]),
+            )
+            for i in overlapping_labels
+        ]
 
     mm_pairs = sorted(
         mm_pairs, key=lambda x: x[0], reverse=not matching_metric.decreasing
@@ -321,8 +380,7 @@ def _find_optimal_part_matching_per_type(
         return [0.0]  # Penalty for part type mismatch
 
     # Get unique parts
-    ref_parts = set(pair[1][0] for pair in part_pairs)
-    pred_parts = set(pair[1][1] for pair in part_pairs)
+    ref_parts = {pair[1][0] for pair in part_pairs}
 
     # Sort part pairs by score
     sorted_pairs = sorted(
@@ -462,7 +520,7 @@ def _calculate_combined_part_score(
 
     all_part_scores = []
 
-    for part_type, part_pairs in part_scores_by_type.items():
+    for _part_type, part_pairs in part_scores_by_type.items():
         # Get optimal matching for this part type
         matching_scores = _find_optimal_part_matching_per_type(
             part_pairs, matching_metric
@@ -592,30 +650,31 @@ def _get_voronoi_regions(
     n_ref_instances: int,
 ) -> tuple[np.ndarray, int]:
     """
-    Get ground truth regions using connected components and distance transforms.
+    Assign every voxel to its nearest labelled reference region (a Voronoi partition).
 
     Args:
-        arr: Input array
-        n_ref_instances: Number of reference instances
+        arr: Labelled reference array (background ``0``, instances ``1..n``).
+        n_ref_instances: Number of reference instances.
 
     Returns:
-        Tuple of (region_map, n_ref_instances) where region_map assigns each pixel
-        to the closest ground truth region.
+        Tuple of ``(region_map, n_ref_instances)`` where ``region_map`` assigns each
+        voxel the label of the nearest reference region.
+
+    Notes:
+        Computed with a single Euclidean feature transform of the background
+        (``distance_transform_edt(arr == 0, return_indices=True)``), which yields, for
+        every voxel, the index of the nearest labelled voxel in one pass. This replaces
+        the previous per-region loop (one full-array distance transform per instance,
+        O(n_instances * n_voxels)) with an O(n_voxels) computation while producing the
+        same nearest-region assignment.
     """
-    # Step 2: Compute distance transform for each region
-    distance_map = np.full(arr.shape, np.inf, dtype=np.float32)
-    region_map = np.zeros(arr.shape, dtype=np.int32)
+    if n_ref_instances <= 0 or not arr.any():
+        return np.zeros(arr.shape, dtype=np.int32), n_ref_instances
 
-    for region_label in range(1, n_ref_instances + 1):
-        # Create region mask
-        region_mask = arr == region_label
-
-        # Compute distance transform
-        distance = distance_transform_edt(~region_mask)
-
-        # Update pixels where this region is closer
-        update_mask = distance < distance_map
-        distance_map[update_mask] = distance[update_mask]
-        region_map[update_mask] = region_label
-
+    # Feature transform of the complement: the "nearest background voxel" of (arr == 0)
+    # is precisely the nearest labelled voxel of ``arr``.
+    indices = distance_transform_edt(
+        arr == 0, return_distances=False, return_indices=True
+    )
+    region_map = arr[tuple(indices)].astype(np.int32)
     return region_map, n_ref_instances

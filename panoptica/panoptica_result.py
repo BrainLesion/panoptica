@@ -1,28 +1,36 @@
 from __future__ import annotations
-from typing import Any, Callable
+
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
-from panoptica.metrics import MetricMode
+
+from panoptica._functionals import _get_orig_onehotcc_structure
+from panoptica.metrics import (
+    Evaluation_List_Metric,
+    Evaluation_Metric,
+    Metric,
+    MetricCouldNotBeComputedException,
+    MetricMode,
+    MetricType,
+)
+from panoptica.utils.edge_case_handling import EdgeCaseHandler
+from panoptica.utils.label_group import LabelGroup, LabelPartGroup
+from panoptica.utils.processing_pair import IntermediateStepsData
 from panoptica.utils.serialization import (
     _AUTC_PREFIX,
     format_autc_key,
     format_threshold_key,
     is_autc_key,
 )
-from panoptica.metrics import (
-    Evaluation_List_Metric,
-    Evaluation_Metric,
-    Metric,
-    MetricCouldNotBeComputedException,
-    MetricType,
-)
-from panoptica.utils.edge_case_handling import EdgeCaseHandler
-from panoptica.utils.processing_pair import IntermediateStepsData
-from panoptica.utils.label_group import LabelGroup, LabelPartGroup
-from panoptica._functionals import _get_orig_onehotcc_structure
+
+# ``np.trapezoid`` was added in NumPy 2.0 as the rename of ``np.trapz`` (which is
+# deprecated there but still present). Resolve whichever exists so AUTC integration
+# works across the whole declared ``numpy>=1.22`` range, not just NumPy >= 2.0.
+_trapezoid = getattr(np, "trapezoid", None) or np.trapz
 
 
-class PanopticaResult(object):
-
+class PanopticaResult:
     def __init__(
         self,
         reference_arr: np.ndarray,
@@ -498,7 +506,7 @@ class PanopticaResult(object):
             self._add_metric(
                 f"global_bin_{m.name.lower()}",
                 MetricType.GLOBAL,
-                lambda x: MetricCouldNotBeComputedException(
+                lambda x, m=m: MetricCouldNotBeComputedException(
                     f"Global Metric {m} not set"
                 ),
                 long_name="Global Binary " + m.value.long_name,
@@ -509,7 +517,7 @@ class PanopticaResult(object):
             self._add_metric(
                 f"region_avg_{m.name.lower()}",
                 MetricType.GLOBAL,
-                lambda x: MetricCouldNotBeComputedException(
+                lambda x, m=m: MetricCouldNotBeComputedException(
                     f"Region Average Metric {m} not set"
                 ),
                 long_name="Region Average " + m.value.long_name,
@@ -944,7 +952,7 @@ class PanopticaResult(object):
 
 
 # region AUTCResult
-class PanopticaAUTCResult(object):
+class PanopticaAUTCResult:
     """
     Holds dict mapping thresholds across a range to PanopticaResult objects.
     Computes Area Under The Threshold Curve (AUTC) for metrics from different thresholds.
@@ -991,7 +999,7 @@ class PanopticaAUTCResult(object):
             if np.isclose(t, threshold):
                 return res
         raise ValueError(
-            f"No result for threshold {threshold}. " f"Available: {self.thresholds}"
+            f"No result for threshold {threshold}. Available: {self.thresholds}"
         )
 
     def get_autc(self, metric_name: str) -> float:
@@ -1017,7 +1025,7 @@ class PanopticaAUTCResult(object):
             )
 
         y_values: list[float] = []
-        for threshold, result in self._threshold_results.items():
+        for _threshold, result in self._threshold_results.items():
             try:
                 val = getattr(result, metric_name)
                 y_values.append(0.0 if (val is None or np.isnan(val)) else float(val))
@@ -1034,7 +1042,7 @@ class PanopticaAUTCResult(object):
         x_arr = np.array(x_values, dtype=float)
         y_arr = np.array(y_values, dtype=float)
 
-        return float(np.trapezoid(y_arr, x=x_arr))
+        return float(_trapezoid(y_arr, x=x_arr))
 
     def to_dict(
         self, output_individual_instance_metrics: bool = False
@@ -1084,7 +1092,7 @@ class PanopticaAUTCResult(object):
                 raise AttributeError(
                     f"'{type(self).__name__}' has no attribute '{name}' "
                     f"(metric '{metric_name}' not found in PanopticaResult)."
-                )
+                ) from None
 
         raise AttributeError(
             f"'{type(self).__name__}' object has no attribute '{name}'"

@@ -1,10 +1,34 @@
 from dataclasses import dataclass, field
-from multiprocessing import Pool
+
 import numpy as np
 
+from panoptica._functionals import _get_orig_onehotcc_structure, _get_paired_crop
 from panoptica.metrics import Metric
-from panoptica.utils.processing_pair import MatchedInstancePair, EvaluateInstancePair
-from panoptica._functionals import _get_paired_crop, _get_orig_onehotcc_structure
+from panoptica.metrics._surface_distances import (
+    SURFACE_DISTANCE_METRIC_NAMES,
+    _reduce_surface_metric,
+    _surface_distance_pair,
+)
+from panoptica.utils.processing_pair import EvaluateInstancePair, MatchedInstancePair
+
+
+def _extended_voxelspacing(voxelspacing: tuple[float, ...], ndim: int):
+    """Match a voxelspacing to a spatial array, padding non-spatial (label) axes.
+
+    Flattened one-hot arrays gain leading label axes when reshaped to
+    ``(num_labels + 1, *spatial_shape)``; spatial metrics need a spacing entry per
+    axis, so unit spacing is prepended for those extra dimensions.
+    """
+    if len(voxelspacing) < ndim:
+        extra_dims = ndim - len(voxelspacing)
+        return (1.0,) * extra_dims + tuple(voxelspacing)
+    if len(voxelspacing) > ndim:
+        raise ValueError(
+            f"Voxelspacing has {len(voxelspacing)} dimensions but the spatial array "
+            f"only has {ndim} dimensions. Voxelspacing should match the original "
+            f"spatial dimensions of the data."
+        )
+    return voxelspacing
 
 
 @dataclass(frozen=True)
@@ -195,57 +219,54 @@ def _evaluate_instance(
 
     result: dict[Metric, float] = {}
 
-    # Cache spatial structures if any metric requires them and is_flattened_onehot is True
+    # Resolve the mask view spatial metrics operate on, once instead of per metric.
+    # For flattened one-hot (LabelPartGroup) data this means reshaping back to
+    # (num_classes, *spatial_shape), extracting this instance and cropping; for normal
+    # data the already-cropped instance masks are used directly.
     needs_spatial = any(
         metric.requires_spatial and is_flattened_onehot for metric in eval_metrics
     )
-    ref_spatial = pred_spatial = None
     if needs_spatial:
-        # Reshape full arrays back to (num_classes, *spatial_shape) only once
         ref_spatial = _get_orig_onehotcc_structure(
             reference_arr, n_ref_labels, processing_pair_orig_shape
         )
         pred_spatial = _get_orig_onehotcc_structure(
             prediction_arr, n_ref_labels, processing_pair_orig_shape
         )
+        ref_spatial_instance = ref_spatial == ref_idx
+        pred_spatial_instance = pred_spatial == ref_idx
+        spatial_crop = _get_paired_crop(pred_spatial_instance, ref_spatial_instance)
+        spatial_ref = ref_spatial_instance[spatial_crop]
+        spatial_pred = pred_spatial_instance[spatial_crop]
+        spatial_voxelspacing = _extended_voxelspacing(voxelspacing, spatial_ref.ndim)
+    else:
+        spatial_ref, spatial_pred = ref_arr, pred_arr
+        spatial_voxelspacing = voxelspacing
+
+    # ASSD/HD/HD95/NSD are all reductions of the same directional surface-distance
+    # pair, so compute it once for this instance and reduce, rather than recomputing
+    # the distance transforms inside every surface metric.
+    surface_pair = None
+    if any(m.name in SURFACE_DISTANCE_METRIC_NAMES for m in eval_metrics):
+        surface_pair = _surface_distance_pair(
+            spatial_ref, spatial_pred, voxelspacing=spatial_voxelspacing
+        )
 
     for metric in eval_metrics:
-        if metric.requires_spatial and is_flattened_onehot:
-            # For spatial metrics on flattened one-hot data, use cached spatial structure
-
-            # Extract the specific instance from the spatial structure
-            ref_spatial_instance = ref_spatial == ref_idx
-            pred_spatial_instance = pred_spatial == ref_idx
-
-            # Crop for performance (only on spatial dimensions)
-            crop = _get_paired_crop(pred_spatial_instance, ref_spatial_instance)
-            ref_spatial_cropped = ref_spatial_instance[crop]
-            pred_spatial_cropped = pred_spatial_instance[crop]
-
-            # Adjust voxelspacing to match spatial array dimensions if needed
-            if len(voxelspacing) < ref_spatial_cropped.ndim:
-                # After reshaping from flattened one-hot, arrays have shape (num_labels+1, *spatial_shape)
-                # The instance extraction preserves this shape as a boolean mask
-                # Spatial metrics require voxelspacing for ALL dimensions, so we prepend 1.0
-                # for the non-spatial label dimension(s)
-                extra_dims = ref_spatial_cropped.ndim - len(voxelspacing)
-                extended_voxelspacing = (1.0,) * extra_dims + tuple(voxelspacing)
-            elif len(voxelspacing) > ref_spatial_cropped.ndim:
-                raise ValueError(
-                    f"Voxelspacing has {len(voxelspacing)} dimensions but the spatial array "
-                    f"only has {ref_spatial_cropped.ndim} dimensions. Voxelspacing should match "
-                    f"the original spatial dimensions of the data."
-                )
-            else:
-                extended_voxelspacing = voxelspacing
-
+        if metric.name in SURFACE_DISTANCE_METRIC_NAMES:
+            metric_value = _reduce_surface_metric(
+                metric.name,
+                surface_pair[0],
+                surface_pair[1],
+                voxelspacing=spatial_voxelspacing,
+            )
+        elif metric.requires_spatial and is_flattened_onehot:
+            # Spatial-but-not-surface metrics (e.g. center distance) on one-hot data.
             metric_value = metric(
-                ref_spatial_cropped,
-                pred_spatial_cropped,
-                voxelspacing=extended_voxelspacing,
+                spatial_ref, spatial_pred, voxelspacing=spatial_voxelspacing
             )
         else:
-            # For non-spatial metrics or normal arrays, use standard computation
+            # Non-spatial metrics, or any metric on normal (non-one-hot) arrays.
             metric_value = metric(ref_arr, pred_arr, voxelspacing=voxelspacing)
 
         result[metric] = metric_value

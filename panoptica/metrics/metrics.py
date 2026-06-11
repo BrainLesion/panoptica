@@ -1,22 +1,31 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from enum import EnumMeta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from panoptica.metrics import (
+# Import directly from the metric submodules (not the panoptica.metrics package) to
+# avoid a circular import: panoptica.metrics.__init__ imports this module, so importing
+# back from the package here is ordering-sensitive and breaks under import sorting.
+from panoptica.metrics.assd import (
     _compute_instance_average_symmetric_surface_distance,
-    _compute_centerline_dice,
-    _compute_instance_volumetric_dice,
-    _compute_instance_iou,
-    _compute_instance_relative_volume_difference,
-    _compute_instance_relative_volume_error,
-    _compute_instance_center_distance,
+)
+from panoptica.metrics.center_distance import _compute_instance_center_distance
+from panoptica.metrics.cldice import _compute_centerline_dice
+from panoptica.metrics.dice import _compute_instance_volumetric_dice
+from panoptica.metrics.hausdorff_distance import (
     _compute_instance_hausdorff_distance,
     _compute_instance_hausdorff_distance95,
-    # _compute_instance_segmentation_tendency,
+)
+from panoptica.metrics.iou import _compute_instance_iou
+from panoptica.metrics.normalized_surface_dice import (
     _compute_instance_normalized_surface_dice,
-    _compute_normalized_surface_dice,
+)
+from panoptica.metrics.relative_absolute_volume_error import (
+    _compute_instance_relative_volume_error,
+)
+from panoptica.metrics.relative_volume_difference import (
+    _compute_instance_relative_volume_difference,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -78,12 +87,13 @@ class _Metric:
             int | float: The computed metric value.
         """
         if ref_instance_idx is not None and pred_instance_idx is not None:
-            reference_arr = reference_arr.copy() == ref_instance_idx
+            # ``==`` and ``np.isin`` already allocate fresh arrays and never mutate
+            # their inputs, so an explicit ``.copy()`` first would only double the
+            # memory traffic on this hot path (runs per metric and per match pair).
+            reference_arr = reference_arr == ref_instance_idx
             if isinstance(pred_instance_idx, int):
                 pred_instance_idx = [pred_instance_idx]
-            prediction_arr = np.isin(
-                prediction_arr.copy(), pred_instance_idx
-            )  # type: ignore
+            prediction_arr = np.isin(prediction_arr, pred_instance_idx)  # type: ignore
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
@@ -142,16 +152,6 @@ class _Metric:
         return (self.increasing and matching_score >= matching_threshold) or (
             self.decreasing and matching_score <= matching_threshold
         )
-
-
-class DirectValueMeta(EnumMeta):
-    "Metaclass that allows for directly getting an enum attribute"
-
-    def __getattribute__(cls, name) -> _Metric:
-        value = super().__getattribute__(name)
-        if isinstance(value, cls):
-            value = value.value
-        return value
 
 
 class Metric(_Enum_Compare):
@@ -243,10 +243,10 @@ class Metric(_Enum_Compare):
             int | float: The metric value
         """
         return self.value(
-            reference_arr=reference_arr,
-            prediction_arr=prediction_arr,
-            ref_instance_idx=ref_instance_idx,
-            pred_instance_idx=pred_instance_idx,
+            reference_arr,
+            prediction_arr,
+            ref_instance_idx,
+            pred_instance_idx,
             *args,
             **kwargs,
         )
@@ -458,7 +458,9 @@ class Evaluation_List_Metric:
         self.STD = (
             None
             if self.ALL is None
-            else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+            else empty_list_std
+            if len(self.ALL) == 0
+            else np.std(self.ALL)
         )
 
     def __getitem__(self, mode: MetricMode | str):
