@@ -1,3 +1,5 @@
+"""Per-instance metric evaluation for matched instance pairs."""
+
 from dataclasses import dataclass, field
 
 import numpy as np

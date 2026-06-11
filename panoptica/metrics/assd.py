@@ -1,3 +1,5 @@
+"""Average Symmetric Surface Distance and the shared surface-distance machinery."""
+
 import numpy as np
 from scipy.ndimage import _ni_support, binary_erosion, generate_binary_structure
 from scipy.ndimage._nd_image import euclidean_feature_transform

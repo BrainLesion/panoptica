@@ -1,3 +1,5 @@
+"""Top-level Panoptica_Evaluator orchestrating the approximation -> matching -> evaluation pipeline."""
+
 from panoptica.utils import format_autc_key
 from panoptica.utils import format_threshold_key
 from panoptica.panoptica_pipeline import _phase_instance_approximation

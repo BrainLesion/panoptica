@@ -1,3 +1,5 @@
+"""Aggregate statistics and plots computed over many PanopticaResult evaluations."""
+
 from panoptica.utils import (
     is_threshold_key,
     parse_threshold_key,
@@ -340,10 +342,10 @@ class Panoptica_Statistic:
         """Gets the values for ONE subject for each group and metric
 
         Args:
-            subjectname (str): _description_
+            subjectname (str): Name of the subject to extract.
 
         Returns:
-            _type_: _description_
+            dict[str, dict[str, float | None]]: Group -> metric -> value for this subject.
         """
         self._assertsubject(subjectname)
         sidx = self.__subj_names.index(subjectname)
@@ -356,10 +358,10 @@ class Panoptica_Statistic:
         """Gets the dictionary mapping the group to the metrics specified
 
         Args:
-            metricname (str): _description_
+            metricname (str): Name of the metric to extract.
 
         Returns:
-            _type_: _description_
+            dict[str, list[float | None]]: Group -> list of values for this metric.
         """
         self._assertmetric(metricname)
         return {g: self.get(g, metricname) for g in self.__groupnames}
@@ -368,10 +370,10 @@ class Panoptica_Statistic:
         """Gets the dictionary mapping metric to values for ONE group
 
         Args:
-            groupname (str): _description_
+            groupname (str): Name of the group to extract.
 
         Returns:
-            _type_: _description_
+            dict[str, list[float | None]]: Metric -> list of values for this group.
         """
         self._assertgroup(groupname)
         return {m: self.get(groupname, m) for m in self.__metricnames}
@@ -380,7 +382,7 @@ class Panoptica_Statistic:
         """Converts the statistic to a pandas dataframe
 
         Returns:
-            pd.DataFrame: _description_
+            pd.DataFrame: One row per (subject, group), with a column per metric.
         """
         data = []
         for subj in self.__subj_names:
@@ -397,10 +399,10 @@ class Panoptica_Statistic:
         """Given metric, gives list of all values (even across groups!) Treat with care!
 
         Args:
-            metric (_type_): _description_
+            metric (str): Name of the metric to pool.
 
         Returns:
-            _type_: _description_
+            list[float | None]: All values of the metric concatenated across every group.
         """
         values = []
         for g in self.__groupnames:
@@ -413,9 +415,9 @@ class Panoptica_Statistic:
         """Calculates the subject-wise paired values in metric for given group to another Panoptica_Statistic object
 
         Args:
-            other (Panoptica_Statistic): _description_
-            group (str): _description_
-            metric (str): _description_
+            other (Panoptica_Statistic): The other statistic to compare against (must share subject names).
+            group (str): Group to compare.
+            metric (str): Metric to compare.
         """
         self._assertgroup(group)
         self._assertmetric(metric)
@@ -453,11 +455,11 @@ class Panoptica_Statistic:
         """Calculates the subject-wise difference in metric for given group to another Panoptica_Statistic object
 
         Args:
-            other (Panoptica_Statistic): _description_
-            group (str): _description_
-            metric (str): _description_
+            other (Panoptica_Statistic): The other statistic to compare against (must share subject names).
+            group (str): Group to compare.
+            metric (str): Metric to compare.
         Returns:
-            dict[str, float]: _description_
+            dict[str, float | None]: Subject -> (self value minus other value); None where either is missing.
         """
         subj_names, self_v, other_v = self.get_subject_wise_paired_values_to(
             other, group, metric
@@ -474,7 +476,7 @@ class Panoptica_Statistic:
         """Calculates the average and std over all groups (so group-wise avg first, then average over those)
 
         Returns:
-            dict[str, tuple[float, float]]: _description_
+            dict[str, FloatDistribution]: Metric -> distribution of the per-group averages.
         """
         summary_dict = {}
         for m in self.__metricnames:

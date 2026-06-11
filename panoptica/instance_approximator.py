@@ -1,3 +1,5 @@
+"""Approximate instances from semantic segmentations via connected components."""
+
 from abc import abstractmethod, ABCMeta
 
 import numpy as np

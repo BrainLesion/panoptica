@@ -1,3 +1,5 @@
+"""The PanopticaResult container and its lazy, dependency-aware metric computation."""
+
 from __future__ import annotations
 
 from collections.abc import Callable

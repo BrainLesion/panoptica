@@ -1,3 +1,5 @@
+"""Algorithms for matching predicted instances to reference instances."""
+
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 

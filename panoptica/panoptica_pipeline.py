@@ -1,3 +1,5 @@
+"""The three-phase panoptic evaluation pipeline: approximation, matching, evaluation."""
+
 from time import perf_counter
 from panoptica.utils.logger import logger
 from typing import TYPE_CHECKING

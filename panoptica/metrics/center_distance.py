@@ -1,3 +1,5 @@
+"""Center-of-mass distance metric (CEDI)."""
+
 import numpy as np
 from scipy.ndimage import center_of_mass
 

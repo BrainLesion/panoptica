@@ -1,3 +1,5 @@
+"""Thread-safe aggregation of per-subject evaluation results into a TSV/JSONL file."""
+
 from panoptica.utils import validate_subject_name
 from panoptica.utils.logger import logger
 import numpy as np

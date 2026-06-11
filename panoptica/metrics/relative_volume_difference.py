@@ -1,3 +1,5 @@
+"""Relative Volume Difference (RVD)."""
+
 import numpy as np
 
 

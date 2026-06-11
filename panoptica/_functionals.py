@@ -1,3 +1,5 @@
+"""Low-level array helpers: connected components, label overlap/matching, cropping, Voronoi regions."""
+
 import math
 from typing import TYPE_CHECKING
 

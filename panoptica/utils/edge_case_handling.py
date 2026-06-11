@@ -225,16 +225,16 @@ class EdgeCaseHandler(SupportsConfig):
         n_pred_instances: int,
         n_ref_instances: int,
     ) -> tuple[bool, float | None]:
-        """_summary_
+        """Resolve the metric value when an instance pair has zero true positives.
 
         Args:
-            metric (Metric): _description_
-            tp (int): _description_
-            n_pred_instances (int): _description_
-            n_ref_instances (int): _description_
+            metric (Metric): The metric being evaluated.
+            tp (int): True-positive count; handling only applies when this is 0.
+            n_pred_instances (int): Number of prediction instances.
+            n_ref_instances (int): Number of reference instances.
 
         Raises:
-            NotImplementedError: _description_
+            NotImplementedError: If no zero-TP handling is configured for this metric.
 
         Returns:
             tuple[bool, float | None]: if edge case, and its edge case value

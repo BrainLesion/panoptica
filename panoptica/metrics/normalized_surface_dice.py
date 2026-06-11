@@ -1,3 +1,5 @@
+"""Normalized Surface Dice (NSD)."""
+
 import sys
 import warnings
 import numpy as np
@@ -24,7 +26,7 @@ def _compute_normalized_surface_dice(
     Args:
         reference (np.ndarray): The reference mask
         prediction (np.ndarray): The prediction mask
-        voxelspacing (_type_, optional): The voxel spacing. Defaults to None.
+        voxelspacing (tuple[float, ...] | None, optional): The voxel spacing per axis. Defaults to None.
         connectivity (int, optional): The connectivity. Defaults to 1.
         threshold (float): The threshold for the surface distance in real world coordinates. If None, the minimum voxel spacing is used. If voxelspacing is None, the threshold is set to 0.5.
 
@@ -75,7 +77,7 @@ def _compute_instance_normalized_surface_dice(
         prediction (np.ndarray): The prediction mask
         ref_instance_idx (int | None, optional): The reference instance index. Defaults to None.
         pred_instance_idx (int | None, optional): The prediction instance index. Defaults to None.
-        voxelspacing (_type_, optional): The voxel spacing. Defaults to None.
+        voxelspacing (tuple[float, ...] | None, optional): The voxel spacing per axis. Defaults to None.
         connectivity (int, optional): The connectivity. Defaults to 1.
         threshold (float): The threshold for the surface distance in real world coordinates. If None, the minimum voxel spacing is used. If voxelspacing is None, the threshold is set to 0.5.
 

@@ -1,3 +1,5 @@
+"""Metric registry: the Metric enum and its supporting value and edge-case types."""
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -156,10 +158,7 @@ class _Metric:
 
 class Metric(_Enum_Compare):
     """Enum containing important metrics that must be calculated in the evaluator, can be set for thresholding in matching and evaluation
-    Never call the .value member here, use the properties directly
-
-    Returns:
-        _type_: _description_
+    Never call the .value member here, use the properties directly.
     """
 
     DSC = _Metric("DSC", "Dice", False, False, _compute_instance_volumetric_dice)
@@ -299,11 +298,7 @@ class Metric(_Enum_Compare):
 
 
 class MetricMode(_Enum_Compare):
-    """Different modalities from Metrics
-
-    Args:
-        _Enum_Compare (_type_): _description_
-    """
+    """Different modalities from Metrics"""
 
     ALL = auto()
     AVG = auto()
@@ -314,11 +309,7 @@ class MetricMode(_Enum_Compare):
 
 
 class MetricType(_Enum_Compare):
-    """Different type of metrics
-
-    Args:
-        _Enum_Compare (_type_): _description_
-    """
+    """Different type of metrics"""
 
     NO_PRINT = auto()
     MATCHING = auto()
@@ -370,14 +361,13 @@ class Evaluation_Metric:
         """If called, needs to return its way, raise error or calculate it
 
         Args:
-            result_obj (PanopticaResult): _description_
+            result_obj (PanopticaResult): The result object the metric is computed from.
 
         Raises:
-            MetricCouldNotBeComputedException: _description_
-            self._error_obj: _description_
+            MetricCouldNotBeComputedException: If the metric or one of its dependencies could not be computed.
 
         Returns:
-            Any: _description_
+            Any: The computed metric value.
         """
         # ERROR
         if self._error:
