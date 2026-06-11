@@ -1,4 +1,5 @@
 from time import perf_counter
+from panoptica.utils.logger import logger
 from typing import TYPE_CHECKING
 
 from panoptica.instance_approximator import InstanceApproximator
@@ -67,7 +68,7 @@ def _panoptic_evaluate(
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
     if verbose:
-        print("Panoptic: Start Evaluation")
+        logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
 
@@ -221,7 +222,7 @@ def _panoptic_evaluate_region_wise(
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
     if verbose:
-        print("Panoptic: Start Evaluation")
+        logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
 
@@ -440,7 +441,7 @@ def _phase_instance_approximation(
         if instance_approximator is None:
             raise ValueError("Got SemanticPair but not InstanceApproximator")
         if verbose:
-            print("-- Got SemanticPair, will approximate instances")
+            logger.info("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
 
         processing_pair = instance_approximator.approximate_instances(
@@ -449,7 +450,7 @@ def _phase_instance_approximation(
         )
 
         if log_times:
-            print(f"-- Approximation took {perf_counter() - start} seconds")
+            logger.info(f"-- Approximation took {perf_counter() - start} seconds")
 
         # Update instance metadata after approximation
         if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
@@ -488,7 +489,7 @@ def _phase_instance_matching(
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
-            print("-- Got UnmatchedInstancePair, will match instances")
+            logger.info("-- Got UnmatchedInstancePair, will match instances")
         if instance_matcher is None:
             raise ValueError(
                 "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
@@ -509,7 +510,7 @@ def _phase_instance_matching(
             **match_kwargs,
         )
         if log_times:
-            print(f"-- Matching took {perf_counter() - start} seconds")
+            logger.info(f"-- Matching took {perf_counter() - start} seconds")
     return processing_pair
 
 
@@ -541,7 +542,7 @@ def _phase_instance_evaluation(
 
     if isinstance(processing_pair, MatchedInstancePair):
         if verbose:
-            print("-- Got MatchedInstancePair, will evaluate instances")
+            logger.info("-- Got MatchedInstancePair, will evaluate instances")
         start = perf_counter()
         processing_pair = evaluate_matched_instance(
             processing_pair,
@@ -553,7 +554,7 @@ def _phase_instance_evaluation(
             **kwargs,
         )
         if log_times:
-            print(f"-- Instance Evaluation took {perf_counter() - start} seconds")
+            logger.info(f"-- Instance Evaluation took {perf_counter() - start} seconds")
     return processing_pair
 
 

@@ -1,4 +1,5 @@
 import numpy as np
+from panoptica.utils.logger import logger
 from importlib.util import find_spec
 from pathlib import Path
 from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
@@ -82,7 +83,7 @@ class NRRDImageChecker(_InputDataTypeChecker):
         try:
             readdata, header = nrrd.read(str(image_path))
         except Exception as e:
-            print(f"Error reading images: {e}")
+            logger.error(f"Error reading images: {e}")
             return None
         return NRRDImage(readdata, header)
 

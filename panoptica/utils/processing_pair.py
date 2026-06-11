@@ -1,4 +1,5 @@
 from abc import ABC
+from panoptica.utils.logger import logger
 
 import numpy as np
 
@@ -70,13 +71,10 @@ class _ProcessingPair(ABC):
 
         self.__prediction_arr = self.__prediction_arr[self.__crop]
         self.__reference_arr = self.__reference_arr[self.__crop]
-        (
-            print(
+        if verbose:
+            logger.info(
                 f"-- Cropped from {self.__uncropped_shape} to {self.__prediction_arr.shape}"
             )
-            if verbose
-            else None
-        )
         self.__is_cropped = True
 
     def uncrop_data(self, verbose: bool = False):
@@ -95,13 +93,10 @@ class _ProcessingPair(ABC):
 
         reference_arr = np.zeros(self.__uncropped_shape)
         reference_arr[self.__crop] = self.__reference_arr
-        (
-            print(
+        if verbose:
+            logger.info(
                 f"-- Uncropped from {self.__reference_arr.shape} to {self.__uncropped_shape}"
             )
-            if verbose
-            else None
-        )
         self.__reference_arr = reference_arr
         self.__is_cropped = False
 

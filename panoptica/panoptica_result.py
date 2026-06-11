@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from panoptica.utils.logger import logger
 from typing import Any
 
 import numpy as np
@@ -717,7 +718,7 @@ class PanopticaResult:
 
         if print_errors:
             for k, v in metric_errors.items():
-                print(f"Metric {k}: {v}")
+                logger.warning(f"Metric {k}: {v}")
 
     def _calc(self, k, v):
         """

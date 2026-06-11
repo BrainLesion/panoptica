@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from panoptica.utils.logger import logger
 
 from panoptica.utils.serialization import (
     format_instance_subject_name,
@@ -64,7 +65,7 @@ class JSONLBackend(FileBackend):
                         existing.append(format_instance_subject_name(sn, g, inst_idx))
 
         if not seen_any:
-            print(
+            logger.info(
                 f"{self.path}: Output file given is empty, will start with first subject"
             )
         return existing
@@ -135,7 +136,7 @@ class JSONLBackend(FileBackend):
             record["groups"][groupname] = group_obj
 
         _append_jsonl_record(self.path, record)
-        print(f"Saved entry {subject_name} into {self.path}")
+        logger.info(f"Saved entry {subject_name} into {self.path}")
 
     def write_full(
         self,
@@ -207,9 +208,9 @@ class JSONLBackend(FileBackend):
                     metric_names.append(k)
 
         if verbose:
-            print(f"Found {len(records)} entries")
-            print(f"Found metrics: {metric_names}")
-            print(f"Found groups: {group_names}")
+            logger.info(f"Found {len(records)} entries")
+            logger.info(f"Found metrics: {metric_names}")
+            logger.info(f"Found groups: {group_names}")
 
         subj_names: list[str] = []
         value_dict: dict[str, dict[str, list[float | None]]] = {

@@ -1,4 +1,5 @@
 import numpy as np
+from panoptica.utils.logger import logger
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
@@ -40,7 +41,7 @@ class TorchImageChecker(_InputDataTypeChecker):
                 map_location="cpu",
             )
         except Exception as e:
-            print(f"Error reading images: {e}")
+            logger.error(f"Error reading images: {e}")
             return None
         return image
 

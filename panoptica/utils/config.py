@@ -1,4 +1,5 @@
 from ruamel.yaml import YAML
+from panoptica.utils.logger import logger
 from pathlib import Path
 from panoptica.utils.filepath import config_by_name, config_dir_by_name
 from abc import abstractmethod
@@ -70,7 +71,7 @@ def _save_yaml(data_dict: dict | object, out_file: str | Path, registered_class=
         #    yaml.dump([registered_class(*data_dict)], out_file)
     else:
         yaml.dump(data_dict, out_file)
-    print(f"Saved config into {out_file}")
+    logger.info(f"Saved config into {out_file}")
 
 
 #########

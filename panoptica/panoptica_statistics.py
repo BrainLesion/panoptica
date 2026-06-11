@@ -6,6 +6,7 @@ from panoptica.utils import (
     get_backend,
     FileType,
 )
+from panoptica.utils.logger import logger
 import numpy as np
 import warnings
 from pathlib import Path
@@ -16,8 +17,9 @@ try:
     import plotly.express as px
     import plotly.graph_objects as go
 except Exception as e:
-    print(e)
-    print("OPTIONAL PACKAGE MISSING")
+    logger.warning(
+        "Optional plotting package missing, some statistics features disabled: %s", e
+    )
 
 
 class FloatDistribution:
@@ -608,7 +610,7 @@ def make_autc_plots(
         thresholds = stat.get_thresholds_for_metric(metric)
 
         if not thresholds:
-            print(f"Warning: No threshold data found for '{metric}' in '{setupname}'.")
+            logger.warning(f"No threshold data found for '{metric}' in '{setupname}'.")
             continue
 
         X = thresholds

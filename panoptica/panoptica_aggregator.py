@@ -1,4 +1,5 @@
 from panoptica.utils import validate_subject_name
+from panoptica.utils.logger import logger
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
@@ -174,15 +175,14 @@ class Panoptica_Aggregator:
             id_list = _load_buffer_entries(self.__output_buffer_file)
 
             if subject_name in id_list:
-                print(
-                    f"Subject '{subject_name}' evaluated or in process {self.__output_file}, do not add duplicates to your evaluation!",
-                    flush=True,
+                logger.warning(
+                    f"Subject '{subject_name}' evaluated or in process {self.__output_file}, do not add duplicates to your evaluation!"
                 )
                 return
             _append_buffer_entries(self.__output_buffer_file, [subject_name])
 
         # Run Evaluation (allowed in parallel)
-        print(f"Call evaluate on {subject_name}")
+        logger.info(f"Call evaluate on {subject_name}")
         if self.__autc:
             if self.__threshold_step_size is None:
                 raise ValueError(

@@ -1,4 +1,5 @@
 import time
+from panoptica.utils.logger import logger
 
 
 def measure_time(func):
@@ -10,7 +11,7 @@ def measure_time(func):
         end_time = time.time()
         elapsed_time = end_time - start_time
         if hasattr(kwargs, "verbose") and kwargs.verbose:
-            print(f"-- {func.__name__} took {elapsed_time} seconds to execute.")
+            logger.info(f"-- {func.__name__} took {elapsed_time} seconds to execute.")
         return result
 
     return wrapper

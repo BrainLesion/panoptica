@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from panoptica.utils.logger import logger
 
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import FileBackend
@@ -37,7 +38,7 @@ class TSVBackend(FileBackend):
         else:
             existing_header = _read_first_tsv_row(self.path)
             if len(existing_header) == 0:
-                print(
+                logger.info(
                     f"{self.path}: Output file given is empty, will start with header"
                 )
                 _append_tsv_rows(self.path, [header])
@@ -111,7 +112,7 @@ class TSVBackend(FileBackend):
                     content.append(_canonical_tsv_value(result_dict.get(e)))
             _append_tsv_rows(self.path, [content])
 
-        print(f"Saved entry {subject_name} into {self.path}")
+        logger.info(f"Saved entry {subject_name} into {self.path}")
 
     def write_full(
         self,
@@ -169,7 +170,7 @@ class TSVBackend(FileBackend):
         group_names = list(dict.fromkeys(k[0] for k in keys_in_order))
 
         if verbose:
-            print(f"Found {len(rows) - 1} entries")
+            logger.info(f"Found {len(rows) - 1} entries")
             print(f"Found metrics: {metric_names}")
             print(f"Found groups: {group_names}")
 
