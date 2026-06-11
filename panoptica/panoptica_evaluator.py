@@ -47,13 +47,8 @@ class Panoptica_Evaluator(SupportsConfig):
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
         segmentation_class_groups: SegmentationClassGroups | None = None,
-        instance_metrics: list[Metric] = [
-            Metric.DSC,
-            Metric.IOU,
-            Metric.ASSD,
-            Metric.RVD,
-        ],
-        global_metrics: list[Metric] = [Metric.DSC],
+        instance_metrics: list[Metric] | None = None,
+        global_metrics: list[Metric] | None = None,
         decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
         per_region_evaluation: bool = False,
@@ -85,6 +80,10 @@ class Panoptica_Evaluator(SupportsConfig):
         #
         self.__instance_approximator = instance_approximator
         self.__instance_matcher = instance_matcher
+        if instance_metrics is None:
+            instance_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD, Metric.RVD]
+        if global_metrics is None:
+            global_metrics = [Metric.DSC]
         self.__eval_metrics = instance_metrics
         self.__global_metrics = global_metrics
         self.__decision_metric = decision_metric

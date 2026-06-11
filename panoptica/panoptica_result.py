@@ -41,7 +41,7 @@ class PanopticaResult:
         tp: int,
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
-        global_metrics: list[Metric] = [],
+        global_metrics: list[Metric] | None = None,
         processing_pair_orig_shape: tuple[int, int] | None = None,
         n_ref_labels: int | None = None,
         label_group: LabelGroup | None = None,
@@ -67,6 +67,8 @@ class PanopticaResult:
         self._evaluation_metrics: dict[str, Evaluation_Metric] = {}
         self._edge_case_handler = edge_case_handler
         empty_list_std = self._edge_case_handler.handle_empty_list_std().value
+        if global_metrics is None:
+            global_metrics = []
         self._global_metrics: list[Metric] = global_metrics
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data

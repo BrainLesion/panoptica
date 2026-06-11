@@ -27,8 +27,8 @@ def _panoptic_evaluate(
     input_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    instance_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
-    global_metrics: list[Metric] = [Metric.DSC],
+    instance_metrics: list[Metric] | None = None,
+    global_metrics: list[Metric] | None = None,
     decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
     matching_threshold: float | None = None,
@@ -67,6 +67,10 @@ def _panoptic_evaluate(
         ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
+    if instance_metrics is None:
+        instance_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD]
+    if global_metrics is None:
+        global_metrics = [Metric.DSC]
     if verbose:
         logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
@@ -186,8 +190,8 @@ def _panoptic_evaluate_region_wise(
     input_pair: SemanticPair | UnmatchedInstancePair,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    instance_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
-    global_metrics: list[Metric] = [Metric.DSC],
+    instance_metrics: list[Metric] | None = None,
+    global_metrics: list[Metric] | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
     result_all: bool = True,
@@ -221,6 +225,10 @@ def _panoptic_evaluate_region_wise(
         ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
+    if instance_metrics is None:
+        instance_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD]
+    if global_metrics is None:
+        global_metrics = [Metric.DSC]
     if verbose:
         logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
@@ -562,7 +570,7 @@ def _handle_zero_instances_cases(
     processing_pair: UnmatchedInstancePair | MatchedInstancePair,
     edge_case_handler: EdgeCaseHandler,
     global_metrics: list[Metric],
-    eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    eval_metrics: list[Metric] | None = None,
     voxelspacing: tuple[float, ...] | None = None,
 ) -> UnmatchedInstancePair | MatchedInstancePair | PanopticaResult:
     """
@@ -578,6 +586,8 @@ def _handle_zero_instances_cases(
     Returns:
         UnmatchedInstancePair | MatchedInstancePair | PanopticaResult: The processed processing pair or evaluation result.
     """
+    if eval_metrics is None:
+        eval_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD]
     n_reference_instance = processing_pair.n_ref_instances
     n_prediction_instance = processing_pair.n_pred_instances
 

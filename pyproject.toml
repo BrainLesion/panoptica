@@ -118,10 +118,6 @@ ignore = [
     "B024",  # _ProcessingPair is an intentional ABC without abstract methods
     "B028",  # explicit warnings.warn stacklevel is noise for this codebase
     "UP038", # isinstance(x, A | B) is slower at runtime than the tuple form
-    # B006 (mutable default args, e.g. instance_metrics=[...]) is a tracked follow-up:
-    # those defaults are only ever read, never mutated. Fix with None sentinels, then
-    # drop this ignore.
-    "B006",
 ]
 
 [tool.ruff.lint.per-file-ignores]

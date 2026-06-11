@@ -48,7 +48,7 @@ class _InstanceEvaluation:
 
 def evaluate_matched_instance(
     matched_instance_pair: MatchedInstancePair,
-    eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    eval_metrics: list[Metric] | None = None,
     decision_metric: Metric | None = Metric.IOU,
     decision_threshold: float | None = None,
     voxelspacing: tuple[float, ...] | None = None,
@@ -67,6 +67,8 @@ def evaluate_matched_instance(
         EvaluateInstancePair: Evaluated pair of instances
 
     """
+    if eval_metrics is None:
+        eval_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD]
     if decision_metric is not None:
         if decision_metric.name not in [v.name for v in eval_metrics]:
             raise ValueError("decision metric not contained in eval_metrics")
