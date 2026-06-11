@@ -46,7 +46,9 @@ class _ProcessingPair(ABC):
         self.__dtype = dtype
         self.__n_dim: int = reference_arr.ndim
         self.__ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type: ignore
-        self.__pred_labels: tuple[int, ...] = tuple(_unique_without_zeros(prediction_arr))  # type: ignore
+        self.__pred_labels: tuple[int, ...] = tuple(
+            _unique_without_zeros(prediction_arr)
+        )  # type: ignore
         self.__crop: tuple[slice, ...] = None
         self.__is_cropped: bool = False
         self.__uncropped_shape: tuple[int, ...] = reference_arr.shape

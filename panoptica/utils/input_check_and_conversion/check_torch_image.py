@@ -31,7 +31,7 @@ class TorchImageChecker(_InputDataTypeChecker):
         )
 
     def load_image_from_path(
-        self, image_path: Union[str, Path]
+        self, image_path: str | Path
     ) -> Union["torch.Tensor", None]:
         try:
             image = torch.load(

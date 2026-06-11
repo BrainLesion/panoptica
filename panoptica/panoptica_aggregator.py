@@ -1,4 +1,4 @@
-from panoptica.utils import format_instance_subject_name, validate_subject_name
+from panoptica.utils import validate_subject_name
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
@@ -9,7 +9,6 @@ import os
 import atexit
 from tempfile import NamedTemporaryFile
 import warnings
-from typing import Optional
 
 from panoptica.utils import FileType
 from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
@@ -48,7 +47,7 @@ class Panoptica_Aggregator:
         file_type: FileType = "jsonl",
         output_individual_instance_metrics: bool = False,
         is_autc: bool = False,
-        threshold_step_size: Optional[float] = None,
+        threshold_step_size: float | None = None,
     ):
         """Initializes the Panoptica_Aggregator.
 
@@ -232,7 +231,7 @@ def _load_buffer_entries(file: str | Path) -> list[str]:
     Raises:
         ValueError: If the buffer file contains duplicate entries.
     """
-    with open(str(file), "r", encoding="utf8", newline="") as f:
+    with open(str(file), encoding="utf8", newline="") as f:
         rows = list(csv.reader(f, delimiter="\t", lineterminator="\n"))
     entries = [row[0] for row in rows if row]
     if len(entries) != len(set(entries)):

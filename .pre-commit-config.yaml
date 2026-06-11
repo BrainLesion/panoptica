@@ -1,0 +1,13 @@
+# Install once with:  pre-commit install
+# Run over everything: pre-commit run --all-files
+#
+# ruff (lint + format) is the enforced gate. mypy is intentionally NOT a pre-commit
+# hook yet: the codebase still has typing debt (see `mypy panoptica/`), so it would
+# block every commit. It runs non-blocking in CI until that debt is paid down.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format

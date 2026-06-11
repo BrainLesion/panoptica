@@ -1,4 +1,5 @@
-import sys, warnings
+import sys
+import warnings
 import numpy as np
 from panoptica.metrics.assd import __surface_distances
 

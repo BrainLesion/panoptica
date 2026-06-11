@@ -97,7 +97,7 @@ def sanity_check_and_convert_to_array(
             elif not is_path:
                 try:
                     r, msg, (pred, ref) = checker(prediction, reference)
-                except TypeError as e:
+                except TypeError:
                     continue
                 if not r:
                     raise ValueError(

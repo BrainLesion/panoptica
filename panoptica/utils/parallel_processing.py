@@ -1,6 +1,6 @@
 import multiprocessing.pool
-from multiprocessing import Pool, Process
-from typing import Callable
+from multiprocessing import Process
+from collections.abc import Callable
 
 
 class NoDaemonProcess(Process):

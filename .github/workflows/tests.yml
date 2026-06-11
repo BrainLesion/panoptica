@@ -10,6 +10,25 @@ on:
     branches: ["main"]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install lint tools
+        run: python -m pip install --upgrade pip "ruff>=0.11.0" "mypy>=1.10.0"
+      - name: Ruff lint
+        run: ruff check panoptica/
+      - name: Ruff format check
+        run: ruff format --check panoptica/
+      - name: Mypy (non-blocking; tracked typing debt)
+        # Not yet gating: the package still has typing debt. Remove continue-on-error
+        # once `mypy panoptica/` is clean.
+        continue-on-error: true
+        run: mypy panoptica/
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:

@@ -9,7 +9,7 @@ def measure_time(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         elapsed_time = end_time - start_time
-        if hasattr(kwargs, "verbose") and getattr(kwargs, "verbose"):
+        if hasattr(kwargs, "verbose") and kwargs.verbose:
             print(f"-- {func.__name__} took {elapsed_time} seconds to execute.")
         return result
 

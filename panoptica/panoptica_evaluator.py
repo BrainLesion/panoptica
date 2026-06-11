@@ -276,7 +276,10 @@ class Panoptica_Evaluator(SupportsConfig):
             prediction_arr_grouped = label_group(processing_pair.prediction_arr)
             reference_arr_grouped = label_group(processing_pair.reference_arr)
 
-            processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
+            processing_pair_grouped = processing_pair.__class__(
+                prediction_arr=prediction_arr_grouped,
+                reference_arr=reference_arr_grouped,
+            )  # type: ignore
             instance_metadata = processing_pair_grouped.get_metadata()
             if label_group.single_instance and not isinstance(
                 processing_pair, MatchedInstancePair
@@ -351,7 +354,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "sitk.Image",
         ],
         voxelspacing: tuple[float, ...] | None = None,
-    ) -> tuple[Union[MatchedInstancePair, UnmatchedInstancePair, SemanticPair], dict]:
+    ) -> tuple[MatchedInstancePair | UnmatchedInstancePair | SemanticPair, dict]:
         """Handles data ingestion, sanity checking, and initial validation."""
 
         # Sanity check input and convert to numpy arrays
@@ -491,7 +494,9 @@ class Panoptica_Evaluator(SupportsConfig):
         reference_arr_grouped = label_group(processing_pair.reference_arr)
 
         single_instance_mode = label_group.single_instance
-        processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
+        processing_pair_grouped = processing_pair.__class__(
+            prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped
+        )  # type: ignore
         if single_instance_mode and not isinstance(
             processing_pair, MatchedInstancePair
         ):

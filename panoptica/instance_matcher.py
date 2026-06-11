@@ -1,6 +1,5 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
 
 import numpy as np
 
@@ -23,9 +22,9 @@ from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 class MatchingContext:
     """Encapsulates context information needed for matching operations."""
 
-    label_group: Optional[LabelGroup] = None
-    n_ref_labels: Optional[int] = None
-    processing_pair_orig_shape: Optional[Tuple] = None
+    label_group: LabelGroup | None = None
+    n_ref_labels: int | None = None
+    processing_pair_orig_shape: tuple | None = None
 
     @property
     def is_part_group(self) -> bool:
@@ -59,7 +58,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -120,9 +119,9 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def _calculate_matching_metric_pairs(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext],
+        context: MatchingContext | None,
         matching_metric: Metric,
-    ) -> List[Tuple[float, Tuple[int, int]]]:
+    ) -> list[tuple[float, tuple[int, int]]]:
         """
         Calculate matching metric pairs based on context.
 
@@ -220,7 +219,7 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,
@@ -246,7 +245,7 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
         n_ref_labels=None,
         processing_pair_orig_shape=None,
         *,
-        matching_threshold: Optional[float] = None,
+        matching_threshold: float | None = None,
         **kwargs,
     ) -> MatchedInstancePair:
         return super().match_instances(
@@ -293,7 +292,7 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,
@@ -354,7 +353,7 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,
@@ -394,9 +393,9 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
 
     def _create_cost_matrix(
         self,
-        ref_labels: List[int],
-        pred_labels: List[int],
-        mm_pairs: List[Tuple[float, Tuple[int, int]]],
+        ref_labels: list[int],
+        pred_labels: list[int],
+        mm_pairs: list[tuple[float, tuple[int, int]]],
         matching_threshold: float,
     ) -> np.ndarray:
         """Create cost matrix for bipartite matching."""
@@ -423,7 +422,7 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
         return cost_matrix
 
     def _solve_bipartite_matching(
-        self, cost_matrix: np.ndarray, ref_labels: List[int], pred_labels: List[int]
+        self, cost_matrix: np.ndarray, ref_labels: list[int], pred_labels: list[int]
     ) -> InstanceLabelMap:
         """Solve the bipartite matching problem and return labelmap."""
         from scipy.optimize import linear_sum_assignment
@@ -459,7 +458,7 @@ class MaximizeMergeMatching(ThresholdBasedMatching):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,

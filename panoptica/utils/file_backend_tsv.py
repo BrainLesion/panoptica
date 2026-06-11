@@ -141,7 +141,7 @@ class TSVBackend(FileBackend):
     def load_raw(
         self, verbose: bool = True
     ) -> tuple[list[str], dict[str, dict[str, list[float | None]]]]:
-        with open(self.path, "r", encoding="utf8", newline="") as tsvfile:
+        with open(self.path, encoding="utf8", newline="") as tsvfile:
             rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
             rows = list(rd)
 
@@ -155,7 +155,8 @@ class TSVBackend(FileBackend):
             )
 
         keys_in_order: list[tuple[str, str]] = [
-            tuple(c.split("-", maxsplit=1)) for c in header[1:]  # type: ignore[misc]
+            tuple(c.split("-", maxsplit=1))
+            for c in header[1:]  # type: ignore[misc]
         ]
         keys_in_order = [
             k if len(k) == 2 else ("ungrouped", k[0]) for k in keys_in_order
@@ -230,7 +231,7 @@ def _canonical_tsv_value(v):
 
 def _read_first_tsv_row(path: Path) -> list[str]:
     """Reads the first row of a TSV file. NOT THREAD SAFE BY ITSELF."""
-    with open(path, "r", encoding="utf8", newline="") as tsvfile:
+    with open(path, encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
         return next(rd, [])
 
@@ -243,7 +244,7 @@ def _load_first_tsv_column(path: Path) -> list[str]:
     Raises:
         ValueError: If the file contains duplicate entries.
     """
-    with open(path, "r", encoding="utf8", newline="") as tsvfile:
+    with open(path, encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
         rows = list(rd)
     id_list = [row[0] for row in rows]

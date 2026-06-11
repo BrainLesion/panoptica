@@ -97,7 +97,7 @@ class JSONLBackend(FileBackend):
     def append_subject(
         self,
         subject_name: str,
-        result_grouped: dict[str, "PanopticaResult | PanopticaAUTCResult"],
+        result_grouped: dict[str, PanopticaResult | PanopticaAUTCResult],
         class_group_names: list[str],
         evaluation_metrics: list[str],
         output_individual_instance_metrics: bool,
@@ -305,8 +305,7 @@ def _parse_jsonl_value(v) -> float | None:
             return None
         return f
     raise ValueError(
-        f"unsupported value {v!r} of type {type(v).__name__}; "
-        f"expected number or null"
+        f"unsupported value {v!r} of type {type(v).__name__}; expected number or null"
     )
 
 
@@ -318,7 +317,7 @@ def _iter_jsonl_records(path: Path):
     malformed line, so a partial write from a crash or a hand-edit gets
     pinpointed rather than surfacing as a context-free ``JSONDecodeError``.
     """
-    with open(path, "r", encoding="utf8") as f:
+    with open(path, encoding="utf8") as f:
         for line_number, line in enumerate(f, start=1):
             stripped = line.strip()
             if not stripped:

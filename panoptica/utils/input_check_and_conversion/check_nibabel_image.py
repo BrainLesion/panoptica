@@ -56,9 +56,7 @@ class NibabelImageChecker(_InputDataTypeChecker):
         if prediction_image.shape != reference_image.shape:
             return (
                 False,
-                "Dimension Mismatch: {} vs {}".format(
-                    prediction_image.shape, reference_image.shape
-                ),
+                f"Dimension Mismatch: {prediction_image.shape} vs {reference_image.shape}",
             )
 
         # check if the affine matrices are similar
@@ -67,9 +65,7 @@ class NibabelImageChecker(_InputDataTypeChecker):
         ).sum() > self.threshold:
             return (
                 False,
-                "Affine Mismatch: {} vs {}".format(
-                    prediction_image.affine, reference_image.affine
-                ),
+                f"Affine Mismatch: {prediction_image.affine} vs {reference_image.affine}",
             )
 
         return True, ""

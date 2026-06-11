@@ -57,7 +57,10 @@ test = [
     "coverage>=7.0.1",
     "pytest-mock>=3.6.0,<4.0.0",
     "future>=0.18.3, <1.0.0",
-    "flake8>=4.0.1",
+]
+lint = [
+    "ruff>=0.11.0",
+    "mypy>=1.10.0",
 ]
 docs = [
     "Sphinx>=7.0.0",
@@ -68,6 +71,7 @@ docs = [
 dev = [
     { include-group = "test" },
     { include-group = "docs" },
+    { include-group = "lint" },
     "pre-commit>=2.20.0,<3.0.0",
     "torch>=2.1.0,<3.0.0",
 ]
@@ -84,9 +88,53 @@ optional = true
 [tool.poetry.group.dev]
 optional = true
 
+[tool.poetry.group.lint]
+optional = true
+
 
 [project.optional-dependencies]
 gpu = ["torch>=2.1.0,<3.0.0"]
 
 [tool.poetry.scripts]
 panopticacli = "panoptica.cli:app"
+
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+extend-exclude = ["docs", "examples", "benchmark"]
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, UP: pyupgrade, B: bugbear.
+# NOTE: import sorting (I) is intentionally NOT enabled. The package currently relies
+# on a set of order-sensitive circular imports (_functionals <-> utils <->
+# processing_pair <-> panoptica_result); reordering imports breaks `import panoptica`.
+# Re-enable "I" once those cycles are decoupled.
+select = ["E", "W", "F", "UP", "B"]
+ignore = [
+    "E501",  # line length is enforced by the formatter, not the linter
+    "B905",  # zip(..., strict=) is 3.10+ only; not worth churning every call site
+    "B008",  # calls in arg defaults are deliberate here (edge-case policy objects)
+    "B024",  # _ProcessingPair is an intentional ABC without abstract methods
+    "B028",  # explicit warnings.warn stacklevel is noise for this codebase
+    "UP038", # isinstance(x, A | B) is slower at runtime than the tuple form
+    # B006 (mutable default args, e.g. instance_metrics=[...]) is a tracked follow-up:
+    # those defaults are only ever read, never mutated. Fix with None sentinels, then
+    # drop this ignore.
+    "B006",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__.py re-exports are deliberate public API, not unused imports.
+"__init__.py" = ["F401"]
+# Tests favor readability over import hygiene (shared fixtures, re-imports).
+"unit_tests/**" = ["F401", "F811", "E402", "F841"]
+
+[tool.mypy]
+python_version = "3.10"
+# Pragmatic baseline: type-check what is annotated without forcing full coverage on a
+# large, partially-dynamic codebase. Tighten (e.g. disallow_untyped_defs) incrementally.
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+exclude = ["docs/", "examples/", "benchmark/", "unit_tests/"]
