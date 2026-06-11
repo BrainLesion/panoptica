@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 import numpy as np
+from scipy.ndimage import find_objects
 
 from panoptica._functionals import _get_orig_onehotcc_structure, _get_paired_crop
 from panoptica.metrics import Metric
@@ -31,6 +32,37 @@ def _extended_voxelspacing(voxelspacing: tuple[float, ...], ndim: int):
             f"spatial dimensions of the data."
         )
     return voxelspacing
+
+
+def _union_instance_slice(
+    ref_slices: list,
+    pred_slices: list,
+    label: int,
+    shape: tuple[int, ...],
+    px_pad: int = 2,
+) -> tuple[slice, ...] | None:
+    """Padded union of a label's reference and prediction bounding boxes.
+
+    ``ref_slices`` / ``pred_slices`` are ``scipy.ndimage.find_objects`` outputs (indexed
+    by ``label - 1``, ``None`` where the label is absent). Returns a per-axis slice tuple
+    that bounds the instance in both arrays plus ``px_pad`` voxels (so the downstream
+    ``_get_paired_crop`` reproduces exactly the crop it would compute on the full array),
+    or ``None`` when the label is absent from both.
+    """
+    boxes = []
+    for slices in (ref_slices, pred_slices):
+        box = slices[label - 1] if 0 < label <= len(slices) else None
+        if box is not None:
+            boxes.append(box)
+    if not boxes:
+        return None
+    return tuple(
+        slice(
+            max(min(b[ax].start for b in boxes) - px_pad, 0),
+            min(max(b[ax].stop for b in boxes) + px_pad, shape[ax]),
+        )
+        for ax in range(len(shape))
+    )
 
 
 @dataclass(frozen=True)
@@ -85,6 +117,11 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
+    # Precompute every label's bounding box once (a single pass over each array) so each
+    # instance is evaluated within its own crop instead of rescanning the full array.
+    ref_slices = find_objects(reference_arr)
+    pred_slices = find_objects(prediction_arr)
+
     per_instance_results: list[_InstanceEvaluation] = [
         _evaluate_instance(
             reference_arr,
@@ -94,14 +131,12 @@ def evaluate_matched_instance(
             voxelspacing,
             processing_pair_orig_shape,
             n_ref_labels,
+            instance_slice=_union_instance_slice(
+                ref_slices, pred_slices, ref_idx, reference_arr.shape
+            ),
         )
         for ref_idx in ref_matched_labels
     ]
-    # instance_pairs = [(reference_arr, prediction_arr, ref_idx, eval_metrics) for ref_idx in ref_matched_labels]
-    # with Pool() as pool:
-    #    metric_dicts: list[_InstanceEvaluation] = pool.starmap(
-    #        _evaluate_instance, instance_pairs
-    #    )
 
     # TODO if instance matcher already gives matching metric, adapt here!
     tp = 0
@@ -170,6 +205,7 @@ def _evaluate_instance(
     voxelspacing: tuple[float, ...] | None = None,
     processing_pair_orig_shape: tuple[int, ...] | None = None,
     n_ref_labels: int | None = None,
+    instance_slice: tuple[slice, ...] | None = None,
 ) -> _InstanceEvaluation:
     """
     Evaluate a single instance.
@@ -185,8 +221,14 @@ def _evaluate_instance(
         If the reference label is absent from ``reference_arr`` (``voxel_count_ref == 0``), the result has empty metrics and zero count/volume.
         If the reference is present but the prediction has no voxels for this label, the result has empty metrics but still carries the reference's true voxel count and volume, so the caller can record the ref as unmatched with its actual size.
     """
-    ref_arr = reference_arr == ref_idx
-    pred_arr = prediction_arr == ref_idx
+    # Restrict the per-instance mask extraction to the instance's bounding box when one
+    # was precomputed; the one-hot spatial path below still reshapes the full arrays.
+    if instance_slice is not None:
+        ref_arr = reference_arr[instance_slice] == ref_idx
+        pred_arr = prediction_arr[instance_slice] == ref_idx
+    else:
+        ref_arr = reference_arr == ref_idx
+        pred_arr = prediction_arr == ref_idx
 
     # Detect if we have flattened one-hot arrays that need reshaping for spatial metrics
     is_flattened_onehot = (
