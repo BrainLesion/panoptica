@@ -52,4 +52,4 @@ class NonDaemonicPool(multiprocessing.pool.Pool):
     This class creates a pool of worker processes using `NoDaemonProcess` for situations where nested child processes are needed.
     """
 
-    Process = NoDaemonProcess
+    Process = NoDaemonProcess  # type: ignore[assignment]

@@ -77,6 +77,7 @@ class PanopticaResult:
         self.metadata: dict[str, Any] = kwargs
 
         if isinstance(label_group, LabelPartGroup):
+            assert n_ref_labels is not None and processing_pair_orig_shape is not None
             # Store the one-hot encoded arrays for both reference and prediction
             one_hot_ref_array = _get_orig_onehotcc_structure(
                 reference_arr, n_ref_labels, processing_pair_orig_shape
@@ -86,7 +87,7 @@ class PanopticaResult:
             )
 
             # Store the multi-channel data for later use in global metrics
-            self._multi_channel_data = {
+            self._multi_channel_data: dict[str, Any] = {
                 "ref_channels": one_hot_ref_array,
                 "pred_channels": one_hot_pred_array,
                 "n_channels": one_hot_ref_array.shape[0],
@@ -629,7 +630,7 @@ class PanopticaResult:
 
             # Return mean of channel metrics
             if channel_metrics:
-                return np.mean(channel_metrics)
+                return float(np.mean(channel_metrics))  # type: ignore[arg-type]
             else:
                 # Handle case where no valid metrics could be computed
                 is_edgecase, result = self._edge_case_handler.handle_zero_tp(
@@ -714,15 +715,17 @@ class PanopticaResult:
         """
         metric_errors: dict[str, Exception] = {}
 
-        for k, v in self._evaluation_metrics.items():
+        for k in self._evaluation_metrics:
             try:
-                v = getattr(self, k)
+                # Access each metric to trigger its lazy computation; we only care
+                # about which ones raise, not their values.
+                getattr(self, k)
             except Exception as e:
                 metric_errors[k] = e
 
         if print_errors:
-            for k, v in metric_errors.items():
-                logger.warning(f"Metric {k}: {v}")
+            for k, err in metric_errors.items():
+                logger.warning(f"Metric {k}: {err}")
 
     def _calc(self, k, v):
         """
@@ -819,13 +822,13 @@ class PanopticaResult:
                     val_list[i] if i < len(val_list) else None
                 )
 
-        for key, val_list in (
+        for key, val_list in (  # type: ignore[assignment]
             ("voxel_count", self.instance_voxel_count_matched_ref_list),
             ("volume", self.instance_volume_matched_ref_list),
         ):
             for i in range(n_matched):
                 rows[i][key] = val_list[i] if i < len(val_list) else None
-        for key, val_list in (
+        for key, val_list in (  # type: ignore[assignment]
             ("voxel_count", self.instance_voxel_count_unmatched_ref_list),
             ("volume", self.instance_volume_unmatched_ref_list),
         ):

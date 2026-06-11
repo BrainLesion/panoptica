@@ -46,11 +46,11 @@ class _ProcessingPair(ABC):
         self.set_dtype(dtype)
         self._dtype = dtype
         self._n_dim: int = reference_arr.ndim
-        self._ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))  # type: ignore
+        self._ref_labels: tuple[int, ...] = tuple(_unique_without_zeros(reference_arr))
         self._pred_labels: tuple[int, ...] = tuple(
             _unique_without_zeros(prediction_arr)
-        )  # type: ignore
-        self._crop: tuple[slice, ...] = None
+        )
+        self._crop: tuple[slice, ...] | None = None
         self._is_cropped: bool = False
         self._uncropped_shape: tuple[int, ...] = reference_arr.shape
 
@@ -168,7 +168,7 @@ class _ProcessingPair(ABC):
         return type(self)(
             prediction_arr=self._prediction_arr.copy(),
             reference_arr=self._reference_arr.copy(),
-        )  # type: ignore
+        )
 
 
 class _ProcessingPairInstanced(_ProcessingPair):
@@ -228,7 +228,7 @@ class _ProcessingPairInstanced(_ProcessingPair):
             reference_arr=self.reference_arr.copy(),
             n_pred_instances=self.n_pred_instances,
             n_ref_instances=self.n_ref_instances,
-        )  # type: ignore
+        )
 
 
 def _check_array_integrity(
@@ -305,7 +305,7 @@ class UnmatchedInstancePair(_ProcessingPairInstanced):
             reference_arr,
             n_pred_instances,
             n_ref_instances,
-        )  # type: ignore
+        )
 
 
 class MatchedInstancePair(_ProcessingPairInstanced):
@@ -352,7 +352,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             reference_arr,
             n_pred_instances,
             n_ref_instances,
-        )  # type: ignore
+        )
         if matched_instances is None:
             matched_instances = [i for i in self.pred_labels if i in self.ref_labels]
         self.matched_instances = matched_instances

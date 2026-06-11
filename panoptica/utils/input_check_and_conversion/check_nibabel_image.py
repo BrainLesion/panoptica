@@ -25,7 +25,7 @@ class NibabelImageChecker(_InputDataTypeChecker):
         except Exception as e:
             print(f"Error reading images: {e}")
             return None
-        return image
+        return image  # type: ignore[return-value]
 
     def sanity_check_images(
         self,
@@ -71,7 +71,7 @@ class NibabelImageChecker(_InputDataTypeChecker):
         return True, ""
 
     def convert_to_numpy_array(self, image: nib.Nifti1Image) -> np.ndarray:
-        return np.asanyarray(image.dataobj, dtype=image.dataobj.dtype).copy()
+        return np.asanyarray(image.dataobj, dtype=image.dataobj.dtype).copy()  # type: ignore[attr-defined]
 
     def extract_metadata_from_image(self, image: nib.Nifti1Image) -> dict:
         """

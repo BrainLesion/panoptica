@@ -4,7 +4,7 @@ from pathlib import Path
 from panoptica.utils.filepath import config_by_name, config_dir_by_name
 from abc import abstractmethod
 
-supported_helper_classes = []
+supported_helper_classes: list[type] = []
 
 
 def _register_helper_classes(yaml: YAML):

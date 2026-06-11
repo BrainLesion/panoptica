@@ -82,7 +82,7 @@ def _get_paired_crop(
     prediction_arr: np.ndarray,
     reference_arr: np.ndarray,
     px_pad: int = 2,
-) -> np.ndarray:
+) -> tuple[slice, ...]:
     """
     Calculates a bounding box based on paired prediction and reference arrays.
 
@@ -284,7 +284,7 @@ def calculate_all_label_pairs(
         list: All (reference_label, prediction_label) pairs
     """
     pred_labels = [int(label) for label in np.unique(prediction_arr) if label > 0]
-    ref_labels = [int(label) for label in ref_labels if label > 0]
+    ref_labels = tuple(int(label) for label in ref_labels if label > 0)
 
     return [
         (ref_label, pred_label)
@@ -318,7 +318,7 @@ def _is_part_encompassed(part_component: np.ndarray, thing_mask: np.ndarray) -> 
     boundary = dilated_part & ~part_component
 
     # If all boundary pixels are thing pixels, the part is surrounded
-    return np.all((boundary & thing_mask) == boundary)
+    return bool(np.all((boundary & thing_mask) == boundary))
 
 
 def _get_encompassed_parts(part_slice: np.ndarray, thing_mask: np.ndarray) -> list[int]:
@@ -573,7 +573,7 @@ def _calc_matching_metric_of_overlapping_partlabels(
     overlapping_labels = _calc_overlapping_labels(
         prediction_arr=prediction_arr[0],
         reference_arr=reference_arr[0],
-        ref_labels=[max(prediction_arr[0].max(), reference_arr[0].max())],
+        ref_labels=(int(max(prediction_arr[0].max(), reference_arr[0].max())),),
     )
 
     # Calculate thing scores

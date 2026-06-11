@@ -95,7 +95,7 @@ class _Metric:
             reference_arr = reference_arr == ref_instance_idx
             if isinstance(pred_instance_idx, int):
                 pred_instance_idx = [pred_instance_idx]
-            prediction_arr = np.isin(prediction_arr, pred_instance_idx)  # type: ignore
+            prediction_arr = np.isin(prediction_arr, pred_instance_idx)
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
@@ -433,7 +433,9 @@ class Evaluation_List_Metric:
             self.MAX: None | float = edge_case_result
         else:
             self.AVG = (
-                None if self.ALL is None or len(self.ALL) == 0 else np.average(self.ALL)
+                None
+                if self.ALL is None or len(self.ALL) == 0
+                else float(np.average(self.ALL))
             )
             self.SUM = (
                 None if self.ALL is None or len(self.ALL) == 0 else np.sum(self.ALL)

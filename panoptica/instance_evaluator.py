@@ -198,6 +198,7 @@ def _evaluate_instance(
     # Set default voxelspacing based on original or current array dimensions
     if voxelspacing is None:
         if is_flattened_onehot:
+            assert processing_pair_orig_shape is not None
             voxelspacing = (1.0,) * len(processing_pair_orig_shape)
         else:
             voxelspacing = (1.0,) * reference_arr.ndim
@@ -231,6 +232,7 @@ def _evaluate_instance(
         metric.requires_spatial and is_flattened_onehot for metric in eval_metrics
     )
     if needs_spatial:
+        assert n_ref_labels is not None and processing_pair_orig_shape is not None
         ref_spatial = _get_orig_onehotcc_structure(
             reference_arr, n_ref_labels, processing_pair_orig_shape
         )
@@ -258,6 +260,7 @@ def _evaluate_instance(
 
     for metric in eval_metrics:
         if metric.name in SURFACE_DISTANCE_METRIC_NAMES:
+            assert surface_pair is not None
             metric_value = _reduce_surface_metric(
                 metric.name,
                 surface_pair[0],

@@ -21,6 +21,16 @@ from panoptica.utils.processing_pair import (
 from panoptica._functionals import _get_voronoi_regions
 import numpy as np
 
+# A processing pair is progressively transformed across the pipeline phases; the
+# isinstance guards in each phase narrow it back to the concrete type they handle.
+_ProcessingState = (
+    SemanticPair
+    | UnmatchedInstancePair
+    | MatchedInstancePair
+    | EvaluateInstancePair
+    | PanopticaResult
+)
+
 if TYPE_CHECKING:
     pass
 
@@ -90,7 +100,7 @@ def _panoptic_evaluate(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair = input_pair.copy()
+    processing_pair: _ProcessingState = input_pair.copy()
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -248,7 +258,7 @@ def _panoptic_evaluate_region_wise(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair = input_pair.copy()
+    processing_pair: _ProcessingState = input_pair.copy()
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -292,7 +302,7 @@ def _panoptic_evaluate_region_wise(
             )
 
             # multiply region mask with both prediction and reference arr
-            processing_pair_r = UnmatchedInstancePair(
+            processing_pair_r: _ProcessingState = UnmatchedInstancePair(
                 processing_pair.prediction_arr * region_mask,
                 processing_pair.reference_arr * region_mask,
             )
@@ -390,11 +400,11 @@ def _panoptic_evaluate_region_wise(
                 reference_arr=input_pair.reference_arr,
                 prediction_arr=input_pair.prediction_arr,
                 processing_pair_orig_shape=instance_metadata["original_shape"],
-                n_pred_instances=np.nan,
-                n_ref_instances=np.nan,  # We set n_ref_instances to the number of regions, as each region corresponds to one reference instance
+                n_pred_instances=np.nan,  # type: ignore[arg-type]
+                n_ref_instances=np.nan,  # type: ignore[arg-type]  # We set n_ref_instances to the number of regions, as each region corresponds to one reference instance
                 n_ref_labels=instance_metadata["n_ref_labels"],
                 label_group=label_group,
-                tp=np.nan,
+                tp=np.nan,  # type: ignore[arg-type]
                 list_metrics={},
                 global_metrics=global_metrics,
                 edge_case_handler=edge_case_handler,
@@ -404,11 +414,10 @@ def _panoptic_evaluate_region_wise(
     else:
         # In case edge case handling already produced a result, we skip the region-wise processing and return the edge case result directly
         combined_result = processing_pair
-        combined_result.tp = (
-            np.nan
-        )  # Set tp to nan to indicate that no true positive calculation was done
-        combined_result.n_pred_instances = np.nan
-        combined_result.n_ref_instances = np.nan
+        # region-wise has no global TP/instance counts
+        combined_result.tp = np.nan  # type: ignore[assignment]
+        combined_result.n_pred_instances = np.nan  # type: ignore[assignment]
+        combined_result.n_ref_instances = np.nan  # type: ignore[assignment]
         num_features = 0
 
     # combined global metrics post-hoc
@@ -434,9 +443,9 @@ def _panoptic_evaluate_region_wise(
 
 
 def _phase_instance_approximation(
-    processing_pair: SemanticPair,
+    processing_pair: _ProcessingState,
     intermediate_steps_data: IntermediateStepsData | None,
-    instance_approximator: InstanceApproximator,
+    instance_approximator: InstanceApproximator | None,
     instance_metadata: dict,
     label_group=None,
     log_times=False,
@@ -471,13 +480,13 @@ def _phase_instance_approximation(
 
 
 def _phase_instance_matching(
-    processing_pair: UnmatchedInstancePair,
+    processing_pair: _ProcessingState,
     intermediate_steps_data: IntermediateStepsData,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
     edge_case_handler: EdgeCaseHandler,
-    instance_matcher: InstanceMatchingAlgorithm,
+    instance_matcher: InstanceMatchingAlgorithm | None,
     matching_threshold: float | None = None,
     label_group=None,
     log_times=False,
@@ -525,7 +534,7 @@ def _phase_instance_matching(
 
 
 def _phase_instance_evaluation(
-    processing_pair: UnmatchedInstancePair | MatchedInstancePair,
+    processing_pair: _ProcessingState,
     intermediate_steps_data: IntermediateStepsData,
     instance_metrics: list[Metric],
     instance_metadata: dict,

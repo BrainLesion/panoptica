@@ -7,7 +7,7 @@ try:
     from skimage.morphology import skeletonize_3d
 except ImportError:
     # In newer skimage versions (0.23+), skeletonize handles both 2D and 3D
-    skeletonize_3d = None
+    skeletonize_3d = None  # type: ignore[assignment]
 
 
 def _get_skeleton(array: np.ndarray) -> np.ndarray:

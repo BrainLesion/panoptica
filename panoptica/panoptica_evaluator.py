@@ -280,7 +280,7 @@ class Panoptica_Evaluator(SupportsConfig):
             processing_pair_grouped = processing_pair.__class__(
                 prediction_arr=prediction_arr_grouped,
                 reference_arr=reference_arr_grouped,
-            )  # type: ignore
+            )
             instance_metadata = processing_pair_grouped.get_metadata()
             if label_group.single_instance and not isinstance(
                 processing_pair, MatchedInstancePair
@@ -304,7 +304,7 @@ class Panoptica_Evaluator(SupportsConfig):
             threshold_results: dict[float, PanopticaResult] = {}
             for threshold in thresholds:
                 threshold = float(threshold)
-                decision_threshold = threshold
+                decision_threshold: float | None = threshold
                 if label_group.single_instance:
                     decision_threshold = 0.0
                 elif decision_threshold_mode == "fixed":
@@ -497,7 +497,7 @@ class Panoptica_Evaluator(SupportsConfig):
         single_instance_mode = label_group.single_instance
         processing_pair_grouped = processing_pair.__class__(
             prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped
-        )  # type: ignore
+        )
         if single_instance_mode and not isinstance(
             processing_pair, MatchedInstancePair
         ):

@@ -52,6 +52,7 @@ def _get_smallest_fitting_uint(max_value: int) -> type:
     >>> _get_smallest_fitting_uint(255)
     <class 'numpy.uint8'>
     """
+    dtype: type
     if max_value < 256:
         dtype = np.uint8
     elif max_value < 65536:
@@ -82,22 +83,21 @@ def _get_bbox_nd(
         raise ValueError("bbox_nd: img is empty, cannot calculate a bbox")
     N = img.ndim
     shp = img.shape
-    if isinstance(px_dist, int):
-        px_dist = np.ones(N, dtype=np.uint8) * px_dist
-    if len(px_dist) != N:
+    pad: list[int] = [px_dist] * N if isinstance(px_dist, int) else list(px_dist)
+    if len(pad) != N:
         raise ValueError(
             f"dimension mismatch, got img shape {shp} and px_dist {px_dist}"
         )
 
-    out = []
+    bounds: list[int] = []
     for ax in itertools.combinations(reversed(range(N)), N - 1):
         nonzero = np.any(a=img, axis=ax)
-        out.extend(np.where(nonzero)[0][[0, -1]])
-    out = tuple(
+        idx = np.where(nonzero)[0]
+        bounds.extend((int(idx[0]), int(idx[-1])))
+    return tuple(
         slice(
-            max(out[i] - px_dist[i // 2], 0),
-            min(out[i + 1] + px_dist[i // 2], shp[i // 2]) + 1,
+            max(bounds[i] - pad[i // 2], 0),
+            min(bounds[i + 1] + pad[i // 2], shp[i // 2]) + 1,
         )
-        for i in range(0, len(out), 2)
+        for i in range(0, len(bounds), 2)
     )
-    return out

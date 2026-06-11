@@ -73,7 +73,7 @@ class TSVBackend(FileBackend):
                 summary_dict = result.to_dict(True)
                 # Row keys live under "reference_instances"; pop so they don't
                 # bleed into the summary loop below.
-                group_instance_rows[groupname] = summary_dict.pop(
+                group_instance_rows[groupname] = summary_dict.pop(  # type: ignore[assignment]
                     "reference_instances", []
                 )
                 if result.computation_time is not None:
@@ -155,9 +155,8 @@ class TSVBackend(FileBackend):
                 "First column is not subject_names, something wrong with the file?"
             )
 
-        keys_in_order: list[tuple[str, str]] = [
-            tuple(c.split("-", maxsplit=1))
-            for c in header[1:]  # type: ignore[misc]
+        keys_in_order: list[tuple[str, ...]] = [
+            tuple(c.split("-", maxsplit=1)) for c in header[1:]
         ]
         keys_in_order = [
             k if len(k) == 2 else ("ungrouped", k[0]) for k in keys_in_order

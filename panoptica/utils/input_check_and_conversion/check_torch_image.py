@@ -15,7 +15,7 @@ _spec = find_spec("torch")
 if _spec is not None:
     import torch
 else:
-    torch = None
+    torch = None  # type: ignore[assignment]
 
 if TYPE_CHECKING:
     import torch

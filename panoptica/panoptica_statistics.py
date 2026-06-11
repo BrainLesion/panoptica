@@ -411,7 +411,7 @@ class Panoptica_Statistic:
 
     def get_subject_wise_paired_values_to(
         self, other: "Panoptica_Statistic", group: str, metric: str
-    ) -> tuple[list[str], list[float], list[float]]:
+    ) -> tuple[list[str], list[float | None], list[float | None]]:
         """Calculates the subject-wise paired values in metric for given group to another Panoptica_Statistic object
 
         Args:
@@ -464,7 +464,7 @@ class Panoptica_Statistic:
         subj_names, self_v, other_v = self.get_subject_wise_paired_values_to(
             other, group, metric
         )
-        diff_dict = {}
+        diff_dict: dict[str, float | None] = {}
         for subj, val_self, val_other in zip(subj_names, self_v, other_v):
             if val_self is not None and val_other is not None:
                 diff_dict[subj] = val_self - val_other
@@ -720,7 +720,7 @@ def make_curve_over_setups(
 
     # If X (setupnames) are digits only, plot as digits
     if convert_x_to_digit:
-        X = [float(s) for s in setupnames]
+        X: list = [float(s) for s in setupnames]
     else:
         X = setupnames
 

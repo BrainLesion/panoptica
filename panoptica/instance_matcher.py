@@ -142,6 +142,10 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         ref_labels = unmatched_instance_pair.ref_labels
 
         if context is not None and context.is_part_group:
+            assert (
+                context.processing_pair_orig_shape is not None
+                and context.n_ref_labels is not None
+            )
             return _calc_matching_metric_of_overlapping_partlabels(
                 pred_arr,
                 ref_arr,
@@ -154,6 +158,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
                 pred_arr, ref_arr, ref_labels, matching_metric=matching_metric
             )
 
+    @classmethod
     def _yaml_repr(cls, node) -> dict:
         raise NotImplementedError(
             f"Tried to get yaml representation of abstract class {cls.__name__}"
@@ -218,7 +223,7 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
         }
 
     @abstractmethod
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         context: MatchingContext | None = None,
@@ -291,7 +296,7 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
         super().__init__(matching_metric, matching_threshold)
         self._allow_many_to_one = allow_many_to_one
 
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         context: MatchingContext | None = None,
@@ -352,7 +357,7 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
     This implementation maximizes the global matching score between predictions and references.
     """
 
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         context: MatchingContext | None = None,
@@ -457,7 +462,7 @@ class MaximizeMergeMatching(ThresholdBasedMatching):
         matching_threshold (float): The threshold for matching instances.
     """
 
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
         context: MatchingContext | None = None,

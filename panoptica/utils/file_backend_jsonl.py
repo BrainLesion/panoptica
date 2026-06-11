@@ -109,7 +109,9 @@ class JSONLBackend(FileBackend):
             group_obj: dict = {}
             if output_individual_instance_metrics:
                 summary_dict = result.to_dict(True)
-                instance_dicts = summary_dict.pop("reference_instances", [])
+                instance_dicts: list = summary_dict.pop(  # type: ignore[assignment]
+                    "reference_instances", []
+                )
             else:
                 summary_dict = result.to_dict(False)
                 instance_dicts = []

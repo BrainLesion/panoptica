@@ -128,9 +128,11 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.10"
-# Pragmatic baseline: type-check what is annotated without forcing full coverage on a
-# large, partially-dynamic codebase. Tighten (e.g. disallow_untyped_defs) incrementally.
+# The package is clean under this configuration. It is pragmatic rather than strict:
+# missing third-party stubs are ignored, and full annotation coverage is not enforced
+# (tighten with e.g. disallow_untyped_defs incrementally). warn_unused_ignores is left
+# off on purpose so optional deps (torch/nibabel/SimpleITK) not installed in a given
+# environment don't turn their guarded `# type: ignore`s into spurious failures.
 ignore_missing_imports = true
-warn_unused_ignores = true
 warn_redundant_casts = true
 exclude = ["docs/", "examples/", "benchmark/", "unit_tests/"]

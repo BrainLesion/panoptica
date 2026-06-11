@@ -103,23 +103,19 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
             )
 
         self._default_result = default_result
-        self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = (
-            empty_prediction_result
-            if empty_prediction_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = (
-            empty_reference_result
-            if empty_reference_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = (
-            no_instances_result if no_instances_result is not None else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NORMAL] = (
-            normal if normal is not None else default_result
-        )
+
+        # The validation above guarantees a non-None value for every key.
+        def _resolve(specific: EdgeCaseResult | None) -> EdgeCaseResult:
+            value = specific if specific is not None else default_result
+            assert value is not None
+            return value
+
+        self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {
+            EdgeCaseZeroTP.EMPTY_PRED: _resolve(empty_prediction_result),
+            EdgeCaseZeroTP.EMPTY_REF: _resolve(empty_reference_result),
+            EdgeCaseZeroTP.NO_INSTANCES: _resolve(no_instances_result),
+            EdgeCaseZeroTP.NORMAL: _resolve(normal),
+        }
 
     def __call__(
         self, tp: int, n_pred_instances: int, n_ref_instances: int
@@ -259,7 +255,7 @@ class EdgeCaseHandler(SupportsConfig):
     def get_metric_zero_tp_handle(self, metric: Metric):
         return self.__listmetric_zeroTP_handling[metric]
 
-    def handle_empty_list_std(self) -> EdgeCaseResult | None:
+    def handle_empty_list_std(self) -> EdgeCaseResult:
         return self.__empty_list_std
 
     def __str__(self) -> str:
