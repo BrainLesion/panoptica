@@ -1,4 +1,5 @@
 from typing import Any
+from panoptica.utils.logger import logger
 import numpy as np
 from pathlib import Path
 from warnings import warn
@@ -36,9 +37,9 @@ class INPUTDTYPE(_Enum_Compare):
 def print_available_package_to_input_handlers():
     for d in INPUTDTYPE:
         if d.value.are_requirements_fulfilled():
-            print(f"{d.name} is available for input handling.")
+            logger.info(f"{d.name} is available for input handling.")
         else:
-            print(
+            logger.info(
                 f"{d.name} is not available for input handling. Missing packages: {d.value.missing_packages}"
             )
 
@@ -97,7 +98,7 @@ def sanity_check_and_convert_to_array(
             elif not is_path:
                 try:
                     r, msg, (pred, ref) = checker(prediction, reference)
-                except TypeError as e:
+                except TypeError:
                     continue
                 if not r:
                     raise ValueError(
