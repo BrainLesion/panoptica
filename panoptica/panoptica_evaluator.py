@@ -1,3 +1,5 @@
+"""Top-level Panoptica_Evaluator orchestrating the approximation -> matching -> evaluation pipeline."""
+
 from panoptica.utils import format_autc_key
 from panoptica.utils import format_threshold_key
 from panoptica.panoptica_pipeline import _phase_instance_approximation
@@ -47,13 +49,8 @@ class Panoptica_Evaluator(SupportsConfig):
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
         segmentation_class_groups: SegmentationClassGroups | None = None,
-        instance_metrics: list[Metric] = [
-            Metric.DSC,
-            Metric.IOU,
-            Metric.ASSD,
-            Metric.RVD,
-        ],
-        global_metrics: list[Metric] = [Metric.DSC],
+        instance_metrics: list[Metric] | None = None,
+        global_metrics: list[Metric] | None = None,
         decision_metric: Metric | None = None,
         decision_threshold: float | None = None,
         per_region_evaluation: bool = False,
@@ -85,6 +82,10 @@ class Panoptica_Evaluator(SupportsConfig):
         #
         self.__instance_approximator = instance_approximator
         self.__instance_matcher = instance_matcher
+        if instance_metrics is None:
+            instance_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD, Metric.RVD]
+        if global_metrics is None:
+            global_metrics = [Metric.DSC]
         self.__eval_metrics = instance_metrics
         self.__global_metrics = global_metrics
         self.__decision_metric = decision_metric
@@ -276,7 +277,10 @@ class Panoptica_Evaluator(SupportsConfig):
             prediction_arr_grouped = label_group(processing_pair.prediction_arr)
             reference_arr_grouped = label_group(processing_pair.reference_arr)
 
-            processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
+            processing_pair_grouped = processing_pair.__class__(
+                prediction_arr=prediction_arr_grouped,
+                reference_arr=reference_arr_grouped,
+            )
             instance_metadata = processing_pair_grouped.get_metadata()
             if label_group.single_instance and not isinstance(
                 processing_pair, MatchedInstancePair
@@ -300,7 +304,7 @@ class Panoptica_Evaluator(SupportsConfig):
             threshold_results: dict[float, PanopticaResult] = {}
             for threshold in thresholds:
                 threshold = float(threshold)
-                decision_threshold = threshold
+                decision_threshold: float | None = threshold
                 if label_group.single_instance:
                     decision_threshold = 0.0
                 elif decision_threshold_mode == "fixed":
@@ -351,7 +355,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "sitk.Image",
         ],
         voxelspacing: tuple[float, ...] | None = None,
-    ) -> tuple[Union[MatchedInstancePair, UnmatchedInstancePair, SemanticPair], dict]:
+    ) -> tuple[MatchedInstancePair | UnmatchedInstancePair | SemanticPair, dict]:
         """Handles data ingestion, sanity checking, and initial validation."""
 
         # Sanity check input and convert to numpy arrays
@@ -491,7 +495,9 @@ class Panoptica_Evaluator(SupportsConfig):
         reference_arr_grouped = label_group(processing_pair.reference_arr)
 
         single_instance_mode = label_group.single_instance
-        processing_pair_grouped = processing_pair.__class__(prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped)  # type: ignore
+        processing_pair_grouped = processing_pair.__class__(
+            prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped
+        )
         if single_instance_mode and not isinstance(
             processing_pair, MatchedInstancePair
         ):

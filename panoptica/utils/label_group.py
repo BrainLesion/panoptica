@@ -283,7 +283,7 @@ class _LabelGroupAny(LabelGroup):
         return array
 
     def __str__(self) -> str:
-        return f"LabelGroupAny"
+        return "LabelGroupAny"
 
     def __repr__(self) -> str:
         return str(self)

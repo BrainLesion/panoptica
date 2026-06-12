@@ -83,8 +83,8 @@ class _InputDataTypeChecker(ABC):
         """Tries to load the images of that data type and then checks if they are compatible.
 
         Args:
-            prediction (_type_): Prediction image or path to prediction image.
-            reference (_type_): Reference image or path to reference image.
+            prediction: Prediction image or path to prediction image.
+            reference: Reference image or path to reference image.
 
         Returns:
             tuple[bool, str, tuple[object, object]]: A tuple containing a boolean indicating success, an (error) message string, and a tuple of the loaded images.

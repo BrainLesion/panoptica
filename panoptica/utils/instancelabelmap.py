@@ -2,7 +2,7 @@ import numpy as np
 
 
 # Many-to-One Mapping
-class InstanceLabelMap(object):
+class InstanceLabelMap:
     """Creates a mapping between prediction labels and reference labels in a many-to-one relationship.
 
     This class allows mapping multiple prediction labels to a single reference label.

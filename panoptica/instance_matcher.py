@@ -1,6 +1,7 @@
+"""Algorithms for matching predicted instances to reference instances."""
+
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Tuple, List
 
 import numpy as np
 
@@ -23,9 +24,9 @@ from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 class MatchingContext:
     """Encapsulates context information needed for matching operations."""
 
-    label_group: Optional[LabelGroup] = None
-    n_ref_labels: Optional[int] = None
-    processing_pair_orig_shape: Optional[Tuple] = None
+    label_group: LabelGroup | None = None
+    n_ref_labels: int | None = None
+    processing_pair_orig_shape: tuple | None = None
 
     @property
     def is_part_group(self) -> bool:
@@ -59,7 +60,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def _match_instances(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         **kwargs,
     ) -> InstanceLabelMap:
         """
@@ -120,9 +121,9 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
     def _calculate_matching_metric_pairs(
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext],
+        context: MatchingContext | None,
         matching_metric: Metric,
-    ) -> List[Tuple[float, Tuple[int, int]]]:
+    ) -> list[tuple[float, tuple[int, int]]]:
         """
         Calculate matching metric pairs based on context.
 
@@ -141,6 +142,10 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
         ref_labels = unmatched_instance_pair.ref_labels
 
         if context is not None and context.is_part_group:
+            assert (
+                context.processing_pair_orig_shape is not None
+                and context.n_ref_labels is not None
+            )
             return _calc_matching_metric_of_overlapping_partlabels(
                 pred_arr,
                 ref_arr,
@@ -153,6 +158,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
                 pred_arr, ref_arr, ref_labels, matching_metric=matching_metric
             )
 
+    @classmethod
     def _yaml_repr(cls, node) -> dict:
         raise NotImplementedError(
             f"Tried to get yaml representation of abstract class {cls.__name__}"
@@ -217,10 +223,10 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
         }
 
     @abstractmethod
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,
@@ -246,7 +252,7 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
         n_ref_labels=None,
         processing_pair_orig_shape=None,
         *,
-        matching_threshold: Optional[float] = None,
+        matching_threshold: float | None = None,
         **kwargs,
     ) -> MatchedInstancePair:
         return super().match_instances(
@@ -290,10 +296,10 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
         super().__init__(matching_metric, matching_threshold)
         self._allow_many_to_one = allow_many_to_one
 
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,
@@ -351,10 +357,10 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
     This implementation maximizes the global matching score between predictions and references.
     """
 
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,
@@ -394,9 +400,9 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
 
     def _create_cost_matrix(
         self,
-        ref_labels: List[int],
-        pred_labels: List[int],
-        mm_pairs: List[Tuple[float, Tuple[int, int]]],
+        ref_labels: list[int],
+        pred_labels: list[int],
+        mm_pairs: list[tuple[float, tuple[int, int]]],
         matching_threshold: float,
     ) -> np.ndarray:
         """Create cost matrix for bipartite matching."""
@@ -423,7 +429,7 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
         return cost_matrix
 
     def _solve_bipartite_matching(
-        self, cost_matrix: np.ndarray, ref_labels: List[int], pred_labels: List[int]
+        self, cost_matrix: np.ndarray, ref_labels: list[int], pred_labels: list[int]
     ) -> InstanceLabelMap:
         """Solve the bipartite matching problem and return labelmap."""
         from scipy.optimize import linear_sum_assignment
@@ -456,10 +462,10 @@ class MaximizeMergeMatching(ThresholdBasedMatching):
         matching_threshold (float): The threshold for matching instances.
     """
 
-    def _match_instances(
+    def _match_instances(  # type: ignore[override]
         self,
         unmatched_instance_pair: UnmatchedInstancePair,
-        context: Optional[MatchingContext] = None,
+        context: MatchingContext | None = None,
         *,
         matching_threshold: float,
         **kwargs,
