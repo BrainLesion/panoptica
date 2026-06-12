@@ -1,0 +1,13 @@
+# Install once with:  pre-commit install
+# Run over everything: pre-commit run --all-files
+#
+# ruff (lint + format) is the enforced gate here. mypy is a blocking CI check rather
+# than a pre-commit hook: it needs the project's dependencies installed to type-check
+# correctly, which a lightweight pre-commit environment doesn't provide.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
