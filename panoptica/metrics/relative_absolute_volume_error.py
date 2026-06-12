@@ -1,3 +1,5 @@
+"""Relative Absolute Volume Error (RVAE)."""
+
 import numpy as np
 
 

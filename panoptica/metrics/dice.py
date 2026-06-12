@@ -1,3 +1,5 @@
+"""Dice (volumetric Dice) coefficient."""
+
 import numpy as np
 
 

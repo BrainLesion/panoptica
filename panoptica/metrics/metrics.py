@@ -1,22 +1,33 @@
+"""Metric registry: the Metric enum and its supporting value and edge-case types."""
+
+from collections.abc import Callable
 from dataclasses import dataclass
-from enum import EnumMeta
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from panoptica.metrics import (
+# Import directly from the metric submodules (not the panoptica.metrics package) to
+# avoid a circular import: panoptica.metrics.__init__ imports this module, so importing
+# back from the package here is ordering-sensitive and breaks under import sorting.
+from panoptica.metrics.assd import (
     _compute_instance_average_symmetric_surface_distance,
-    _compute_centerline_dice,
-    _compute_instance_volumetric_dice,
-    _compute_instance_iou,
-    _compute_instance_relative_volume_difference,
-    _compute_instance_relative_volume_error,
-    _compute_instance_center_distance,
+)
+from panoptica.metrics.center_distance import _compute_instance_center_distance
+from panoptica.metrics.cldice import _compute_centerline_dice
+from panoptica.metrics.dice import _compute_instance_volumetric_dice
+from panoptica.metrics.hausdorff_distance import (
     _compute_instance_hausdorff_distance,
     _compute_instance_hausdorff_distance95,
-    # _compute_instance_segmentation_tendency,
+)
+from panoptica.metrics.iou import _compute_instance_iou
+from panoptica.metrics.normalized_surface_dice import (
     _compute_instance_normalized_surface_dice,
-    _compute_normalized_surface_dice,
+)
+from panoptica.metrics.relative_absolute_volume_error import (
+    _compute_instance_relative_volume_error,
+)
+from panoptica.metrics.relative_volume_difference import (
+    _compute_instance_relative_volume_difference,
 )
 from panoptica.utils.constants import _Enum_Compare, auto
 
@@ -78,12 +89,13 @@ class _Metric:
             int | float: The computed metric value.
         """
         if ref_instance_idx is not None and pred_instance_idx is not None:
-            reference_arr = reference_arr.copy() == ref_instance_idx
+            # ``==`` and ``np.isin`` already allocate fresh arrays and never mutate
+            # their inputs, so an explicit ``.copy()`` first would only double the
+            # memory traffic on this hot path (runs per metric and per match pair).
+            reference_arr = reference_arr == ref_instance_idx
             if isinstance(pred_instance_idx, int):
                 pred_instance_idx = [pred_instance_idx]
-            prediction_arr = np.isin(
-                prediction_arr.copy(), pred_instance_idx
-            )  # type: ignore
+            prediction_arr = np.isin(prediction_arr, pred_instance_idx)
         return self._metric_function(reference_arr, prediction_arr, *args, **kwargs)
 
     def __eq__(self, __value: object) -> bool:
@@ -144,22 +156,9 @@ class _Metric:
         )
 
 
-class DirectValueMeta(EnumMeta):
-    "Metaclass that allows for directly getting an enum attribute"
-
-    def __getattribute__(cls, name) -> _Metric:
-        value = super().__getattribute__(name)
-        if isinstance(value, cls):
-            value = value.value
-        return value
-
-
 class Metric(_Enum_Compare):
     """Enum containing important metrics that must be calculated in the evaluator, can be set for thresholding in matching and evaluation
-    Never call the .value member here, use the properties directly
-
-    Returns:
-        _type_: _description_
+    Never call the .value member here, use the properties directly.
     """
 
     DSC = _Metric("DSC", "Dice", False, False, _compute_instance_volumetric_dice)
@@ -243,10 +242,10 @@ class Metric(_Enum_Compare):
             int | float: The metric value
         """
         return self.value(
-            reference_arr=reference_arr,
-            prediction_arr=prediction_arr,
-            ref_instance_idx=ref_instance_idx,
-            pred_instance_idx=pred_instance_idx,
+            reference_arr,
+            prediction_arr,
+            ref_instance_idx,
+            pred_instance_idx,
             *args,
             **kwargs,
         )
@@ -299,11 +298,7 @@ class Metric(_Enum_Compare):
 
 
 class MetricMode(_Enum_Compare):
-    """Different modalities from Metrics
-
-    Args:
-        _Enum_Compare (_type_): _description_
-    """
+    """Different modalities from Metrics"""
 
     ALL = auto()
     AVG = auto()
@@ -314,11 +309,7 @@ class MetricMode(_Enum_Compare):
 
 
 class MetricType(_Enum_Compare):
-    """Different type of metrics
-
-    Args:
-        _Enum_Compare (_type_): _description_
-    """
+    """Different type of metrics"""
 
     NO_PRINT = auto()
     MATCHING = auto()
@@ -370,14 +361,13 @@ class Evaluation_Metric:
         """If called, needs to return its way, raise error or calculate it
 
         Args:
-            result_obj (PanopticaResult): _description_
+            result_obj (PanopticaResult): The result object the metric is computed from.
 
         Raises:
-            MetricCouldNotBeComputedException: _description_
-            self._error_obj: _description_
+            MetricCouldNotBeComputedException: If the metric or one of its dependencies could not be computed.
 
         Returns:
-            Any: _description_
+            Any: The computed metric value.
         """
         # ERROR
         if self._error:
@@ -443,7 +433,9 @@ class Evaluation_List_Metric:
             self.MAX: None | float = edge_case_result
         else:
             self.AVG = (
-                None if self.ALL is None or len(self.ALL) == 0 else np.average(self.ALL)
+                None
+                if self.ALL is None or len(self.ALL) == 0
+                else float(np.average(self.ALL))
             )
             self.SUM = (
                 None if self.ALL is None or len(self.ALL) == 0 else np.sum(self.ALL)
@@ -458,7 +450,9 @@ class Evaluation_List_Metric:
         self.STD = (
             None
             if self.ALL is None
-            else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
+            else empty_list_std
+            if len(self.ALL) == 0
+            else np.std(self.ALL)
         )
 
     def __getitem__(self, mode: MetricMode | str):

@@ -1,3 +1,5 @@
+"""Centerline Dice (clDSC) via skeletonization."""
+
 import numpy as np
 from skimage.morphology import skeletonize
 
@@ -5,7 +7,7 @@ try:
     from skimage.morphology import skeletonize_3d
 except ImportError:
     # In newer skimage versions (0.23+), skeletonize handles both 2D and 3D
-    skeletonize_3d = None
+    skeletonize_3d = None  # type: ignore[assignment]
 
 
 def _get_skeleton(array: np.ndarray) -> np.ndarray:
@@ -39,7 +41,7 @@ def cl_score(volume: np.ndarray, skeleton: np.ndarray):
         skeleton (np.ndarray): skeleton
 
     Returns:
-        _type_: skeleton overlap
+        float: Skeleton overlap fraction.
     """
     return np.sum(volume * skeleton) / np.sum(skeleton)
 

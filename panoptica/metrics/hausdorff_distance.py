@@ -1,5 +1,6 @@
+"""Hausdorff distance (HD) and 95th-percentile Hausdorff distance (HD95)."""
+
 import numpy as np
-from scipy.spatial import cKDTree
 from panoptica.metrics.assd import __surface_distances
 
 
@@ -16,12 +17,12 @@ def _compute_instance_hausdorff_distance(
     """Computes the hausdroff distance between two instances.
 
     Args:
-        ref_labels (np.ndarray): _description_
-        pred_labels (np.ndarray): _description_
-        ref_instance_idx (int | None, optional): _description_. Defaults to None.
-        pred_instance_idx (int | None, optional): _description_. Defaults to None.
-        voxelspacing (_type_, optional): _description_. Defaults to None.
-        connectivity (int, optional): _description_. Defaults to 1.
+        ref_labels (np.ndarray): Reference label array.
+        pred_labels (np.ndarray): Prediction label array.
+        ref_instance_idx (int | None, optional): Reference instance label to isolate before computing. Defaults to None.
+        pred_instance_idx (int | None, optional): Prediction instance label to isolate before computing. Defaults to None.
+        voxelspacing (tuple[float, ...] | None, optional): Physical spacing per axis; None means isotropic unit spacing. Defaults to None.
+        connectivity (int, optional): Connectivity of the border-extracting structuring element. Defaults to 1.
 
     Returns:
         float: Hausdorff Distance
@@ -54,10 +55,10 @@ def _compute_hausdorff_distance(
     """Computes the hausdroff distance between two instances.
 
     Args:
-        ref_labels (np.ndarray): _description_
-        pred_labels (np.ndarray): _description_
-        voxelspacing (_type_, optional): _description_. Defaults to None.
-        connectivity (int, optional): _description_. Defaults to 1.
+        ref_labels (np.ndarray): Reference label array.
+        pred_labels (np.ndarray): Prediction label array.
+        voxelspacing (tuple[float, ...] | None, optional): Physical spacing per axis; None means isotropic unit spacing. Defaults to None.
+        connectivity (int, optional): Connectivity of the border-extracting structuring element. Defaults to 1.
 
     Returns:
         float: Hausdorff Distance
@@ -81,12 +82,12 @@ def _compute_instance_hausdorff_distance95(
     """Computes the hausdroff distance between two instances.
 
     Args:
-        ref_labels (np.ndarray): _description_
-        pred_labels (np.ndarray): _description_
-        ref_instance_idx (int | None, optional): _description_. Defaults to None.
-        pred_instance_idx (int | None, optional): _description_. Defaults to None.
-        voxelspacing (_type_, optional): _description_. Defaults to None.
-        connectivity (int, optional): _description_. Defaults to 1.
+        ref_labels (np.ndarray): Reference label array.
+        pred_labels (np.ndarray): Prediction label array.
+        ref_instance_idx (int | None, optional): Reference instance label to isolate before computing. Defaults to None.
+        pred_instance_idx (int | None, optional): Prediction instance label to isolate before computing. Defaults to None.
+        voxelspacing (tuple[float, ...] | None, optional): Physical spacing per axis; None means isotropic unit spacing. Defaults to None.
+        connectivity (int, optional): Connectivity of the border-extracting structuring element. Defaults to 1.
 
     Returns:
         float: Hausdorff Distance
@@ -119,10 +120,10 @@ def _compute_hausdorff_distance95(
     """Computes the hausdroff distance 95 between two instances.
 
     Args:
-        ref_labels (np.ndarray): _description_
-        pred_labels (np.ndarray): _description_
-        voxelspacing (_type_, optional): _description_. Defaults to None.
-        connectivity (int, optional): _description_. Defaults to 1.
+        ref_labels (np.ndarray): Reference label array.
+        pred_labels (np.ndarray): Prediction label array.
+        voxelspacing (tuple[float, ...] | None, optional): Physical spacing per axis; None means isotropic unit spacing. Defaults to None.
+        connectivity (int, optional): Connectivity of the border-extracting structuring element. Defaults to 1.
 
     Returns:
         float: Hausdorff Distance

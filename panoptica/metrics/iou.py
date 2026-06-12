@@ -1,3 +1,5 @@
+"""Intersection-over-Union (Jaccard) metric."""
+
 import numpy as np
 
 
