@@ -20,6 +20,11 @@ from panoptica.utils.processing_pair import IntermediateStepsData
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 from panoptica._functionals import _get_orig_onehotcc_structure
 
+# ``np.trapezoid`` was added in NumPy 2.0 as the rename of ``np.trapz`` (which is
+# deprecated there but still present). Resolve whichever exists so AUTC integration
+# works across the whole declared ``numpy>=1.22`` range, not just NumPy >= 2.0.
+_trapezoid = getattr(np, "trapezoid", None) or np.trapz
+
 
 class PanopticaResult(object):
 
@@ -1034,7 +1039,7 @@ class PanopticaAUTCResult(object):
         x_arr = np.array(x_values, dtype=float)
         y_arr = np.array(y_values, dtype=float)
 
-        return float(np.trapezoid(y_arr, x=x_arr))
+        return float(_trapezoid(y_arr, x=x_arr))
 
     def to_dict(
         self, output_individual_instance_metrics: bool = False
