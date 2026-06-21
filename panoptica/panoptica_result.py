@@ -27,6 +27,7 @@ from panoptica._functionals import _get_orig_onehotcc_structure
 # works across the whole declared ``numpy>=1.22`` range, not just NumPy >= 2.0.
 _trapezoid = getattr(np, "trapezoid", None) or np.trapz
 
+
 def _get_original_instance_arrays_for_aji(
     reference_arr: np.ndarray,
     prediction_arr: np.ndarray,
@@ -49,6 +50,7 @@ def _get_original_instance_arrays_for_aji(
             pass
 
     return reference_arr, prediction_arr
+
 
 class PanopticaResult(object):
 
@@ -91,7 +93,10 @@ class PanopticaResult(object):
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
         self.metadata: dict[str, Any] = kwargs
-        aji_reference_arr, aji_prediction_arr = _get_original_instance_arrays_for_aji(
+        (
+            aji_reference_arr,
+            aji_prediction_arr,
+        ) = _get_original_instance_arrays_for_aji(
             reference_arr=reference_arr,
             prediction_arr=prediction_arr,
             intermediate_steps_data=intermediate_steps_data,

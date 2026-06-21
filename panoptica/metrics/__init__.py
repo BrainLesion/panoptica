@@ -47,4 +47,3 @@ from panoptica.metrics.metrics import (
     MetricType,
     _Metric,
 )
-
