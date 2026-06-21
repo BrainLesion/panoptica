@@ -14,6 +14,8 @@ from panoptica.metrics import (
     Metric,
     MetricCouldNotBeComputedException,
     MetricType,
+    _compute_aggregated_jaccard_index,
+    _compute_aggregated_jaccard_index_plus,
 )
 from panoptica.utils.edge_case_handling import EdgeCaseHandler
 from panoptica.utils.processing_pair import IntermediateStepsData
@@ -24,6 +26,30 @@ from panoptica._functionals import _get_orig_onehotcc_structure
 # deprecated there but still present). Resolve whichever exists so AUTC integration
 # works across the whole declared ``numpy>=1.22`` range, not just NumPy >= 2.0.
 _trapezoid = getattr(np, "trapezoid", None) or np.trapz
+
+
+def _get_original_instance_arrays_for_aji(
+    reference_arr: np.ndarray,
+    prediction_arr: np.ndarray,
+    intermediate_steps_data: IntermediateStepsData | None,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Prefer the original grouped instance masks for AJI/AJI+.
+
+    AJI/AJI+ should be computed on whole labeled instance masks, not only on
+    the matched/renamed TP labels. If intermediate step data is unavailable,
+    fall back to the arrays passed into PanopticaResult.
+    """
+    if intermediate_steps_data is not None:
+        try:
+            return (
+                intermediate_steps_data.original_reference_arr,
+                intermediate_steps_data.original_prediction_arr,
+            )
+        except RuntimeError:
+            pass
+
+    return reference_arr, prediction_arr
 
 
 class PanopticaResult(object):
@@ -67,7 +93,14 @@ class PanopticaResult(object):
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
         self.metadata: dict[str, Any] = kwargs
-
+        (
+            aji_reference_arr,
+            aji_prediction_arr,
+        ) = _get_original_instance_arrays_for_aji(
+            reference_arr=reference_arr,
+            prediction_arr=prediction_arr,
+            intermediate_steps_data=intermediate_steps_data,
+        )
         if isinstance(label_group, LabelPartGroup):
             # Store the one-hot encoded arrays for both reference and prediction
             one_hot_ref_array = _get_orig_onehotcc_structure(
@@ -159,6 +192,33 @@ class PanopticaResult(object):
             long_name="Recognition Quality / F1-Score",
             lower_bound=0.0,
             upper_bound=1.0,
+        )
+        # endregion
+        # region Aggregated Jaccard Index
+        self.aji: float
+        self._add_metric(
+            "aji",
+            MetricType.GLOBAL,
+            None,
+            long_name="Aggregated Jaccard Index",
+            default_value=_compute_aggregated_jaccard_index(
+                reference_arr=aji_reference_arr,
+                prediction_arr=aji_prediction_arr,
+            ),
+            was_calculated=True,
+        )
+
+        self.aji_plus: float
+        self._add_metric(
+            "aji_plus",
+            MetricType.GLOBAL,
+            None,
+            long_name="Aggregated Jaccard Index Plus",
+            default_value=_compute_aggregated_jaccard_index_plus(
+                reference_arr=aji_reference_arr,
+                prediction_arr=aji_prediction_arr,
+            ),
+            was_calculated=True,
         )
         # endregion
         #

@@ -34,6 +34,10 @@ from panoptica.metrics.normalized_surface_dice import (
     _compute_normalized_surface_dice,
 )
 from panoptica.metrics.iou import _compute_instance_iou, _compute_iou
+from panoptica.metrics.aggregated_jaccard_index import (
+    _compute_aggregated_jaccard_index,
+    _compute_aggregated_jaccard_index_plus,
+)
 from panoptica.metrics.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
