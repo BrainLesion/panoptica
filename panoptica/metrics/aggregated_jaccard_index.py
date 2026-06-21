@@ -2,7 +2,9 @@ import numpy as np
 from scipy.optimize import linear_sum_assignment
 
 
-def _positive_labels_and_areas(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _positive_labels_and_areas(
+    arr: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
     """Return positive instance labels and their pixel/voxel counts."""
     positive = arr[arr > 0]
     if positive.size == 0:
@@ -12,7 +14,9 @@ def _positive_labels_and_areas(arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]
         )
 
     labels, counts = np.unique(positive, return_counts=True)
-    return labels.astype(np.int64, copy=False), counts.astype(np.float64, copy=False)
+    return labels.astype(np.int64, copy=False), counts.astype(
+        np.float64, copy=False
+    )
 
 
 def _label_overlap_statistics(
@@ -28,7 +32,9 @@ def _label_overlap_statistics(
     np.ndarray,
 ]:
     """
-    Compute pairwise intersection, union, and IoU matrices for labeled instance masks.
+    Compute pairwise intersection, union, and IoU matrices.
+
+    This is for labeled instance masks.
 
     Assumes:
     - 0 is background
@@ -39,18 +45,26 @@ def _label_overlap_statistics(
     prediction_arr = np.asarray(prediction_arr)
 
     if reference_arr.shape != prediction_arr.shape:
-        raise ValueError("reference_arr and prediction_arr must have the same shape")
+        raise ValueError(
+            "reference_arr and prediction_arr must have the same shape"
+        )
 
     if reference_arr.ndim < 2:
-        raise ValueError("reference_arr and prediction_arr must be at least 2D label maps")
+        raise ValueError(
+            "reference_arr and prediction_arr must be at least 2D label maps"
+        )
 
     if np.any(reference_arr < 0) or np.any(prediction_arr < 0):
-        raise ValueError("AJI expects non-negative label maps with 0 as background")
+        raise ValueError(
+            "AJI expects non-negative label maps with 0 as background"
+        )
 
     ref_labels, ref_areas = _positive_labels_and_areas(reference_arr)
     pred_labels, pred_areas = _positive_labels_and_areas(prediction_arr)
 
-    intersections = np.zeros((len(ref_labels), len(pred_labels)), dtype=np.float64)
+    intersections = np.zeros(
+        (len(ref_labels), len(pred_labels)), dtype=np.float64
+    )
 
     if len(ref_labels) == 0 or len(pred_labels) == 0:
         unions = ref_areas[:, None] + pred_areas[None, :]
@@ -83,7 +97,9 @@ def _label_overlap_statistics(
         ref_index = {int(label): idx for idx, label in enumerate(ref_labels)}
         pred_index = {int(label): idx for idx, label in enumerate(pred_labels)}
 
-        for (ref_label, pred_label), count in zip(overlap_pairs, overlap_counts):
+        for (ref_label, pred_label), count in zip(
+            overlap_pairs, overlap_counts
+        ):
             intersections[
                 ref_index[int(ref_label)],
                 pred_index[int(pred_label)],
@@ -144,7 +160,9 @@ def _compute_aggregated_jaccard_index(
     paired_ref = np.where(best_iou_for_ref > 0)[0]
     paired_pred = best_pred_for_ref[paired_ref]
 
-    intersection_sum = intersections[paired_ref, paired_pred].sum(dtype=np.float64)
+    intersection_sum = intersections[paired_ref, paired_pred].sum(
+        dtype=np.float64
+    )
     union_sum = unions[paired_ref, paired_pred].sum(dtype=np.float64)
 
     unpaired_ref = np.setdiff1d(
@@ -208,7 +226,9 @@ def _compute_aggregated_jaccard_index_plus(
         paired_ref = np.asarray([], dtype=np.int64)
         paired_pred = np.asarray([], dtype=np.int64)
 
-    intersection_sum = intersections[paired_ref, paired_pred].sum(dtype=np.float64)
+    intersection_sum = intersections[paired_ref, paired_pred].sum(
+        dtype=np.float64
+    )
     union_sum = unions[paired_ref, paired_pred].sum(dtype=np.float64)
 
     unpaired_ref = np.setdiff1d(

@@ -201,8 +201,6 @@ class PanopticaResult(object):
                 prediction_arr=aji_prediction_arr,
             ),
             was_calculated=True,
-            lower_bound=0.0,
-            upper_bound=1.0,
         )
 
         self.aji_plus: float
@@ -216,8 +214,6 @@ class PanopticaResult(object):
                 prediction_arr=aji_prediction_arr,
             ),
             was_calculated=True,
-            lower_bound=0.0,
-            upper_bound=1.0,
         )
         # endregion
         #
