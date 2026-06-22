@@ -117,7 +117,7 @@ def _compute_hausdorff_distance95(
     *args,
     **kwargs,
 ) -> float:
-    """Computes the hausdroff distance 95 between two instances.
+    """Computes the hausdorff distance 95 between two instances.
 
     Args:
         ref_labels (np.ndarray): Reference label array.
