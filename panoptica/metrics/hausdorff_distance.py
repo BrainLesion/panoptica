@@ -14,7 +14,7 @@ def _compute_instance_hausdorff_distance(
     *args,
     **kwargs,
 ):
-    """Computes the hausdroff distance between two instances.
+    """Computes the hausdorff distance between two instances.
 
     Args:
         ref_labels (np.ndarray): Reference label array.
