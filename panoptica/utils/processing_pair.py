@@ -87,7 +87,9 @@ class _ProcessingPair(ABC):
             return
         if self._uncropped_shape is None:
             raise RuntimeError("Calling uncrop_data() without having cropped first")
-        prediction_arr = np.zeros(self._uncropped_shape, dtype=self._prediction_arr.dtype)
+        prediction_arr = np.zeros(
+            self._uncropped_shape, dtype=self._prediction_arr.dtype
+        )
         prediction_arr[self._crop] = self._prediction_arr
         self._prediction_arr = prediction_arr
 
