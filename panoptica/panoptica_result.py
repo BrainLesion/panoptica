@@ -45,6 +45,104 @@ INSTANCE_METRICS: list[Metric] = sorted(
 )
 
 
+# --------------------------------------------------------------------------- #
+# Grouped result accessors (#248).
+#
+# An additive, read-only view over the flat metric registry that lets users
+# reach metrics by category instead of by mangled flat key:
+#
+#     result["global"].dice      # whole-image binary DSC  (global_bin_dsc)
+#     result.instance.dice.sq    # mean per-instance DSC   (sq_dsc)
+#     result.instance.dice.pq    # panoptic quality DSC    (pq_dsc)
+#     result.region.dice         # region-wise average DSC (region_avg_dsc)
+#     autc_result.autc.dice.pq   # AUTC of pq_dsc
+#
+# The flat attributes (result.sq_dsc, result.global_bin_dsc, ...) are unchanged;
+# this is purely a nicer surface on top of them.
+# --------------------------------------------------------------------------- #
+_METRIC_NAME_ALIASES: dict[str, Metric] = {
+    "dice": Metric.DSC,
+    "centerline_dice": Metric.clDSC,
+    "centerline_dsc": Metric.clDSC,
+}
+
+
+def _resolve_metric_name(short: str) -> Metric:
+    """Map a short metric name (e.g. ``"dice"``, ``"iou"``) to its ``Metric``."""
+    key = short.lower()
+    if key in _METRIC_NAME_ALIASES:
+        return _METRIC_NAME_ALIASES[key]
+    for m in Metric:
+        if m.name.lower() == key:
+            return m
+    raise AttributeError(f"Unknown metric name {short!r}")
+
+
+class _InstanceScore:
+    """sq / std (and pq for overlap metrics) for a single instance metric."""
+
+    def __init__(self, result: "PanopticaResult", metric: Metric):
+        self._result = result
+        self._metric = metric
+
+    @property
+    def sq(self):
+        return getattr(self._result, self._metric.get_result_key("sq"))
+
+    @property
+    def std(self):
+        return getattr(self._result, self._metric.get_result_key("sq", is_std=True))
+
+    @property
+    def pq(self):
+        if not self._metric.supports_pq:
+            raise AttributeError(
+                f"{self._metric.name} has no panoptic quality (pq) component"
+            )
+        return getattr(self._result, self._metric.get_result_key("pq"))
+
+    def __repr__(self) -> str:
+        return f"InstanceScore({self._metric.name})"
+
+
+class _AUTCScore:
+    """AUTC of sq / pq for a single overlap metric on a PanopticaAUTCResult."""
+
+    def __init__(self, autc_result, metric: Metric):
+        self._autc = autc_result
+        self._metric = metric
+
+    @property
+    def sq(self):
+        return getattr(self._autc, format_autc_key(self._metric.get_result_key("sq")))
+
+    @property
+    def pq(self):
+        if not self._metric.supports_pq:
+            raise AttributeError(
+                f"{self._metric.name} has no panoptic quality (pq) component"
+            )
+        return getattr(self._autc, format_autc_key(self._metric.get_result_key("pq")))
+
+    def __repr__(self) -> str:
+        return f"AUTCScore({self._metric.name})"
+
+
+class _MetricGroupView:
+    """Resolve a short metric name within one metric group of a result."""
+
+    def __init__(self, resolver: Callable[[Metric], Any]):
+        object.__setattr__(self, "_resolver", resolver)
+
+    def __getattr__(self, short: str):
+        if short.startswith("_"):
+            raise AttributeError(short)
+        return object.__getattribute__(self, "_resolver")(_resolve_metric_name(short))
+
+    def __getitem__(self, short: str):
+        return object.__getattribute__(self, "_resolver")(_resolve_metric_name(short))
+
+
 class PanopticaResult:
     def __init__(
         self,
@@ -376,6 +474,39 @@ class PanopticaResult:
             for k, v in self._evaluation_metrics.items()
             if v.lower_bound == 0.0 and v.upper_bound == 1.0
         ]
+
+    # --- Grouped accessors (#248); additive over the flat attributes ---
+    @property
+    def instance(self) -> _MetricGroupView:
+        """Per-instance metrics, e.g. ``result.instance.dice.sq`` / ``.pq`` / ``.std``."""
+        return _MetricGroupView(lambda m: _InstanceScore(self, m))
+
+    @property
+    def semantic(self) -> _MetricGroupView:
+        """Whole-image binary ("global") metrics, e.g. ``result.semantic.dice``.
+
+        Also reachable as ``result["global"]`` since ``global`` is a Python keyword.
+        """
+        return _MetricGroupView(lambda m: getattr(self, f"global_bin_{m.name.lower()}"))
+
+    @property
+    def region(self) -> _MetricGroupView:
+        """Region-wise average metrics, e.g. ``result.region.dice``."""
+        return _MetricGroupView(lambda m: getattr(self, f"region_avg_{m.name.lower()}"))
+
+    def __getitem__(self, group: str) -> _MetricGroupView:
+        """Grouped access by category name, e.g. ``result["global"].dice``."""
+        groups = {
+            "global": self.semantic,
+            "semantic": self.semantic,
+            "instance": self.instance,
+            "region": self.region,
+        }
+        if group not in groups:
+            raise KeyError(
+                f"Unknown metric group {group!r}; expected one of {sorted(groups)}"
+            )
+        return groups[group]
 
     def _calc_global_bin_metric(
         self,
@@ -851,6 +982,11 @@ class PanopticaAUTCResult:
         self._threshold_results: dict[float, PanopticaResult] = dict(
             sorted(threshold_results.items())
         )
+
+    @property
+    def autc(self) -> _MetricGroupView:
+        """Grouped AUTC accessor, e.g. ``autc_result.autc.dice.pq`` / ``.sq``."""
+        return _MetricGroupView(lambda m: _AUTCScore(self, m))
 
     @property
     def thresholds(self) -> list[float]:
