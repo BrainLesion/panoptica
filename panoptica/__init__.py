@@ -18,3 +18,7 @@ from panoptica.utils.processing_pair import (
     MatchedInstancePair,
 )
 from panoptica.metrics import Metric, MetricMode, MetricType
+from panoptica.utils.citation_reminder import (
+    disable_citation_reminder,
+    enable_citation_reminder,
+)

@@ -10,7 +10,11 @@ from panoptica.utils.numpy_utils import (
     _count_unique_without_zeros,
     _get_smallest_fitting_uint,
 )
-from panoptica.utils.citation_reminder import citation_reminder
+from panoptica.utils.citation_reminder import (
+    citation_reminder,
+    disable_citation_reminder,
+    enable_citation_reminder,
+)
 
 
 class Test_Citation_Reminder(unittest.TestCase):
@@ -24,6 +28,22 @@ class Test_Citation_Reminder(unittest.TestCase):
             return "bar"
 
         foo()
+
+    def test_disable_citation_reminder(self):
+        os.environ["PANOPTICA_CITATION_REMINDER"] = "True"
+        disable_citation_reminder()
+        try:
+
+            @citation_reminder
+            def foo():
+                return "bar"
+
+            self.assertEqual(foo(), "bar")
+            # Disabled -> the reminder block (and its "show once" env latch) is skipped,
+            # so the env var is left untouched.
+            self.assertEqual(os.environ["PANOPTICA_CITATION_REMINDER"], "True")
+        finally:
+            enable_citation_reminder()  # restore module state for other tests
 
 
 class Test_Numpy_Utils(unittest.TestCase):
