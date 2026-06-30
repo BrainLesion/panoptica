@@ -18,3 +18,4 @@ from panoptica.utils.processing_pair import (
     MatchedInstancePair,
 )
 from panoptica.metrics import Metric, MetricMode, MetricType
+from panoptica.utils.logger import set_log_level
