@@ -20,6 +20,7 @@ from panoptica.metrics import (
 from panoptica.utils.edge_case_handling import EdgeCaseHandler
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
 from panoptica.utils.processing_pair import IntermediateStepsData
+from panoptica.utils.numpy_utils import recall_by_volume_bins
 from panoptica.utils.serialization import (
     _AUTC_PREFIX,
     format_autc_key,
@@ -544,6 +545,44 @@ class PanopticaResult:
     def normalize_row_to_master_schema(cls, row: dict) -> dict:
         """Rewrite a ``reference_instances`` row dict so its keys match the master schema."""
         return {cls.ROW_KEY_TO_MASTER_KEY.get(k, k): v for k, v in row.items()}
+
+    def recall_by_volume(
+        self, thresholds: list[float], volume: str = "volume"
+    ) -> dict[str, float]:
+        """Instance detection recall stratified by reference-instance volume.
+
+        Single-sample counterpart of ``Panoptica_Statistic.recall_by_volume``: bins this
+        result's reference instances by size and reports the matched fraction per bin —
+        useful to see whether small instances are detected as well as large ones. Matched
+        (TP) references count as detected, unmatched (FN) references as missed.
+
+        Args:
+            thresholds: User-supplied volume bin edges (e.g. ``[160, 271, 451]``); ``n``
+                thresholds give ``n + 1`` bins ``rec_q0`` .. ``rec_qn``.
+            volume: Which size to bin on — ``"volume"`` (physical volume, default) or
+                ``"voxel_count"`` (raw voxel counts).
+
+        Returns:
+            dict[str, float]: ``{"rec_q0": ..., ...}``, one entry per bin (``nan`` for an
+            empty bin).
+        """
+        matched_sizes: list[float] | list[int]
+        unmatched_sizes: list[float] | list[int]
+        if volume == "volume":
+            matched_sizes = self.instance_volume_matched_ref_list
+            unmatched_sizes = self.instance_volume_unmatched_ref_list
+        elif volume == "voxel_count":
+            matched_sizes = self.instance_voxel_count_matched_ref_list
+            unmatched_sizes = self.instance_voxel_count_unmatched_ref_list
+        else:
+            raise ValueError(
+                f"volume must be 'volume' or 'voxel_count', got {volume!r}"
+            )
+        volumes = [float(v) for v in matched_sizes] + [
+            float(v) for v in unmatched_sizes
+        ]
+        matched_flags = [1.0] * len(matched_sizes) + [0.0] * len(unmatched_sizes)
+        return recall_by_volume_bins(volumes, matched_flags, thresholds)
 
     @property
     def autc_metrics(self) -> list[str]:
