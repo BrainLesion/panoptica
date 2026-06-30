@@ -447,11 +447,12 @@ class Evaluation_List_Metric:
                 None if self.ALL is None or len(self.ALL) == 0 else np.max(self.ALL)
             )
 
-        self.STD = (
-            None
-            if self.ALL is None
-            else empty_list_std if len(self.ALL) == 0 else np.std(self.ALL)
-        )
+        if self.ALL is None:
+            self.STD = None
+        elif len(self.ALL) == 0:
+            self.STD = empty_list_std
+        else:
+            self.STD = float(np.std(self.ALL))
 
     def __getitem__(self, mode: MetricMode | str):
         if self.error:
