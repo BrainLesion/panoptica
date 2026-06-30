@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 
 from panoptica._functionals import _get_orig_onehotcc_structure
+from panoptica.computation import calc_global_bin_metric, fn, fp, prec, rec, rq
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
@@ -429,8 +430,8 @@ class PanopticaResult:
                     )
                     default_value = edge_case_result
                 else:
-                    default_value = self._calc_global_bin_metric(
-                        m, pred_binary, ref_binary, do_binarize=False
+                    default_value = calc_global_bin_metric(
+                        self, m, pred_binary, ref_binary, do_binarize=False
                     )
                 was_calculated = True
 
@@ -507,118 +508,6 @@ class PanopticaResult:
                 f"Unknown metric group {group!r}; expected one of {sorted(groups)}"
             )
         return groups[group]
-
-    def _calc_global_bin_metric(
-        self,
-        metric: Metric,
-        prediction_arr,
-        reference_arr,
-        do_binarize: bool = True,
-    ):
-        """
-        Calculates a global binary metric based on predictions and references.
-        For multi-channel data (LabelPartGroup), computes metrics per channel and averages.
-
-        Args:
-            metric (Metric): The metric to compute.
-            prediction_arr: The predicted values.
-            reference_arr: The ground truth values.
-            do_binarize (bool): Whether to binarize the input arrays. Defaults to True.
-
-        Returns:
-            The calculated metric value or mean of channel metrics for multi-channel data.
-
-        Raises:
-            MetricCouldNotBeComputedException: If the specified metric is not set.
-        """
-        if metric not in self._global_metrics:
-            raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
-
-        # Set THING_CHANNEL so it can be avoided during the part calculation
-        #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
-        THING_CHANNEL = 1
-
-        # Handle multi-channel data from LabelPartGroup
-        if hasattr(self, "_multi_channel_data"):
-            channel_metrics = []
-            channel_results = {}
-
-            for i in range(self._multi_channel_data["n_channels"]):
-                if i == THING_CHANNEL:
-                    continue
-                ref_channel = self._multi_channel_data["ref_channels"][i]
-                pred_channel = self._multi_channel_data["pred_channels"][i]
-
-                # Skip empty channels (where both reference and prediction are empty)
-                if ref_channel.sum() == 0 and pred_channel.sum() == 0:
-                    continue
-
-                # Binarize each channel to ensure binary input
-                pred_channel = (pred_channel != 0).astype(np.uint8)
-                ref_channel = (ref_channel != 0).astype(np.uint8)
-                # Handle edge cases for empty reference or prediction
-                prediction_empty = pred_channel.sum() == 0
-                reference_empty = ref_channel.sum() == 0
-
-                if prediction_empty or reference_empty:
-                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                        metric, 0, int(prediction_empty), int(reference_empty)
-                    )
-                    if is_edgecase:
-                        channel_result = result
-                    else:
-                        channel_result = metric(
-                            reference_arr=ref_channel,
-                            prediction_arr=pred_channel,
-                        )
-                else:
-                    channel_result = metric(
-                        reference_arr=ref_channel,
-                        prediction_arr=pred_channel,
-                    )
-
-                channel_metrics.append(channel_result)
-                channel_results[i] = channel_result
-
-            # Store individual channel metrics for reference
-            metric_name = metric.name.lower()
-            if not hasattr(self, "_channel_metrics"):
-                self._channel_metrics = {}
-            self._channel_metrics[metric_name] = channel_results
-
-            # Return mean of channel metrics
-            if channel_metrics:
-                return float(np.mean(channel_metrics))  # type: ignore[arg-type]
-            else:
-                # Handle case where no valid metrics could be computed
-                is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                    metric, 0, 1, 1
-                )
-                return result
-
-        # Original single-channel logic
-        if do_binarize:
-            pred_binary = prediction_arr.copy()
-            ref_binary = reference_arr.copy()
-            pred_binary[pred_binary != 0] = 1
-            ref_binary[ref_binary != 0] = 1
-        else:
-            pred_binary = prediction_arr
-            ref_binary = reference_arr
-
-        prediction_empty = pred_binary.sum() == 0
-        reference_empty = ref_binary.sum() == 0
-        if prediction_empty or reference_empty:
-            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                metric, 0, int(prediction_empty), int(reference_empty)
-            )
-            if is_edgecase:
-                return result
-
-        return metric(
-            reference_arr=ref_binary,
-            prediction_arr=pred_binary,
-        )
 
     def _add_metric(
         self,
@@ -1138,38 +1027,5 @@ class PanopticaAUTCResult:
         return f"PanopticaAUTCResult(thresholds={self.thresholds!r})"
 
 
-#########################
-# Calculation functions #
-#########################
-
-
-# region Basic
-def fp(res: PanopticaResult):
-    return res.n_pred_instances - res.tp
-
-
-def fn(res: PanopticaResult):
-    return res.n_ref_instances - res.tp
-
-
-def prec(res: PanopticaResult):
-    return res.tp / (res.tp + res.fp)
-
-
-def rec(res: PanopticaResult):
-    return res.tp / (res.tp + res.fn)
-
-
-def rq(res: PanopticaResult):
-    """
-    Calculate the Recognition Quality (RQ) based on TP, FP, and FN.
-
-    Returns:
-        float: Recognition Quality (RQ).
-    """
-    if res.tp == 0:
-        return 0.0 if res.n_pred_instances + res.n_ref_instances > 0 else np.nan
-    return res.tp / (res.tp + 0.5 * res.fp + 0.5 * res.fn)
-
-
-# endregion
+# The metric calculation functions (fp/fn/prec/rec/rq and the global-binary metric)
+# now live in panoptica.computation and are imported at the top of this module.
