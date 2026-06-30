@@ -409,6 +409,10 @@ class EvaluateInstancePair:
         instance_volume_matched_ref (list[float]): Physical volume of each matched (TP) reference instance, computed as voxel count times ``prod(voxelspacing)``.
         instance_voxel_count_unmatched_ref (list[int]): Raw voxel count of each unmatched (FN) reference instance.
         instance_volume_unmatched_ref (list[float]): Physical volume of each unmatched (FN) reference instance.
+        instance_voxel_count_matched_pred (list[int]): Raw voxel count of each matched prediction instance (one that shares a reference label).
+        instance_volume_matched_pred (list[float]): Physical volume of each matched prediction instance.
+        instance_voxel_count_unmatched_pred (list[int]): Raw voxel count of each unmatched (FP) prediction instance.
+        instance_volume_unmatched_pred (list[float]): Physical volume of each unmatched (FP) prediction instance.
     """
 
     reference_arr: np.ndarray
@@ -421,6 +425,10 @@ class EvaluateInstancePair:
     instance_volume_matched_ref: list[float] = field(default_factory=list)
     instance_voxel_count_unmatched_ref: list[int] = field(default_factory=list)
     instance_volume_unmatched_ref: list[float] = field(default_factory=list)
+    instance_voxel_count_matched_pred: list[int] = field(default_factory=list)
+    instance_volume_matched_pred: list[float] = field(default_factory=list)
+    instance_voxel_count_unmatched_pred: list[int] = field(default_factory=list)
+    instance_volume_unmatched_pred: list[float] = field(default_factory=list)
 
 
 class InputType(_Enum_Compare):
