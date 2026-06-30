@@ -77,7 +77,10 @@ class PanopticaResult:
         self.metadata: dict[str, Any] = kwargs
 
         if isinstance(label_group, LabelPartGroup):
-            assert n_ref_labels is not None and processing_pair_orig_shape is not None
+            if n_ref_labels is None or processing_pair_orig_shape is None:
+                raise ValueError(
+                    "PanopticaResult: n_ref_labels and processing_pair_orig_shape are required when label_group is a LabelPartGroup"
+                )
             # Store the one-hot encoded arrays for both reference and prediction
             one_hot_ref_array = _get_orig_onehotcc_structure(
                 reference_arr, n_ref_labels, processing_pair_orig_shape

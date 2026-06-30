@@ -170,8 +170,8 @@ class TSVBackend(FileBackend):
 
         if verbose:
             logger.info(f"Found {len(rows) - 1} entries")
-            print(f"Found metrics: {metric_names}")
-            print(f"Found groups: {group_names}")
+            logger.info(f"Found metrics: {metric_names}")
+            logger.info(f"Found groups: {group_names}")
 
         # Header-only file
         if len(rows) == 1:
