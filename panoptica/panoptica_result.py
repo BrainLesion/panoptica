@@ -33,6 +33,27 @@ from panoptica.utils.serialization import (
 _trapezoid = getattr(np, "trapezoid", None) or np.trapz
 
 
+# Table driving the auto-generated per-instance metric members (see #189). Each entry is
+# (Metric, display name, supports_pq). Every metric gets ``sq_{suffix}`` and
+# ``sq_{suffix}_std``; only the unit-interval overlap metrics (IOU/DSC/clDSC) additionally
+# get ``pq_{suffix}`` and ``[0, 1]`` bounds on their sq/pq (the bounds drive AUTC metric
+# selection). The display name is the human label used in the metric's ``long_name`` and
+# the ORDER here is the registration order, so it must stay fixed to keep result-dict /
+# file-header column order stable.
+_INSTANCE_METRIC_SPECS: list[tuple[Metric, str, bool]] = [
+    (Metric.IOU, "IoU", True),
+    (Metric.DSC, "Dsc", True),
+    (Metric.clDSC, "Centerline Dsc", True),
+    (Metric.ASSD, "ASSD", False),
+    (Metric.RVD, "Relative Volume Difference", False),
+    (Metric.RVAE, "Relative Volume Absolute Error", False),
+    (Metric.CEDI, "Center Distance", False),
+    (Metric.HD, "Hausdorff Distance", False),
+    (Metric.HD95, "Hausdorff Distance 95", False),
+    (Metric.NSD, "Normalized Surface Dice", False),
+]
+
+
 class PanopticaResult:
     def __init__(
         self,
@@ -175,201 +196,12 @@ class PanopticaResult:
         # endregion
         #
         #
-        # region IOU
-        self.sq: float
-        self._add_metric(
-            Metric.IOU.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq,
-            long_name="Segmentation Quality IoU",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        self.sq_std: float
-        self._add_metric(
-            Metric.IOU.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_std,
-            long_name="Segmentation Quality IoU Standard Deviation",
-        )
-        self.pq: float
-        self._add_metric(
-            Metric.IOU.get_result_key("pq"),
-            MetricType.INSTANCE,
-            pq,
-            long_name="Panoptic Quality IoU",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        # endregion
-        #
-        # region DICE
-        self.sq_dsc: float
-        self._add_metric(
-            Metric.DSC.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_dsc,
-            long_name="Segmentation Quality Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        self.sq_dsc_std: float
-        self._add_metric(
-            Metric.DSC.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_dsc_std,
-            long_name="Segmentation Quality Dsc Standard Deviation",
-        )
-        self.pq_dsc: float
-        self._add_metric(
-            Metric.DSC.get_result_key("pq"),
-            MetricType.INSTANCE,
-            pq_dsc,
-            long_name="Panoptic Quality Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        # endregion
-        #
-        # region clDICE
-        self.sq_cldsc: float
-        self._add_metric(
-            Metric.clDSC.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_cldsc,
-            long_name="Segmentation Quality Centerline Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        self.sq_cldsc_std: float
-        self._add_metric(
-            Metric.clDSC.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_cldsc_std,
-            long_name="Segmentation Quality Centerline Dsc Standard Deviation",
-        )
-        self.pq_cldsc: float
-        self._add_metric(
-            Metric.clDSC.get_result_key("pq"),
-            MetricType.INSTANCE,
-            pq_cldsc,
-            long_name="Panoptic Quality Centerline Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        # endregion
-        #
-        # region ASSD
-        self.sq_assd: float
-        self._add_metric(
-            Metric.ASSD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_assd,
-            long_name="Segmentation Quality ASSD",
-        )
-        self.sq_assd_std: float
-        self._add_metric(
-            Metric.ASSD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_assd_std,
-            long_name="Segmentation Quality ASSD Standard Deviation",
-        )
-        # endregion
-        #
-        # region RVD
-        self.sq_rvd: float
-        self._add_metric(
-            Metric.RVD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_rvd,
-            long_name="Segmentation Quality Relative Volume Difference",
-        )
-        self.sq_rvd_std: float
-        self._add_metric(
-            Metric.RVD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_rvd_std,
-            long_name="Segmentation Quality Relative Volume Difference Standard Deviation",
-        )
-        # endregion
-        #
-        # region RVAE
-        self.sq_rvae: float
-        self._add_metric(
-            Metric.RVAE.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_rvae,
-            long_name="Segmentation Quality Relative Volume Absolute Error",
-        )
-        self.sq_rvae_std: float
-        self._add_metric(
-            Metric.RVAE.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_rvae_std,
-            long_name="Segmentation Quality Relative Volume Absolute Error Standard Deviation",
-        )
-        # endregion
-        #
-        # region CEDI
-        self.sq_cedi: float
-        self._add_metric(
-            Metric.CEDI.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_cedi,
-            long_name="Segmentation Quality Center Distance",
-        )
-        self.sq_cedi_std: float
-        self._add_metric(
-            Metric.CEDI.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_cedi_std,
-            long_name="Segmentation Quality Center Distance Standard Deviation",
-        )
-        # endregion
-        #
-        # region HD
-        self.sq_hd: float
-        self._add_metric(
-            Metric.HD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_hd,
-            long_name="Segmentation Quality Hausdorff Distance",
-        )
-        self.sq_hd_std: float
-        self._add_metric(
-            Metric.HD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_hd_std,
-            long_name="Segmentation Quality Hausdorff Distance Standard Deviation",
-        )
-        self.sq_hd95: float
-        self._add_metric(
-            Metric.HD95.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_hd95,
-            long_name="Segmentation Quality Hausdorff Distance 95",
-        )
-        self.sq_hd95_std: float
-        self._add_metric(
-            Metric.HD95.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_hd95_std,
-            long_name="Segmentation Quality Hausdorff Distance 95 Standard Deviation",
-        )
-        self.sq_nsd: float
-        self._add_metric(
-            Metric.NSD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_nsd,
-            long_name="Segmentation Quality Normalized Surface Dice",
-        )
-        self.sq_nsd_std: float
-        self._add_metric(
-            Metric.NSD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_nsd_std,
-            long_name="Segmentation Quality Normalized Surface Dice Standard Deviation",
-        )
+        # region Instance metrics
+        # sq / sq_std for every metric, plus pq for the unit-interval overlap
+        # metrics (IOU/DSC/clDSC). Generated from _INSTANCE_METRIC_SPECS so a new
+        # instance metric is one table entry instead of three hand-written
+        # _add_metric blocks (see #189).
+        self._register_instance_metrics()
         # endregion
 
         # region Reference Instances
@@ -708,6 +540,44 @@ class PanopticaResult:
         )
         self._evaluation_metrics[name_id] = eval_metric
         return default_value
+
+    def _register_instance_metrics(self) -> None:
+        """Register the per-instance sq/sq_std/pq metrics from _INSTANCE_METRIC_SPECS.
+
+        For each metric this adds ``sq_{suffix}`` (mean of the per-instance scores) and
+        ``sq_{suffix}_std`` (their std); unit-interval overlap metrics additionally get
+        ``pq_{suffix} = sq * rq``. Lambda default args bind the loop variables so each
+        closure captures its own metric/sq-key.
+        """
+        for metric, display, supports_pq in _INSTANCE_METRIC_SPECS:
+            # IOU/DSC/clDSC are unit-interval -> bound sq to [0, 1]; the rest are
+            # unbounded distances/ratios.
+            sq_lower = 0.0 if supports_pq else None
+            sq_upper = 1.0 if supports_pq else None
+            self._add_metric(
+                metric.get_result_key("sq"),
+                MetricType.INSTANCE,
+                lambda res, m=metric: res.get_list_metric(m, mode=MetricMode.AVG),
+                long_name=f"Segmentation Quality {display}",
+                lower_bound=sq_lower,
+                upper_bound=sq_upper,
+            )
+            self._add_metric(
+                metric.get_result_key("sq", is_std=True),
+                MetricType.INSTANCE,
+                lambda res, m=metric: res.get_list_metric(m, mode=MetricMode.STD),
+                long_name=f"Segmentation Quality {display} Standard Deviation",
+            )
+            if supports_pq:
+                sq_key = metric.get_result_key("sq")
+                self._add_metric(
+                    metric.get_result_key("pq"),
+                    MetricType.INSTANCE,
+                    lambda res, k=sq_key: getattr(res, k) * res.rq,
+                    long_name=f"Panoptic Quality {display}",
+                    lower_bound=0.0,
+                    upper_bound=1.0,
+                )
 
     def calculate_all(self, print_errors: bool = False):
         """
@@ -1172,126 +1042,6 @@ def rq(res: PanopticaResult):
     if res.tp == 0:
         return 0.0 if res.n_pred_instances + res.n_ref_instances > 0 else np.nan
     return res.tp / (res.tp + 0.5 * res.fp + 0.5 * res.fn)
-
-
-# endregion
-
-
-# region IOU
-def sq(res: PanopticaResult):
-    return res.get_list_metric(Metric.IOU, mode=MetricMode.AVG)
-
-
-def sq_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.IOU, mode=MetricMode.STD)
-
-
-def pq(res: PanopticaResult):
-    return res.sq * res.rq
-
-
-# endregion
-
-
-# region DSC
-def sq_dsc(res: PanopticaResult):
-    return res.get_list_metric(Metric.DSC, mode=MetricMode.AVG)
-
-
-def sq_dsc_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.DSC, mode=MetricMode.STD)
-
-
-def pq_dsc(res: PanopticaResult):
-    return res.sq_dsc * res.rq
-
-
-# endregion
-
-
-# region clDSC
-def sq_cldsc(res: PanopticaResult):
-    return res.get_list_metric(Metric.clDSC, mode=MetricMode.AVG)
-
-
-def sq_cldsc_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.clDSC, mode=MetricMode.STD)
-
-
-def pq_cldsc(res: PanopticaResult):
-    return res.sq_cldsc * res.rq
-
-
-# endregion
-
-
-# region ASSD
-def sq_assd(res: PanopticaResult):
-    return res.get_list_metric(Metric.ASSD, mode=MetricMode.AVG)
-
-
-def sq_assd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.ASSD, mode=MetricMode.STD)
-
-
-# endregion
-
-
-# region RVD
-def sq_rvd(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVD, mode=MetricMode.AVG)
-
-
-def sq_rvd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVD, mode=MetricMode.STD)
-
-
-def sq_rvae(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVAE, mode=MetricMode.AVG)
-
-
-def sq_rvae_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVAE, mode=MetricMode.STD)
-
-
-# endregion
-
-
-# region CEDI
-def sq_cedi(res: PanopticaResult):
-    return res.get_list_metric(Metric.CEDI, mode=MetricMode.AVG)
-
-
-def sq_cedi_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.CEDI, mode=MetricMode.STD)
-
-
-# endregion
-
-
-# region HD
-def sq_hd(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD, mode=MetricMode.AVG)
-
-
-def sq_hd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD, mode=MetricMode.STD)
-
-
-def sq_hd95(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD95, mode=MetricMode.AVG)
-
-
-def sq_hd95_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD95, mode=MetricMode.STD)
-
-
-def sq_nsd(res: PanopticaResult):
-    return res.get_list_metric(Metric.NSD, mode=MetricMode.AVG)
-
-
-def sq_nsd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.NSD, mode=MetricMode.STD)
 
 
 # endregion
