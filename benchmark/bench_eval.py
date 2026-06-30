@@ -119,13 +119,17 @@ def timeit(fn, repeats: int = 3) -> float:
     return best * 1e3
 
 
-def _largest_instance_masks(ref: np.ndarray, pred: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def _largest_instance_masks(
+    ref: np.ndarray, pred: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     labels, counts = np.unique(ref[ref > 0], return_counts=True)
     label = int(labels[int(np.argmax(counts))])
     return ref == label, pred == label
 
 
-def run_config(name: str, shape: tuple[int, ...], n_instances: int, seed: int = 0) -> None:
+def run_config(
+    name: str, shape: tuple[int, ...], n_instances: int, seed: int = 0
+) -> None:
     rng = np.random.default_rng(seed)
     ref, n = make_reference(shape, n_instances, rng)
     pred = make_prediction(ref, rng)
@@ -135,7 +139,9 @@ def run_config(name: str, shape: tuple[int, ...], n_instances: int, seed: int = 
     evaluator = Panoptica_Evaluator(
         expected_input=InputType.SEMANTIC,
         instance_approximator=ConnectedComponentsInstanceApproximator(),
-        instance_matcher=NaiveThresholdMatching(matching_metric=Metric.IOU, matching_threshold=0.3),
+        instance_matcher=NaiveThresholdMatching(
+            matching_metric=Metric.IOU, matching_threshold=0.3
+        ),
         instance_metrics=[Metric.DSC, Metric.IOU, Metric.ASSD, Metric.HD95, Metric.NSD],
         global_metrics=[Metric.DSC],
         verbose=False,
@@ -144,7 +150,9 @@ def run_config(name: str, shape: tuple[int, ...], n_instances: int, seed: int = 
     pred_bin = (pred > 0).astype(np.uint8)
 
     print(f"\n### {name}  shape={shape}  instances={n}")
-    print(f"{'end-to-end evaluate':32s} {timeit(lambda: evaluator.evaluate(pred_bin, ref_bin)):8.1f} ms")
+    print(
+        f"{'end-to-end evaluate':32s} {timeit(lambda: evaluator.evaluate(pred_bin, ref_bin)):8.1f} ms"
+    )
     print(
         f"{'matching (IoU, all pairs)':32s} "
         f"{timeit(lambda: _calc_matching_metric_of_overlapping_labels(pred, ref, ref_labels, Metric.IOU)):8.1f} ms"
@@ -167,7 +175,9 @@ def run_config(name: str, shape: tuple[int, ...], n_instances: int, seed: int = 
 
     print(f"{'surface family (unshared)':32s} {timeit(surface_unshared):8.1f} ms")
     print(f"{'surface family (shared)':32s} {timeit(surface_shared):8.1f} ms")
-    print(f"{'voronoi regions':32s} {timeit(lambda: _get_voronoi_regions(ref, n)):8.1f} ms")
+    print(
+        f"{'voronoi regions':32s} {timeit(lambda: _get_voronoi_regions(ref, n)):8.1f} ms"
+    )
 
 
 def main() -> None:
