@@ -244,6 +244,77 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         self.assertEqual(list(d_asc.keys()), ["c", "a", "e"])
         self.assertEqual(list(d_asc.values()), [0.3, 0.5, 0.7])
 
+    def test_get_global_summary(self):
+        # s1 has 1 instance (sq=0.6); s2 has 3 instances (sq=0.9 each).
+        from panoptica.utils.serialization import format_instance_subject_name
+
+        subj = [
+            "s1",
+            format_instance_subject_name("s1", "g", 0),
+            "s2",
+            format_instance_subject_name("s2", "g", 0),
+            format_instance_subject_name("s2", "g", 1),
+            format_instance_subject_name("s2", "g", 2),
+        ]
+        stat = Panoptica_Statistic(
+            subj_names=subj,
+            value_dict={
+                "g": {
+                    "sq": [0.6, 0.6, 0.9, 0.9, 0.9, 0.9],
+                    "tp": [1, None, 3, None, None, None],
+                    "fp": [0, None, 0, None, None, None],
+                    "fn": [0, None, 0, None, None, None],
+                    "pq": [0.6, None, 0.9, None, None, None],
+                }
+            },
+        )
+        # Per-sample average weights each sample equally: (0.6 + 0.9) / 2 = 0.75.
+        self.assertEqual(stat.get_summary("g", "sq").avg, 0.75)
+
+        # Global pooling weights each instance equally: (0.6 + 0.9 * 3) / 4 = 0.825.
+        g = stat.get_global_summary()
+        self.assertAlmostEqual(g["sq"], 0.825)
+        self.assertEqual((g["tp"], g["fp"], g["fn"]), (4.0, 0.0, 0.0))
+        self.assertEqual(g["rq"], 1.0)
+        self.assertAlmostEqual(g["pq"], 0.825)  # sq_global * rq_global
+
+    def test_get_global_summary_rq_from_confusion_matrix(self):
+        from panoptica.utils.serialization import format_instance_subject_name
+
+        subj = [
+            "s1",
+            format_instance_subject_name("s1", "g", 0),
+            "s2",
+            format_instance_subject_name("s2", "g", 0),
+        ]
+        stat = Panoptica_Statistic(
+            subj_names=subj,
+            value_dict={
+                "g": {
+                    "sq": [1.0, 1.0, 1.0, 1.0],
+                    "tp": [1, None, 1, None],
+                    "fp": [1, None, 3, None],
+                    "fn": [0, None, 2, None],
+                }
+            },
+        )
+        g = stat.get_global_summary("g")
+        # pooled totals: tp=2, fp=4, fn=2 -> rq = 2 / (2 + 0.5*4 + 0.5*2) = 0.4
+        self.assertEqual((g["tp"], g["fp"], g["fn"]), (2.0, 4.0, 2.0))
+        self.assertAlmostEqual(g["rq"], 0.4)
+        self.assertAlmostEqual(g["prec"], 2 / 6)
+        self.assertAlmostEqual(g["rec"], 2 / 4)
+
+    def test_get_global_summary_requires_instance_rows(self):
+        stat = Panoptica_Statistic(
+            subj_names=["s1", "s2"],
+            value_dict={
+                "g": {"sq": [0.5, 0.7], "tp": [1, 1], "fp": [0, 0], "fn": [0, 0]}
+            },
+        )
+        with self.assertRaises(ValueError):
+            stat.get_global_summary()
+
     def test_make_autc_plots_graceful_on_regular_stats(self):
         """
         Tests that make_autc_plots does not crash when provided with
