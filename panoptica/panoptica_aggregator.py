@@ -1,4 +1,7 @@
-from panoptica.utils import format_instance_subject_name, validate_subject_name
+"""Thread-safe aggregation of per-subject evaluation results into a TSV/JSONL file."""
+
+from panoptica.utils import validate_subject_name
+from panoptica.utils.logger import logger
 import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
@@ -9,7 +12,6 @@ import os
 import atexit
 from tempfile import NamedTemporaryFile
 import warnings
-from typing import Optional
 
 from panoptica.utils import FileType
 from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
@@ -48,7 +50,7 @@ class Panoptica_Aggregator:
         file_type: FileType = "jsonl",
         output_individual_instance_metrics: bool = False,
         is_autc: bool = False,
-        threshold_step_size: Optional[float] = None,
+        threshold_step_size: float | None = None,
     ):
         """Initializes the Panoptica_Aggregator.
 
@@ -175,15 +177,14 @@ class Panoptica_Aggregator:
             id_list = _load_buffer_entries(self.__output_buffer_file)
 
             if subject_name in id_list:
-                print(
-                    f"Subject '{subject_name}' evaluated or in process {self.__output_file}, do not add duplicates to your evaluation!",
-                    flush=True,
+                logger.warning(
+                    f"Subject '{subject_name}' evaluated or in process {self.__output_file}, do not add duplicates to your evaluation!"
                 )
                 return
             _append_buffer_entries(self.__output_buffer_file, [subject_name])
 
         # Run Evaluation (allowed in parallel)
-        print(f"Call evaluate on {subject_name}")
+        logger.info(f"Call evaluate on {subject_name}")
         if self.__autc:
             if self.__threshold_step_size is None:
                 raise ValueError(
@@ -232,7 +233,7 @@ def _load_buffer_entries(file: str | Path) -> list[str]:
     Raises:
         ValueError: If the buffer file contains duplicate entries.
     """
-    with open(str(file), "r", encoding="utf8", newline="") as f:
+    with open(str(file), encoding="utf8", newline="") as f:
         rows = list(csv.reader(f, delimiter="\t", lineterminator="\n"))
     entries = [row[0] for row in rows if row]
     if len(entries) != len(set(entries)):

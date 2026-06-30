@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from panoptica.utils.logger import logger
 
 from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import FileBackend
@@ -37,7 +38,7 @@ class TSVBackend(FileBackend):
         else:
             existing_header = _read_first_tsv_row(self.path)
             if len(existing_header) == 0:
-                print(
+                logger.info(
                     f"{self.path}: Output file given is empty, will start with header"
                 )
                 _append_tsv_rows(self.path, [header])
@@ -72,7 +73,7 @@ class TSVBackend(FileBackend):
                 summary_dict = result.to_dict(True)
                 # Row keys live under "reference_instances"; pop so they don't
                 # bleed into the summary loop below.
-                group_instance_rows[groupname] = summary_dict.pop(
+                group_instance_rows[groupname] = summary_dict.pop(  # type: ignore[assignment]
                     "reference_instances", []
                 )
                 if result.computation_time is not None:
@@ -111,7 +112,7 @@ class TSVBackend(FileBackend):
                     content.append(_canonical_tsv_value(result_dict.get(e)))
             _append_tsv_rows(self.path, [content])
 
-        print(f"Saved entry {subject_name} into {self.path}")
+        logger.info(f"Saved entry {subject_name} into {self.path}")
 
     def write_full(
         self,
@@ -141,7 +142,7 @@ class TSVBackend(FileBackend):
     def load_raw(
         self, verbose: bool = True
     ) -> tuple[list[str], dict[str, dict[str, list[float | None]]]]:
-        with open(self.path, "r", encoding="utf8", newline="") as tsvfile:
+        with open(self.path, encoding="utf8", newline="") as tsvfile:
             rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
             rows = list(rd)
 
@@ -154,8 +155,8 @@ class TSVBackend(FileBackend):
                 "First column is not subject_names, something wrong with the file?"
             )
 
-        keys_in_order: list[tuple[str, str]] = [
-            tuple(c.split("-", maxsplit=1)) for c in header[1:]  # type: ignore[misc]
+        keys_in_order: list[tuple[str, ...]] = [
+            tuple(c.split("-", maxsplit=1)) for c in header[1:]
         ]
         keys_in_order = [
             k if len(k) == 2 else ("ungrouped", k[0]) for k in keys_in_order
@@ -168,9 +169,9 @@ class TSVBackend(FileBackend):
         group_names = list(dict.fromkeys(k[0] for k in keys_in_order))
 
         if verbose:
-            print(f"Found {len(rows) - 1} entries")
-            print(f"Found metrics: {metric_names}")
-            print(f"Found groups: {group_names}")
+            logger.info(f"Found {len(rows) - 1} entries")
+            logger.info(f"Found metrics: {metric_names}")
+            logger.info(f"Found groups: {group_names}")
 
         # Header-only file
         if len(rows) == 1:
@@ -230,7 +231,7 @@ def _canonical_tsv_value(v):
 
 def _read_first_tsv_row(path: Path) -> list[str]:
     """Reads the first row of a TSV file. NOT THREAD SAFE BY ITSELF."""
-    with open(path, "r", encoding="utf8", newline="") as tsvfile:
+    with open(path, encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
         return next(rd, [])
 
@@ -243,7 +244,7 @@ def _load_first_tsv_column(path: Path) -> list[str]:
     Raises:
         ValueError: If the file contains duplicate entries.
     """
-    with open(path, "r", encoding="utf8", newline="") as tsvfile:
+    with open(path, encoding="utf8", newline="") as tsvfile:
         rd = csv.reader(tsvfile, delimiter="\t", lineterminator="\n")
         rows = list(rd)
     id_list = [row[0] for row in rows]

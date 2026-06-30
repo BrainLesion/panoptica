@@ -1,4 +1,5 @@
 import numpy as np
+from panoptica.utils.logger import logger
 from importlib.util import find_spec
 from pathlib import Path
 from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
@@ -24,7 +25,7 @@ class NRRDImage:
             self.__space_origin: np.ndarray = np.array(header["space origin"])
             ndim: int = header["dimension"]
         except KeyError as e:
-            raise KeyError(f"Missing key in header: {e}")
+            raise KeyError(f"Missing key in header: {e}") from e
 
         if self.__space_directions.shape != (ndim, ndim):
             raise ValueError(
@@ -82,7 +83,7 @@ class NRRDImageChecker(_InputDataTypeChecker):
         try:
             readdata, header = nrrd.read(str(image_path))
         except Exception as e:
-            print(f"Error reading images: {e}")
+            logger.error(f"Error reading images: {e}")
             return None
         return NRRDImage(readdata, header)
 
@@ -98,16 +99,18 @@ class NRRDImageChecker(_InputDataTypeChecker):
         # start necessary comparisons
         # dimensions need to be exact
         if prediction_image.shape != reference_image.shape:
-            return False, "Dimension Mismatch: {} vs {}".format(
-                prediction_image.shape, reference_image.shape
+            return (
+                False,
+                f"Dimension Mismatch: {prediction_image.shape} vs {reference_image.shape}",
             )
 
         # check if the affine matrices are similar
         if (
             np.array(prediction_image.affine) - np.array(reference_image.affine)
         ).sum() > self.threshold:
-            return False, "Affine Mismatch: {} vs {}".format(
-                prediction_image.affine, reference_image.affine
+            return (
+                False,
+                f"Affine Mismatch: {prediction_image.affine} vs {reference_image.affine}",
             )
 
         return True, ""

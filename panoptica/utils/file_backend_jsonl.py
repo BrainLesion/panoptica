@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from panoptica.utils.logger import logger
 
 from panoptica.utils.serialization import (
     format_instance_subject_name,
@@ -64,7 +65,7 @@ class JSONLBackend(FileBackend):
                         existing.append(format_instance_subject_name(sn, g, inst_idx))
 
         if not seen_any:
-            print(
+            logger.info(
                 f"{self.path}: Output file given is empty, will start with first subject"
             )
         return existing
@@ -97,7 +98,7 @@ class JSONLBackend(FileBackend):
     def append_subject(
         self,
         subject_name: str,
-        result_grouped: dict[str, "PanopticaResult | PanopticaAUTCResult"],
+        result_grouped: dict[str, PanopticaResult | PanopticaAUTCResult],
         class_group_names: list[str],
         evaluation_metrics: list[str],
         output_individual_instance_metrics: bool,
@@ -108,7 +109,9 @@ class JSONLBackend(FileBackend):
             group_obj: dict = {}
             if output_individual_instance_metrics:
                 summary_dict = result.to_dict(True)
-                instance_dicts = summary_dict.pop("reference_instances", [])
+                instance_dicts: list = summary_dict.pop(  # type: ignore[assignment]
+                    "reference_instances", []
+                )
             else:
                 summary_dict = result.to_dict(False)
                 instance_dicts = []
@@ -135,7 +138,7 @@ class JSONLBackend(FileBackend):
             record["groups"][groupname] = group_obj
 
         _append_jsonl_record(self.path, record)
-        print(f"Saved entry {subject_name} into {self.path}")
+        logger.info(f"Saved entry {subject_name} into {self.path}")
 
     def write_full(
         self,
@@ -207,9 +210,9 @@ class JSONLBackend(FileBackend):
                     metric_names.append(k)
 
         if verbose:
-            print(f"Found {len(records)} entries")
-            print(f"Found metrics: {metric_names}")
-            print(f"Found groups: {group_names}")
+            logger.info(f"Found {len(records)} entries")
+            logger.info(f"Found metrics: {metric_names}")
+            logger.info(f"Found groups: {group_names}")
 
         subj_names: list[str] = []
         value_dict: dict[str, dict[str, list[float | None]]] = {
@@ -305,8 +308,7 @@ def _parse_jsonl_value(v) -> float | None:
             return None
         return f
     raise ValueError(
-        f"unsupported value {v!r} of type {type(v).__name__}; "
-        f"expected number or null"
+        f"unsupported value {v!r} of type {type(v).__name__}; expected number or null"
     )
 
 
@@ -318,7 +320,7 @@ def _iter_jsonl_records(path: Path):
     malformed line, so a partial write from a crash or a hand-edit gets
     pinpointed rather than surfacing as a context-free ``JSONDecodeError``.
     """
-    with open(path, "r", encoding="utf8") as f:
+    with open(path, encoding="utf8") as f:
         for line_number, line in enumerate(f, start=1):
             stripped = line.strip()
             if not stripped:

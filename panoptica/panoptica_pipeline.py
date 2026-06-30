@@ -1,5 +1,7 @@
-from typing import Optional
+"""The three-phase panoptic evaluation pipeline: approximation, matching, evaluation."""
+
 from time import perf_counter
+from panoptica.utils.logger import logger
 from typing import TYPE_CHECKING
 
 from panoptica.instance_approximator import InstanceApproximator
@@ -19,18 +21,26 @@ from panoptica.utils.processing_pair import (
 from panoptica._functionals import _get_voronoi_regions
 import numpy as np
 
+# A processing pair is progressively transformed across the pipeline phases; the
+# isinstance guards in each phase narrow it back to the concrete type they handle.
+_ProcessingState = (
+    SemanticPair
+    | UnmatchedInstancePair
+    | MatchedInstancePair
+    | EvaluateInstancePair
+    | PanopticaResult
+)
+
 if TYPE_CHECKING:
-    import torch
-    import SimpleITK as sitk
-    import nibabel as nib
+    pass
 
 
 def _panoptic_evaluate(
     input_pair: SemanticPair | UnmatchedInstancePair | MatchedInstancePair,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    instance_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
-    global_metrics: list[Metric] = [Metric.DSC],
+    instance_metrics: list[Metric] | None = None,
+    global_metrics: list[Metric] | None = None,
     decision_metric: Metric | None = None,
     decision_threshold: float | None = None,
     matching_threshold: float | None = None,
@@ -69,8 +79,12 @@ def _panoptic_evaluate(
         ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
+    if instance_metrics is None:
+        instance_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD]
+    if global_metrics is None:
+        global_metrics = [Metric.DSC]
     if verbose:
-        print("Panoptic: Start Evaluation")
+        logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
 
@@ -86,7 +100,7 @@ def _panoptic_evaluate(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair = input_pair.copy()
+    processing_pair: _ProcessingState = input_pair.copy()
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -188,8 +202,8 @@ def _panoptic_evaluate_region_wise(
     input_pair: SemanticPair | UnmatchedInstancePair,
     instance_approximator: InstanceApproximator | None = None,
     instance_matcher: InstanceMatchingAlgorithm | None = None,
-    instance_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
-    global_metrics: list[Metric] = [Metric.DSC],
+    instance_metrics: list[Metric] | None = None,
+    global_metrics: list[Metric] | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
     log_times: bool = False,
     result_all: bool = True,
@@ -223,8 +237,12 @@ def _panoptic_evaluate_region_wise(
         ValueError: If a required component (e.g. InstanceApproximator or InstanceMatchingAlgorithm) is missing.
         RuntimeError: If the end of the panoptic pipeline is reached without producing results.
     """
+    if instance_metrics is None:
+        instance_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD]
+    if global_metrics is None:
+        global_metrics = [Metric.DSC]
     if verbose:
-        print("Panoptic: Start Evaluation")
+        logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
 
@@ -240,7 +258,7 @@ def _panoptic_evaluate_region_wise(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair = input_pair.copy()
+    processing_pair: _ProcessingState = input_pair.copy()
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -265,7 +283,6 @@ def _panoptic_evaluate_region_wise(
 
     # proceed if pipeline only if no edge case handling necessary
     if not isinstance(processing_pair, PanopticaResult):
-
         # create regions and label to regions
         region_map, num_features = _get_voronoi_regions(
             processing_pair.reference_arr, processing_pair.n_ref_instances
@@ -285,7 +302,7 @@ def _panoptic_evaluate_region_wise(
             )
 
             # multiply region mask with both prediction and reference arr
-            processing_pair_r = UnmatchedInstancePair(
+            processing_pair_r: _ProcessingState = UnmatchedInstancePair(
                 processing_pair.prediction_arr * region_mask,
                 processing_pair.reference_arr * region_mask,
             )
@@ -383,11 +400,11 @@ def _panoptic_evaluate_region_wise(
                 reference_arr=input_pair.reference_arr,
                 prediction_arr=input_pair.prediction_arr,
                 processing_pair_orig_shape=instance_metadata["original_shape"],
-                n_pred_instances=np.nan,
-                n_ref_instances=np.nan,  # We set n_ref_instances to the number of regions, as each region corresponds to one reference instance
+                n_pred_instances=np.nan,  # type: ignore[arg-type]
+                n_ref_instances=np.nan,  # type: ignore[arg-type]  # We set n_ref_instances to the number of regions, as each region corresponds to one reference instance
                 n_ref_labels=instance_metadata["n_ref_labels"],
                 label_group=label_group,
-                tp=np.nan,
+                tp=np.nan,  # type: ignore[arg-type]
                 list_metrics={},
                 global_metrics=global_metrics,
                 edge_case_handler=edge_case_handler,
@@ -397,11 +414,10 @@ def _panoptic_evaluate_region_wise(
     else:
         # In case edge case handling already produced a result, we skip the region-wise processing and return the edge case result directly
         combined_result = processing_pair
-        combined_result.tp = (
-            np.nan
-        )  # Set tp to nan to indicate that no true positive calculation was done
-        combined_result.n_pred_instances = np.nan
-        combined_result.n_ref_instances = np.nan
+        # region-wise has no global TP/instance counts
+        combined_result.tp = np.nan  # type: ignore[assignment]
+        combined_result.n_pred_instances = np.nan  # type: ignore[assignment]
+        combined_result.n_ref_instances = np.nan  # type: ignore[assignment]
         num_features = 0
 
     # combined global metrics post-hoc
@@ -427,9 +443,9 @@ def _panoptic_evaluate_region_wise(
 
 
 def _phase_instance_approximation(
-    processing_pair: SemanticPair,
-    intermediate_steps_data: Optional[IntermediateStepsData],
-    instance_approximator: InstanceApproximator,
+    processing_pair: _ProcessingState,
+    intermediate_steps_data: IntermediateStepsData | None,
+    instance_approximator: InstanceApproximator | None,
     instance_metadata: dict,
     label_group=None,
     log_times=False,
@@ -444,7 +460,7 @@ def _phase_instance_approximation(
         if instance_approximator is None:
             raise ValueError("Got SemanticPair but not InstanceApproximator")
         if verbose:
-            print("-- Got SemanticPair, will approximate instances")
+            logger.info("-- Got SemanticPair, will approximate instances")
         start = perf_counter()
 
         processing_pair = instance_approximator.approximate_instances(
@@ -453,7 +469,7 @@ def _phase_instance_approximation(
         )
 
         if log_times:
-            print(f"-- Approximation took {perf_counter() - start} seconds")
+            logger.info(f"-- Approximation took {perf_counter() - start} seconds")
 
         # Update instance metadata after approximation
         if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
@@ -464,13 +480,13 @@ def _phase_instance_approximation(
 
 
 def _phase_instance_matching(
-    processing_pair: UnmatchedInstancePair,
+    processing_pair: _ProcessingState,
     intermediate_steps_data: IntermediateStepsData,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
     edge_case_handler: EdgeCaseHandler,
-    instance_matcher: InstanceMatchingAlgorithm,
+    instance_matcher: InstanceMatchingAlgorithm | None,
     matching_threshold: float | None = None,
     label_group=None,
     log_times=False,
@@ -492,7 +508,7 @@ def _phase_instance_matching(
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
-            print("-- Got UnmatchedInstancePair, will match instances")
+            logger.info("-- Got UnmatchedInstancePair, will match instances")
         if instance_matcher is None:
             raise ValueError(
                 "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
@@ -513,12 +529,12 @@ def _phase_instance_matching(
             **match_kwargs,
         )
         if log_times:
-            print(f"-- Matching took {perf_counter() - start} seconds")
+            logger.info(f"-- Matching took {perf_counter() - start} seconds")
     return processing_pair
 
 
 def _phase_instance_evaluation(
-    processing_pair: UnmatchedInstancePair | MatchedInstancePair,
+    processing_pair: _ProcessingState,
     intermediate_steps_data: IntermediateStepsData,
     instance_metrics: list[Metric],
     instance_metadata: dict,
@@ -545,7 +561,7 @@ def _phase_instance_evaluation(
 
     if isinstance(processing_pair, MatchedInstancePair):
         if verbose:
-            print("-- Got MatchedInstancePair, will evaluate instances")
+            logger.info("-- Got MatchedInstancePair, will evaluate instances")
         start = perf_counter()
         processing_pair = evaluate_matched_instance(
             processing_pair,
@@ -557,7 +573,7 @@ def _phase_instance_evaluation(
             **kwargs,
         )
         if log_times:
-            print(f"-- Instance Evaluation took {perf_counter() - start} seconds")
+            logger.info(f"-- Instance Evaluation took {perf_counter() - start} seconds")
     return processing_pair
 
 
@@ -565,7 +581,7 @@ def _handle_zero_instances_cases(
     processing_pair: UnmatchedInstancePair | MatchedInstancePair,
     edge_case_handler: EdgeCaseHandler,
     global_metrics: list[Metric],
-    eval_metrics: list[Metric] = [Metric.DSC, Metric.IOU, Metric.ASSD],
+    eval_metrics: list[Metric] | None = None,
     voxelspacing: tuple[float, ...] | None = None,
 ) -> UnmatchedInstancePair | MatchedInstancePair | PanopticaResult:
     """
@@ -581,6 +597,8 @@ def _handle_zero_instances_cases(
     Returns:
         UnmatchedInstancePair | MatchedInstancePair | PanopticaResult: The processed processing pair or evaluation result.
     """
+    if eval_metrics is None:
+        eval_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD]
     n_reference_instance = processing_pair.n_ref_instances
     n_prediction_instance = processing_pair.n_pred_instances
 

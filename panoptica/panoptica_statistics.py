@@ -1,3 +1,5 @@
+"""Aggregate statistics and plots computed over many PanopticaResult evaluations."""
+
 from panoptica.utils import (
     is_threshold_key,
     parse_threshold_key,
@@ -6,6 +8,7 @@ from panoptica.utils import (
     get_backend,
     FileType,
 )
+from panoptica.utils.logger import logger
 import numpy as np
 import warnings
 from pathlib import Path
@@ -16,8 +19,9 @@ try:
     import plotly.express as px
     import plotly.graph_objects as go
 except Exception as e:
-    print(e)
-    print("OPTIONAL PACKAGE MISSING")
+    logger.warning(
+        "Optional plotting package missing, some statistics features disabled: %s", e
+    )
 
 
 class FloatDistribution:
@@ -338,10 +342,10 @@ class Panoptica_Statistic:
         """Gets the values for ONE subject for each group and metric
 
         Args:
-            subjectname (str): _description_
+            subjectname (str): Name of the subject to extract.
 
         Returns:
-            _type_: _description_
+            dict[str, dict[str, float | None]]: Group -> metric -> value for this subject.
         """
         self._assertsubject(subjectname)
         sidx = self.__subj_names.index(subjectname)
@@ -354,10 +358,10 @@ class Panoptica_Statistic:
         """Gets the dictionary mapping the group to the metrics specified
 
         Args:
-            metricname (str): _description_
+            metricname (str): Name of the metric to extract.
 
         Returns:
-            _type_: _description_
+            dict[str, list[float | None]]: Group -> list of values for this metric.
         """
         self._assertmetric(metricname)
         return {g: self.get(g, metricname) for g in self.__groupnames}
@@ -366,10 +370,10 @@ class Panoptica_Statistic:
         """Gets the dictionary mapping metric to values for ONE group
 
         Args:
-            groupname (str): _description_
+            groupname (str): Name of the group to extract.
 
         Returns:
-            _type_: _description_
+            dict[str, list[float | None]]: Metric -> list of values for this group.
         """
         self._assertgroup(groupname)
         return {m: self.get(groupname, m) for m in self.__metricnames}
@@ -378,7 +382,7 @@ class Panoptica_Statistic:
         """Converts the statistic to a pandas dataframe
 
         Returns:
-            pd.DataFrame: _description_
+            pd.DataFrame: One row per (subject, group), with a column per metric.
         """
         data = []
         for subj in self.__subj_names:
@@ -395,10 +399,10 @@ class Panoptica_Statistic:
         """Given metric, gives list of all values (even across groups!) Treat with care!
 
         Args:
-            metric (_type_): _description_
+            metric (str): Name of the metric to pool.
 
         Returns:
-            _type_: _description_
+            list[float | None]: All values of the metric concatenated across every group.
         """
         values = []
         for g in self.__groupnames:
@@ -407,13 +411,13 @@ class Panoptica_Statistic:
 
     def get_subject_wise_paired_values_to(
         self, other: "Panoptica_Statistic", group: str, metric: str
-    ) -> tuple[list[str], list[float], list[float]]:
+    ) -> tuple[list[str], list[float | None], list[float | None]]:
         """Calculates the subject-wise paired values in metric for given group to another Panoptica_Statistic object
 
         Args:
-            other (Panoptica_Statistic): _description_
-            group (str): _description_
-            metric (str): _description_
+            other (Panoptica_Statistic): The other statistic to compare against (must share subject names).
+            group (str): Group to compare.
+            metric (str): Metric to compare.
         """
         self._assertgroup(group)
         self._assertmetric(metric)
@@ -451,16 +455,16 @@ class Panoptica_Statistic:
         """Calculates the subject-wise difference in metric for given group to another Panoptica_Statistic object
 
         Args:
-            other (Panoptica_Statistic): _description_
-            group (str): _description_
-            metric (str): _description_
+            other (Panoptica_Statistic): The other statistic to compare against (must share subject names).
+            group (str): Group to compare.
+            metric (str): Metric to compare.
         Returns:
-            dict[str, float]: _description_
+            dict[str, float | None]: Subject -> (self value minus other value); None where either is missing.
         """
         subj_names, self_v, other_v = self.get_subject_wise_paired_values_to(
             other, group, metric
         )
-        diff_dict = {}
+        diff_dict: dict[str, float | None] = {}
         for subj, val_self, val_other in zip(subj_names, self_v, other_v):
             if val_self is not None and val_other is not None:
                 diff_dict[subj] = val_self - val_other
@@ -472,7 +476,7 @@ class Panoptica_Statistic:
         """Calculates the average and std over all groups (so group-wise avg first, then average over those)
 
         Returns:
-            dict[str, tuple[float, float]]: _description_
+            dict[str, FloatDistribution]: Metric -> distribution of the per-group averages.
         """
         summary_dict = {}
         for m in self.__metricnames:
@@ -608,7 +612,7 @@ def make_autc_plots(
         thresholds = stat.get_thresholds_for_metric(metric)
 
         if not thresholds:
-            print(f"Warning: No threshold data found for '{metric}' in '{setupname}'.")
+            logger.warning(f"No threshold data found for '{metric}' in '{setupname}'.")
             continue
 
         X = thresholds
@@ -716,7 +720,7 @@ def make_curve_over_setups(
 
     # If X (setupnames) are digits only, plot as digits
     if convert_x_to_digit:
-        X = [float(s) for s in setupnames]
+        X: list = [float(s) for s in setupnames]
     else:
         X = setupnames
 
