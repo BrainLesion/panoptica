@@ -183,6 +183,10 @@ def _panoptic_evaluate(
             instance_volume_matched_ref=processing_pair.instance_volume_matched_ref,
             instance_voxel_count_unmatched_ref=processing_pair.instance_voxel_count_unmatched_ref,
             instance_volume_unmatched_ref=processing_pair.instance_volume_unmatched_ref,
+            instance_voxel_count_matched_pred=processing_pair.instance_voxel_count_matched_pred,
+            instance_volume_matched_pred=processing_pair.instance_volume_matched_pred,
+            instance_voxel_count_unmatched_pred=processing_pair.instance_voxel_count_unmatched_pred,
+            instance_volume_unmatched_pred=processing_pair.instance_volume_unmatched_pred,
             global_metrics=global_metrics,
             edge_case_handler=edge_case_handler,
             intermediate_steps_data=intermediate_steps_data,
@@ -381,6 +385,10 @@ def _panoptic_evaluate_region_wise(
                     instance_volume_matched_ref=processing_pair_r.instance_volume_matched_ref,
                     instance_voxel_count_unmatched_ref=processing_pair_r.instance_voxel_count_unmatched_ref,
                     instance_volume_unmatched_ref=processing_pair_r.instance_volume_unmatched_ref,
+                    instance_voxel_count_matched_pred=processing_pair_r.instance_voxel_count_matched_pred,
+                    instance_volume_matched_pred=processing_pair_r.instance_volume_matched_pred,
+                    instance_voxel_count_unmatched_pred=processing_pair_r.instance_voxel_count_unmatched_pred,
+                    instance_volume_unmatched_pred=processing_pair_r.instance_volume_unmatched_pred,
                     global_metrics=global_metrics,
                     edge_case_handler=edge_case_handler,
                     intermediate_steps_data=intermediate_steps_data_r,
@@ -623,6 +631,29 @@ def _handle_zero_instances_cases(
         n_reference_instance = 0
         n_prediction_instance = n_prediction_instance
         is_edge_case = True
+        # Report each prediction instance as an unmatched (FP) prediction. Single
+        # np.unique pass, mirroring the all-false-negative branch below.
+        unique_labels, counts = np.unique(
+            processing_pair.prediction_arr, return_counts=True
+        )
+        voxel_size = float(
+            np.prod(
+                voxelspacing
+                if voxelspacing is not None
+                else (1.0,) * processing_pair.prediction_arr.ndim
+            )
+        )
+        unmatched_pred_voxel_counts: list[int] = []
+        unmatched_pred_volumes: list[float] = []
+        for label, count in zip(unique_labels, counts):
+            if label == 0:
+                continue
+            unmatched_pred_voxel_counts.append(int(count))
+            unmatched_pred_volumes.append(float(count) * voxel_size)
+        panoptica_result_args["instance_voxel_count_unmatched_pred"] = (
+            unmatched_pred_voxel_counts
+        )
+        panoptica_result_args["instance_volume_unmatched_pred"] = unmatched_pred_volumes
     elif n_prediction_instance == 0:
         # All predictions are missing, only false negatives
         n_reference_instance = n_reference_instance

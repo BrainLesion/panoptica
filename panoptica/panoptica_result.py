@@ -53,6 +53,10 @@ class PanopticaResult:
         instance_volume_matched_ref: list[float] | None = None,
         instance_voxel_count_unmatched_ref: list[int] | None = None,
         instance_volume_unmatched_ref: list[float] | None = None,
+        instance_voxel_count_matched_pred: list[int] | None = None,
+        instance_volume_matched_pred: list[float] | None = None,
+        instance_voxel_count_unmatched_pred: list[int] | None = None,
+        instance_volume_unmatched_pred: list[float] | None = None,
         **kwargs,
     ):
         """Result object for Panoptica, contains all calculatable metrics
@@ -427,6 +431,37 @@ class PanopticaResult:
             )
         # endregion
 
+        # region Predicted Instances
+        # Per-instance voxel count and physical volume of each prediction instance, split
+        # into matched predictions (those sharing a reference label) and unmatched (FP)
+        # predictions. Kept as plain lists (surfaced via to_dict's "predicted_instances"
+        # block); no master metric is registered, so the default output schema is unchanged.
+        self.instance_voxel_count_matched_pred_list: list[int] = list(
+            instance_voxel_count_matched_pred or []
+        )
+        self.instance_volume_matched_pred_list: list[float] = list(
+            instance_volume_matched_pred or []
+        )
+        if len(self.instance_voxel_count_matched_pred_list) != len(
+            self.instance_volume_matched_pred_list
+        ):
+            raise ValueError(
+                "matched pred voxel-count and volume lists must have equal length"
+            )
+        self.instance_voxel_count_unmatched_pred_list: list[int] = list(
+            instance_voxel_count_unmatched_pred or []
+        )
+        self.instance_volume_unmatched_pred_list: list[float] = list(
+            instance_volume_unmatched_pred or []
+        )
+        if len(self.instance_voxel_count_unmatched_pred_list) != len(
+            self.instance_volume_unmatched_pred_list
+        ):
+            raise ValueError(
+                "unmatched pred voxel-count and volume lists must have equal length"
+            )
+        # endregion
+
         # region Global
         self.global_bin_volume_pred = np.count_nonzero(prediction_arr)
         self._add_metric(
@@ -779,7 +814,7 @@ class PanopticaResult:
         When ``output_individual_instance_metrics`` is False, returns a flat
         ``dict`` of subject-level (master) metrics.
 
-        When True, returns the same master dict augmented with one extra key:
+        When True, returns the same master dict augmented with two extra keys:
 
         - ``"reference_instances"``: list of per-instance dicts, one per
           reference instance. Matched instances appear first, followed by
@@ -791,6 +826,12 @@ class PanopticaResult:
           all rows live under ``reference_instances`` already; file backends
           translate them back to master keys via
           ``normalize_row_to_master_schema``.
+        - ``"predicted_instances"``: list of per-instance dicts, one per
+          prediction instance. Matched predictions (those sharing a reference
+          label) appear first, followed by unmatched (FP) predictions. Each row
+          carries ``"voxel_count"``, ``"volume"`` and ``"is_matched"`` (``1`` or
+          ``0``). This is the minimal predicted-instance report; the file
+          backends do not yet persist it.
         """
         # Base dictionary (Master row with averages and globals)
         master_dict = {
@@ -844,6 +885,31 @@ class PanopticaResult:
             rows[i]["is_matched"] = 0
 
         master_dict["reference_instances"] = rows
+
+        # Per-prediction-instance rows (minimal scope: volume, voxel count, matched flag).
+        # Matched predictions (sharing a reference label) come first, then unmatched (FP).
+        n_matched_pred = len(self.instance_volume_matched_pred_list)
+        n_unmatched_pred = len(self.instance_volume_unmatched_pred_list)
+        pred_rows: list[dict] = [{} for _ in range(n_matched_pred + n_unmatched_pred)]
+        for key, val_list in (  # type: ignore[assignment]
+            ("voxel_count", self.instance_voxel_count_matched_pred_list),
+            ("volume", self.instance_volume_matched_pred_list),
+        ):
+            for i in range(n_matched_pred):
+                pred_rows[i][key] = val_list[i] if i < len(val_list) else None
+        for key, val_list in (  # type: ignore[assignment]
+            ("voxel_count", self.instance_voxel_count_unmatched_pred_list),
+            ("volume", self.instance_volume_unmatched_pred_list),
+        ):
+            for i in range(n_unmatched_pred):
+                pred_rows[n_matched_pred + i][key] = (
+                    val_list[i] if i < len(val_list) else None
+                )
+        for i in range(n_matched_pred):
+            pred_rows[i]["is_matched"] = 1
+        for i in range(n_matched_pred, n_matched_pred + n_unmatched_pred):
+            pred_rows[i]["is_matched"] = 0
+        master_dict["predicted_instances"] = pred_rows
         return master_dict
 
     @property

@@ -182,6 +182,22 @@ def evaluate_matched_instance(
             instance_voxel_count_unmatched_ref.append(voxel_count)
             instance_volume_unmatched_ref.append(float(voxel_count) * missed_voxel_size)
 
+    # Per-prediction-instance volumes. The matcher relabels matched predictions to share
+    # their reference label, so labels in ``matched_instances`` are the matched predictions
+    # and ``missed_prediction_labels`` are the false positives. Size them straight from the
+    # prediction array (same np.unique idiom as the reference accounting above).
+    (
+        instance_voxel_count_matched_pred,
+        instance_volume_matched_pred,
+        instance_voxel_count_unmatched_pred,
+        instance_volume_unmatched_pred,
+    ) = _predicted_instance_volumes(
+        prediction_arr,
+        matched_instance_pair.matched_instances,
+        matched_instance_pair.missed_prediction_labels,
+        voxelspacing,
+    )
+
     # Create and return the EvaluateInstancePair object with computed metrics
     return EvaluateInstancePair(
         reference_arr=matched_instance_pair.reference_arr,
@@ -194,6 +210,43 @@ def evaluate_matched_instance(
         instance_volume_matched_ref=instance_volume_matched_ref,
         instance_voxel_count_unmatched_ref=instance_voxel_count_unmatched_ref,
         instance_volume_unmatched_ref=instance_volume_unmatched_ref,
+        instance_voxel_count_matched_pred=instance_voxel_count_matched_pred,
+        instance_volume_matched_pred=instance_volume_matched_pred,
+        instance_voxel_count_unmatched_pred=instance_voxel_count_unmatched_pred,
+        instance_volume_unmatched_pred=instance_volume_unmatched_pred,
+    )
+
+
+def _predicted_instance_volumes(
+    prediction_arr: np.ndarray,
+    matched_labels: list[int],
+    missed_prediction_labels: list[int],
+    voxelspacing: tuple[float, ...] | None,
+) -> tuple[list[int], list[float], list[int], list[float]]:
+    """Voxel counts and physical volumes of the prediction instances, split into
+    matched (sharing a reference label) and unmatched (false-positive) predictions.
+
+    Returns ``(voxel_count_matched, volume_matched, voxel_count_unmatched, volume_unmatched)``.
+    """
+    unique_pred_labels, pred_counts = np.unique(prediction_arr, return_counts=True)
+    pred_label_to_count = dict(zip(unique_pred_labels.tolist(), pred_counts.tolist()))
+    voxel_size = float(
+        np.prod(
+            voxelspacing if voxelspacing is not None else (1.0,) * prediction_arr.ndim
+        )
+    )
+
+    def _sizes(labels: list[int]) -> tuple[list[int], list[float]]:
+        counts = [int(pred_label_to_count.get(label, 0)) for label in labels]
+        return counts, [float(c) * voxel_size for c in counts]
+
+    voxel_count_matched, volume_matched = _sizes(matched_labels)
+    voxel_count_unmatched, volume_unmatched = _sizes(missed_prediction_labels)
+    return (
+        voxel_count_matched,
+        volume_matched,
+        voxel_count_unmatched,
+        volume_unmatched,
     )
 
 
