@@ -453,6 +453,36 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertEqual(result.sq, 0.75)
         self.assertEqual(result.pq, 0.75)
 
+    def test_skip_groups(self):
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy().astype(a.dtype)
+        a[20:40, 10:20] = 5
+        b[20:35, 10:20] = 5
+        a[5:15, 30:40] = 7
+        b[5:15, 30:40] = 7
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            segmentation_class_groups=SegmentationClassGroups(
+                {"organ_a": (5, True), "organ_b": (7, True)}
+            ),
+        )
+
+        # without skipping, both groups are evaluated
+        full = evaluator.evaluate(b, a)
+        self.assertEqual(set(full.keys()), {"organ_a", "organ_b"})
+
+        # a skipped group is omitted from the result and not evaluated
+        skipped = evaluator.evaluate(b, a, skip_groups=["organ_b"])
+        self.assertEqual(set(skipped.keys()), {"organ_a"})
+        self.assertNotIn("organ_b", skipped)
+
+        # unknown names are ignored (with a warning), never "skip everything"
+        none_skipped = evaluator.evaluate(b, a, skip_groups=["does_not_exist"])
+        self.assertEqual(set(none_skipped.keys()), {"organ_a", "organ_b"})
+
     def test_single_instance_mode_nooverlap(self):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
