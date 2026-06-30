@@ -25,7 +25,7 @@ class NibabelImageChecker(_InputDataTypeChecker):
         except Exception as e:
             print(f"Error reading images: {e}")
             return None
-        return image
+        return image  # type: ignore[return-value]
 
     def sanity_check_images(
         self,
@@ -56,9 +56,7 @@ class NibabelImageChecker(_InputDataTypeChecker):
         if prediction_image.shape != reference_image.shape:
             return (
                 False,
-                "Dimension Mismatch: {} vs {}".format(
-                    prediction_image.shape, reference_image.shape
-                ),
+                f"Dimension Mismatch: {prediction_image.shape} vs {reference_image.shape}",
             )
 
         # check if the affine matrices are similar
@@ -67,15 +65,13 @@ class NibabelImageChecker(_InputDataTypeChecker):
         ).sum() > self.threshold:
             return (
                 False,
-                "Affine Mismatch: {} vs {}".format(
-                    prediction_image.affine, reference_image.affine
-                ),
+                f"Affine Mismatch: {prediction_image.affine} vs {reference_image.affine}",
             )
 
         return True, ""
 
     def convert_to_numpy_array(self, image: nib.Nifti1Image) -> np.ndarray:
-        return np.asanyarray(image.dataobj, dtype=image.dataobj.dtype).copy()
+        return np.asanyarray(image.dataobj, dtype=image.dataobj.dtype).copy()  # type: ignore[attr-defined]
 
     def extract_metadata_from_image(self, image: nib.Nifti1Image) -> dict:
         """

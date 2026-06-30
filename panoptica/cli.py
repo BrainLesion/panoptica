@@ -1,9 +1,7 @@
 import os
-from typing import Optional
 import typer
-from typing_extensions import Annotated
+from typing import Annotated
 from importlib.metadata import version
-import SimpleITK as sitk
 from pathlib import Path
 from warnings import warn
 
@@ -41,7 +39,7 @@ def main(
         ),
     ],
     config: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "-c",
             "--config",
@@ -49,7 +47,7 @@ def main(
         ),
     ],
     version: Annotated[
-        Optional[bool],
+        bool | None,
         typer.Option(
             "-v",
             "--version",

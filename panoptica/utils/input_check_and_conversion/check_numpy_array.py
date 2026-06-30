@@ -45,8 +45,9 @@ def _sanity_check_images(
 
     # dimensions need to be exact
     if prediction_image.shape != reference_image.shape:
-        return False, "Dimension Mismatch: {} vs {}".format(
-            prediction_image.shape, reference_image.shape
+        return (
+            False,
+            f"Dimension Mismatch: {prediction_image.shape} vs {reference_image.shape}",
         )
 
     return True, ""

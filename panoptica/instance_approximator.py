@@ -1,4 +1,6 @@
-from abc import ABC, abstractmethod, ABCMeta
+"""Approximate instances from semantic segmentations via connected components."""
+
+from abc import abstractmethod, ABCMeta
 
 import numpy as np
 
@@ -65,6 +67,7 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
         """
         pass
 
+    @classmethod
     def _yaml_repr(cls, node) -> dict:
         raise NotImplementedError(
             f"Tried to get yaml representation of abstract class {cls.__name__}"
@@ -104,6 +107,7 @@ class InstanceApproximator(SupportsConfig, metaclass=ABCMeta):
             )
 
         # If label_group is LabelPartGroup, force OneHotConnectedComponentsInstanceApproximator
+        instance_pair: UnmatchedInstancePair | MatchedInstancePair
         if isinstance(label_group, LabelPartGroup):
             instance_pair = OneHotConnectedComponentsInstanceApproximator(
                 cca_backend=CCABackend.cc3d
@@ -145,7 +149,7 @@ class ConnectedComponentsInstanceApproximator(InstanceApproximator):
         """
         self.cca_backend = cca_backend
 
-    def _approximate_instances(
+    def _approximate_instances(  # type: ignore[override]
         self, semantic_pair: SemanticPair, **kwargs
     ) -> UnmatchedInstancePair:
         """
@@ -199,7 +203,7 @@ class OneHotConnectedComponentsInstanceApproximator(InstanceApproximator):
         # Move the class axis to the front: (C, *arr_shape)
         return np.moveaxis(one_hot, -1, 0)
 
-    def _approximate_instances(
+    def _approximate_instances(  # type: ignore[override]
         self, semantic_pair: SemanticPair, label_group: LabelGroup | None = None
     ) -> UnmatchedInstancePair:
         cca_backend = self.cca_backend

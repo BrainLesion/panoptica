@@ -103,23 +103,19 @@ class MetricZeroTPEdgeCaseHandling(SupportsConfig):
             )
 
         self._default_result = default_result
-        self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {}
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_PRED] = (
-            empty_prediction_result
-            if empty_prediction_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.EMPTY_REF] = (
-            empty_reference_result
-            if empty_reference_result is not None
-            else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NO_INSTANCES] = (
-            no_instances_result if no_instances_result is not None else default_result
-        )
-        self._edgecase_dict[EdgeCaseZeroTP.NORMAL] = (
-            normal if normal is not None else default_result
-        )
+
+        # The validation above guarantees a non-None value for every key.
+        def _resolve(specific: EdgeCaseResult | None) -> EdgeCaseResult:
+            value = specific if specific is not None else default_result
+            assert value is not None
+            return value
+
+        self._edgecase_dict: dict[EdgeCaseZeroTP, EdgeCaseResult] = {
+            EdgeCaseZeroTP.EMPTY_PRED: _resolve(empty_prediction_result),
+            EdgeCaseZeroTP.EMPTY_REF: _resolve(empty_reference_result),
+            EdgeCaseZeroTP.NO_INSTANCES: _resolve(no_instances_result),
+            EdgeCaseZeroTP.NORMAL: _resolve(normal),
+        }
 
     def __call__(
         self, tp: int, n_pred_instances: int, n_ref_instances: int
@@ -182,33 +178,37 @@ class EdgeCaseHandler(SupportsConfig):
 
     def __init__(
         self,
-        listmetric_zeroTP_handling: dict[Metric, MetricZeroTPEdgeCaseHandling] = {
-            Metric.DSC: MetricZeroTPEdgeCaseHandling(
-                no_instances_result=EdgeCaseResult.NAN,
-                default_result=EdgeCaseResult.ZERO,
-            ),
-            Metric.clDSC: MetricZeroTPEdgeCaseHandling(
-                no_instances_result=EdgeCaseResult.NAN,
-                default_result=EdgeCaseResult.ZERO,
-            ),
-            Metric.IOU: MetricZeroTPEdgeCaseHandling(
-                no_instances_result=EdgeCaseResult.NAN,
-                empty_prediction_result=EdgeCaseResult.ZERO,
-                default_result=EdgeCaseResult.ZERO,
-            ),
-            Metric.ASSD: MetricZeroTPEdgeCaseHandling(
-                no_instances_result=EdgeCaseResult.NAN,
-                default_result=EdgeCaseResult.INF,
-            ),
-            Metric.RVD: MetricZeroTPEdgeCaseHandling(
-                default_result=EdgeCaseResult.NAN,
-            ),
-            Metric.RVAE: MetricZeroTPEdgeCaseHandling(
-                default_result=EdgeCaseResult.NAN,
-            ),
-        },
+        listmetric_zeroTP_handling: (
+            dict[Metric, MetricZeroTPEdgeCaseHandling] | None
+        ) = None,
         empty_list_std: EdgeCaseResult = EdgeCaseResult.NAN,
     ) -> None:
+        if listmetric_zeroTP_handling is None:
+            listmetric_zeroTP_handling = {
+                Metric.DSC: MetricZeroTPEdgeCaseHandling(
+                    no_instances_result=EdgeCaseResult.NAN,
+                    default_result=EdgeCaseResult.ZERO,
+                ),
+                Metric.clDSC: MetricZeroTPEdgeCaseHandling(
+                    no_instances_result=EdgeCaseResult.NAN,
+                    default_result=EdgeCaseResult.ZERO,
+                ),
+                Metric.IOU: MetricZeroTPEdgeCaseHandling(
+                    no_instances_result=EdgeCaseResult.NAN,
+                    empty_prediction_result=EdgeCaseResult.ZERO,
+                    default_result=EdgeCaseResult.ZERO,
+                ),
+                Metric.ASSD: MetricZeroTPEdgeCaseHandling(
+                    no_instances_result=EdgeCaseResult.NAN,
+                    default_result=EdgeCaseResult.INF,
+                ),
+                Metric.RVD: MetricZeroTPEdgeCaseHandling(
+                    default_result=EdgeCaseResult.NAN,
+                ),
+                Metric.RVAE: MetricZeroTPEdgeCaseHandling(
+                    default_result=EdgeCaseResult.NAN,
+                ),
+            }
         self.__listmetric_zeroTP_handling: dict[
             Metric, MetricZeroTPEdgeCaseHandling
         ] = listmetric_zeroTP_handling
@@ -221,16 +221,16 @@ class EdgeCaseHandler(SupportsConfig):
         n_pred_instances: int,
         n_ref_instances: int,
     ) -> tuple[bool, float | None]:
-        """_summary_
+        """Resolve the metric value when an instance pair has zero true positives.
 
         Args:
-            metric (Metric): _description_
-            tp (int): _description_
-            n_pred_instances (int): _description_
-            n_ref_instances (int): _description_
+            metric (Metric): The metric being evaluated.
+            tp (int): True-positive count; handling only applies when this is 0.
+            n_pred_instances (int): Number of prediction instances.
+            n_ref_instances (int): Number of reference instances.
 
         Raises:
-            NotImplementedError: _description_
+            NotImplementedError: If no zero-TP handling is configured for this metric.
 
         Returns:
             tuple[bool, float | None]: if edge case, and its edge case value
@@ -255,7 +255,7 @@ class EdgeCaseHandler(SupportsConfig):
     def get_metric_zero_tp_handle(self, metric: Metric):
         return self.__listmetric_zeroTP_handling[metric]
 
-    def handle_empty_list_std(self) -> EdgeCaseResult | None:
+    def handle_empty_list_std(self) -> EdgeCaseResult:
         return self.__empty_list_std
 
     def __str__(self) -> str:
