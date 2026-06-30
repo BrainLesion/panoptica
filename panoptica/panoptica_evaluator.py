@@ -89,19 +89,20 @@ class Panoptica_Evaluator(SupportsConfig):
         # Normalize the unified metrics list into the canonical configured form,
         # then derive the per-mode bare-Metric lists the pipeline consumes.
         self.__metrics = self._resolve_metrics(metrics)
-        # Fixed metric parameters (e.g. NSD threshold) are carried on the ConfiguredMetric
-        # but are not yet threaded through the evaluation pipeline. Rather than silently
-        # drop them, refuse them here until the parameter flow-through lands.
-        parameterized = [c for c in self.__metrics if c.params]
-        if parameterized:
-            raise NotImplementedError(
-                "Parameterized metrics are not yet supported by Panoptica_Evaluator "
-                f"(got {parameterized}). The parameters are carried on the ConfiguredMetric "
-                "and applied when it is called directly, but pipeline flow-through is not "
-                "implemented yet. Use default-parameter metrics for now."
-            )
         self.__eval_metrics = [c.metric for c in self.__metrics if c.is_instance]
         self.__global_metrics = [c.metric for c in self.__metrics if c.is_global]
+        # Instance-metric fixed parameters (e.g. NSD threshold) are threaded into the
+        # instance evaluation. Global parameterized metrics are not wired through yet, so
+        # they are refused rather than silently ignored.
+        global_parameterized = [c for c in self.__metrics if c.is_global and c.params]
+        if global_parameterized:
+            raise NotImplementedError(
+                "Parameterized global metrics are not yet supported by Panoptica_Evaluator "
+                f"(got {global_parameterized}). Use default-parameter global metrics for now."
+            )
+        self.__instance_metric_params = self._collect_metric_params(
+            [c for c in self.__metrics if c.is_instance]
+        )
         if isinstance(decision_metric, ConfiguredMetric):
             decision_metric = decision_metric.metric
         self.__decision_metric = decision_metric
@@ -173,6 +174,28 @@ class Panoptica_Evaluator(SupportsConfig):
                 seen.add(c)
                 deduped.append(c)
         return deduped
+
+    @staticmethod
+    def _collect_metric_params(
+        configs: "list[ConfiguredMetric]",
+    ) -> dict[Metric, dict]:
+        """Map each parameterized metric to its fixed parameters.
+
+        Only metrics that actually carry parameters are included. Two configs for the
+        same metric with different parameters are rejected, since results are keyed by
+        the bare metric (a single column per metric) and cannot yet represent multiple
+        parameterizations of the same metric.
+        """
+        params: dict[Metric, dict] = {}
+        for c in configs:
+            if c.metric in params and params[c.metric] != c.param_dict:
+                raise ValueError(
+                    f"Conflicting parameters for metric {c.metric.name}: "
+                    f"{params[c.metric]} vs {c.param_dict}. Multiple parameterizations "
+                    "of the same metric are not supported yet."
+                )
+            params[c.metric] = c.param_dict
+        return {m: p for m, p in params.items() if p}
 
     @classmethod
     def _yaml_repr(cls, node) -> dict:
@@ -372,6 +395,7 @@ class Panoptica_Evaluator(SupportsConfig):
                     instance_matcher=self.__instance_matcher,
                     instance_metrics=self.__eval_metrics,
                     global_metrics=self.__global_metrics,
+                    instance_metric_params=self.__instance_metric_params,
                     decision_metric=self.__decision_metric,
                     decision_threshold=decision_threshold,
                     matching_threshold=threshold,
@@ -570,6 +594,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 instance_matcher=self.__instance_matcher,
                 instance_metrics=self.__eval_metrics,
                 global_metrics=self.__global_metrics,
+                instance_metric_params=self.__instance_metric_params,
                 result_all=result_all,
                 log_times=self.__log_times if log_times is None else log_times,
                 verbose=self.__verbose if verbose is None else verbose,
@@ -585,6 +610,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 instance_matcher=self.__instance_matcher,
                 instance_metrics=self.__eval_metrics,
                 global_metrics=self.__global_metrics,
+                instance_metric_params=self.__instance_metric_params,
                 decision_metric=self.__decision_metric,
                 decision_threshold=decision_threshold,
                 matching_threshold=matching_threshold,

@@ -218,7 +218,6 @@ class Metric(_Enum_Compare):
         _compute_instance_average_symmetric_surface_distance,
         display_name="ASSD",
         instance_order=3,
-        param_spec=("connectivity",),
     )
     clDSC = _Metric(
         "clDSC",
@@ -266,7 +265,6 @@ class Metric(_Enum_Compare):
         _compute_instance_hausdorff_distance,
         display_name="Hausdorff Distance",
         instance_order=7,
-        param_spec=("connectivity",),
     )
     HD95 = _Metric(
         "HD95",
@@ -276,7 +274,6 @@ class Metric(_Enum_Compare):
         _compute_instance_hausdorff_distance95,
         display_name="Hausdorff Distance 95",
         instance_order=8,
-        param_spec=("connectivity",),
     )
     NSD = _Metric(
         "NSD",
@@ -286,7 +283,7 @@ class Metric(_Enum_Compare):
         _compute_instance_normalized_surface_dice,
         display_name="Normalized Surface Dice",
         instance_order=9,
-        param_spec=("threshold", "connectivity"),
+        param_spec=("threshold",),
     )
 
     def __call__(

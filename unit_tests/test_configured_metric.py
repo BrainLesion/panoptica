@@ -121,15 +121,42 @@ class Test_Unified_Metrics_API(unittest.TestCase):
         )
         self.assertEqual(ev._Panoptica_Evaluator__decision_metric, Metric.DSC)
 
-    def test_parameterized_metrics_rejected_for_now(self):
-        # The parameter is constructible and applies on a direct call, but the evaluator
-        # does not yet thread it through the pipeline, so it must refuse rather than drop it.
+    def test_instance_params_flow_through(self):
+        # A large NSD threshold tolerates a small surface mismatch, so it scores higher
+        # than the default threshold -> proves the parameter reaches the computation.
+        ref = np.zeros((40, 40), dtype=np.uint8)
+        pred = np.zeros((40, 40), dtype=np.uint8)
+        ref[10:30, 10:30] = 1
+        pred[10:30, 12:32] = 1  # shifted by 2 voxels
+
+        def sq_nsd(metrics):
+            ev = Panoptica_Evaluator(
+                expected_input=InputType.MATCHED_INSTANCE, metrics=metrics
+            )
+            return ev.evaluate(pred, ref)["ungrouped"].sq_nsd
+
+        default = sq_nsd([Metric.NSD.instance()])
+        loose = sq_nsd([Metric.NSD.instance(threshold=10)])
+        self.assertGreater(loose, default)
+        self.assertAlmostEqual(loose, 1.0)
+
+    def test_global_params_rejected_for_now(self):
         with self.assertRaises(NotImplementedError):
-            self._evaluator([Metric.NSD.instance(threshold=4)])
+            self._evaluator([GlobalMetric(Metric.NSD, threshold=4)])
+
+    def test_conflicting_instance_params_rejected(self):
+        with self.assertRaises(ValueError):
+            self._evaluator(
+                [Metric.NSD.instance(threshold=2), Metric.NSD.instance(threshold=4)]
+            )
 
     def test_yaml_round_trip(self):
         ev = self._evaluator(
-            [Metric.DSC.instance(), Metric.NSD.instance(), GlobalMetric(Metric.DSC)]
+            [
+                Metric.DSC.instance(),
+                Metric.NSD.instance(threshold=4),
+                GlobalMetric(Metric.DSC),
+            ]
         )
         path = tempfile.mktemp(suffix=".yaml")
         try:
