@@ -210,16 +210,21 @@ class ThresholdBasedMatching(InstanceMatchingAlgorithm):
     """Base class for matchers that rely on a metric and a cutoff threshold."""
 
     def __init__(
-        self, matching_metric: Metric = Metric.IOU, matching_threshold: float = 0.5
+        self,
+        matching_metric: Metric = Metric.IOU,
+        matching_threshold: float = 0.5,
+        strict_threshold: bool = False,
     ):
         self._matching_metric = matching_metric
         self._matching_threshold = matching_threshold
+        self._strict_threshold = strict_threshold
 
     @classmethod
     def _yaml_repr(cls, node) -> dict:
         return {
             "matching_metric": node._matching_metric,
             "matching_threshold": node._matching_threshold,
+            "strict_threshold": node._strict_threshold,
         }
 
     @abstractmethod
@@ -284,6 +289,7 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
         matching_metric: Metric = Metric.IOU,
         matching_threshold: float = 0.5,
         allow_many_to_one: bool = False,
+        strict_threshold: bool = False,
     ) -> None:
         """
         Initialize the NaiveThresholdMatching instance.
@@ -292,8 +298,11 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
             matching_metric (Metric): The metric used for matching.
             matching_threshold (float): The threshold for matching instances.
             allow_many_to_one (bool): Whether to allow many-to-one matching.
+            strict_threshold (bool): If True, a candidate must strictly beat the
+                threshold (``>`` instead of ``>=``), so e.g. ``matching_threshold=0``
+                rejects zero-overlap pairs. Defaults to False.
         """
-        super().__init__(matching_metric, matching_threshold)
+        super().__init__(matching_metric, matching_threshold, strict_threshold)
         self._allow_many_to_one = allow_many_to_one
 
     def _match_instances(  # type: ignore[override]
@@ -334,7 +343,7 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
                 continue
 
             if self._matching_metric.score_beats_threshold(
-                matching_score, matching_threshold
+                matching_score, matching_threshold, strict=self._strict_threshold
             ):
                 # Match found, add entry to labelmap
                 labelmap.add_labelmap_entry(pred_label, ref_label)
@@ -347,6 +356,7 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
             "matching_metric": node._matching_metric,
             "matching_threshold": node._matching_threshold,
             "allow_many_to_one": node._allow_many_to_one,
+            "strict_threshold": node._strict_threshold,
         }
 
 
@@ -418,7 +428,7 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
         # Fill in known costs for overlapping instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if not self._matching_metric.score_beats_threshold(
-                matching_score, matching_threshold
+                matching_score, matching_threshold, strict=self._strict_threshold
             ):
                 continue
 
@@ -450,6 +460,7 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
         return {
             "matching_metric": node._matching_metric,
             "matching_threshold": node._matching_threshold,
+            "strict_threshold": node._strict_threshold,
         }
 
 
@@ -514,7 +525,7 @@ class MaximizeMergeMatching(ThresholdBasedMatching):
                     labelmap.add_labelmap_entry(pred_label, ref_label)
                     score_ref[ref_label] = new_score
             elif self._matching_metric.score_beats_threshold(
-                matching_score, matching_threshold
+                matching_score, matching_threshold, strict=self._strict_threshold
             ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
@@ -543,4 +554,5 @@ class MaximizeMergeMatching(ThresholdBasedMatching):
         return {
             "matching_metric": node._matching_metric,
             "matching_threshold": node._matching_threshold,
+            "strict_threshold": node._strict_threshold,
         }

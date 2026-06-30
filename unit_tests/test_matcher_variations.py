@@ -167,6 +167,64 @@ class Test_Naive_Matcher_Variations(BaseMatcherTest):
             expected_results,
         )
 
+    def test_score_beats_threshold_strict_flag(self):
+        """The strict flag flips the boundary comparison from >=/<= to >/<."""
+        from panoptica.metrics import Metric
+
+        # increasing metric (IOU): a score equal to the threshold passes only non-strict
+        self.assertTrue(Metric.IOU.score_beats_threshold(0.5, 0.5))
+        self.assertFalse(Metric.IOU.score_beats_threshold(0.5, 0.5, strict=True))
+        self.assertTrue(Metric.IOU.score_beats_threshold(0.6, 0.5, strict=True))
+        # decreasing metric (ASSD): a distance equal to the threshold likewise
+        self.assertTrue(Metric.ASSD.score_beats_threshold(0.5, 0.5))
+        self.assertFalse(Metric.ASSD.score_beats_threshold(0.5, 0.5, strict=True))
+        self.assertTrue(Metric.ASSD.score_beats_threshold(0.4, 0.5, strict=True))
+
+    def test_strict_threshold_rejects_score_equal_to_threshold(self):
+        """A pair whose IOU exactly equals the threshold matches with >= but not >."""
+
+        # ref: 4x5 = 20 voxels; pred: 2x5 = 10 voxels fully inside ref -> IOU = 0.5
+        def setup_ref(masks):
+            masks[2:6, 2:7] = 1
+
+        def setup_pred(masks):
+            masks[2:4, 2:7] = 1
+
+        # non-strict: 0.5 >= 0.5 -> matched (TP)
+        self.run_overlap_scenario(
+            NaiveThresholdMatching(matching_threshold=0.5),
+            setup_pred,
+            setup_ref,
+            {
+                "tp": 1,
+                "fp": 0,
+                "fn": 0,
+                "sq": 0.5,
+                "rq": 1.0,
+                "pq": 0.5,
+                "sq_dsc": 2 / 3,
+                "global_bin_dsc": 2 / 3,
+            },
+        )
+
+        # strict: 0.5 > 0.5 is False -> no instance match (FP + FN); the global binary
+        # overlap metric is independent of instance matching and stays the same
+        self.run_overlap_scenario(
+            NaiveThresholdMatching(matching_threshold=0.5, strict_threshold=True),
+            setup_pred,
+            setup_ref,
+            {
+                "tp": 0,
+                "fp": 1,
+                "fn": 1,
+                "sq": 0.0,
+                "rq": 0.0,
+                "pq": 0.0,
+                "sq_dsc": 0.0,
+                "global_bin_dsc": 2 / 3,
+            },
+        )
+
 
 class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
 
