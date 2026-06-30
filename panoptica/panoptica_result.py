@@ -33,25 +33,16 @@ from panoptica.utils.serialization import (
 _trapezoid = getattr(np, "trapezoid", None) or np.trapz
 
 
-# Table driving the auto-generated per-instance metric members (see #189). Each entry is
-# (Metric, display name, supports_pq). Every metric gets ``sq_{suffix}`` and
-# ``sq_{suffix}_std``; only the unit-interval overlap metrics (IOU/DSC/clDSC) additionally
-# get ``pq_{suffix}`` and ``[0, 1]`` bounds on their sq/pq (the bounds drive AUTC metric
-# selection). The display name is the human label used in the metric's ``long_name`` and
-# the ORDER here is the registration order, so it must stay fixed to keep result-dict /
-# file-header column order stable.
-_INSTANCE_METRIC_SPECS: list[tuple[Metric, str, bool]] = [
-    (Metric.IOU, "IoU", True),
-    (Metric.DSC, "Dsc", True),
-    (Metric.clDSC, "Centerline Dsc", True),
-    (Metric.ASSD, "ASSD", False),
-    (Metric.RVD, "Relative Volume Difference", False),
-    (Metric.RVAE, "Relative Volume Absolute Error", False),
-    (Metric.CEDI, "Center Distance", False),
-    (Metric.HD, "Hausdorff Distance", False),
-    (Metric.HD95, "Hausdorff Distance 95", False),
-    (Metric.NSD, "Normalized Surface Dice", False),
-]
+# The per-instance metric columns are generated from the metric definitions
+# themselves (see ``_Metric`` in metrics.py), which are the single source of truth
+# for display name, whether a ``pq_*`` column exists (``supports_pq``), the
+# ``[0, 1]`` sq/pq bounds (``sq_unit_interval``, which also drives AUTC selection)
+# and the column order (``instance_order``). The order must stay fixed to keep
+# result-dict / file-header column order stable.
+INSTANCE_METRICS: list[Metric] = sorted(
+    (m for m in Metric if m.instance_order is not None),
+    key=lambda m: m.instance_order,  # type: ignore[arg-type, return-value]
+)
 
 
 class PanopticaResult:
@@ -198,9 +189,10 @@ class PanopticaResult:
         #
         # region Instance metrics
         # sq / sq_std for every metric, plus pq for the unit-interval overlap
-        # metrics (IOU/DSC/clDSC). Generated from _INSTANCE_METRIC_SPECS so a new
-        # instance metric is one table entry instead of three hand-written
-        # _add_metric blocks (see #189).
+        # metrics (IOU/DSC/clDSC). Generated from the metric definitions (their
+        # instance_order / supports_pq / sq_unit_interval metadata) so a new
+        # instance metric is one metric definition instead of three hand-written
+        # _add_metric blocks (see #189 / #181).
         self._register_instance_metrics()
         # endregion
 
@@ -542,23 +534,23 @@ class PanopticaResult:
         return default_value
 
     def _register_instance_metrics(self) -> None:
-        """Register the per-instance sq/sq_std/pq metrics from _INSTANCE_METRIC_SPECS.
+        """Register the per-instance sq/sq_std/pq metrics from the metric definitions.
 
-        For each metric this adds ``sq_{suffix}`` (mean of the per-instance scores) and
-        ``sq_{suffix}_std`` (their std); unit-interval overlap metrics additionally get
-        ``pq_{suffix} = sq * rq``. Lambda default args bind the loop variables so each
+        For each instance metric this adds ``sq_{suffix}`` (mean of the per-instance
+        scores) and ``sq_{suffix}_std`` (their std); metrics that support PQ additionally
+        get ``pq_{suffix} = sq * rq``. Lambda default args bind the loop variables so each
         closure captures its own metric/sq-key.
         """
-        for metric, display, supports_pq in _INSTANCE_METRIC_SPECS:
-            # IOU/DSC/clDSC are unit-interval -> bound sq to [0, 1]; the rest are
+        for metric in INSTANCE_METRICS:
+            # Unit-interval metrics (IOU/DSC/clDSC) bound sq to [0, 1]; the rest are
             # unbounded distances/ratios.
-            sq_lower = 0.0 if supports_pq else None
-            sq_upper = 1.0 if supports_pq else None
+            sq_lower = 0.0 if metric.sq_unit_interval else None
+            sq_upper = 1.0 if metric.sq_unit_interval else None
             self._add_metric(
                 metric.get_result_key("sq"),
                 MetricType.INSTANCE,
                 lambda res, m=metric: res.get_list_metric(m, mode=MetricMode.AVG),
-                long_name=f"Segmentation Quality {display}",
+                long_name=f"Segmentation Quality {metric.display_name}",
                 lower_bound=sq_lower,
                 upper_bound=sq_upper,
             )
@@ -566,15 +558,15 @@ class PanopticaResult:
                 metric.get_result_key("sq", is_std=True),
                 MetricType.INSTANCE,
                 lambda res, m=metric: res.get_list_metric(m, mode=MetricMode.STD),
-                long_name=f"Segmentation Quality {display} Standard Deviation",
+                long_name=f"Segmentation Quality {metric.display_name} Standard Deviation",
             )
-            if supports_pq:
+            if metric.supports_pq:
                 sq_key = metric.get_result_key("sq")
                 self._add_metric(
                     metric.get_result_key("pq"),
                     MetricType.INSTANCE,
                     lambda res, k=sq_key: getattr(res, k) * res.rq,
-                    long_name=f"Panoptic Quality {display}",
+                    long_name=f"Panoptic Quality {metric.display_name}",
                     lower_bound=0.0,
                     upper_bound=1.0,
                 )

@@ -142,8 +142,13 @@ def run_config(
         instance_matcher=NaiveThresholdMatching(
             matching_metric=Metric.IOU, matching_threshold=0.3
         ),
-        instance_metrics=[Metric.DSC, Metric.IOU, Metric.ASSD, Metric.HD95, Metric.NSD],
-        global_metrics=[Metric.DSC],
+        metrics=[
+            Metric.DSC,  # bare -> instance + global
+            Metric.IOU.instance(),
+            Metric.ASSD.instance(),
+            Metric.HD95.instance(),
+            Metric.NSD.instance(),
+        ],
         verbose=False,
     )
     ref_bin = (ref > 0).astype(np.uint8)

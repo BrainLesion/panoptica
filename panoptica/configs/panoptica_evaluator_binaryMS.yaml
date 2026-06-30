@@ -19,8 +19,9 @@ edge_case_handler: !EdgeCaseHandler
     !Metric RVD: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult NAN,
       empty_reference_result: !EdgeCaseResult NAN, no_instances_result: !EdgeCaseResult NAN,
       normal: !EdgeCaseResult NAN}
-instance_metrics: [!Metric DSC]
-global_metrics: [!Metric DSC]
+metrics:
+- !ConfiguredMetric {metric: !Metric DSC, mode: instance}
+- !ConfiguredMetric {metric: !Metric DSC, mode: global}
 expected_input: !InputType SEMANTIC
 instance_approximator: !ConnectedComponentsInstanceApproximator {cca_backend: null}
 instance_matcher: !NaiveThresholdMatching {allow_many_to_one: false, matching_metric: !Metric DSC,

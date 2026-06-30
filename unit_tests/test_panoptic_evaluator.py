@@ -140,8 +140,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         evaluator = Panoptica_Evaluator(
             expected_input=InputType.UNMATCHED_INSTANCE,
             instance_matcher=NaiveThresholdMatching(),
-            global_metrics=metrics,
-            instance_metrics=metrics,
+            metrics=metrics,
         )
 
         result = evaluator.evaluate(b, a)["ungrouped"]
@@ -191,7 +190,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
-            instance_metrics=[Metric.DSC],
+            metrics=[Metric.DSC],
         )
 
         result = evaluator.evaluate(b, a)["ungrouped"]

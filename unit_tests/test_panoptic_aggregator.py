@@ -199,7 +199,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
                 expected_input=InputType.SEMANTIC,
                 instance_approximator=ConnectedComponentsInstanceApproximator(),
                 instance_matcher=NaiveThresholdMatching(),
-                instance_metrics=[Metric.DSC, Metric.IOU],
+                metrics=[Metric.DSC, Metric.IOU.instance()],
             )
             aggregator = Panoptica_Aggregator(
                 evaluator,
@@ -307,7 +307,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            instance_metrics=[Metric.DSC, Metric.IOU],
+            metrics=[Metric.DSC, Metric.IOU.instance()],
         )
         aggregator = Panoptica_Aggregator(
             evaluator,
@@ -378,7 +378,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            instance_metrics=[Metric.DSC, Metric.IOU],
+            metrics=[Metric.DSC, Metric.IOU.instance()],
         )
         aggregator = Panoptica_Aggregator(
             evaluator,
@@ -461,7 +461,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            instance_metrics=[Metric.DSC, Metric.IOU],
+            metrics=[Metric.DSC, Metric.IOU.instance()],
             decision_metric=Metric.IOU,
             decision_threshold=0.8,
         )
@@ -527,7 +527,7 @@ class Test_Panoptica_Aggregator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
-            instance_metrics=[Metric.DSC, Metric.IOU],
+            metrics=[Metric.DSC, Metric.IOU.instance()],
         )
         aggregator = Panoptica_Aggregator(
             evaluator,
