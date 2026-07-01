@@ -33,14 +33,26 @@ def _get_original_instance_arrays_for_aji(
     prediction_arr: np.ndarray,
     intermediate_steps_data: IntermediateStepsData | None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Prefer the original grouped instance masks for AJI/AJI+.
+    """Select the most appropriate instance-labeled arrays for AJI/AJI+.
 
-    AJI/AJI+ should be computed on whole labeled instance masks, not only on
-    the matched/renamed TP labels. If intermediate step data is unavailable,
-    fall back to the arrays passed into PanopticaResult.
+    AJI/AJI+ should be computed on full labeled *instance* masks (not on the
+    matched/renamed TP label maps). In pipelines starting from semantic labels,
+    the original input arrays are semantic class maps, so we prefer the
+    UNMATCHED_INSTANCE intermediate step (post-approximation, pre-matching).
+
+    If no suitable intermediate step exists, fall back to the arrays passed into
+    PanopticaResult.
     """
     if intermediate_steps_data is not None:
+        # Prefer post-approximation instance maps when available (e.g. SEMANTIC input).
+        try:
+            unmatched = intermediate_steps_data["UNMATCHED_INSTANCE"]
+            return unmatched.reference_arr, unmatched.prediction_arr
+        except KeyError:
+            pass
+
+        # Otherwise, fall back to the original input (already instance-labeled for
+        # UNMATCHED_INSTANCE / MATCHED_INSTANCE inputs).
         try:
             return (
                 intermediate_steps_data.original_reference_arr,
