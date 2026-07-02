@@ -385,20 +385,9 @@ class PanopticaResult:
         ##################
         # List Metrics   #
         ##################
+        # Per-TP instance metrics, kept in their own registry (not _evaluation_metrics).
         self._list_metrics: dict[Metric, Evaluation_List_Metric] = {}
-        # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
-
-        arrays_present = False
-        # TODO move this after m is in global metrics otherwise this is unnecessarily computed
-        if prediction_arr is not None and reference_arr is not None:
-            pred_binary = prediction_arr.copy()
-            ref_binary = reference_arr.copy()
-            pred_binary[pred_binary != 0] = 1
-            ref_binary[ref_binary != 0] = 1
-            arrays_present = True
-
         for m in Metric:
-            # Set metrics for instances for each TP
             if m in list_metrics:
                 is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
                     metric=m,
@@ -409,53 +398,14 @@ class PanopticaResult:
                 self._list_metrics[m] = Evaluation_List_Metric(
                     m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result
                 )
-            # even if not available, set the global vars
-            default_value = None
-            was_calculated = False
 
-            if m in self._global_metrics and arrays_present:
-                combi = pred_binary + ref_binary
-                combi[combi != 2] = 0
-                combi[combi != 0] = 1
-                is_edge_case = combi.sum() == 0
-                if is_edge_case:
-                    (
-                        is_edge_case,
-                        edge_case_result,
-                    ) = self._edge_case_handler.handle_zero_tp(
-                        metric=m,
-                        tp=0,
-                        n_pred_instances=self.n_pred_instances,
-                        n_ref_instances=self.n_ref_instances,
-                    )
-                    default_value = edge_case_result
-                else:
-                    default_value = calc_global_bin_metric(
-                        self, m, pred_binary, ref_binary, do_binarize=False
-                    )
-                was_calculated = True
-
-            self._add_metric(
-                f"global_bin_{m.name.lower()}",
-                MetricType.GLOBAL,
-                lambda x, m=m: MetricCouldNotBeComputedException(
-                    f"Global Metric {m} not set"
-                ),
-                long_name="Global Binary " + m.value.long_name,
-                default_value=default_value,
-                was_calculated=was_calculated,
-            )
-
-            self._add_metric(
-                f"region_avg_{m.name.lower()}",
-                MetricType.GLOBAL,
-                lambda x, m=m: MetricCouldNotBeComputedException(
-                    f"Region Average Metric {m} not set"
-                ),
-                long_name="Region Average " + m.value.long_name,
-                default_value=None,
-                was_calculated=False,
-            )
+        ##################
+        # Global Metrics #
+        ##################
+        # Binarization and the prediction/reference overlap do not depend on the
+        # metric, so they are computed once (and skipped entirely when no global
+        # metric is requested) rather than per metric inside the loop.
+        self._register_global_metrics(prediction_arr, reference_arr)
 
     # File backends call `normalize_row_to_master_schema` to align row dicts with the master-keyed on-disk schema.
     ROW_KEY_TO_MASTER_KEY: dict[str, str] = {
@@ -590,6 +540,71 @@ class PanopticaResult:
                     lower_bound=0.0,
                     upper_bound=1.0,
                 )
+
+    def _register_global_metrics(self, prediction_arr, reference_arr) -> None:
+        """Register ``global_bin_*`` / ``region_avg_*`` for every metric, eagerly
+        computing the ones requested as global metrics.
+
+        The binary masks and their overlap are the same for every metric, so they are
+        built once here instead of once per metric. When no global metric is requested
+        the binarization is skipped entirely (it was previously always computed).
+        """
+        need_global = (
+            prediction_arr is not None
+            and reference_arr is not None
+            and len(self._global_metrics) > 0
+        )
+        pred_binary = ref_binary = None
+        global_intersection_empty = False
+        if need_global:
+            pred_binary = prediction_arr.copy()
+            ref_binary = reference_arr.copy()
+            pred_binary[pred_binary != 0] = 1
+            ref_binary[ref_binary != 0] = 1
+            # Intersection (== global true-positive voxels); its emptiness is the
+            # whole-image zero-TP edge case and does not depend on the metric.
+            combi = pred_binary + ref_binary
+            combi[combi != 2] = 0
+            combi[combi != 0] = 1
+            global_intersection_empty = combi.sum() == 0
+
+        for m in Metric:
+            default_value = None
+            was_calculated = False
+            if need_global and m in self._global_metrics:
+                if global_intersection_empty:
+                    _, default_value = self._edge_case_handler.handle_zero_tp(
+                        metric=m,
+                        tp=0,
+                        n_pred_instances=self.n_pred_instances,
+                        n_ref_instances=self.n_ref_instances,
+                    )
+                else:
+                    default_value = calc_global_bin_metric(
+                        self, m, pred_binary, ref_binary, do_binarize=False
+                    )
+                was_calculated = True
+
+            self._add_metric(
+                f"global_bin_{m.name.lower()}",
+                MetricType.GLOBAL,
+                lambda x, m=m: MetricCouldNotBeComputedException(
+                    f"Global Metric {m} not set"
+                ),
+                long_name="Global Binary " + m.value.long_name,
+                default_value=default_value,
+                was_calculated=was_calculated,
+            )
+            self._add_metric(
+                f"region_avg_{m.name.lower()}",
+                MetricType.GLOBAL,
+                lambda x, m=m: MetricCouldNotBeComputedException(
+                    f"Region Average Metric {m} not set"
+                ),
+                long_name="Region Average " + m.value.long_name,
+                default_value=None,
+                was_calculated=False,
+            )
 
     def calculate_all(self, print_errors: bool = False):
         """
