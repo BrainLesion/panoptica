@@ -94,17 +94,14 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__metrics = self._resolve_metrics(metrics, per_region_evaluation)
         self.__eval_metrics = [c.metric for c in self.__metrics if c.is_instance]
         self.__global_metrics = [c.metric for c in self.__metrics if c.is_global]
-        # Instance-metric fixed parameters (e.g. NSD threshold) are threaded into the
-        # instance evaluation. Global parameterized metrics are not wired through yet, so
-        # they are refused rather than silently ignored.
-        global_parameterized = [c for c in self.__metrics if c.is_global and c.params]
-        if global_parameterized:
-            raise NotImplementedError(
-                "Parameterized global metrics are not yet supported by Panoptica_Evaluator "
-                f"(got {global_parameterized}). Use default-parameter global metrics for now."
-            )
+        # Fixed per-metric parameters (e.g. NSD threshold) are threaded into the
+        # evaluation for both instance and global metrics. Keying is one column per
+        # metric, so conflicting parameters for the same metric are rejected.
         self.__instance_metric_params = self._collect_metric_params(
             [c for c in self.__metrics if c.is_instance]
+        )
+        self.__global_metric_params = self._collect_metric_params(
+            [c for c in self.__metrics if c.is_global]
         )
         if isinstance(decision_metric, ConfiguredMetric):
             decision_metric = decision_metric.metric
@@ -415,6 +412,7 @@ class Panoptica_Evaluator(SupportsConfig):
                     instance_metrics=self.__eval_metrics,
                     global_metrics=self.__global_metrics,
                     instance_metric_params=self.__instance_metric_params,
+                    global_metric_params=self.__global_metric_params,
                     decision_metric=self.__decision_metric,
                     decision_threshold=decision_threshold,
                     matching_threshold=threshold,
@@ -614,6 +612,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 instance_metrics=self.__eval_metrics,
                 global_metrics=self.__global_metrics,
                 instance_metric_params=self.__instance_metric_params,
+                global_metric_params=self.__global_metric_params,
                 result_all=result_all,
                 log_times=self.__log_times if log_times is None else log_times,
                 verbose=self.__verbose if verbose is None else verbose,
@@ -630,6 +629,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 instance_metrics=self.__eval_metrics,
                 global_metrics=self.__global_metrics,
                 instance_metric_params=self.__instance_metric_params,
+                global_metric_params=self.__global_metric_params,
                 decision_metric=self.__decision_metric,
                 decision_threshold=decision_threshold,
                 matching_threshold=matching_threshold,

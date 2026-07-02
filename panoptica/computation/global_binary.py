@@ -24,6 +24,7 @@ def calc_global_bin_metric(
     prediction_arr,
     reference_arr,
     do_binarize: bool = True,
+    params: dict | None = None,
 ):
     """
     Calculates a global binary metric based on predictions and references.
@@ -36,6 +37,8 @@ def calc_global_bin_metric(
         prediction_arr: The predicted values.
         reference_arr: The ground truth values.
         do_binarize (bool): Whether to binarize the input arrays. Defaults to True.
+        params (dict | None): Fixed metric parameters (e.g. NSD ``threshold``) forwarded
+            to every metric call. Defaults to no extra parameters.
 
     Returns:
         The calculated metric value or mean of channel metrics for multi-channel data.
@@ -45,6 +48,8 @@ def calc_global_bin_metric(
     """
     if metric not in result._global_metrics:
         raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
+
+    params = params or {}
 
     # Set THING_CHANNEL so it can be avoided during the part calculation
     #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
@@ -82,11 +87,13 @@ def calc_global_bin_metric(
                     channel_result = metric(
                         reference_arr=ref_channel,
                         prediction_arr=pred_channel,
+                        **params,
                     )
             else:
                 channel_result = metric(
                     reference_arr=ref_channel,
                     prediction_arr=pred_channel,
+                    **params,
                 )
 
             channel_metrics.append(channel_result)
@@ -130,4 +137,5 @@ def calc_global_bin_metric(
     return metric(
         reference_arr=ref_binary,
         prediction_arr=pred_binary,
+        **params,
     )

@@ -155,6 +155,7 @@ class PanopticaResult:
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
         global_metrics: list[Metric] | None = None,
+        global_metric_params: dict[Metric, dict] | None = None,
         processing_pair_orig_shape: tuple[int, int] | None = None,
         n_ref_labels: int | None = None,
         label_group: LabelGroup | None = None,
@@ -183,6 +184,9 @@ class PanopticaResult:
         if global_metrics is None:
             global_metrics = []
         self._global_metrics: list[Metric] = global_metrics
+        # Fixed parameters (e.g. NSD threshold) per global metric, applied when the
+        # whole-image binary metric is computed. One column per metric.
+        self._global_metric_params: dict[Metric, dict] = global_metric_params or {}
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
         self.metadata: dict[str, Any] = kwargs
@@ -581,7 +585,12 @@ class PanopticaResult:
                     )
                 else:
                     default_value = calc_global_bin_metric(
-                        self, m, pred_binary, ref_binary, do_binarize=False
+                        self,
+                        m,
+                        pred_binary,
+                        ref_binary,
+                        do_binarize=False,
+                        params=self._global_metric_params.get(m, {}),
                     )
                 was_calculated = True
 

@@ -160,9 +160,25 @@ class Test_Unified_Metrics_API(unittest.TestCase):
         self.assertGreater(loose, default)
         self.assertAlmostEqual(loose, 1.0)
 
-    def test_global_params_rejected_for_now(self):
-        with self.assertRaises(NotImplementedError):
-            self._evaluator([GlobalMetric(Metric.NSD, threshold=4)])
+    def test_global_params_flow_through(self):
+        # A large NSD threshold tolerates a small surface mismatch, so the whole-image
+        # (global) NSD scores higher than the default -> proves the global parameter
+        # reaches the computation (previously this raised NotImplementedError).
+        ref = np.zeros((40, 40), dtype=np.uint8)
+        pred = np.zeros((40, 40), dtype=np.uint8)
+        ref[10:30, 10:30] = 1
+        pred[10:30, 12:32] = 1  # shifted by 2 voxels
+
+        def global_nsd(metrics):
+            ev = Panoptica_Evaluator(
+                expected_input=InputType.MATCHED_INSTANCE, metrics=metrics
+            )
+            return ev.evaluate(pred, ref)["ungrouped"].global_bin_nsd
+
+        default = global_nsd([GlobalMetric(Metric.NSD)])
+        loose = global_nsd([GlobalMetric(Metric.NSD, threshold=10)])
+        self.assertGreater(loose, default)
+        self.assertAlmostEqual(loose, 1.0)
 
     def test_conflicting_instance_params_rejected(self):
         with self.assertRaises(ValueError):
