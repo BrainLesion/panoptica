@@ -31,6 +31,15 @@ from panoptica.utils.segmentation_class import SegmentationClassGroups
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
 from panoptica.utils.label_group import LabelPartGroup
+from unit_tests.unit_test_utils import (
+    case_simple_identical,
+    case_simple_nooverlap,
+    case_simple_shifted,
+    case_simple_overpredicted,
+    case_simple_underpredicted,
+    case_simple_overlap_but_large_discrepancy,
+    case_multiple_overlapping_instances,
+)
 
 
 class BaseMatcherTest(unittest.TestCase):
@@ -94,7 +103,7 @@ class BaseMatcherTest(unittest.TestCase):
         matcher,
         pred_setup_func,
         ref_setup_func,
-        expected_results,
+        expected_results=None,
         groups=None,
         class_name="class_1",
     ):
@@ -111,11 +120,12 @@ class BaseMatcherTest(unittest.TestCase):
 
         # Run evaluation and assert results
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
-        self.assert_metrics_match(results, expected_results, class_name)
+        if expected_results is not None:
+            self.assert_metrics_match(results, expected_results, class_name)
+        return results
 
 
 class Test_Naive_Matcher_Variations(BaseMatcherTest):
-
     def test_perfect_overlap_masks(self):
         """Test case with perfect overlap between prediction and reference masks."""
 
@@ -225,9 +235,63 @@ class Test_Naive_Matcher_Variations(BaseMatcherTest):
             },
         )
 
+    def test_strict_threshold_equal_with_threshold_zero(self):
+        """A pair whose IOU exactly equals the threshold matches with >= but not >."""
+
+        # non-strict evaluator
+        pe_normal = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(
+                matching_threshold=0.0, strict_threshold=False
+            ),
+        )
+        # strict evaluator
+        pe_strict = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(
+                matching_threshold=0.0, strict_threshold=True
+            ),
+        )
+
+        for case in (
+            case_simple_identical,
+            case_simple_nooverlap,
+            case_simple_shifted,
+            case_simple_overpredicted,
+            case_simple_underpredicted,
+            case_simple_overlap_but_large_discrepancy,
+            case_multiple_overlapping_instances,
+        ):
+            # not strict
+            pred_masks, ref_masks = case()
+            result_normal = pe_normal.evaluate(pred_masks, ref_masks, verbose=False)
+            # strict
+            pred_masks, ref_masks = case()
+            result_strict = pe_strict.evaluate(pred_masks, ref_masks, verbose=False)
+
+            # Compare the results
+            for class_name in result_normal.keys():
+                with self.subTest(case=case.__name__, class_name=class_name):
+                    normal_metrics = result_normal[class_name].to_dict()
+                    strict_metrics = result_strict[class_name].to_dict()
+
+                    # Check that the metrics are equal for both evaluators
+                    for metric in normal_metrics.keys():
+                        # check that they are equal or both nan
+                        if not np.isfinite(normal_metrics[metric]) and not np.isfinite(
+                            strict_metrics[metric]
+                        ):
+                            continue
+                        self.assertEqual(
+                            normal_metrics[metric],
+                            strict_metrics[metric],
+                            f"Metric {metric} differs between normal and strict evaluators for case {case.__name__} and class {class_name}",
+                        )
+
 
 class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
-
     def test_perfect_overlap_masks(self):
         """Test case with perfect overlap between prediction and reference masks."""
 
@@ -283,7 +347,6 @@ class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
 
 
 class Test_Part_Matcher_Variations(BaseMatcherTest):
-
     def get_part_groups(self):
         """Get the complex groups configuration for part tests."""
         return {
@@ -504,7 +567,6 @@ class Test_Part_Matcher_Variations(BaseMatcherTest):
 
 
 class Test_MultiPart_Matcher_Variations(BaseMatcherTest):
-
     def get_part_groups(self):
         """Get the complex groups configuration for part tests."""
         return {
