@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
@@ -104,7 +105,7 @@ class Test_SegmentationClassGroups_Validation(unittest.TestCase):
 
 class Test_Evaluator_Validates_Subject(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.output_file = Path(__file__).parent.joinpath(
             "unittest_serialization_tmp.tsv"
         )

@@ -2,7 +2,6 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
 from panoptica.utils.numpy_utils import (
@@ -19,36 +18,33 @@ from panoptica.utils.citation_reminder import (
 
 class Test_Citation_Reminder(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "True"
+        enable_citation_reminder()
         return super().setUp()
+
+    def tearDown(self) -> None:
+        enable_citation_reminder()  # restore module state for other tests
+        return super().tearDown()
 
     def test_citation_code(self):
         @citation_reminder
         def foo():
             return "bar"
 
-        foo()
+        self.assertEqual(foo(), "bar")
 
     def test_disable_citation_reminder(self):
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "True"
         disable_citation_reminder()
-        try:
 
-            @citation_reminder
-            def foo():
-                return "bar"
+        @citation_reminder
+        def foo():
+            return "bar"
 
-            self.assertEqual(foo(), "bar")
-            # Disabled -> the reminder block (and its "show once" env latch) is skipped,
-            # so the env var is left untouched.
-            self.assertEqual(os.environ["PANOPTICA_CITATION_REMINDER"], "True")
-        finally:
-            enable_citation_reminder()  # restore module state for other tests
+        self.assertEqual(foo(), "bar")
 
 
 class Test_Numpy_Utils(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_np_unique(self):
