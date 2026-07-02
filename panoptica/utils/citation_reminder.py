@@ -1,15 +1,29 @@
-import os
-
 from rich.console import Console
 
 CITATION_LINK = "https://github.com/BrainLesion/panoptica#citation"
+
+# Runtime toggle for the citation reminder (replaces the old env var approach).
+_citation_reminder_enabled = True
+
+
+def disable_citation_reminder() -> None:
+    """Suppress the panoptica citation reminder for the rest of this process."""
+    global _citation_reminder_enabled
+    _citation_reminder_enabled = False
+
+
+def enable_citation_reminder() -> None:
+    """Re-enable the citation reminder (undoes :func:`disable_citation_reminder`)."""
+    global _citation_reminder_enabled
+    _citation_reminder_enabled = True
 
 
 def citation_reminder(func):
     """Decorator to remind users to cite panoptica."""
 
     def wrapper(*args, **kwargs):
-        if os.environ.get("PANOPTICA_CITATION_REMINDER", "true").lower() == "true":
+        global _citation_reminder_enabled
+        if _citation_reminder_enabled:
             console = Console()
             console.rule("Thank you for using [bold]panoptica[/bold]")
             console.print(
@@ -22,7 +36,7 @@ def citation_reminder(func):
             )
             console.rule()
             console.line()
-            os.environ["PANOPTICA_CITATION_REMINDER"] = "false"  # Show only once
+            _citation_reminder_enabled = False  # Show only once
         return func(*args, **kwargs)
 
     return wrapper

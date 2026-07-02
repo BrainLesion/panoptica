@@ -80,16 +80,10 @@ class Panoptica_Aggregator:
 
         if is_autc:
             if self.__threshold_step_size is None:
-                raise ValueError(
-                    "threshold_step_size must be provided to build AUTC headers"
-                )
+                raise ValueError("threshold_step_size must be provided to build AUTC headers")
             if output_individual_instance_metrics:
-                raise ValueError(
-                    "output_individual_instance_metrics is not supported with is_autc=True"
-                )
-            self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(
-                self.__threshold_step_size
-            )
+                raise ValueError("output_individual_instance_metrics is not supported with is_autc=True")
+            self.__evaluation_metrics = panoptica_evaluator.get_autc_metric_keys(self.__threshold_step_size)
         else:
             self.__evaluation_metrics = panoptica_evaluator.get_resulting_metric_keys(
                 output_individual_instance_metrics=output_individual_instance_metrics
@@ -102,9 +96,7 @@ class Panoptica_Aggregator:
             output_file = Path(output_file)
 
         if not output_file.parent.exists():
-            raise FileNotFoundError(
-                f"Directory {str(output_file.parent)} does not exist"
-            )
+            raise FileNotFoundError(f"Directory {str(output_file.parent)} does not exist")
 
         if not output_file.suffix:
             output_file = output_file.with_suffix(f".{file_type}")
@@ -177,9 +169,7 @@ class Panoptica_Aggregator:
             id_list = _load_buffer_entries(self.__output_buffer_file)
 
             if subject_name in id_list:
-                logger.warning(
-                    f"Subject '{subject_name}' evaluated or in process {self.__output_file}, do not add duplicates to your evaluation!"
-                )
+                # logger.warning(f"Subject '{subject_name}' evaluated or in process!")
                 return
             _append_buffer_entries(self.__output_buffer_file, [subject_name])
 
@@ -187,9 +177,7 @@ class Panoptica_Aggregator:
         logger.info(f"Call evaluate on {subject_name}")
         if self.__autc:
             if self.__threshold_step_size is None:
-                raise ValueError(
-                    "threshold_step_size must be provided to build AUTC headers"
-                )
+                raise ValueError("threshold_step_size must be provided to build AUTC headers")
             res = self.__panoptica_evaluator.evaluate_autc(
                 prediction_arr,
                 reference_arr,
