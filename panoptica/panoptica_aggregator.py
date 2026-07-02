@@ -124,14 +124,14 @@ class Panoptica_Aggregator:
                 collect_existing=self.__continue_file,
             )
 
-        # register exist handler after last side-effecting step so any earlier raise doesn't leak a buffer file
+        # register exit handler after last side-effecting step so any earlier raise doesn't leak a buffer file
         with NamedTemporaryFile(delete=False) as tmp:
             self.__output_buffer_file = tmp.name
         # Per-instance buffer file -> its own lock; guards the in-flight subject list
         # against the forked workers that share this buffer path.
         self.__buffer_lock_path = str(self.__output_buffer_file) + ".lock"
         self.__buffer_filelock = FileLock(self.__buffer_lock_path)
-        atexit.register(self.__exist_handler)
+        atexit.register(self.__exit_handler)
 
         if self.__continue_file and existing_subjects:
             with self.__buffer_filelock:
@@ -161,7 +161,7 @@ class Panoptica_Aggregator:
         self.__output_filelock = FileLock(self.__output_lock_path)
         self.__buffer_filelock = FileLock(self.__buffer_lock_path)
 
-    def __exist_handler(self):
+    def __exit_handler(self):
         """Handles cleanup upon program exit by removing the temporary output buffer file (and its lock sidecar)."""
         if Path(self.__output_buffer_file).exists():
             os.remove(str(self.__output_buffer_file))
