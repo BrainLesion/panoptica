@@ -108,12 +108,12 @@ class JSONLBackend(FileBackend):
             result = result_grouped[groupname]
             group_obj: dict = {}
             if output_individual_instance_metrics:
-                summary_dict = result.to_dict(True)
+                summary_dict = result._to_master_dict(True)
                 instance_dicts: list = summary_dict.pop(  # type: ignore[assignment]
                     "reference_instances", []
                 )
             else:
-                summary_dict = result.to_dict(False)
+                summary_dict = result._to_master_dict(False)
                 instance_dicts = []
 
             if result.computation_time is not None:

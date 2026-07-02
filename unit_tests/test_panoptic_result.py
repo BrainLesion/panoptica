@@ -191,7 +191,7 @@ class Test_Panoptica_Results(unittest.TestCase):
         )
         result.calculate_all(print_errors=False)
 
-        result_dict = result.to_dict(output_individual_instance_metrics=True)
+        result_dict = result._to_master_dict(output_individual_instance_metrics=True)
 
         # Single root dict with reference_instances nested.
         self.assertIsInstance(result_dict, dict)
@@ -242,7 +242,7 @@ class Test_Panoptica_Results(unittest.TestCase):
         )
         result.calculate_all(print_errors=False)
 
-        rows = result.to_dict(output_individual_instance_metrics=True)[
+        rows = result._to_master_dict(output_individual_instance_metrics=True)[
             "reference_instances"
         ]
         n_matched, n_unmatched = 1, 1
@@ -276,7 +276,7 @@ class Test_Panoptica_Results(unittest.TestCase):
         )
         result.calculate_all(print_errors=False)
 
-        result_dict = result.to_dict(output_individual_instance_metrics=True)
+        result_dict = result._to_master_dict(output_individual_instance_metrics=True)
         rows = result_dict.pop("reference_instances")
         master_keys = set(result_dict.keys())
         remap = PanopticaResult.ROW_KEY_TO_MASTER_KEY

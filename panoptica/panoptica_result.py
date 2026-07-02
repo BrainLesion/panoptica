@@ -46,6 +46,47 @@ INSTANCE_METRICS: list[Metric] = sorted(
 )
 
 
+def _build_nested_key_index() -> dict[str, tuple[str, str, str | None]]:
+    """Map each flat master-dict key to its ``(group, name, component)`` position in the
+    nested ``to_dict`` schema (component is ``None`` for scalar leaves).
+
+    The nested schema groups metrics by category: ``matching`` (counts / recognition
+    quality), ``instance`` (per-metric ``{sq, std, pq?}``), ``global`` (whole-image
+    binary), ``region`` (per-region averages) and ``instance_reference`` (matched-ref
+    sizes). The mapping is derived from the metric definitions, so it stays in sync with
+    the flat keys the result registry produces.
+    """
+    index: dict[str, tuple[str, str, str | None]] = {}
+    for key in (
+        "n_ref_instances",
+        "n_pred_instances",
+        "tp",
+        "fp",
+        "fn",
+        "prec",
+        "rec",
+        "rq",
+    ):
+        index[key] = ("matching", key, None)
+    index["instance_voxel_count_ref"] = ("instance_reference", "voxel_count", None)
+    index["instance_volume_ref"] = ("instance_reference", "volume", None)
+    index["global_bin_volume_pred"] = ("global", "volume_prediction", None)
+    index["global_bin_volume_ref"] = ("global", "volume_reference", None)
+    for m in INSTANCE_METRICS:
+        short = m.name.lower()
+        index[m.get_result_key("sq")] = ("instance", short, "sq")
+        index[m.get_result_key("sq", is_std=True)] = ("instance", short, "std")
+        if m.supports_pq:
+            index[m.get_result_key("pq")] = ("instance", short, "pq")
+    for m in Metric:
+        index[f"global_bin_{m.name.lower()}"] = ("global", m.name.lower(), None)
+        index[f"region_avg_{m.name.lower()}"] = ("region", m.name.lower(), None)
+    return index
+
+
+_NESTED_KEY_INDEX = _build_nested_key_index()
+
+
 # --------------------------------------------------------------------------- #
 # Grouped result accessors (#248).
 #
@@ -679,8 +720,13 @@ class PanopticaResult:
                     text += "\n"
         return text
 
-    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict:
-        """Converts the metrics to a dictionary format.
+    def _to_master_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Flat master dictionary of subject-level metrics (mangled keys).
+
+        This is the on-disk / serialization view used by the file backends and the
+        evaluator's schema derivation; the public :meth:`to_dict` reshapes it into the
+        nested schema. Kept flat so the TSV/JSONL layout and the byte-identical
+        round-trip are unaffected by the nested-schema change.
 
         When ``output_individual_instance_metrics`` is False, returns a flat
         ``dict`` of subject-level (master) metrics.
@@ -751,6 +797,38 @@ class PanopticaResult:
 
         master_dict["reference_instances"] = rows
         return master_dict
+
+    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Nested metric dictionary grouped by category (#248).
+
+        Instead of mangled flat keys (``sq_dsc``, ``global_bin_dsc``), metrics are
+        grouped hierarchically::
+
+            {
+              "matching": {"tp": ..., "fp": ..., "rq": ..., ...},
+              "instance": {"dsc": {"sq": ..., "std": ..., "pq": ...},
+                           "assd": {"sq": ..., "std": ...}, ...},
+              "instance_reference": {"voxel_count": ..., "volume": ...},
+              "global": {"dsc": ..., "volume_prediction": ..., ...},
+            }
+
+        Only computed metrics appear (same filtering as the flat view). Reachable the
+        same way as the grouped accessors (``result.instance.dsc.sq`` etc.). With
+        ``output_individual_instance_metrics=True`` the per-reference rows are attached
+        under ``"reference_instances"`` unchanged (a serialization detail).
+        """
+        master = self._to_master_dict(output_individual_instance_metrics)
+        rows = master.pop("reference_instances", None)
+        nested: dict[str, Any] = {}
+        for key, value in master.items():
+            group, name, comp = _NESTED_KEY_INDEX.get(key, ("other", key, None))
+            if comp is None:
+                nested.setdefault(group, {})[name] = value
+            else:
+                nested.setdefault(group, {}).setdefault(name, {})[comp] = value
+        if rows is not None:
+            nested["reference_instances"] = rows
+        return nested
 
     @property
     def evaluation_metrics(self):
@@ -991,7 +1069,7 @@ class PanopticaAUTCResult:
                 result[key] = np.nan
 
         for t, res in self._threshold_results.items():
-            for k, v in res.to_dict().items():
+            for k, v in res._to_master_dict().items():
                 key = format_threshold_key(t, k)
                 try:
                     numeric_v = float(v)
@@ -1000,6 +1078,15 @@ class PanopticaAUTCResult:
                     result[key] = np.nan
 
         return result
+
+    def _to_master_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Flat serialization view; alias of :meth:`to_dict`.
+
+        The AUTC threshold-sweep dict is inherently flat (``autc_*`` / ``t{threshold}_*``
+        keys), so unlike PanopticaResult it has no separate nested vs. flat form. The file
+        backends call ``_to_master_dict`` on both result types uniformly.
+        """
+        return self.to_dict(output_individual_instance_metrics)
 
     def __getattr__(self, name: str) -> Any:
         # Guard: prevent recursion if internal attributes haven't been set yet

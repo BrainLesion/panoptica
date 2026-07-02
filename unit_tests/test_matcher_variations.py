@@ -58,7 +58,7 @@ class BaseMatcherTest(unittest.TestCase):
         self, actual_results, expected_results, class_name="class_1"
     ):
         """Assert that all important metrics match expected values."""
-        class_result = actual_results[class_name].to_dict()
+        class_result = actual_results[class_name]._to_master_dict()
         important_metrics = [
             "tp",
             "fp",

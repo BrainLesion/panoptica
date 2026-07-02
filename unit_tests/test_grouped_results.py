@@ -111,6 +111,29 @@ class Test_Grouped_Results(unittest.TestCase):
         self.assertEqual(autc.autc.iou.sq, autc.autc_sq)
         self.assertEqual(autc.autc.iou.pq, autc.autc_pq)
 
+    def test_to_dict_is_nested_and_matches_flat(self):
+        # Public to_dict() is the nested schema; every leaf equals the flat master value.
+        r = _instance_result()
+        nested = r.to_dict()
+        self.assertEqual(
+            set(nested), {"matching", "instance", "instance_reference", "global"}
+        )
+        # matching counts
+        self.assertEqual(nested["matching"]["tp"], r.tp)
+        self.assertEqual(nested["matching"]["rq"], r.rq)
+        # instance metric components (IOU uses the bare sq/pq flat keys)
+        self.assertEqual(nested["instance"]["dsc"]["sq"], r.sq_dsc)
+        self.assertEqual(nested["instance"]["dsc"]["std"], r.sq_dsc_std)
+        self.assertEqual(nested["instance"]["dsc"]["pq"], r.pq_dsc)
+        self.assertEqual(nested["instance"]["iou"]["sq"], r.sq)
+        # ASSD has no pq component
+        self.assertNotIn("pq", nested["instance"]["assd"])
+        # global + reference sizes
+        self.assertEqual(nested["global"]["dsc"], r.global_bin_dsc)
+        self.assertEqual(
+            nested["instance_reference"]["voxel_count"], r.instance_voxel_count_ref
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

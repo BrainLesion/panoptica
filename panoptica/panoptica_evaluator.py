@@ -502,7 +502,8 @@ class Panoptica_Evaluator(SupportsConfig):
     ) -> list[str]:
         if output_individual_instance_metrics not in self.__resulting_metric_keys_cache:
             res = self._get_dummy_result()
-            result = res.to_dict(
+            # The on-disk schema stays the flat master view; the public to_dict() is nested.
+            result = res._to_master_dict(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
             # For now reference_instances is the only nested dict.

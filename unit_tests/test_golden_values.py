@@ -207,7 +207,7 @@ class Test_Golden_Values(unittest.TestCase):
         result = evaluator.evaluate(*_instance_case(), voxelspacing=(1.0, 1.0))[
             "ungrouped"
         ]
-        actual = result.to_dict()
+        actual = result._to_master_dict()
         self.assertEqual(
             set(actual.keys()),
             set(GOLDEN_INSTANCE.keys()),
@@ -233,7 +233,7 @@ class Test_Golden_Values(unittest.TestCase):
     def test_region_wise_values(self):
         evaluator = _build_region_evaluator()
         result = evaluator.evaluate(*_region_case())["ungrouped"]
-        actual = result.to_dict()
+        actual = result._to_master_dict()
         self.assertEqual(
             set(actual.keys()),
             set(GOLDEN_REGION_TO_DICT.keys()),
