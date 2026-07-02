@@ -123,7 +123,7 @@ def _resolve_metric_name(short: str) -> Metric:
 class _InstanceScore:
     """sq / std (and pq for overlap metrics) for a single instance metric."""
 
-    def __init__(self, result: "PanopticaResult", metric: Metric):
+    def __init__(self, result: PanopticaResult, metric: Metric):
         self._result = result
         self._metric = metric
 

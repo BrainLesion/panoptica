@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def calc_global_bin_metric(
-    result: "PanopticaResult",
+    result: PanopticaResult,
     metric: Metric,
     prediction_arr,
     reference_arr,

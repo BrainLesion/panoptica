@@ -16,23 +16,23 @@ if TYPE_CHECKING:
     from panoptica.core.result import PanopticaResult
 
 
-def fp(res: "PanopticaResult"):
+def fp(res: PanopticaResult):
     return res.n_pred_instances - res.tp
 
 
-def fn(res: "PanopticaResult"):
+def fn(res: PanopticaResult):
     return res.n_ref_instances - res.tp
 
 
-def prec(res: "PanopticaResult"):
+def prec(res: PanopticaResult):
     return res.tp / (res.tp + res.fp)
 
 
-def rec(res: "PanopticaResult"):
+def rec(res: PanopticaResult):
     return res.tp / (res.tp + res.fn)
 
 
-def rq(res: "PanopticaResult"):
+def rq(res: PanopticaResult):
     """
     Calculate the Recognition Quality (RQ) based on TP, FP, and FN.
 

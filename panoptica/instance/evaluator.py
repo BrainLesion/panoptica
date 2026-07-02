@@ -324,7 +324,9 @@ def _evaluate_instance(
             )
         else:
             # Non-spatial metrics, or any metric on normal (non-one-hot) arrays.
-            metric_value = metric(ref_arr, pred_arr, voxelspacing=voxelspacing, **params)
+            metric_value = metric(
+                ref_arr, pred_arr, voxelspacing=voxelspacing, **params
+            )
 
         result[metric] = metric_value
 
