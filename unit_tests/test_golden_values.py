@@ -147,12 +147,10 @@ GOLDEN_INSTANCE: dict[str, float] = {
     "global_bin_dsc": 0.7335907335907336,
     "global_bin_iou": 0.5792682926829268,
     "global_bin_cldsc": 0.6829268292682926,
-    "global_bin_assd": 5.670966441085757,
+    # ASSD/CEDI/HD/HD95 are single-object metrics (supports_semantic=False): no
+    # whole-image global variant, so their global_bin_* keys are gone from the schema.
     "global_bin_rvd": -0.03787878787878788,
     "global_bin_rvae": 0.03787878787878788,
-    "global_bin_cedi": 8.44357212364506,
-    "global_bin_hd": 25.45584412271571,
-    "global_bin_hd95": 22.80350850198276,
     "global_bin_nsd": 0.626326530612245,
 }
 
@@ -174,7 +172,8 @@ GOLDEN_REGION_TO_DICT: dict[str, float] = {
     "global_bin_volume_ref": 750,
     "global_bin_dsc": 0.6466666666666666,
     "global_bin_iou": 0.47783251231527096,
-    "global_bin_assd": 0.9047506328833388,
+    # ASSD is single-object: no whole-image global on the combined region result.
+    # Its per-region average is still exposed as region_avg_assd (GOLDEN_REGION_AVG).
     "instance_voxel_count_ref": float("nan"),
     "instance_volume_ref": float("nan"),
 }

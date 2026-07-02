@@ -152,9 +152,9 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertAlmostEqual(result.sq, 0.6666666666666666)
         self.assertAlmostEqual(result.pq, 0.4444444444444444)
         #
-        self.assertEqual(result.global_bin_cedi, 2.5)
-        self.assertEqual(result.global_bin_hd, 5.0)
-        self.assertEqual(result.global_bin_hd95, 5.0)
+        # CEDI/HD/HD95 are single-object metrics (supports_semantic=False): a bare
+        # metric does not expand to a whole-image global variant, so global_bin_cedi/
+        # hd/hd95 are gone. RVD/RVAE remain whole-image metrics.
         self.assertEqual(result.global_bin_rvd, -0.25)
         self.assertEqual(result.global_bin_rvae, 0.25)
         self.assertEqual(result.sq_cedi, 2.5)

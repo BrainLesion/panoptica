@@ -44,7 +44,13 @@ class Test_Grouped_Results(unittest.TestCase):
         r = _instance_result()
         self.assertEqual(r.semantic.dice, r.global_bin_dsc)
         self.assertEqual(r.semantic.iou, r.global_bin_iou)
-        self.assertEqual(r.semantic.assd, r.global_bin_assd)
+
+    def test_semantic_group_rejects_single_object_metric(self):
+        # ASSD is single-object (supports_semantic=False): a bare metric does not
+        # expand to a whole-image variant, so the semantic group has no ASSD.
+        r = _instance_result()
+        with self.assertRaises(MetricCouldNotBeComputedException):
+            r.semantic.assd
 
     def test_subscript_global_alias(self):
         r = _instance_result()

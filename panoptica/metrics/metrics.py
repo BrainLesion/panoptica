@@ -64,8 +64,12 @@ class _Metric:
         modes (frozenset[str]): Evaluation modes the metric applies to
             ("instance" and/or "global").
         param_spec (tuple[str, ...]): Names of the fixed parameters this metric
-            accepts beyond ``voxelspacing`` (e.g. NSD accepts ("threshold",
-            "connectivity")).
+            accepts beyond ``voxelspacing`` (e.g. NSD accepts ("threshold",)).
+        supports_semantic (bool): Whether the metric is meaningful as a whole-image
+            binary ("semantic"/global) metric. Distance and boundary metrics
+            (ASSD/CEDI/HD/HD95) are only meaningful on a single object, so they set
+            this False: they stay available per instance and per region (each region
+            is one object) but are excluded from whole-image evaluation.
 
     Example:
         >>> my_metric = _Metric(name="accuracy", long_name="Accuracy", decreasing=False, requires_spatial=False, _metric_function=accuracy_function)
@@ -90,6 +94,9 @@ class _Metric:
     # Capability metadata (#181): applicable modes and accepted fixed parameters.
     modes: frozenset[str] = frozenset({"instance", "global"})
     param_spec: tuple[str, ...] = ()
+    # Whether a whole-image ("semantic"/global) variant is meaningful. Single-object
+    # distance/boundary metrics set this False (see attribute docstring above).
+    supports_semantic: bool = True
 
     def __call__(
         self,
@@ -218,6 +225,7 @@ class Metric(_Enum_Compare):
         _compute_instance_average_symmetric_surface_distance,
         display_name="ASSD",
         instance_order=3,
+        supports_semantic=False,
     )
     clDSC = _Metric(
         "clDSC",
@@ -256,6 +264,7 @@ class Metric(_Enum_Compare):
         _compute_instance_center_distance,
         display_name="Center Distance",
         instance_order=6,
+        supports_semantic=False,
     )
     HD = _Metric(
         "HD",
@@ -265,6 +274,7 @@ class Metric(_Enum_Compare):
         _compute_instance_hausdorff_distance,
         display_name="Hausdorff Distance",
         instance_order=7,
+        supports_semantic=False,
     )
     HD95 = _Metric(
         "HD95",
@@ -274,6 +284,7 @@ class Metric(_Enum_Compare):
         _compute_instance_hausdorff_distance95,
         display_name="Hausdorff Distance 95",
         instance_order=8,
+        supports_semantic=False,
     )
     NSD = _Metric(
         "NSD",
@@ -371,6 +382,11 @@ class Metric(_Enum_Compare):
     @property
     def param_spec(self) -> tuple[str, ...]:
         return self.value.param_spec
+
+    @property
+    def supports_semantic(self) -> bool:
+        """Whether a whole-image binary ("global") variant of this metric is meaningful."""
+        return self.value.supports_semantic
 
     def instance(self, **params) -> "ConfiguredMetric":
         """Configure this metric for instance-wise evaluation (e.g. ``Metric.NSD.instance(threshold=4)``)."""

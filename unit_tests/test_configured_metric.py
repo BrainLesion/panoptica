@@ -106,6 +106,26 @@ class Test_Unified_Metrics_API(unittest.TestCase):
         )
         self.assertEqual(ev._Panoptica_Evaluator__global_metrics, [Metric.DSC])
 
+    def test_bare_single_object_metric_is_instance_only(self):
+        # ASSD/CEDI/HD/HD95 have supports_semantic=False: a bare metric expands to its
+        # instance variant only in a non-region evaluator (no whole-image global).
+        ev = self._evaluator([Metric.ASSD])
+        self.assertEqual(ev._Panoptica_Evaluator__eval_metrics, [Metric.ASSD])
+        self.assertEqual(ev._Panoptica_Evaluator__global_metrics, [])
+
+    def test_bare_single_object_metric_keeps_global_region_wise(self):
+        # Under per_region_evaluation each region is one object, so the whole-image
+        # ("global") variant is meaningful again and a bare single-object metric
+        # expands to it (surfaced as region_avg_*).
+        ev = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+            metrics=[Metric.ASSD],
+            per_region_evaluation=True,
+        )
+        self.assertIn(Metric.ASSD, ev._Panoptica_Evaluator__global_metrics)
+
     def test_invalid_entry_type_rejected(self):
         with self.assertRaises(TypeError):
             self._evaluator(["DSC"])

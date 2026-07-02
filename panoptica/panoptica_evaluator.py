@@ -87,8 +87,11 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__instance_approximator = instance_approximator
         self.__instance_matcher = instance_matcher
         # Normalize the unified metrics list into the canonical configured form,
-        # then derive the per-mode bare-Metric lists the pipeline consumes.
-        self.__metrics = self._resolve_metrics(metrics)
+        # then derive the per-mode bare-Metric lists the pipeline consumes. A bare
+        # metric's whole-image ("global") variant is only added when it is meaningful
+        # in this evaluator's context (see _resolve_metrics), so per_region_evaluation
+        # decides whether single-object metrics (ASSD/HD/...) get a global variant.
+        self.__metrics = self._resolve_metrics(metrics, per_region_evaluation)
         self.__eval_metrics = [c.metric for c in self.__metrics if c.is_instance]
         self.__global_metrics = [c.metric for c in self.__metrics if c.is_global]
         # Instance-metric fixed parameters (e.g. NSD threshold) are threaded into the
@@ -141,27 +144,43 @@ class Panoptica_Evaluator(SupportsConfig):
 
     @classmethod
     def _resolve_metrics(
-        cls, metrics: "Sequence[Metric | ConfiguredMetric] | None"
+        cls,
+        metrics: "Sequence[Metric | ConfiguredMetric] | None",
+        per_region: bool = False,
     ) -> list[ConfiguredMetric]:
         """Normalize the unified ``metrics`` list into a deduplicated, ordered list of
         ``ConfiguredMetric``.
 
         A bare ``Metric`` is expanded to every mode it supports; a ``ConfiguredMetric``
         contributes only its own mode. ``None`` yields the default instance + global sets.
+
+        The whole-image ("global") variant of a single-object metric (``supports_semantic``
+        is False, e.g. ASSD/HD) is added only under ``per_region`` evaluation, where each
+        region is one object; in a non-region evaluator a bare such metric expands to its
+        instance variant alone.
         """
+
+        def wants_global(m: "Metric") -> bool:
+            return "global" in m.modes and (per_region or m.supports_semantic)
+
         if metrics is None:
             normalized = [
                 ConfiguredMetric(m, "instance") for m in cls._DEFAULT_INSTANCE_METRICS
-            ] + [ConfiguredMetric(m, "global") for m in cls._DEFAULT_GLOBAL_METRICS]
+            ] + [
+                ConfiguredMetric(m, "global")
+                for m in cls._DEFAULT_GLOBAL_METRICS
+                if wants_global(m)
+            ]
         else:
             normalized = []
             for m in metrics:
                 if isinstance(m, ConfiguredMetric):
                     normalized.append(m)
                 elif isinstance(m, Metric):
-                    for mode in ("instance", "global"):
-                        if mode in m.modes:
-                            normalized.append(ConfiguredMetric(m, mode))
+                    if "instance" in m.modes:
+                        normalized.append(ConfiguredMetric(m, "instance"))
+                    if wants_global(m):
+                        normalized.append(ConfiguredMetric(m, "global"))
                 else:
                     raise TypeError(
                         "metrics must contain Metric or ConfiguredMetric entries, "

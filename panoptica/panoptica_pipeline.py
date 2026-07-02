@@ -399,6 +399,11 @@ def _panoptic_evaluate_region_wise(
                 region2result_map[i] = processing_pair_r
 
         if len(region2result_map) == num_features:
+            # The combined result spans the whole (multi-region) image, so it only
+            # carries whole-image ("semantic") global metrics. Single-object metrics
+            # (ASSD/HD/...) stay meaningful per region and are surfaced as region_avg_*
+            # below; they are dropped from the combined result's whole-image globals.
+            semantic_global_metrics = [m for m in global_metrics if m.supports_semantic]
             # Combine results from all regions into a single PanopticaResult
             combined_result = PanopticaResult(
                 reference_arr=input_pair.reference_arr,
@@ -410,7 +415,7 @@ def _panoptic_evaluate_region_wise(
                 label_group=label_group,
                 tp=np.nan,  # type: ignore[arg-type]
                 list_metrics={},
-                global_metrics=global_metrics,
+                global_metrics=semantic_global_metrics,
                 edge_case_handler=edge_case_handler,
                 intermediate_steps_data=intermediate_steps_data,
                 **kwargs,
