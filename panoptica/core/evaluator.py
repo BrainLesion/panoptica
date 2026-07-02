@@ -2,14 +2,16 @@
 
 from panoptica.utils import format_autc_key
 from panoptica.utils import format_threshold_key
-from panoptica.panoptica_pipeline import _phase_instance_approximation
+from panoptica.core.pipeline import _phase_instance_approximation
 from time import perf_counter
+from collections.abc import Sequence
 from typing import Literal, Union
 from typing import TYPE_CHECKING
-from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
+from panoptica.instance.approximator import InstanceApproximator
+from panoptica.instance.matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
+from panoptica.metrics.configured_metric import ConfiguredMetric
+from panoptica.core.result import PanopticaResult, PanopticaAUTCResult
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.citation_reminder import citation_reminder
@@ -29,7 +31,7 @@ from panoptica.utils.segmentation_class import (
     LabelGroup,
     _NoSegmentationClassGroups,
 )
-from panoptica.panoptica_pipeline import (
+from panoptica.core.pipeline import (
     _panoptic_evaluate,
     _panoptic_evaluate_region_wise,
 )
@@ -49,9 +51,8 @@ class Panoptica_Evaluator(SupportsConfig):
         instance_matcher: InstanceMatchingAlgorithm | None = None,
         edge_case_handler: EdgeCaseHandler | None = None,
         segmentation_class_groups: SegmentationClassGroups | None = None,
-        instance_metrics: list[Metric] | None = None,
-        global_metrics: list[Metric] | None = None,
-        decision_metric: Metric | None = None,
+        metrics: "Sequence[Metric | ConfiguredMetric] | None" = None,
+        decision_metric: "Metric | ConfiguredMetric | None" = None,
         decision_threshold: float | None = None,
         per_region_evaluation: bool = False,
         save_group_times: bool = False,
@@ -68,10 +69,13 @@ class Panoptica_Evaluator(SupportsConfig):
             edge_case_handler (edge_case_handler, optional): EdgeCaseHandler to be used. If none, will create the default one
             segmentation_class_groups (SegmentationClassGroups, optional): If not none, will evaluate per class group defined, instead of over all at the same time. A class group is a collection of labels that are considered of the same class / structure.
 
-            instance_metrics (list[Metric]): List of all metrics that should be calculated between all instances
-            global_metrics (list[Metric]): List of all metrics that should be calculated on the global binary masks
+            metrics (Sequence[Metric | ConfiguredMetric]): Unified list of metrics to compute. Each entry is
+                either a bare ``Metric`` (expanded to every evaluation mode it supports, i.e. instance AND global)
+                or a ``ConfiguredMetric`` bound to a single mode and optional fixed parameters
+                (e.g. ``Metric.IOU.instance()``, ``GlobalMetric(Metric.DSC)``, ``Metric.NSD.instance(threshold=4)``).
+                Defaults to instance ``[DSC, IOU, ASSD, RVD]`` plus global ``[DSC]``.
 
-            decision_metric: (Metric | None, optional): This metric is the final decision point between True Positive and False Positive. Can be left away if the matching algorithm is used (it will match by a metric and threshold already)
+            decision_metric: (Metric | ConfiguredMetric | None, optional): This metric is the final decision point between True Positive and False Positive. Can be left away if the matching algorithm is used (it will match by a metric and threshold already)
             decision_threshold: (float | None, optional): Threshold for the decision_metric
 
             save_group_times(bool): If true, will save the computation time of each sample and put that into the result object.
@@ -82,12 +86,25 @@ class Panoptica_Evaluator(SupportsConfig):
         #
         self.__instance_approximator = instance_approximator
         self.__instance_matcher = instance_matcher
-        if instance_metrics is None:
-            instance_metrics = [Metric.DSC, Metric.IOU, Metric.ASSD, Metric.RVD]
-        if global_metrics is None:
-            global_metrics = [Metric.DSC]
-        self.__eval_metrics = instance_metrics
-        self.__global_metrics = global_metrics
+        # Normalize the unified metrics list into the canonical configured form,
+        # then derive the per-mode bare-Metric lists the pipeline consumes. A bare
+        # metric's whole-image ("global") variant is only added when it is meaningful
+        # in this evaluator's context (see _resolve_metrics), so per_region_evaluation
+        # decides whether single-object metrics (ASSD/HD/...) get a global variant.
+        self.__metrics = self._resolve_metrics(metrics, per_region_evaluation)
+        self.__eval_metrics = [c.metric for c in self.__metrics if c.is_instance]
+        self.__global_metrics = [c.metric for c in self.__metrics if c.is_global]
+        # Fixed per-metric parameters (e.g. NSD threshold) are threaded into the
+        # evaluation for both instance and global metrics. Keying is one column per
+        # metric, so conflicting parameters for the same metric are rejected.
+        self.__instance_metric_params = self._collect_metric_params(
+            [c for c in self.__metrics if c.is_instance]
+        )
+        self.__global_metric_params = self._collect_metric_params(
+            [c for c in self.__metrics if c.is_global]
+        )
+        if isinstance(decision_metric, ConfiguredMetric):
+            decision_metric = decision_metric.metric
         self.__decision_metric = decision_metric
         self.__decision_threshold = decision_threshold
         self.__save_group_times = save_group_times
@@ -118,6 +135,84 @@ class Panoptica_Evaluator(SupportsConfig):
         # Cache of resulting_metric_keys output keyed by output_individual_instance_metrics.
         self.__resulting_metric_keys_cache: dict[bool, list[str]] = {}
 
+    # Defaults reproduce the historical split: instance [DSC, IOU, ASSD, RVD] + global [DSC].
+    _DEFAULT_INSTANCE_METRICS = (Metric.DSC, Metric.IOU, Metric.ASSD, Metric.RVD)
+    _DEFAULT_GLOBAL_METRICS = (Metric.DSC,)
+
+    @classmethod
+    def _resolve_metrics(
+        cls,
+        metrics: "Sequence[Metric | ConfiguredMetric] | None",
+        per_region: bool = False,
+    ) -> list[ConfiguredMetric]:
+        """Normalize the unified ``metrics`` list into a deduplicated, ordered list of
+        ``ConfiguredMetric``.
+
+        A bare ``Metric`` is expanded to every mode it supports; a ``ConfiguredMetric``
+        contributes only its own mode. ``None`` yields the default instance + global sets.
+
+        The whole-image ("global") variant of a single-object metric (``supports_semantic``
+        is False, e.g. ASSD/HD) is added only under ``per_region`` evaluation, where each
+        region is one object; in a non-region evaluator a bare such metric expands to its
+        instance variant alone.
+        """
+
+        def wants_global(m: "Metric") -> bool:
+            return "global" in m.modes and (per_region or m.supports_semantic)
+
+        if metrics is None:
+            normalized = [
+                ConfiguredMetric(m, "instance") for m in cls._DEFAULT_INSTANCE_METRICS
+            ] + [
+                ConfiguredMetric(m, "global")
+                for m in cls._DEFAULT_GLOBAL_METRICS
+                if wants_global(m)
+            ]
+        else:
+            normalized = []
+            for m in metrics:
+                if isinstance(m, ConfiguredMetric):
+                    normalized.append(m)
+                elif isinstance(m, Metric):
+                    if "instance" in m.modes:
+                        normalized.append(ConfiguredMetric(m, "instance"))
+                    if wants_global(m):
+                        normalized.append(ConfiguredMetric(m, "global"))
+                else:
+                    raise TypeError(
+                        "metrics must contain Metric or ConfiguredMetric entries, "
+                        f"got {type(m)}"
+                    )
+        seen: set[ConfiguredMetric] = set()
+        deduped: list[ConfiguredMetric] = []
+        for c in normalized:
+            if c not in seen:
+                seen.add(c)
+                deduped.append(c)
+        return deduped
+
+    @staticmethod
+    def _collect_metric_params(
+        configs: "list[ConfiguredMetric]",
+    ) -> dict[Metric, dict]:
+        """Map each parameterized metric to its fixed parameters.
+
+        Only metrics that actually carry parameters are included. Two configs for the
+        same metric with different parameters are rejected, since results are keyed by
+        the bare metric (a single column per metric) and cannot yet represent multiple
+        parameterizations of the same metric.
+        """
+        params: dict[Metric, dict] = {}
+        for c in configs:
+            if c.metric in params and params[c.metric] != c.param_dict:
+                raise ValueError(
+                    f"Conflicting parameters for metric {c.metric.name}: "
+                    f"{params[c.metric]} vs {c.param_dict}. Multiple parameterizations "
+                    "of the same metric are not supported yet."
+                )
+            params[c.metric] = c.param_dict
+        return {m: p for m, p in params.items() if p}
+
     @classmethod
     def _yaml_repr(cls, node) -> dict:
         return {
@@ -126,8 +221,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "instance_matcher": node.__instance_matcher,
             "edge_case_handler": node.__edge_case_handler,
             "segmentation_class_groups": node.__segmentation_class_groups,
-            "instance_metrics": node.__eval_metrics,
-            "global_metrics": node.__global_metrics,
+            "metrics": node.__metrics,
             "decision_metric": node.__decision_metric,
             "decision_threshold": node.__decision_threshold,
             "per_region_evaluation": node.__per_region_evaluation,
@@ -317,6 +411,8 @@ class Panoptica_Evaluator(SupportsConfig):
                     instance_matcher=self.__instance_matcher,
                     instance_metrics=self.__eval_metrics,
                     global_metrics=self.__global_metrics,
+                    instance_metric_params=self.__instance_metric_params,
+                    global_metric_params=self.__global_metric_params,
                     decision_metric=self.__decision_metric,
                     decision_threshold=decision_threshold,
                     matching_threshold=threshold,
@@ -406,7 +502,8 @@ class Panoptica_Evaluator(SupportsConfig):
     ) -> list[str]:
         if output_individual_instance_metrics not in self.__resulting_metric_keys_cache:
             res = self._get_dummy_result()
-            result = res.to_dict(
+            # The on-disk schema stays the flat master view; the public to_dict() is nested.
+            result = res._to_master_dict(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
             # For now reference_instances is the only nested dict.
@@ -515,6 +612,8 @@ class Panoptica_Evaluator(SupportsConfig):
                 instance_matcher=self.__instance_matcher,
                 instance_metrics=self.__eval_metrics,
                 global_metrics=self.__global_metrics,
+                instance_metric_params=self.__instance_metric_params,
+                global_metric_params=self.__global_metric_params,
                 result_all=result_all,
                 log_times=self.__log_times if log_times is None else log_times,
                 verbose=self.__verbose if verbose is None else verbose,
@@ -530,6 +629,8 @@ class Panoptica_Evaluator(SupportsConfig):
                 instance_matcher=self.__instance_matcher,
                 instance_metrics=self.__eval_metrics,
                 global_metrics=self.__global_metrics,
+                instance_metric_params=self.__instance_metric_params,
+                global_metric_params=self.__global_metric_params,
                 decision_metric=self.__decision_metric,
                 decision_threshold=decision_threshold,
                 matching_threshold=matching_threshold,

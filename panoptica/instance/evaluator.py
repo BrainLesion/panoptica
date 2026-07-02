@@ -88,6 +88,7 @@ def evaluate_matched_instance(
     voxelspacing: tuple[float, ...] | None = None,
     processing_pair_orig_shape: tuple[int, ...] | None = None,
     n_ref_labels: int | None = None,
+    instance_metric_params: dict[Metric, dict] | None = None,
     **kwargs,
 ) -> EvaluateInstancePair:
     """
@@ -134,6 +135,7 @@ def evaluate_matched_instance(
             instance_slice=_union_instance_slice(
                 ref_slices, pred_slices, ref_idx, reference_arr.shape
             ),
+            metric_params=instance_metric_params,
         )
         for ref_idx in ref_matched_labels
     ]
@@ -206,6 +208,7 @@ def _evaluate_instance(
     processing_pair_orig_shape: tuple[int, ...] | None = None,
     n_ref_labels: int | None = None,
     instance_slice: tuple[slice, ...] | None = None,
+    metric_params: dict[Metric, dict] | None = None,
 ) -> _InstanceEvaluation:
     """
     Evaluate a single instance.
@@ -301,6 +304,10 @@ def _evaluate_instance(
         )
 
     for metric in eval_metrics:
+        # Fixed per-metric parameters (e.g. NSD threshold) configured via
+        # ConfiguredMetric. Default-parameter metrics get an empty dict and behave
+        # exactly as before.
+        params = metric_params.get(metric, {}) if metric_params else {}
         if metric.name in SURFACE_DISTANCE_METRIC_NAMES:
             assert surface_pair is not None
             metric_value = _reduce_surface_metric(
@@ -308,15 +315,18 @@ def _evaluate_instance(
                 surface_pair[0],
                 surface_pair[1],
                 voxelspacing=spatial_voxelspacing,
+                **params,
             )
         elif metric.requires_spatial and is_flattened_onehot:
             # Spatial-but-not-surface metrics (e.g. center distance) on one-hot data.
             metric_value = metric(
-                spatial_ref, spatial_pred, voxelspacing=spatial_voxelspacing
+                spatial_ref, spatial_pred, voxelspacing=spatial_voxelspacing, **params
             )
         else:
             # Non-spatial metrics, or any metric on normal (non-one-hot) arrays.
-            metric_value = metric(ref_arr, pred_arr, voxelspacing=voxelspacing)
+            metric_value = metric(
+                ref_arr, pred_arr, voxelspacing=voxelspacing, **params
+            )
 
         result[metric] = metric_value
 

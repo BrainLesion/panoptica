@@ -116,8 +116,15 @@ def _reduce_surface_metric(
     sd_ref: np.ndarray,
     sd_pred: np.ndarray,
     voxelspacing=None,
+    threshold=None,
 ) -> float:
-    """Dispatch a surface-distance metric by name onto the precomputed pair."""
+    """Dispatch a surface-distance metric by name onto the precomputed pair.
+
+    ``threshold`` is the NSD distance threshold; it is ignored by the distance-based
+    reducers (ASSD/HD/HD95). Since the surface-distance pair is shared across all
+    surface metrics for an instance, per-metric ``connectivity`` is not configurable
+    here (the pair is built with the default connectivity).
+    """
     if metric_name == "ASSD":
         return _assd_from_pair(sd_ref, sd_pred)
     if metric_name == "HD":
@@ -125,5 +132,7 @@ def _reduce_surface_metric(
     if metric_name == "HD95":
         return _hd95_from_pair(sd_ref, sd_pred)
     if metric_name == "NSD":
-        return _nsd_from_pair(sd_ref, sd_pred, voxelspacing=voxelspacing)
+        return _nsd_from_pair(
+            sd_ref, sd_pred, voxelspacing=voxelspacing, threshold=threshold
+        )
     raise ValueError(f"{metric_name} is not a surface-distance metric")

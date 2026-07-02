@@ -9,7 +9,7 @@ from panoptica.utils.serialization import (
     parse_instance_subject_name,
 )
 from panoptica.utils.file_backend import FileBackend
-from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+from panoptica.core.result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
 import numpy as np
 import json
@@ -108,12 +108,12 @@ class JSONLBackend(FileBackend):
             result = result_grouped[groupname]
             group_obj: dict = {}
             if output_individual_instance_metrics:
-                summary_dict = result.to_dict(True)
+                summary_dict = result._to_master_dict(True)
                 instance_dicts: list = summary_dict.pop(  # type: ignore[assignment]
                     "reference_instances", []
                 )
             else:
-                summary_dict = result.to_dict(False)
+                summary_dict = result._to_master_dict(False)
                 instance_dicts = []
 
             if result.computation_time is not None:

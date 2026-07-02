@@ -32,7 +32,8 @@ from panoptica.metrics.relative_volume_difference import (
 from panoptica.utils.constants import _Enum_Compare, auto
 
 if TYPE_CHECKING:
-    from panoptica.panoptica_result import PanopticaResult
+    from panoptica.metrics.configured_metric import ConfiguredMetric
+    from panoptica.core.result import PanopticaResult
 
 
 @dataclass
@@ -50,6 +51,25 @@ class _Metric:
         requires_spatial (bool): If True, the metric requires spatial structure for meaningful computation.
         _metric_function (Callable): A callable function that computes the metric
             between two input arrays.
+        display_name (str): Short human label used when building per-instance result
+            long-names (e.g. "IoU", "Dsc"). Falls back to ``name`` when empty.
+        supports_pq (bool): If True, the metric gets a ``pq_{suffix}`` result column
+            (only the overlap metrics IOU/DSC/clDSC do).
+        sq_unit_interval (bool): If True, the per-instance sq/pq are bounded to
+            ``[0, 1]`` (which also makes them eligible for AUTC integration).
+        instance_order (int | None): Registration order of this metric's sq/pq
+            result columns. ``None`` means the metric is not registered as an
+            instance metric. This drives the file-header / result-dict column order
+            and must stay fixed.
+        modes (frozenset[str]): Evaluation modes the metric applies to
+            ("instance" and/or "global").
+        param_spec (tuple[str, ...]): Names of the fixed parameters this metric
+            accepts beyond ``voxelspacing`` (e.g. NSD accepts ("threshold",)).
+        supports_semantic (bool): Whether the metric is meaningful as a whole-image
+            binary ("semantic"/global) metric. Distance and boundary metrics
+            (ASSD/CEDI/HD/HD95) are only meaningful on a single object, so they set
+            this False: they stay available per instance and per region (each region
+            is one object) but are excluded from whole-image evaluation.
 
     Example:
         >>> my_metric = _Metric(name="accuracy", long_name="Accuracy", decreasing=False, requires_spatial=False, _metric_function=accuracy_function)
@@ -64,6 +84,19 @@ class _Metric:
     requires_spatial: bool
     _metric_function: Callable
     suffix_override: str | None = None
+    # Per-instance result-column metadata, folded in from the former
+    # _INSTANCE_METRIC_SPECS table in panoptica_result.py (see #189 / #181) so the
+    # metric definition is the single source of truth.
+    display_name: str = ""
+    supports_pq: bool = False
+    sq_unit_interval: bool = False
+    instance_order: int | None = None
+    # Capability metadata (#181): applicable modes and accepted fixed parameters.
+    modes: frozenset[str] = frozenset({"instance", "global"})
+    param_spec: tuple[str, ...] = ()
+    # Whether a whole-image ("semantic"/global) variant is meaningful. Single-object
+    # distance/boundary metrics set this False (see attribute docstring above).
+    supports_semantic: bool = True
 
     def __call__(
         self,
@@ -161,7 +194,17 @@ class Metric(_Enum_Compare):
     Never call the .value member here, use the properties directly.
     """
 
-    DSC = _Metric("DSC", "Dice", False, False, _compute_instance_volumetric_dice)
+    DSC = _Metric(
+        "DSC",
+        "Dice",
+        False,
+        False,
+        _compute_instance_volumetric_dice,
+        display_name="Dsc",
+        supports_pq=True,
+        sq_unit_interval=True,
+        instance_order=1,
+    )
     IOU = _Metric(
         "IOU",
         "Intersection over Union",
@@ -169,6 +212,10 @@ class Metric(_Enum_Compare):
         False,
         _compute_instance_iou,
         suffix_override="",
+        display_name="IoU",
+        supports_pq=True,
+        sq_unit_interval=True,
+        instance_order=0,
     )
     ASSD = _Metric(
         "ASSD",
@@ -176,14 +223,29 @@ class Metric(_Enum_Compare):
         True,
         True,
         _compute_instance_average_symmetric_surface_distance,
+        display_name="ASSD",
+        instance_order=3,
+        supports_semantic=False,
     )
-    clDSC = _Metric("clDSC", "Centerline Dice", False, False, _compute_centerline_dice)
+    clDSC = _Metric(
+        "clDSC",
+        "Centerline Dice",
+        False,
+        False,
+        _compute_centerline_dice,
+        display_name="Centerline Dsc",
+        supports_pq=True,
+        sq_unit_interval=True,
+        instance_order=2,
+    )
     RVD = _Metric(
         "RVD",
         "Relative Volume Difference",
         True,
         False,
         _compute_instance_relative_volume_difference,
+        display_name="Relative Volume Difference",
+        instance_order=4,
     )
     RVAE = _Metric(
         "RVAE",
@@ -191,6 +253,8 @@ class Metric(_Enum_Compare):
         True,
         False,
         _compute_instance_relative_volume_error,
+        display_name="Relative Volume Absolute Error",
+        instance_order=5,
     )
     CEDI = _Metric(
         "CEDI",
@@ -198,6 +262,9 @@ class Metric(_Enum_Compare):
         True,
         True,
         _compute_instance_center_distance,
+        display_name="Center Distance",
+        instance_order=6,
+        supports_semantic=False,
     )
     HD = _Metric(
         "HD",
@@ -205,6 +272,9 @@ class Metric(_Enum_Compare):
         True,
         True,
         _compute_instance_hausdorff_distance,
+        display_name="Hausdorff Distance",
+        instance_order=7,
+        supports_semantic=False,
     )
     HD95 = _Metric(
         "HD95",
@@ -212,6 +282,9 @@ class Metric(_Enum_Compare):
         True,
         True,
         _compute_instance_hausdorff_distance95,
+        display_name="Hausdorff Distance 95",
+        instance_order=8,
+        supports_semantic=False,
     )
     NSD = _Metric(
         "NSD",
@@ -219,6 +292,9 @@ class Metric(_Enum_Compare):
         True,
         True,
         _compute_instance_normalized_surface_dice,
+        display_name="Normalized Surface Dice",
+        instance_order=9,
+        param_spec=("threshold",),
     )
 
     def __call__(
@@ -281,6 +357,51 @@ class Metric(_Enum_Compare):
     @property
     def requires_spatial(self):
         return self.value.requires_spatial
+
+    @property
+    def display_name(self) -> str:
+        """Short human label for result long-names (falls back to ``name``)."""
+        return self.value.display_name or self.value.name
+
+    @property
+    def supports_pq(self) -> bool:
+        return self.value.supports_pq
+
+    @property
+    def sq_unit_interval(self) -> bool:
+        return self.value.sq_unit_interval
+
+    @property
+    def instance_order(self) -> int | None:
+        return self.value.instance_order
+
+    @property
+    def modes(self) -> frozenset[str]:
+        return self.value.modes
+
+    @property
+    def param_spec(self) -> tuple[str, ...]:
+        return self.value.param_spec
+
+    @property
+    def supports_semantic(self) -> bool:
+        """Whether a whole-image binary ("global") variant of this metric is meaningful."""
+        return self.value.supports_semantic
+
+    def instance(self, **params) -> "ConfiguredMetric":
+        """Configure this metric for instance-wise evaluation (e.g. ``Metric.NSD.instance(threshold=4)``)."""
+        from panoptica.metrics.configured_metric import ConfiguredMetric
+
+        return ConfiguredMetric(self, "instance", params)
+
+    def as_global(self, **params) -> "ConfiguredMetric":
+        """Configure this metric for global (whole-image binary) evaluation.
+
+        Named ``as_global`` because ``global`` is a Python keyword.
+        """
+        from panoptica.metrics.configured_metric import ConfiguredMetric
+
+        return ConfiguredMetric(self, "global", params)
 
     def get_result_key(self, prefix: str, is_std: bool = False) -> str:
         """

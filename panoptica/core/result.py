@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 
 from panoptica._functionals import _get_orig_onehotcc_structure
+from panoptica.computation import calc_global_bin_metric, fn, fp, prec, rec, rq
 from panoptica.metrics import (
     Evaluation_List_Metric,
     Evaluation_Metric,
@@ -33,6 +34,157 @@ from panoptica.utils.serialization import (
 _trapezoid = getattr(np, "trapezoid", None) or np.trapz
 
 
+# The per-instance metric columns are generated from the metric definitions
+# themselves (see ``_Metric`` in metrics.py), which are the single source of truth
+# for display name, whether a ``pq_*`` column exists (``supports_pq``), the
+# ``[0, 1]`` sq/pq bounds (``sq_unit_interval``, which also drives AUTC selection)
+# and the column order (``instance_order``). The order must stay fixed to keep
+# result-dict / file-header column order stable.
+INSTANCE_METRICS: list[Metric] = sorted(
+    (m for m in Metric if m.instance_order is not None),
+    key=lambda m: m.instance_order,  # type: ignore[arg-type, return-value]
+)
+
+
+def _build_nested_key_index() -> dict[str, tuple[str, str, str | None]]:
+    """Map each flat master-dict key to its ``(group, name, component)`` position in the
+    nested ``to_dict`` schema (component is ``None`` for scalar leaves).
+
+    The nested schema groups metrics by category: ``matching`` (counts / recognition
+    quality), ``instance`` (per-metric ``{sq, std, pq?}``), ``global`` (whole-image
+    binary), ``region`` (per-region averages) and ``instance_reference`` (matched-ref
+    sizes). The mapping is derived from the metric definitions, so it stays in sync with
+    the flat keys the result registry produces.
+    """
+    index: dict[str, tuple[str, str, str | None]] = {}
+    for key in (
+        "n_ref_instances",
+        "n_pred_instances",
+        "tp",
+        "fp",
+        "fn",
+        "prec",
+        "rec",
+        "rq",
+    ):
+        index[key] = ("matching", key, None)
+    index["instance_voxel_count_ref"] = ("instance_reference", "voxel_count", None)
+    index["instance_volume_ref"] = ("instance_reference", "volume", None)
+    index["global_bin_volume_pred"] = ("global", "volume_prediction", None)
+    index["global_bin_volume_ref"] = ("global", "volume_reference", None)
+    for m in INSTANCE_METRICS:
+        short = m.name.lower()
+        index[m.get_result_key("sq")] = ("instance", short, "sq")
+        index[m.get_result_key("sq", is_std=True)] = ("instance", short, "std")
+        if m.supports_pq:
+            index[m.get_result_key("pq")] = ("instance", short, "pq")
+    for m in Metric:
+        index[f"global_bin_{m.name.lower()}"] = ("global", m.name.lower(), None)
+        index[f"region_avg_{m.name.lower()}"] = ("region", m.name.lower(), None)
+    return index
+
+
+_NESTED_KEY_INDEX = _build_nested_key_index()
+
+
+# --------------------------------------------------------------------------- #
+# Grouped result accessors (#248).
+#
+# An additive, read-only view over the flat metric registry that lets users
+# reach metrics by category instead of by mangled flat key:
+#
+#     result["global"].dice      # whole-image binary DSC  (global_bin_dsc)
+#     result.instance.dice.sq    # mean per-instance DSC   (sq_dsc)
+#     result.instance.dice.pq    # panoptic quality DSC    (pq_dsc)
+#     result.region.dice         # region-wise average DSC (region_avg_dsc)
+#     autc_result.autc.dice.pq   # AUTC of pq_dsc
+#
+# The flat attributes (result.sq_dsc, result.global_bin_dsc, ...) are unchanged;
+# this is purely a nicer surface on top of them.
+# --------------------------------------------------------------------------- #
+_METRIC_NAME_ALIASES: dict[str, Metric] = {
+    "dice": Metric.DSC,
+    "centerline_dice": Metric.clDSC,
+    "centerline_dsc": Metric.clDSC,
+}
+
+
+def _resolve_metric_name(short: str) -> Metric:
+    """Map a short metric name (e.g. ``"dice"``, ``"iou"``) to its ``Metric``."""
+    key = short.lower()
+    if key in _METRIC_NAME_ALIASES:
+        return _METRIC_NAME_ALIASES[key]
+    for m in Metric:
+        if m.name.lower() == key:
+            return m
+    raise AttributeError(f"Unknown metric name {short!r}")
+
+
+class _InstanceScore:
+    """sq / std (and pq for overlap metrics) for a single instance metric."""
+
+    def __init__(self, result: PanopticaResult, metric: Metric):
+        self._result = result
+        self._metric = metric
+
+    @property
+    def sq(self):
+        return getattr(self._result, self._metric.get_result_key("sq"))
+
+    @property
+    def std(self):
+        return getattr(self._result, self._metric.get_result_key("sq", is_std=True))
+
+    @property
+    def pq(self):
+        if not self._metric.supports_pq:
+            raise AttributeError(
+                f"{self._metric.name} has no panoptic quality (pq) component"
+            )
+        return getattr(self._result, self._metric.get_result_key("pq"))
+
+    def __repr__(self) -> str:
+        return f"InstanceScore({self._metric.name})"
+
+
+class _AUTCScore:
+    """AUTC of sq / pq for a single overlap metric on a PanopticaAUTCResult."""
+
+    def __init__(self, autc_result, metric: Metric):
+        self._autc = autc_result
+        self._metric = metric
+
+    @property
+    def sq(self):
+        return getattr(self._autc, format_autc_key(self._metric.get_result_key("sq")))
+
+    @property
+    def pq(self):
+        if not self._metric.supports_pq:
+            raise AttributeError(
+                f"{self._metric.name} has no panoptic quality (pq) component"
+            )
+        return getattr(self._autc, format_autc_key(self._metric.get_result_key("pq")))
+
+    def __repr__(self) -> str:
+        return f"AUTCScore({self._metric.name})"
+
+
+class _MetricGroupView:
+    """Resolve a short metric name within one metric group of a result."""
+
+    def __init__(self, resolver: Callable[[Metric], Any]):
+        object.__setattr__(self, "_resolver", resolver)
+
+    def __getattr__(self, short: str):
+        if short.startswith("_"):
+            raise AttributeError(short)
+        return object.__getattribute__(self, "_resolver")(_resolve_metric_name(short))
+
+    def __getitem__(self, short: str):
+        return object.__getattribute__(self, "_resolver")(_resolve_metric_name(short))
+
+
 class PanopticaResult:
     def __init__(
         self,
@@ -44,6 +196,7 @@ class PanopticaResult:
         list_metrics: dict[Metric, list[float]],
         edge_case_handler: EdgeCaseHandler,
         global_metrics: list[Metric] | None = None,
+        global_metric_params: dict[Metric, dict] | None = None,
         processing_pair_orig_shape: tuple[int, int] | None = None,
         n_ref_labels: int | None = None,
         label_group: LabelGroup | None = None,
@@ -72,6 +225,9 @@ class PanopticaResult:
         if global_metrics is None:
             global_metrics = []
         self._global_metrics: list[Metric] = global_metrics
+        # Fixed parameters (e.g. NSD threshold) per global metric, applied when the
+        # whole-image binary metric is computed. One column per metric.
+        self._global_metric_params: dict[Metric, dict] = global_metric_params or {}
         self.computation_time = computation_time
         self.intermediate_steps_data = intermediate_steps_data
         self.metadata: dict[str, Any] = kwargs
@@ -175,201 +331,13 @@ class PanopticaResult:
         # endregion
         #
         #
-        # region IOU
-        self.sq: float
-        self._add_metric(
-            Metric.IOU.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq,
-            long_name="Segmentation Quality IoU",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        self.sq_std: float
-        self._add_metric(
-            Metric.IOU.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_std,
-            long_name="Segmentation Quality IoU Standard Deviation",
-        )
-        self.pq: float
-        self._add_metric(
-            Metric.IOU.get_result_key("pq"),
-            MetricType.INSTANCE,
-            pq,
-            long_name="Panoptic Quality IoU",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        # endregion
-        #
-        # region DICE
-        self.sq_dsc: float
-        self._add_metric(
-            Metric.DSC.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_dsc,
-            long_name="Segmentation Quality Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        self.sq_dsc_std: float
-        self._add_metric(
-            Metric.DSC.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_dsc_std,
-            long_name="Segmentation Quality Dsc Standard Deviation",
-        )
-        self.pq_dsc: float
-        self._add_metric(
-            Metric.DSC.get_result_key("pq"),
-            MetricType.INSTANCE,
-            pq_dsc,
-            long_name="Panoptic Quality Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        # endregion
-        #
-        # region clDICE
-        self.sq_cldsc: float
-        self._add_metric(
-            Metric.clDSC.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_cldsc,
-            long_name="Segmentation Quality Centerline Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        self.sq_cldsc_std: float
-        self._add_metric(
-            Metric.clDSC.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_cldsc_std,
-            long_name="Segmentation Quality Centerline Dsc Standard Deviation",
-        )
-        self.pq_cldsc: float
-        self._add_metric(
-            Metric.clDSC.get_result_key("pq"),
-            MetricType.INSTANCE,
-            pq_cldsc,
-            long_name="Panoptic Quality Centerline Dsc",
-            lower_bound=0.0,
-            upper_bound=1.0,
-        )
-        # endregion
-        #
-        # region ASSD
-        self.sq_assd: float
-        self._add_metric(
-            Metric.ASSD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_assd,
-            long_name="Segmentation Quality ASSD",
-        )
-        self.sq_assd_std: float
-        self._add_metric(
-            Metric.ASSD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_assd_std,
-            long_name="Segmentation Quality ASSD Standard Deviation",
-        )
-        # endregion
-        #
-        # region RVD
-        self.sq_rvd: float
-        self._add_metric(
-            Metric.RVD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_rvd,
-            long_name="Segmentation Quality Relative Volume Difference",
-        )
-        self.sq_rvd_std: float
-        self._add_metric(
-            Metric.RVD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_rvd_std,
-            long_name="Segmentation Quality Relative Volume Difference Standard Deviation",
-        )
-        # endregion
-        #
-        # region RVAE
-        self.sq_rvae: float
-        self._add_metric(
-            Metric.RVAE.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_rvae,
-            long_name="Segmentation Quality Relative Volume Absolute Error",
-        )
-        self.sq_rvae_std: float
-        self._add_metric(
-            Metric.RVAE.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_rvae_std,
-            long_name="Segmentation Quality Relative Volume Absolute Error Standard Deviation",
-        )
-        # endregion
-        #
-        # region CEDI
-        self.sq_cedi: float
-        self._add_metric(
-            Metric.CEDI.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_cedi,
-            long_name="Segmentation Quality Center Distance",
-        )
-        self.sq_cedi_std: float
-        self._add_metric(
-            Metric.CEDI.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_cedi_std,
-            long_name="Segmentation Quality Center Distance Standard Deviation",
-        )
-        # endregion
-        #
-        # region HD
-        self.sq_hd: float
-        self._add_metric(
-            Metric.HD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_hd,
-            long_name="Segmentation Quality Hausdorff Distance",
-        )
-        self.sq_hd_std: float
-        self._add_metric(
-            Metric.HD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_hd_std,
-            long_name="Segmentation Quality Hausdorff Distance Standard Deviation",
-        )
-        self.sq_hd95: float
-        self._add_metric(
-            Metric.HD95.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_hd95,
-            long_name="Segmentation Quality Hausdorff Distance 95",
-        )
-        self.sq_hd95_std: float
-        self._add_metric(
-            Metric.HD95.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_hd95_std,
-            long_name="Segmentation Quality Hausdorff Distance 95 Standard Deviation",
-        )
-        self.sq_nsd: float
-        self._add_metric(
-            Metric.NSD.get_result_key("sq"),
-            MetricType.INSTANCE,
-            sq_nsd,
-            long_name="Segmentation Quality Normalized Surface Dice",
-        )
-        self.sq_nsd_std: float
-        self._add_metric(
-            Metric.NSD.get_result_key("sq", is_std=True),
-            MetricType.INSTANCE,
-            sq_nsd_std,
-            long_name="Segmentation Quality Normalized Surface Dice Standard Deviation",
-        )
+        # region Instance metrics
+        # sq / sq_std for every metric, plus pq for the unit-interval overlap
+        # metrics (IOU/DSC/clDSC). Generated from the metric definitions (their
+        # instance_order / supports_pq / sq_unit_interval metadata) so a new
+        # instance metric is one metric definition instead of three hand-written
+        # _add_metric blocks (see #189 / #181).
+        self._register_instance_metrics()
         # endregion
 
         # region Reference Instances
@@ -462,20 +430,9 @@ class PanopticaResult:
         ##################
         # List Metrics   #
         ##################
+        # Per-TP instance metrics, kept in their own registry (not _evaluation_metrics).
         self._list_metrics: dict[Metric, Evaluation_List_Metric] = {}
-        # Loop over all available metric, add it to evaluation_list_metric if available, but also add the global references
-
-        arrays_present = False
-        # TODO move this after m is in global metrics otherwise this is unnecessarily computed
-        if prediction_arr is not None and reference_arr is not None:
-            pred_binary = prediction_arr.copy()
-            ref_binary = reference_arr.copy()
-            pred_binary[pred_binary != 0] = 1
-            ref_binary[ref_binary != 0] = 1
-            arrays_present = True
-
         for m in Metric:
-            # Set metrics for instances for each TP
             if m in list_metrics:
                 is_edge_case, edge_case_result = self._edge_case_handler.handle_zero_tp(
                     metric=m,
@@ -486,53 +443,14 @@ class PanopticaResult:
                 self._list_metrics[m] = Evaluation_List_Metric(
                     m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result
                 )
-            # even if not available, set the global vars
-            default_value = None
-            was_calculated = False
 
-            if m in self._global_metrics and arrays_present:
-                combi = pred_binary + ref_binary
-                combi[combi != 2] = 0
-                combi[combi != 0] = 1
-                is_edge_case = combi.sum() == 0
-                if is_edge_case:
-                    (
-                        is_edge_case,
-                        edge_case_result,
-                    ) = self._edge_case_handler.handle_zero_tp(
-                        metric=m,
-                        tp=0,
-                        n_pred_instances=self.n_pred_instances,
-                        n_ref_instances=self.n_ref_instances,
-                    )
-                    default_value = edge_case_result
-                else:
-                    default_value = self._calc_global_bin_metric(
-                        m, pred_binary, ref_binary, do_binarize=False
-                    )
-                was_calculated = True
-
-            self._add_metric(
-                f"global_bin_{m.name.lower()}",
-                MetricType.GLOBAL,
-                lambda x, m=m: MetricCouldNotBeComputedException(
-                    f"Global Metric {m} not set"
-                ),
-                long_name="Global Binary " + m.value.long_name,
-                default_value=default_value,
-                was_calculated=was_calculated,
-            )
-
-            self._add_metric(
-                f"region_avg_{m.name.lower()}",
-                MetricType.GLOBAL,
-                lambda x, m=m: MetricCouldNotBeComputedException(
-                    f"Region Average Metric {m} not set"
-                ),
-                long_name="Region Average " + m.value.long_name,
-                default_value=None,
-                was_calculated=False,
-            )
+        ##################
+        # Global Metrics #
+        ##################
+        # Binarization and the prediction/reference overlap do not depend on the
+        # metric, so they are computed once (and skipped entirely when no global
+        # metric is requested) rather than per metric inside the loop.
+        self._register_global_metrics(prediction_arr, reference_arr)
 
     # File backends call `normalize_row_to_master_schema` to align row dicts with the master-keyed on-disk schema.
     ROW_KEY_TO_MASTER_KEY: dict[str, str] = {
@@ -553,117 +471,38 @@ class PanopticaResult:
             if v.lower_bound == 0.0 and v.upper_bound == 1.0
         ]
 
-    def _calc_global_bin_metric(
-        self,
-        metric: Metric,
-        prediction_arr,
-        reference_arr,
-        do_binarize: bool = True,
-    ):
+    # --- Grouped accessors (#248); additive over the flat attributes ---
+    @property
+    def instance(self) -> _MetricGroupView:
+        """Per-instance metrics, e.g. ``result.instance.dice.sq`` / ``.pq`` / ``.std``."""
+        return _MetricGroupView(lambda m: _InstanceScore(self, m))
+
+    @property
+    def semantic(self) -> _MetricGroupView:
+        """Whole-image binary ("global") metrics, e.g. ``result.semantic.dice``.
+
+        Also reachable as ``result["global"]`` since ``global`` is a Python keyword.
         """
-        Calculates a global binary metric based on predictions and references.
-        For multi-channel data (LabelPartGroup), computes metrics per channel and averages.
+        return _MetricGroupView(lambda m: getattr(self, f"global_bin_{m.name.lower()}"))
 
-        Args:
-            metric (Metric): The metric to compute.
-            prediction_arr: The predicted values.
-            reference_arr: The ground truth values.
-            do_binarize (bool): Whether to binarize the input arrays. Defaults to True.
+    @property
+    def region(self) -> _MetricGroupView:
+        """Region-wise average metrics, e.g. ``result.region.dice``."""
+        return _MetricGroupView(lambda m: getattr(self, f"region_avg_{m.name.lower()}"))
 
-        Returns:
-            The calculated metric value or mean of channel metrics for multi-channel data.
-
-        Raises:
-            MetricCouldNotBeComputedException: If the specified metric is not set.
-        """
-        if metric not in self._global_metrics:
-            raise MetricCouldNotBeComputedException(f"Global Metric {metric} not set")
-
-        # Set THING_CHANNEL so it can be avoided during the part calculation
-        #! Skipping channel 1 because that is not the right part + thing. That is only thing. We want part + thing evaluated and then the parts.
-        THING_CHANNEL = 1
-
-        # Handle multi-channel data from LabelPartGroup
-        if hasattr(self, "_multi_channel_data"):
-            channel_metrics = []
-            channel_results = {}
-
-            for i in range(self._multi_channel_data["n_channels"]):
-                if i == THING_CHANNEL:
-                    continue
-                ref_channel = self._multi_channel_data["ref_channels"][i]
-                pred_channel = self._multi_channel_data["pred_channels"][i]
-
-                # Skip empty channels (where both reference and prediction are empty)
-                if ref_channel.sum() == 0 and pred_channel.sum() == 0:
-                    continue
-
-                # Binarize each channel to ensure binary input
-                pred_channel = (pred_channel != 0).astype(np.uint8)
-                ref_channel = (ref_channel != 0).astype(np.uint8)
-                # Handle edge cases for empty reference or prediction
-                prediction_empty = pred_channel.sum() == 0
-                reference_empty = ref_channel.sum() == 0
-
-                if prediction_empty or reference_empty:
-                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                        metric, 0, int(prediction_empty), int(reference_empty)
-                    )
-                    if is_edgecase:
-                        channel_result = result
-                    else:
-                        channel_result = metric(
-                            reference_arr=ref_channel,
-                            prediction_arr=pred_channel,
-                        )
-                else:
-                    channel_result = metric(
-                        reference_arr=ref_channel,
-                        prediction_arr=pred_channel,
-                    )
-
-                channel_metrics.append(channel_result)
-                channel_results[i] = channel_result
-
-            # Store individual channel metrics for reference
-            metric_name = metric.name.lower()
-            if not hasattr(self, "_channel_metrics"):
-                self._channel_metrics = {}
-            self._channel_metrics[metric_name] = channel_results
-
-            # Return mean of channel metrics
-            if channel_metrics:
-                return float(np.mean(channel_metrics))  # type: ignore[arg-type]
-            else:
-                # Handle case where no valid metrics could be computed
-                is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                    metric, 0, 1, 1
-                )
-                return result
-
-        # Original single-channel logic
-        if do_binarize:
-            pred_binary = prediction_arr.copy()
-            ref_binary = reference_arr.copy()
-            pred_binary[pred_binary != 0] = 1
-            ref_binary[ref_binary != 0] = 1
-        else:
-            pred_binary = prediction_arr
-            ref_binary = reference_arr
-
-        prediction_empty = pred_binary.sum() == 0
-        reference_empty = ref_binary.sum() == 0
-        if prediction_empty or reference_empty:
-            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
-                metric, 0, int(prediction_empty), int(reference_empty)
+    def __getitem__(self, group: str) -> _MetricGroupView:
+        """Grouped access by category name, e.g. ``result["global"].dice``."""
+        groups = {
+            "global": self.semantic,
+            "semantic": self.semantic,
+            "instance": self.instance,
+            "region": self.region,
+        }
+        if group not in groups:
+            raise KeyError(
+                f"Unknown metric group {group!r}; expected one of {sorted(groups)}"
             )
-            if is_edgecase:
-                return result
-
-        return metric(
-            reference_arr=ref_binary,
-            prediction_arr=pred_binary,
-        )
+        return groups[group]
 
     def _add_metric(
         self,
@@ -708,6 +547,114 @@ class PanopticaResult:
         )
         self._evaluation_metrics[name_id] = eval_metric
         return default_value
+
+    def _register_instance_metrics(self) -> None:
+        """Register the per-instance sq/sq_std/pq metrics from the metric definitions.
+
+        For each instance metric this adds ``sq_{suffix}`` (mean of the per-instance
+        scores) and ``sq_{suffix}_std`` (their std); metrics that support PQ additionally
+        get ``pq_{suffix} = sq * rq``. Lambda default args bind the loop variables so each
+        closure captures its own metric/sq-key.
+        """
+        for metric in INSTANCE_METRICS:
+            # Unit-interval metrics (IOU/DSC/clDSC) bound sq to [0, 1]; the rest are
+            # unbounded distances/ratios.
+            sq_lower = 0.0 if metric.sq_unit_interval else None
+            sq_upper = 1.0 if metric.sq_unit_interval else None
+            self._add_metric(
+                metric.get_result_key("sq"),
+                MetricType.INSTANCE,
+                lambda res, m=metric: res.get_list_metric(m, mode=MetricMode.AVG),
+                long_name=f"Segmentation Quality {metric.display_name}",
+                lower_bound=sq_lower,
+                upper_bound=sq_upper,
+            )
+            self._add_metric(
+                metric.get_result_key("sq", is_std=True),
+                MetricType.INSTANCE,
+                lambda res, m=metric: res.get_list_metric(m, mode=MetricMode.STD),
+                long_name=f"Segmentation Quality {metric.display_name} Standard Deviation",
+            )
+            if metric.supports_pq:
+                sq_key = metric.get_result_key("sq")
+                self._add_metric(
+                    metric.get_result_key("pq"),
+                    MetricType.INSTANCE,
+                    lambda res, k=sq_key: getattr(res, k) * res.rq,
+                    long_name=f"Panoptic Quality {metric.display_name}",
+                    lower_bound=0.0,
+                    upper_bound=1.0,
+                )
+
+    def _register_global_metrics(self, prediction_arr, reference_arr) -> None:
+        """Register ``global_bin_*`` / ``region_avg_*`` for every metric, eagerly
+        computing the ones requested as global metrics.
+
+        The binary masks and their overlap are the same for every metric, so they are
+        built once here instead of once per metric. When no global metric is requested
+        the binarization is skipped entirely (it was previously always computed).
+        """
+        need_global = (
+            prediction_arr is not None
+            and reference_arr is not None
+            and len(self._global_metrics) > 0
+        )
+        pred_binary = ref_binary = None
+        global_intersection_empty = False
+        if need_global:
+            pred_binary = prediction_arr.copy()
+            ref_binary = reference_arr.copy()
+            pred_binary[pred_binary != 0] = 1
+            ref_binary[ref_binary != 0] = 1
+            # Intersection (== global true-positive voxels); its emptiness is the
+            # whole-image zero-TP edge case and does not depend on the metric.
+            combi = pred_binary + ref_binary
+            combi[combi != 2] = 0
+            combi[combi != 0] = 1
+            global_intersection_empty = combi.sum() == 0
+
+        for m in Metric:
+            default_value = None
+            was_calculated = False
+            if need_global and m in self._global_metrics:
+                if global_intersection_empty:
+                    _, default_value = self._edge_case_handler.handle_zero_tp(
+                        metric=m,
+                        tp=0,
+                        n_pred_instances=self.n_pred_instances,
+                        n_ref_instances=self.n_ref_instances,
+                    )
+                else:
+                    default_value = calc_global_bin_metric(
+                        self,
+                        m,
+                        pred_binary,
+                        ref_binary,
+                        do_binarize=False,
+                        params=self._global_metric_params.get(m, {}),
+                    )
+                was_calculated = True
+
+            self._add_metric(
+                f"global_bin_{m.name.lower()}",
+                MetricType.GLOBAL,
+                lambda x, m=m: MetricCouldNotBeComputedException(
+                    f"Global Metric {m} not set"
+                ),
+                long_name="Global Binary " + m.value.long_name,
+                default_value=default_value,
+                was_calculated=was_calculated,
+            )
+            self._add_metric(
+                f"region_avg_{m.name.lower()}",
+                MetricType.GLOBAL,
+                lambda x, m=m: MetricCouldNotBeComputedException(
+                    f"Region Average Metric {m} not set"
+                ),
+                long_name="Region Average " + m.value.long_name,
+                default_value=None,
+                was_calculated=False,
+            )
 
     def calculate_all(self, print_errors: bool = False):
         """
@@ -773,8 +720,13 @@ class PanopticaResult:
                     text += "\n"
         return text
 
-    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict:
-        """Converts the metrics to a dictionary format.
+    def _to_master_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Flat master dictionary of subject-level metrics (mangled keys).
+
+        This is the on-disk / serialization view used by the file backends and the
+        evaluator's schema derivation; the public :meth:`to_dict` reshapes it into the
+        nested schema. Kept flat so the TSV/JSONL layout and the byte-identical
+        round-trip are unaffected by the nested-schema change.
 
         When ``output_individual_instance_metrics`` is False, returns a flat
         ``dict`` of subject-level (master) metrics.
@@ -845,6 +797,38 @@ class PanopticaResult:
 
         master_dict["reference_instances"] = rows
         return master_dict
+
+    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Nested metric dictionary grouped by category (#248).
+
+        Instead of mangled flat keys (``sq_dsc``, ``global_bin_dsc``), metrics are
+        grouped hierarchically::
+
+            {
+              "matching": {"tp": ..., "fp": ..., "rq": ..., ...},
+              "instance": {"dsc": {"sq": ..., "std": ..., "pq": ...},
+                           "assd": {"sq": ..., "std": ...}, ...},
+              "instance_reference": {"voxel_count": ..., "volume": ...},
+              "global": {"dsc": ..., "volume_prediction": ..., ...},
+            }
+
+        Only computed metrics appear (same filtering as the flat view). Reachable the
+        same way as the grouped accessors (``result.instance.dsc.sq`` etc.). With
+        ``output_individual_instance_metrics=True`` the per-reference rows are attached
+        under ``"reference_instances"`` unchanged (a serialization detail).
+        """
+        master = self._to_master_dict(output_individual_instance_metrics)
+        rows = master.pop("reference_instances", None)
+        nested: dict[str, Any] = {}
+        for key, value in master.items():
+            group, name, comp = _NESTED_KEY_INDEX.get(key, ("other", key, None))
+            if comp is None:
+                nested.setdefault(group, {})[name] = value
+            else:
+                nested.setdefault(group, {}).setdefault(name, {})[comp] = value
+        if rows is not None:
+            nested["reference_instances"] = rows
+        return nested
 
     @property
     def evaluation_metrics(self):
@@ -991,6 +975,11 @@ class PanopticaAUTCResult:
         )
 
     @property
+    def autc(self) -> _MetricGroupView:
+        """Grouped AUTC accessor, e.g. ``autc_result.autc.dice.pq`` / ``.sq``."""
+        return _MetricGroupView(lambda m: _AUTCScore(self, m))
+
+    @property
     def thresholds(self) -> list[float]:
         return list(self._threshold_results.keys())
 
@@ -1080,7 +1069,7 @@ class PanopticaAUTCResult:
                 result[key] = np.nan
 
         for t, res in self._threshold_results.items():
-            for k, v in res.to_dict().items():
+            for k, v in res._to_master_dict().items():
                 key = format_threshold_key(t, k)
                 try:
                     numeric_v = float(v)
@@ -1089,6 +1078,15 @@ class PanopticaAUTCResult:
                     result[key] = np.nan
 
         return result
+
+    def _to_master_dict(self, output_individual_instance_metrics: bool = False) -> dict:
+        """Flat serialization view; alias of :meth:`to_dict`.
+
+        The AUTC threshold-sweep dict is inherently flat (``autc_*`` / ``t{threshold}_*``
+        keys), so unlike PanopticaResult it has no separate nested vs. flat form. The file
+        backends call ``_to_master_dict`` on both result types uniformly.
+        """
+        return self.to_dict(output_individual_instance_metrics)
 
     def __getattr__(self, name: str) -> Any:
         # Guard: prevent recursion if internal attributes haven't been set yet
@@ -1140,158 +1138,5 @@ class PanopticaAUTCResult:
         return f"PanopticaAUTCResult(thresholds={self.thresholds!r})"
 
 
-#########################
-# Calculation functions #
-#########################
-
-
-# region Basic
-def fp(res: PanopticaResult):
-    return res.n_pred_instances - res.tp
-
-
-def fn(res: PanopticaResult):
-    return res.n_ref_instances - res.tp
-
-
-def prec(res: PanopticaResult):
-    return res.tp / (res.tp + res.fp)
-
-
-def rec(res: PanopticaResult):
-    return res.tp / (res.tp + res.fn)
-
-
-def rq(res: PanopticaResult):
-    """
-    Calculate the Recognition Quality (RQ) based on TP, FP, and FN.
-
-    Returns:
-        float: Recognition Quality (RQ).
-    """
-    if res.tp == 0:
-        return 0.0 if res.n_pred_instances + res.n_ref_instances > 0 else np.nan
-    return res.tp / (res.tp + 0.5 * res.fp + 0.5 * res.fn)
-
-
-# endregion
-
-
-# region IOU
-def sq(res: PanopticaResult):
-    return res.get_list_metric(Metric.IOU, mode=MetricMode.AVG)
-
-
-def sq_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.IOU, mode=MetricMode.STD)
-
-
-def pq(res: PanopticaResult):
-    return res.sq * res.rq
-
-
-# endregion
-
-
-# region DSC
-def sq_dsc(res: PanopticaResult):
-    return res.get_list_metric(Metric.DSC, mode=MetricMode.AVG)
-
-
-def sq_dsc_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.DSC, mode=MetricMode.STD)
-
-
-def pq_dsc(res: PanopticaResult):
-    return res.sq_dsc * res.rq
-
-
-# endregion
-
-
-# region clDSC
-def sq_cldsc(res: PanopticaResult):
-    return res.get_list_metric(Metric.clDSC, mode=MetricMode.AVG)
-
-
-def sq_cldsc_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.clDSC, mode=MetricMode.STD)
-
-
-def pq_cldsc(res: PanopticaResult):
-    return res.sq_cldsc * res.rq
-
-
-# endregion
-
-
-# region ASSD
-def sq_assd(res: PanopticaResult):
-    return res.get_list_metric(Metric.ASSD, mode=MetricMode.AVG)
-
-
-def sq_assd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.ASSD, mode=MetricMode.STD)
-
-
-# endregion
-
-
-# region RVD
-def sq_rvd(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVD, mode=MetricMode.AVG)
-
-
-def sq_rvd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVD, mode=MetricMode.STD)
-
-
-def sq_rvae(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVAE, mode=MetricMode.AVG)
-
-
-def sq_rvae_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.RVAE, mode=MetricMode.STD)
-
-
-# endregion
-
-
-# region CEDI
-def sq_cedi(res: PanopticaResult):
-    return res.get_list_metric(Metric.CEDI, mode=MetricMode.AVG)
-
-
-def sq_cedi_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.CEDI, mode=MetricMode.STD)
-
-
-# endregion
-
-
-# region HD
-def sq_hd(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD, mode=MetricMode.AVG)
-
-
-def sq_hd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD, mode=MetricMode.STD)
-
-
-def sq_hd95(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD95, mode=MetricMode.AVG)
-
-
-def sq_hd95_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.HD95, mode=MetricMode.STD)
-
-
-def sq_nsd(res: PanopticaResult):
-    return res.get_list_metric(Metric.NSD, mode=MetricMode.AVG)
-
-
-def sq_nsd_std(res: PanopticaResult):
-    return res.get_list_metric(Metric.NSD, mode=MetricMode.STD)
-
-
-# endregion
+# The metric calculation functions (fp/fn/prec/rec/rq and the global-binary metric)
+# now live in panoptica.computation and are imported at the top of this module.

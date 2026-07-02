@@ -43,3 +43,8 @@ from panoptica.metrics.metrics import (
     MetricType,
     _Metric,
 )
+from panoptica.metrics.configured_metric import (
+    ConfiguredMetric,
+    InstanceMetric,
+    GlobalMetric,
+)

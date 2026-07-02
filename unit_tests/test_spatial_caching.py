@@ -7,7 +7,7 @@ whether spatial metrics are evaluated individually or together as a batch.
 
 import unittest
 import numpy as np
-from panoptica.instance_evaluator import _evaluate_instance
+from panoptica.instance.evaluator import _evaluate_instance
 from panoptica.metrics import Metric
 
 

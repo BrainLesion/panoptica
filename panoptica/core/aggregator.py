@@ -3,8 +3,8 @@
 from panoptica.utils import validate_subject_name
 from panoptica.utils.logger import logger
 import numpy as np
-from panoptica.panoptica_statistics import Panoptica_Statistic
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.core.statistics import Panoptica_Statistic
+from panoptica.core.evaluator import Panoptica_Evaluator
 from pathlib import Path
 from multiprocessing import Lock, set_start_method
 import csv

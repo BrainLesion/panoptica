@@ -32,8 +32,8 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from panoptica import InputType, Panoptica_Evaluator
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching
 from panoptica.metrics import Metric
 from panoptica._functionals import (
     _calc_matching_metric_of_overlapping_labels,
@@ -142,8 +142,13 @@ def run_config(
         instance_matcher=NaiveThresholdMatching(
             matching_metric=Metric.IOU, matching_threshold=0.3
         ),
-        instance_metrics=[Metric.DSC, Metric.IOU, Metric.ASSD, Metric.HD95, Metric.NSD],
-        global_metrics=[Metric.DSC],
+        metrics=[
+            Metric.DSC,  # bare -> instance + global
+            Metric.IOU.instance(),
+            Metric.ASSD.instance(),
+            Metric.HD95.instance(),
+            Metric.NSD.instance(),
+        ],
         verbose=False,
     )
     ref_bin = (ref > 0).astype(np.uint8)

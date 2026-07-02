@@ -12,10 +12,10 @@ from pathlib import Path
 import unittest
 import numpy as np
 
-from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_matcher import InstanceMatchingAlgorithm
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaResult
+from panoptica.instance.approximator import InstanceApproximator
+from panoptica.instance.matcher import InstanceMatchingAlgorithm
+from panoptica.core.evaluator import Panoptica_Evaluator
+from panoptica.core.result import PanopticaResult
 from panoptica.utils.edge_case_handling import (
     EdgeCaseHandler,
 )
@@ -28,8 +28,8 @@ warnings.filterwarnings(
 
 from panoptica import Panoptica_Evaluator, InputType
 from panoptica.utils.segmentation_class import SegmentationClassGroups
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching, MaxBipartiteMatching
 from panoptica.utils.label_group import LabelPartGroup
 
 
@@ -58,7 +58,7 @@ class BaseMatcherTest(unittest.TestCase):
         self, actual_results, expected_results, class_name="class_1"
     ):
         """Assert that all important metrics match expected values."""
-        class_result = actual_results[class_name].to_dict()
+        class_result = actual_results[class_name]._to_master_dict()
         important_metrics = [
             "tp",
             "fp",

@@ -4,11 +4,11 @@ from time import perf_counter
 from panoptica.utils.logger import logger
 from typing import TYPE_CHECKING
 
-from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_evaluator import evaluate_matched_instance
-from panoptica.instance_matcher import InstanceMatchingAlgorithm
+from panoptica.instance.approximator import InstanceApproximator
+from panoptica.instance.evaluator import evaluate_matched_instance
+from panoptica.instance.matcher import InstanceMatchingAlgorithm
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import PanopticaResult
+from panoptica.core.result import PanopticaResult
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
@@ -45,6 +45,8 @@ def _panoptic_evaluate(
     decision_threshold: float | None = None,
     matching_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    instance_metric_params: dict[Metric, dict] | None = None,
+    global_metric_params: dict[Metric, dict] | None = None,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
@@ -139,6 +141,7 @@ def _panoptic_evaluate(
         edge_case_handler=edge_case_handler,
         decision_metric=decision_metric,
         decision_threshold=decision_threshold,
+        instance_metric_params=instance_metric_params,
         log_times=log_times,
         verbose=verbose,
         **kwargs,
@@ -184,6 +187,7 @@ def _panoptic_evaluate(
             instance_voxel_count_unmatched_ref=processing_pair.instance_voxel_count_unmatched_ref,
             instance_volume_unmatched_ref=processing_pair.instance_volume_unmatched_ref,
             global_metrics=global_metrics,
+            global_metric_params=global_metric_params,
             edge_case_handler=edge_case_handler,
             intermediate_steps_data=intermediate_steps_data,
             **kwargs,
@@ -205,6 +209,8 @@ def _panoptic_evaluate_region_wise(
     instance_metrics: list[Metric] | None = None,
     global_metrics: list[Metric] | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    instance_metric_params: dict[Metric, dict] | None = None,
+    global_metric_params: dict[Metric, dict] | None = None,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
@@ -332,6 +338,7 @@ def _panoptic_evaluate_region_wise(
                 edge_case_handler=edge_case_handler,
                 decision_metric=None,
                 decision_threshold=None,
+                instance_metric_params=instance_metric_params,
                 log_times=log_times,
                 verbose=verbose,
                 **kwargs,
@@ -382,6 +389,7 @@ def _panoptic_evaluate_region_wise(
                     instance_voxel_count_unmatched_ref=processing_pair_r.instance_voxel_count_unmatched_ref,
                     instance_volume_unmatched_ref=processing_pair_r.instance_volume_unmatched_ref,
                     global_metrics=global_metrics,
+                    global_metric_params=global_metric_params,
                     edge_case_handler=edge_case_handler,
                     intermediate_steps_data=intermediate_steps_data_r,
                     **kwargs,
@@ -395,6 +403,11 @@ def _panoptic_evaluate_region_wise(
                 region2result_map[i] = processing_pair_r
 
         if len(region2result_map) == num_features:
+            # The combined result spans the whole (multi-region) image, so it only
+            # carries whole-image ("semantic") global metrics. Single-object metrics
+            # (ASSD/HD/...) stay meaningful per region and are surfaced as region_avg_*
+            # below; they are dropped from the combined result's whole-image globals.
+            semantic_global_metrics = [m for m in global_metrics if m.supports_semantic]
             # Combine results from all regions into a single PanopticaResult
             combined_result = PanopticaResult(
                 reference_arr=input_pair.reference_arr,
@@ -406,7 +419,8 @@ def _panoptic_evaluate_region_wise(
                 label_group=label_group,
                 tp=np.nan,  # type: ignore[arg-type]
                 list_metrics={},
-                global_metrics=global_metrics,
+                global_metrics=semantic_global_metrics,
+                global_metric_params=global_metric_params,
                 edge_case_handler=edge_case_handler,
                 intermediate_steps_data=intermediate_steps_data,
                 **kwargs,
@@ -542,6 +556,7 @@ def _phase_instance_evaluation(
     edge_case_handler: EdgeCaseHandler,
     decision_metric: Metric | None,
     decision_threshold: float | None,
+    instance_metric_params: dict[Metric, dict] | None = None,
     log_times=False,
     verbose=False,
     **kwargs,
@@ -570,6 +585,7 @@ def _phase_instance_evaluation(
             decision_threshold=decision_threshold,
             processing_pair_orig_shape=instance_metadata["original_shape"],
             n_ref_labels=instance_metadata["n_ref_labels"],
+            instance_metric_params=instance_metric_params,
             **kwargs,
         )
         if log_times:

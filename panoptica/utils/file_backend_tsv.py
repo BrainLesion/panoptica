@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from panoptica.utils.logger import logger
 
-from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+from panoptica.core.result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import FileBackend
 from panoptica.utils.serialization import (
     format_instance_subject_name,
@@ -70,7 +70,7 @@ class TSVBackend(FileBackend):
             group_instance_rows: dict[str, list[dict]] = {}
             for groupname in class_group_names:
                 result = result_grouped[groupname]
-                summary_dict = result.to_dict(True)
+                summary_dict = result._to_master_dict(True)
                 # Row keys live under "reference_instances"; pop so they don't
                 # bleed into the summary loop below.
                 group_instance_rows[groupname] = summary_dict.pop(  # type: ignore[assignment]
@@ -105,7 +105,7 @@ class TSVBackend(FileBackend):
             content: list = [subject_name]
             for groupname in class_group_names:
                 result = result_grouped[groupname]
-                result_dict = result.to_dict(False)
+                result_dict = result._to_master_dict(False)
                 if result.computation_time is not None:
                     result_dict[COMPUTATION_TIME_KEY] = result.computation_time
                 for e in evaluation_metrics:

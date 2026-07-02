@@ -8,11 +8,11 @@ import unittest
 import numpy as np
 
 from panoptica import InputType
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import MaximizeMergeMatching, NaiveThresholdMatching
 from panoptica.metrics import Metric
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import MetricCouldNotBeComputedException
+from panoptica.core.evaluator import Panoptica_Evaluator
+from panoptica.core.result import MetricCouldNotBeComputedException
 from panoptica.utils.processing_pair import SemanticPair
 from panoptica.utils.segmentation_class import SegmentationClassGroups
 import sys
@@ -140,8 +140,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         evaluator = Panoptica_Evaluator(
             expected_input=InputType.UNMATCHED_INSTANCE,
             instance_matcher=NaiveThresholdMatching(),
-            global_metrics=metrics,
-            instance_metrics=metrics,
+            metrics=metrics,
         )
 
         result = evaluator.evaluate(b, a)["ungrouped"]
@@ -153,9 +152,9 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertAlmostEqual(result.sq, 0.6666666666666666)
         self.assertAlmostEqual(result.pq, 0.4444444444444444)
         #
-        self.assertEqual(result.global_bin_cedi, 2.5)
-        self.assertEqual(result.global_bin_hd, 5.0)
-        self.assertEqual(result.global_bin_hd95, 5.0)
+        # CEDI/HD/HD95 are single-object metrics (supports_semantic=False): a bare
+        # metric does not expand to a whole-image global variant, so global_bin_cedi/
+        # hd/hd95 are gone. RVD/RVAE remain whole-image metrics.
         self.assertEqual(result.global_bin_rvd, -0.25)
         self.assertEqual(result.global_bin_rvae, 0.25)
         self.assertEqual(result.sq_cedi, 2.5)
@@ -191,7 +190,7 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
             expected_input=InputType.SEMANTIC,
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(matching_metric=Metric.DSC),
-            instance_metrics=[Metric.DSC],
+            metrics=[Metric.DSC],
         )
 
         result = evaluator.evaluate(b, a)["ungrouped"]

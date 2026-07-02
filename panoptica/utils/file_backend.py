@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
 
 if TYPE_CHECKING:
-    from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+    from panoptica.core.result import PanopticaAUTCResult, PanopticaResult
 
 COMPUTATION_TIME_KEY = "computation_time"
 
@@ -103,7 +103,7 @@ class FileBackend(ABC):
         Returns the ``(subj_names, value_dict)`` pair that
         ``Panoptica_Statistic.__init__`` consumes. Returning raw data
         (rather than a Statistic instance) avoids a circular import with
-        ``panoptica.panoptica_statistics``.
+        ``panoptica.core.statistics``.
         """
 
     @abstractmethod

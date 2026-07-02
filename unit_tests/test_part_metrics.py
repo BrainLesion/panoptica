@@ -7,12 +7,20 @@ import unittest
 import numpy as np
 
 from panoptica import InputType
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
-from panoptica.metrics import Metric
+from panoptica.core.evaluator import Panoptica_Evaluator
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching, MaxBipartiteMatching
+from panoptica.metrics import Metric, InstanceMetric, GlobalMetric
 from panoptica.utils.segmentation_class import SegmentationClassGroups
 from panoptica.utils.label_group import LabelMergeGroup, LabelPartGroup
+
+
+def _metrics(global_metrics):
+    """Unified metrics list reproducing the historical default instance metrics
+    ([DSC, IOU, ASSD, RVD]) plus the given global metrics."""
+    return [
+        InstanceMetric(m) for m in (Metric.DSC, Metric.IOU, Metric.ASSD, Metric.RVD)
+    ] + [GlobalMetric(m) for m in global_metrics]
 
 
 class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
@@ -74,7 +82,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=class_groups,
-            global_metrics=[Metric.DSC, Metric.IOU, Metric.ASSD],
+            metrics=_metrics([Metric.DSC, Metric.IOU, Metric.ASSD]),
         )
 
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
@@ -128,7 +136,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=class_groups,
-            global_metrics=[Metric.DSC, Metric.IOU],
+            metrics=_metrics([Metric.DSC, Metric.IOU]),
         )
 
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
@@ -178,7 +186,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=class_groups,
-            global_metrics=[Metric.DSC, Metric.IOU, Metric.ASSD],
+            metrics=_metrics([Metric.DSC, Metric.IOU, Metric.ASSD]),
         )
 
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
@@ -216,7 +224,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=class_groups,
-            global_metrics=[Metric.DSC],
+            metrics=_metrics([Metric.DSC]),
         )
 
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
@@ -259,7 +267,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=class_groups,
-            global_metrics=[Metric.DSC, Metric.IOU],
+            metrics=_metrics([Metric.DSC, Metric.IOU]),
         )
 
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
@@ -291,7 +299,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=class_groups,
-            global_metrics=[],  # No global metrics
+            metrics=_metrics([]),  # No global metrics
         )
 
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
@@ -324,7 +332,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=class_groups,
-            global_metrics=[Metric.DSC],
+            metrics=_metrics([Metric.DSC]),
         )
 
         results = evaluator.evaluate(pred_masks, ref_masks, verbose=False)
@@ -392,7 +400,7 @@ class Test_Part_Metrics_Integration(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=merge_groups,
-            global_metrics=[Metric.DSC],
+            metrics=_metrics([Metric.DSC]),
         )
 
         evaluator_part = Panoptica_Evaluator(
@@ -400,7 +408,7 @@ class Test_Part_Metrics_Integration(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=MaxBipartiteMatching(),
             segmentation_class_groups=part_groups,
-            global_metrics=[Metric.DSC],
+            metrics=_metrics([Metric.DSC]),
         )
 
         merge_results = evaluator_merge.evaluate(pred_masks, ref_masks, verbose=False)
