@@ -11,9 +11,9 @@ from panoptica import (
     Panoptica_Statistic,
     FloatDistribution,
 )
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching
+from panoptica.core.evaluator import Panoptica_Evaluator
 from pathlib import Path
 
 output_test_dir = Path(__file__).parent.joinpath("unittest_tmp_file.tsv")
@@ -250,7 +250,7 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         a regular Panoptica_Statistic (without threshold columns),
         but gracefully skips and returns a base figure without traces.
         """
-        from panoptica.panoptica_statistics import make_autc_plots
+        from panoptica.core.statistics import make_autc_plots
 
         a = np.zeros([50, 50], dtype=np.uint16)
         a[20:40, 10:20] = 1

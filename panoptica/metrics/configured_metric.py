@@ -40,9 +40,7 @@ class ConfiguredMetric(SupportsConfig):
         if not isinstance(metric, Metric):
             raise TypeError(f"metric must be a Metric, got {type(metric)}")
         if mode not in VALID_MODES:
-            raise ValueError(
-                f"mode must be one of {sorted(VALID_MODES)}, got {mode!r}"
-            )
+            raise ValueError(f"mode must be one of {sorted(VALID_MODES)}, got {mode!r}")
         if mode not in metric.modes:
             raise ValueError(
                 f"Metric {metric.name} does not support mode {mode!r} "

@@ -1,16 +1,16 @@
-from panoptica.instance_approximator import (
+from panoptica.instance.approximator import (
     ConnectedComponentsInstanceApproximator,
     CCABackend,
 )
-from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
-from panoptica.panoptica_statistics import (
+from panoptica.instance.matcher import NaiveThresholdMatching, MaxBipartiteMatching
+from panoptica.core.statistics import (
     Panoptica_Statistic,
     FloatDistribution,
     ValueSummary,
 )
-from panoptica.panoptica_aggregator import Panoptica_Aggregator
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaResult
+from panoptica.core.aggregator import Panoptica_Aggregator
+from panoptica.core.evaluator import Panoptica_Evaluator
+from panoptica.core.result import PanopticaResult
 from panoptica.utils.processing_pair import (
     InputType,
     SemanticPair,

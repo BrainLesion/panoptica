@@ -33,7 +33,7 @@ from panoptica.utils.constants import _Enum_Compare, auto
 
 if TYPE_CHECKING:
     from panoptica.metrics.configured_metric import ConfiguredMetric
-    from panoptica.panoptica_result import PanopticaResult
+    from panoptica.core.result import PanopticaResult
 
 
 @dataclass

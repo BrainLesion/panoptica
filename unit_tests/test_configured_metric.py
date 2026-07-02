@@ -14,8 +14,8 @@ from panoptica import (
     Metric,
     Panoptica_Evaluator,
 )
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching
 
 
 class Test_ConfiguredMetric(unittest.TestCase):

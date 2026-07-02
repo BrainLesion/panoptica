@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from panoptica.panoptica_result import PanopticaResult
+    from panoptica.core.result import PanopticaResult
 
 
 def fp(res: "PanopticaResult"):

@@ -7,9 +7,9 @@ import unittest
 import numpy as np
 
 from panoptica import InputType
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
+from panoptica.core.evaluator import Panoptica_Evaluator
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching, MaxBipartiteMatching
 from panoptica.metrics import Metric, InstanceMetric, GlobalMetric
 from panoptica.utils.segmentation_class import SegmentationClassGroups
 from panoptica.utils.label_group import LabelMergeGroup, LabelPartGroup

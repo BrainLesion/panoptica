@@ -9,9 +9,9 @@ from pathlib import Path
 import numpy as np
 
 from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching
+from panoptica.core.evaluator import Panoptica_Evaluator
 from panoptica.utils.file_backend_jsonl import JSONLBackend, _canonical_jsonl_value
 from panoptica.utils.file_backend_tsv import TSVBackend, _canonical_tsv_value
 from panoptica.utils.file_backend_registry import get_backend

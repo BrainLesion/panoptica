@@ -4,11 +4,11 @@ from time import perf_counter
 from panoptica.utils.logger import logger
 from typing import TYPE_CHECKING
 
-from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_evaluator import evaluate_matched_instance
-from panoptica.instance_matcher import InstanceMatchingAlgorithm
+from panoptica.instance.approximator import InstanceApproximator
+from panoptica.instance.evaluator import evaluate_matched_instance
+from panoptica.instance.matcher import InstanceMatchingAlgorithm
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import PanopticaResult
+from panoptica.core.result import PanopticaResult
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,

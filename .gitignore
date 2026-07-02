@@ -63,6 +63,8 @@ db.sqlite3-journal
 
 # Flask stuff:
 instance/
+# ...but panoptica/instance/ is a source package (pipeline phase), not a Flask dir.
+!panoptica/instance/
 .webassets-cache
 
 # Scrapy stuff:

@@ -8,11 +8,11 @@ import unittest
 import numpy as np
 
 from panoptica import InputType
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import MaximizeMergeMatching, NaiveThresholdMatching
 from panoptica.metrics import Metric
-from panoptica.panoptica_evaluator import Panoptica_Evaluator, EdgeCaseHandler
-from panoptica.panoptica_result import MetricCouldNotBeComputedException
+from panoptica.core.evaluator import Panoptica_Evaluator, EdgeCaseHandler
+from panoptica.core.result import MetricCouldNotBeComputedException
 from panoptica.utils.processing_pair import SemanticPair
 from panoptica.utils.segmentation_class import SegmentationClassGroups
 import sys

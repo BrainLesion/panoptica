@@ -2,16 +2,16 @@
 
 from panoptica.utils import format_autc_key
 from panoptica.utils import format_threshold_key
-from panoptica.panoptica_pipeline import _phase_instance_approximation
+from panoptica.core.pipeline import _phase_instance_approximation
 from time import perf_counter
 from collections.abc import Sequence
 from typing import Literal, Union
 from typing import TYPE_CHECKING
-from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
+from panoptica.instance.approximator import InstanceApproximator
+from panoptica.instance.matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
 from panoptica.metrics.configured_metric import ConfiguredMetric
-from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
+from panoptica.core.result import PanopticaResult, PanopticaAUTCResult
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.citation_reminder import citation_reminder
@@ -31,7 +31,7 @@ from panoptica.utils.segmentation_class import (
     LabelGroup,
     _NoSegmentationClassGroups,
 )
-from panoptica.panoptica_pipeline import (
+from panoptica.core.pipeline import (
     _panoptic_evaluate,
     _panoptic_evaluate_region_wise,
 )

@@ -15,7 +15,7 @@ import numpy as np
 from panoptica.metrics import Metric, MetricCouldNotBeComputedException
 
 if TYPE_CHECKING:
-    from panoptica.panoptica_result import PanopticaResult
+    from panoptica.core.result import PanopticaResult
 
 
 def calc_global_bin_metric(

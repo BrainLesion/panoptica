@@ -11,11 +11,11 @@ from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 
 from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import MaximizeMergeMatching, NaiveThresholdMatching
 from panoptica.metrics import Metric
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import MetricCouldNotBeComputedException
+from panoptica.core.evaluator import Panoptica_Evaluator
+from panoptica.core.result import MetricCouldNotBeComputedException
 from panoptica.utils import NonDaemonicPool
 from panoptica.utils.processing_pair import SemanticPair
 from panoptica.utils.segmentation_class import SegmentationClassGroups
@@ -573,9 +573,7 @@ class Test_Panoptica_Aggregator_Init_Errors(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
-        with patch(
-            "panoptica.panoptica_aggregator.NamedTemporaryFile"
-        ) as mock_tempfile:
+        with patch("panoptica.core.aggregator.NamedTemporaryFile") as mock_tempfile:
             with self.assertRaises(ValueError):
                 Panoptica_Aggregator(
                     evaluator,
@@ -598,9 +596,7 @@ class Test_Panoptica_Aggregator_Init_Errors(unittest.TestCase):
             instance_approximator=ConnectedComponentsInstanceApproximator(),
             instance_matcher=NaiveThresholdMatching(),
         )
-        with patch(
-            "panoptica.panoptica_aggregator.NamedTemporaryFile"
-        ) as mock_tempfile:
+        with patch("panoptica.core.aggregator.NamedTemporaryFile") as mock_tempfile:
             with self.assertRaisesRegex(
                 ValueError,
                 "output_individual_instance_metrics is not supported with is_autc=True",
@@ -625,9 +621,7 @@ class Test_Panoptica_Aggregator_Init_Errors(unittest.TestCase):
             instance_matcher=NaiveThresholdMatching(),
         )
         bad_path = Path("/nonexistent_dir_for_test_leak_47c92/out.jsonl")
-        with patch(
-            "panoptica.panoptica_aggregator.NamedTemporaryFile"
-        ) as mock_tempfile:
+        with patch("panoptica.core.aggregator.NamedTemporaryFile") as mock_tempfile:
             with self.assertRaises(FileNotFoundError):
                 Panoptica_Aggregator(evaluator, output_file=bad_path)
             mock_tempfile.assert_not_called()
@@ -675,7 +669,7 @@ class Test_Panoptica_Aggregator_Init_Locking_And_Lazy_Load(unittest.TestCase):
             order.append("prepare_for_append")
             return []
 
-        with patch("panoptica.panoptica_aggregator.filelock", mock_lock):
+        with patch("panoptica.core.aggregator.filelock", mock_lock):
             with patch(
                 "panoptica.utils.file_backend_jsonl.JSONLBackend.prepare_for_append",
                 side_effect=_record_prepare,

@@ -11,8 +11,8 @@ from panoptica import UnmatchedInstancePair
 from panoptica.metrics import (
     Metric,
 )
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import (
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import (
     MaximizeMergeMatching,
     NaiveThresholdMatching,
     MaxBipartiteMatching,
@@ -20,7 +20,7 @@ from panoptica.instance_matcher import (
     MatchingContext,
 )
 from panoptica.metrics import Metric
-from panoptica.instance_evaluator import (
+from panoptica.instance.evaluator import (
     evaluate_matched_instance,
     _evaluate_instance,
 )

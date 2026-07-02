@@ -32,8 +32,8 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from panoptica import InputType, Panoptica_Evaluator
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching
 from panoptica.metrics import Metric
 from panoptica._functionals import (
     _calc_matching_metric_of_overlapping_labels,

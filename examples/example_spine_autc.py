@@ -7,7 +7,7 @@ from panoptica import (
     Panoptica_Evaluator,
     Panoptica_Aggregator,
 )
-from panoptica.panoptica_statistics import make_autc_plots
+from panoptica.core.statistics import make_autc_plots
 
 
 def main():

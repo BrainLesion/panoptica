@@ -8,7 +8,7 @@ Submodules
 panoptica.instance\_approximator module
 ---------------------------------------
 
-.. automodule:: panoptica.instance_approximator
+.. automodule:: panoptica.instance.approximator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -16,7 +16,7 @@ panoptica.instance\_approximator module
 panoptica.instance\_evaluator module
 ------------------------------------
 
-.. automodule:: panoptica.instance_evaluator
+.. automodule:: panoptica.instance.evaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -24,7 +24,7 @@ panoptica.instance\_evaluator module
 panoptica.instance\_matcher module
 ----------------------------------
 
-.. automodule:: panoptica.instance_matcher
+.. automodule:: panoptica.instance.matcher
    :members:
    :undoc-members:
    :show-inheritance:
@@ -32,7 +32,7 @@ panoptica.instance\_matcher module
 panoptica.panoptica\_aggregator module
 --------------------------------------
 
-.. automodule:: panoptica.panoptica_aggregator
+.. automodule:: panoptica.core.aggregator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -40,7 +40,7 @@ panoptica.panoptica\_aggregator module
 panoptica.panoptica\_evaluator module
 -------------------------------------
 
-.. automodule:: panoptica.panoptica_evaluator
+.. automodule:: panoptica.core.evaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -48,7 +48,7 @@ panoptica.panoptica\_evaluator module
 panoptica.panoptica\_result module
 ----------------------------------
 
-.. automodule:: panoptica.panoptica_result
+.. automodule:: panoptica.core.result
    :members:
    :undoc-members:
    :show-inheritance:
@@ -56,7 +56,7 @@ panoptica.panoptica\_result module
 panoptica.panoptica\_statistics module
 --------------------------------------
 
-.. automodule:: panoptica.panoptica_statistics
+.. automodule:: panoptica.core.statistics
    :members:
    :undoc-members:
    :show-inheritance:

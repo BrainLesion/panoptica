@@ -6,9 +6,9 @@ import unittest
 import numpy as np
 
 from panoptica import InputType, Metric, Panoptica_Evaluator
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching
-from panoptica.panoptica_result import MetricCouldNotBeComputedException
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching
+from panoptica.core.result import MetricCouldNotBeComputedException
 
 
 def _instance_result():

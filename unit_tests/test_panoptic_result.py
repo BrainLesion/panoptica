@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 
 from panoptica.metrics import Metric
-from panoptica.panoptica_result import (
+from panoptica.core.result import (
     MetricCouldNotBeComputedException,
     PanopticaResult,
 )

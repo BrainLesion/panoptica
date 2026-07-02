@@ -9,7 +9,7 @@ from panoptica.utils.serialization import (
     parse_instance_subject_name,
 )
 from panoptica.utils.file_backend import FileBackend
-from panoptica.panoptica_result import PanopticaAUTCResult, PanopticaResult
+from panoptica.core.result import PanopticaAUTCResult, PanopticaResult
 from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
 import numpy as np
 import json

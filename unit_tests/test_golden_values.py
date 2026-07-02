@@ -17,10 +17,10 @@ import unittest
 import numpy as np
 
 from panoptica import InputType
-from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
-from panoptica.instance_matcher import NaiveThresholdMatching
+from panoptica.instance.approximator import ConnectedComponentsInstanceApproximator
+from panoptica.instance.matcher import NaiveThresholdMatching
 from panoptica.metrics import Metric
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
+from panoptica.core.evaluator import Panoptica_Evaluator
 
 ALL_METRICS = [
     Metric.DSC,
