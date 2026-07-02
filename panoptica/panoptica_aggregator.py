@@ -6,12 +6,13 @@ import numpy as np
 from panoptica.panoptica_statistics import Panoptica_Statistic
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from pathlib import Path
-from multiprocessing import Lock, set_start_method
+from multiprocessing import set_start_method
 import csv
 import os
 import atexit
 from tempfile import NamedTemporaryFile
-import warnings
+
+from filelock import FileLock
 
 from panoptica.utils import FileType
 from panoptica.utils.file_backend import COMPUTATION_TIME_KEY
@@ -23,15 +24,9 @@ try:
         set_start_method("fork")
     elif os.name == "nt":
         set_start_method("spawn")
-        warnings.warn(
-            "The multiprocessing start method has been set to 'spawn' since 'fork' is not available on Windows. This can lead to thread unsafety in the current development state."
-        )
 except RuntimeError:
     # Start method can only be set once per process, so ignore if already set
     pass
-
-filelock = Lock()
-inevalfilelock = Lock()
 
 
 class Panoptica_Aggregator:
@@ -112,21 +107,34 @@ class Panoptica_Aggregator:
         self.__output_file = output_file
         self.__file_backend = get_backend(self.__output_file)
 
-        # Serialise file init across forked workers so concurrent Aggregator construction on the same output file can't race
-        with filelock:
+        # OS-level lock keyed off the output file path. Unlike the previous
+        # multiprocessing.Lock (only shared with forked children), a filelock.FileLock
+        # coordinates any processes on the machine writing to the same output file —
+        # independent runs and 'spawn'-started workers (e.g. on Windows) included.
+        # The path is kept so the (unpicklable) lock can be rebuilt after pickling,
+        # see __getstate__/__setstate__.
+        self.__output_lock_path = str(self.__output_file) + ".lock"
+        self.__output_filelock = FileLock(self.__output_lock_path)
+
+        # Serialise file init so concurrent Aggregator construction on the same output file can't race
+        with self.__output_filelock:
             existing_subjects = self.__file_backend.prepare_for_append(
                 self.__class_group_names,
                 self.__evaluation_metrics,
                 collect_existing=self.__continue_file,
             )
 
-        # register exist handler after last side-effecting step so any earlier raise doesn't leak a buffer file
+        # register exit handler after last side-effecting step so any earlier raise doesn't leak a buffer file
         with NamedTemporaryFile(delete=False) as tmp:
             self.__output_buffer_file = tmp.name
-        atexit.register(self.__exist_handler)
+        # Per-instance buffer file -> its own lock; guards the in-flight subject list
+        # against the forked workers that share this buffer path.
+        self.__buffer_lock_path = str(self.__output_buffer_file) + ".lock"
+        self.__buffer_filelock = FileLock(self.__buffer_lock_path)
+        atexit.register(self.__exit_handler)
 
         if self.__continue_file and existing_subjects:
-            with inevalfilelock:
+            with self.__buffer_filelock:
                 _append_buffer_entries(self.__output_buffer_file, existing_subjects)
 
     @property
@@ -137,10 +145,29 @@ class Panoptica_Aggregator:
     def evaluation_metrics(self):
         return self.__evaluation_metrics
 
-    def __exist_handler(self):
-        """Handles cleanup upon program exit by removing the temporary output buffer file."""
+    def __getstate__(self):
+        """Drop the FileLock objects when pickling.
+
+        A FileLock holds an OS file handle (a ``ThreadLocalFileContext``) that cannot
+        be pickled, which would break sending the aggregator to worker processes
+        (``multiprocessing.Pool`` / ``ProcessPoolExecutor``). The lock *paths* are
+        plain strings and survive pickling, so __setstate__ rebuilds the locks; the
+        OS-level lock file still coordinates parent and workers.
+        """
+        return {k: v for k, v in self.__dict__.items() if not isinstance(v, FileLock)}
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.__output_filelock = FileLock(self.__output_lock_path)
+        self.__buffer_filelock = FileLock(self.__buffer_lock_path)
+
+    def __exit_handler(self):
+        """Handles cleanup upon program exit by removing the temporary output buffer file (and its lock sidecar)."""
         if Path(self.__output_buffer_file).exists():
             os.remove(str(self.__output_buffer_file))
+        buffer_lock_file = Path(self.__buffer_lock_path)
+        if buffer_lock_file.exists():
+            os.remove(str(buffer_lock_file))
 
     def make_statistic(self) -> Panoptica_Statistic:
         """Generates statistics from the aggregated evaluation results.
@@ -148,7 +175,7 @@ class Panoptica_Aggregator:
         Returns:
             Panoptica_Statistic: The statistics object containing the results.
         """
-        with filelock:
+        with self.__output_filelock:
             obj = Panoptica_Statistic.from_file(self.__output_file)
         return obj
 
@@ -173,7 +200,7 @@ class Panoptica_Aggregator:
         """
         validate_subject_name(subject_name)
         # Read tmp file to see which sample names are blocked
-        with inevalfilelock:
+        with self.__buffer_filelock:
             id_list = _load_buffer_entries(self.__output_buffer_file)
 
             if subject_name in id_list:
@@ -213,7 +240,7 @@ class Panoptica_Aggregator:
                 **kwargs,
             )
 
-        with filelock:
+        with self.__output_filelock:
             self.__file_backend.append_subject(
                 subject_name,
                 res,
