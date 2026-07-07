@@ -1,0 +1,30 @@
+!Panoptica_Evaluator
+decision_metric: null
+decision_threshold: null
+edge_case_handler: !EdgeCaseHandler
+  empty_list_std: !EdgeCaseResult NAN
+  listmetric_zeroTP_handling:
+    !Metric DSC: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult ZERO,
+      empty_reference_result: !EdgeCaseResult ZERO, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult ZERO}
+    !Metric clDSC: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult ZERO,
+      empty_reference_result: !EdgeCaseResult ZERO, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult ZERO}
+    !Metric IOU: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult ZERO,
+      empty_reference_result: !EdgeCaseResult ZERO, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult ZERO}
+    !Metric ASSD: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult INF,
+      empty_reference_result: !EdgeCaseResult INF, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult INF}
+    !Metric RVD: !MetricZeroTPEdgeCaseHandling {empty_prediction_result: !EdgeCaseResult NAN,
+      empty_reference_result: !EdgeCaseResult NAN, no_instances_result: !EdgeCaseResult NAN,
+      normal: !EdgeCaseResult NAN}
+instance_metrics: [!Metric DSC, !Metric IOU, !Metric ASSD, !Metric RVD]
+global_metrics: [!Metric DSC, !Metric RVD, !Metric IOU]
+expected_input: !InputType SEMANTIC
+instance_approximator: !ConnectedComponentsInstanceApproximator {cca_backend: null}
+instance_matcher: !NaiveThresholdMatching {allow_many_to_one: false, matching_metric: !Metric IOU,
+  matching_threshold: 0.5}
+log_times: true
+segmentation_class_groups: null
+verbose: false
