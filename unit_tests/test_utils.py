@@ -33,6 +33,28 @@ class Test_Citation_Reminder(unittest.TestCase):
         self.assertEqual(foo(), "bar")
 
 
+class Test_Set_Log_Level(unittest.TestCase):
+    def setUp(self) -> None:
+        disable_citation_reminder()
+        return super().setUp()
+
+    def test_set_log_level(self):
+        import logging
+        from panoptica import set_log_level
+        from panoptica.utils.logger import logger
+
+        original = logger.level
+        try:
+            set_log_level("WARNING")
+            self.assertEqual(logger.level, logging.WARNING)
+            set_log_level(logging.DEBUG)
+            self.assertEqual(logger.level, logging.DEBUG)
+            set_log_level("debug")  # names are case-insensitive
+            self.assertEqual(logger.level, logging.DEBUG)
+        finally:
+            logger.setLevel(original)
+
+
 class Test_Numpy_Utils(unittest.TestCase):
     def setUp(self) -> None:
         disable_citation_reminder()
