@@ -12,12 +12,6 @@ def disable_citation_reminder() -> None:
     _citation_reminder_enabled = False
 
 
-def enable_citation_reminder() -> None:
-    """Re-enable the citation reminder (undoes :func:`disable_citation_reminder`)."""
-    global _citation_reminder_enabled
-    _citation_reminder_enabled = True
-
-
 def citation_reminder(func):
     """Decorator to remind users to cite panoptica."""
 
