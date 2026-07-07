@@ -10,6 +10,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
@@ -27,7 +28,7 @@ output_test_dir = Path(__file__).parent.joinpath("unittest_tmp_file.tsv")
 
 class Test_Example_Scripts(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_example_scripts_future(self):
@@ -71,7 +72,7 @@ class Test_Example_Scripts(unittest.TestCase):
 
 class Test_Panoptica_Aggregator(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_simple_evaluation(self):
@@ -560,7 +561,7 @@ class Test_Panoptica_Aggregator_Init_Errors(unittest.TestCase):
     on disk if it raises before reaching the `atexit.register` step."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
 
     def test_no_tempfile_leak_on_autc_misconfiguration(self):
         # is_autc=True without threshold_step_size raises early. Patch
@@ -640,7 +641,7 @@ class Test_Panoptica_Aggregator_Init_Locking_And_Lazy_Load(unittest.TestCase):
     anyway)."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.output_file = Path(__file__).parent.joinpath(
             "unittest_aggregator_init.jsonl"
         )
@@ -826,7 +827,7 @@ class Test_Panoptica_Aggregator_Parallel_JSONL(unittest.TestCase):
     or under mocks in the JSONL configuration."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.output_file = Path(__file__).parent.joinpath(
             "unittest_parallel_jsonl.jsonl"
         )

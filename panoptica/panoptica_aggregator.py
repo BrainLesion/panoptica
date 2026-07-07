@@ -204,9 +204,7 @@ class Panoptica_Aggregator:
             id_list = _load_buffer_entries(self.__output_buffer_file)
 
             if subject_name in id_list:
-                logger.warning(
-                    f"Subject '{subject_name}' evaluated or in process {self.__output_file}, do not add duplicates to your evaluation!"
-                )
+                # logger.warning(f"Subject '{subject_name}' evaluated or in process!")
                 return
             _append_buffer_entries(self.__output_buffer_file, [subject_name])
 
