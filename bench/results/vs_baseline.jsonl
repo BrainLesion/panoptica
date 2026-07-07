@@ -1,0 +1,12 @@
+{"size": "tubes", "input_type": "MATCHED_INSTANCE", "ref_ms": 502.54292000317946, "cpu_ms": 327.9920500062872, "gpu_ms": null, "cpu_x": 1.5321801854451849, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "tubes", "input_type": "UNMATCHED_INSTANCE", "ref_ms": 934.9178550037323, "cpu_ms": 538.8720429909881, "gpu_ms": null, "cpu_x": 1.7349533477641694, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "tubes", "input_type": "SEMANTIC", "ref_ms": 967.8741239913506, "cpu_ms": 408.3472289930796, "gpu_ms": null, "cpu_x": 2.370223317978615, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "heavy_dropout", "input_type": "MATCHED_INSTANCE", "ref_ms": 670.5507550068432, "cpu_ms": 505.37991400051396, "gpu_ms": null, "cpu_x": 1.3268251001486404, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "heavy_dropout", "input_type": "UNMATCHED_INSTANCE", "ref_ms": 1282.037817989476, "cpu_ms": 718.8998679921497, "gpu_ms": null, "cpu_x": 1.7833329439468972, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "heavy_dropout", "input_type": "SEMANTIC", "ref_ms": 1299.018587989849, "cpu_ms": 601.2246030004462, "gpu_ms": null, "cpu_x": 2.160621141428713, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "aniso_spacing", "input_type": "MATCHED_INSTANCE", "ref_ms": 779.5389669918222, "cpu_ms": 543.5612729925197, "gpu_ms": null, "cpu_x": 1.4341326465370723, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "aniso_spacing", "input_type": "UNMATCHED_INSTANCE", "ref_ms": 1380.1414349873085, "cpu_ms": 769.5007060101489, "gpu_ms": null, "cpu_x": 1.793554475269196, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "aniso_spacing", "input_type": "SEMANTIC", "ref_ms": 1343.3324759971583, "cpu_ms": 587.6895830006106, "gpu_ms": null, "cpu_x": 2.285785752979329, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "medium", "input_type": "MATCHED_INSTANCE", "ref_ms": 736.287051011459, "cpu_ms": 425.56619399692863, "gpu_ms": null, "cpu_x": 1.7301351972914767, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "medium", "input_type": "UNMATCHED_INSTANCE", "ref_ms": 1236.9723779993365, "cpu_ms": 635.3637800057186, "gpu_ms": null, "cpu_x": 1.9468726687382196, "gpu_x": null, "verdict": "OK", "n": 5}
+{"size": "medium", "input_type": "SEMANTIC", "ref_ms": 1205.8840230019996, "cpu_ms": 496.3947890064446, "gpu_ms": null, "cpu_x": 2.429284210286792, "gpu_x": null, "verdict": "OK", "n": 5}

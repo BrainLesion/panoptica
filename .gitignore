@@ -167,3 +167,12 @@ cython_debug/
 *.csv
 *.nii.gz
 *.json
+
+# reference-standard baseline venv (bench/baseline)
+.venv-v1/
+.venv-baseline/
+
+# local-only design/benchmark docs (not shipped)
+SPEC.md
+benchmarks.md
+PR.md
