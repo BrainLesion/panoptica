@@ -2,9 +2,9 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
@@ -13,7 +13,7 @@ from panoptica.panoptica_evaluator import Panoptica_Evaluator
 
 class Test_AUTC(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_perfect_match_autc(self):

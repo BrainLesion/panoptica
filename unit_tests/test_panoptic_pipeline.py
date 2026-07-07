@@ -2,11 +2,11 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import UnmatchedInstancePair
 from panoptica.metrics import (
     Metric,
@@ -41,13 +41,13 @@ from pathlib import Path
 class Test_Panoptica_Instance_Approximation(unittest.TestCase):
     # TODO
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
 
 class Test_Panoptica_InstanceLabelMap(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_labelmap(self):
@@ -263,7 +263,7 @@ class Test_Panoptica_Instance_Matching(unittest.TestCase):
 
 class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_eval_empty(self):

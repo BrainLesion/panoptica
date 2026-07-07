@@ -1,11 +1,11 @@
 # Call 'python -m unittest' on this folder
 # coverage run -m unittest
-import os
 import unittest
 
 import numpy as np
 from scipy.ndimage import label as cc_label
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.metrics import Metric
 from panoptica._functionals import (
     _calc_overlapping_labels,
@@ -52,7 +52,7 @@ class Test_VectorizedMatching(unittest.TestCase):
     """The vectorized IoU/Dice matching must match the per-pair reference exactly."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_iou_and_dice_match_bruteforce(self):

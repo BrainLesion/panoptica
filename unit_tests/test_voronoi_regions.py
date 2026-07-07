@@ -2,10 +2,10 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
 from scipy.ndimage import distance_transform_edt
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.utils.processing_pair import UnmatchedInstancePair
 from panoptica._functionals import _get_voronoi_regions
 
@@ -53,7 +53,7 @@ def create_test_data():
 
 class Test_RegionMatching(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_region_based_matching(self):

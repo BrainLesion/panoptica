@@ -2,11 +2,11 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import InputType
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import MaximizeMergeMatching, NaiveThresholdMatching
@@ -29,7 +29,7 @@ from panoptica.utils.input_check_and_conversion.sanity_checker import (
 
 class Test_Example_Scripts(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_example_scripts(self):
@@ -56,7 +56,7 @@ class Test_Example_Scripts(unittest.TestCase):
 
 class Test_Panoptica_Evaluator(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_simple_evaluation(self):
