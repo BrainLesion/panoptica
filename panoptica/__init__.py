@@ -1,4 +1,4 @@
-"""panoptica v2 — batched, backend-swappable instance segmentation metrics."""
+"""panoptica — batched, backend-swappable instance segmentation metrics."""
 
 from __future__ import annotations
 
