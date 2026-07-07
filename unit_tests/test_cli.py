@@ -4,6 +4,7 @@
 # coverage html
 import os
 import unittest
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.cli import cli_main
 from unit_tests.unit_test_utils import (
     case_multiple_overlapping_instances,
@@ -19,7 +20,7 @@ test_npy_ref_file = Path(__file__).parent.joinpath("test-reference.npy")
 
 class Test_CLI_Main(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_cli_main_case_multiple_overlapping_instances(self):
