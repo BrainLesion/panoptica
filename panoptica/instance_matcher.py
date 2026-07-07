@@ -355,7 +355,31 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
     Instance matching algorithm that performs optimal one-to-one matching based on maximum bipartite graph matching.
 
     This implementation maximizes the global matching score between predictions and references.
+
+    With ``allow_many_to_one=True`` the optimal one-to-one assignment is followed by a
+    greedy pass that attaches each still-unmatched prediction to its best-scoring
+    reference (so a reference may collect several predictions), mirroring
+    ``NaiveThresholdMatching``'s many-to-one behaviour.
     """
+
+    def __init__(
+        self,
+        matching_metric: Metric = Metric.IOU,
+        matching_threshold: float = 0.5,
+        allow_many_to_one: bool = False,
+    ) -> None:
+        """
+        Initialize the MaxBipartiteMatching instance.
+
+        Args:
+            matching_metric (Metric): The metric used for matching.
+            matching_threshold (float): The threshold for matching instances.
+            allow_many_to_one (bool): If True, predictions left unmatched by the optimal
+                one-to-one assignment are greedily attached to their best-scoring
+                reference above the threshold. Defaults to False (strict one-to-one).
+        """
+        super().__init__(matching_metric, matching_threshold)
+        self._allow_many_to_one = allow_many_to_one
 
     def _match_instances(  # type: ignore[override]
         self,
@@ -396,7 +420,37 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
         # Apply maximum bipartite graph matching
         labelmap = self._solve_bipartite_matching(cost_matrix, ref_labels, pred_labels)
 
+        if self._allow_many_to_one:
+            self._assign_many_to_one(labelmap, mm_pairs, matching_threshold)
+
         return labelmap
+
+    def _assign_many_to_one(
+        self,
+        labelmap: InstanceLabelMap,
+        mm_pairs: list[tuple[float, tuple[int, int]]],
+        matching_threshold: float,
+    ) -> None:
+        """Greedily attach predictions left unmatched by the one-to-one assignment.
+
+        Each prediction that is not yet matched but still overlaps some reference above
+        the threshold is mapped to its best-scoring reference (one prediction -> one
+        reference, but a reference may collect several predictions). Assumes an increasing
+        overlap metric (IOU/DSC), consistent with the cost-matrix construction.
+        """
+        candidates_by_pred: dict[int, list[tuple[float, int]]] = {}
+        for matching_score, (ref_label, pred_label) in mm_pairs:
+            if self._matching_metric.score_beats_threshold(
+                matching_score, matching_threshold
+            ):
+                candidates_by_pred.setdefault(int(pred_label), []).append(
+                    (matching_score, int(ref_label))
+                )
+        for pred_label, candidates in candidates_by_pred.items():
+            if labelmap.contains_pred(pred_label):
+                continue  # already assigned by the optimal one-to-one matching
+            best_ref = max(candidates, key=lambda score_ref: score_ref[0])[1]
+            labelmap.add_labelmap_entry(pred_label, best_ref)
 
     def _create_cost_matrix(
         self,
@@ -450,6 +504,7 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
         return {
             "matching_metric": node._matching_metric,
             "matching_threshold": node._matching_threshold,
+            "allow_many_to_one": node._allow_many_to_one,
         }
 
 

@@ -223,6 +223,33 @@ class Test_Bipartite_Matcher_Variations(BaseMatcherTest):
             expected_results,
         )
 
+    def test_many_to_one_attaches_extra_predictions(self):
+        # One reference instance overlapped by two disconnected predictions, each with
+        # IOU 0.45. The optimal one-to-one assignment can only keep one of them.
+        ref = np.zeros((40, 50), dtype=np.int32)
+        pred = np.zeros((40, 50), dtype=np.int32)
+        ref[10:30, 10:40] = 1
+        pred[10:19, 10:40] = 1  # prediction A
+        pred[21:30, 10:40] = 1  # prediction B (disconnected from A)
+
+        def run(allow_many_to_one):
+            evaluator = self.create_evaluator(
+                MaxBipartiteMatching(
+                    matching_threshold=0.3, allow_many_to_one=allow_many_to_one
+                ),
+                {"class_1": (1, False)},
+            )
+            return evaluator.evaluate(pred, ref)["class_1"]
+
+        # One-to-one: only the best prediction matches; the other is a false positive.
+        one_to_one = run(False)
+        self.assertEqual((one_to_one.tp, one_to_one.fp, one_to_one.fn), (1, 1, 0))
+
+        # Many-to-one: the second overlapping prediction attaches to the same reference,
+        # so it is no longer a false positive.
+        many_to_one = run(True)
+        self.assertEqual((many_to_one.tp, many_to_one.fp, many_to_one.fn), (1, 0, 0))
+
 
 class Test_Part_Matcher_Variations(BaseMatcherTest):
 
