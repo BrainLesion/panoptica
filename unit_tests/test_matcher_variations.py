@@ -2,7 +2,6 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
 import warnings
@@ -12,6 +11,7 @@ from pathlib import Path
 import unittest
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
@@ -37,7 +37,7 @@ class BaseMatcherTest(unittest.TestCase):
     """Base class for matcher tests with common functionality."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def create_evaluator(self, matcher, groups):

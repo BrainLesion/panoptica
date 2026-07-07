@@ -2,11 +2,11 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import (
     MetricCouldNotBeComputedException,
@@ -31,7 +31,7 @@ class Test_RVD(unittest.TestCase):
     # case_simple_underpredicted
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_rvd_case_simple_identical(self):
@@ -67,7 +67,7 @@ class Test_RVD(unittest.TestCase):
 
 class Test_DSC(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_dsc_case_simple_identical(self):
@@ -155,7 +155,7 @@ class Test_DSC(unittest.TestCase):
 
 class Test_ASSD(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_st_case_simple_identical(self):
@@ -198,7 +198,7 @@ class Test_ASSD(unittest.TestCase):
 
 class Test_clDSC(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_st_case_simple_identical(self):
@@ -239,7 +239,7 @@ class Test_RVAE(unittest.TestCase):
     # case_simple_underpredicted
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_rvae_case_simple_identical(self):
@@ -280,7 +280,7 @@ class Test_CEDI(unittest.TestCase):
     # case_simple_underpredicted
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_cedi_case_simple_identical(self):
@@ -321,7 +321,7 @@ class Test_HD(unittest.TestCase):
     # case_simple_underpredicted
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_hd_case_simple_identical(self):
@@ -397,7 +397,7 @@ class Test_NSD(unittest.TestCase):
     # case_simple_underpredicted
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_nsd_case_simple_identical(self):
@@ -426,7 +426,7 @@ class Test_NSD(unittest.TestCase):
 
 # class Test_ST(unittest.TestCase):
 #    def setUp(self) -> None:
-#        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+#        disable_citation_reminder()
 #        return super().setUp()
 
 #    def test_st_case_simple_identical(self):
