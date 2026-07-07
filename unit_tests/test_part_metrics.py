@@ -2,10 +2,10 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import InputType
 from panoptica.panoptica_evaluator import Panoptica_Evaluator
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
@@ -19,7 +19,7 @@ class Test_Part_Metrics_Global_MultiChannel(unittest.TestCase):
     """Test multi-channel global metrics for part-aware evaluation."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def create_basic_masks(self, size=(28, 28)):
@@ -351,7 +351,7 @@ class Test_Part_Metrics_Integration(unittest.TestCase):
     """Integration tests for part metrics with different scenarios."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_comparison_merge_vs_part_groups(self):

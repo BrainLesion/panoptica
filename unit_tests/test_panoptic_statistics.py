@@ -5,6 +5,7 @@
 import os
 import unittest
 import numpy as np
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import (
     InputType,
     Panoptica_Aggregator,
@@ -23,7 +24,7 @@ input_test_file = Path(__file__).parent.joinpath("test_unittest_file.tsv")
 
 class Test_Panoptica_Statistics(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_simple_statistic(self):
