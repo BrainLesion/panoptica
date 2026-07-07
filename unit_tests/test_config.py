@@ -5,6 +5,7 @@
 import os
 import unittest
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.metrics import (
     Metric,
     _Metric,
@@ -36,7 +37,7 @@ test_file = Path(__file__).parent.joinpath("test.yaml")
 
 class Test_Datatypes(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_enum_config(self):

@@ -19,3 +19,6 @@ from panoptica.utils.processing_pair import (
 )
 from panoptica.metrics import Metric, MetricMode, MetricType
 from panoptica.utils.logger import set_log_level
+from panoptica.utils.citation_reminder import (
+    disable_citation_reminder,
+)
