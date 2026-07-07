@@ -12,19 +12,10 @@ from panoptica.utils.numpy_utils import (
 from panoptica.utils.citation_reminder import (
     citation_reminder,
     disable_citation_reminder,
-    enable_citation_reminder,
 )
 
 
 class Test_Citation_Reminder(unittest.TestCase):
-    def setUp(self) -> None:
-        enable_citation_reminder()
-        return super().setUp()
-
-    def tearDown(self) -> None:
-        enable_citation_reminder()  # restore module state for other tests
-        return super().tearDown()
-
     def test_citation_code(self):
         @citation_reminder
         def foo():
