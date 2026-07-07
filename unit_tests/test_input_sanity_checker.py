@@ -22,6 +22,7 @@ if _spec is not None:
 else:
     HAS_TORCH = False
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.utils.input_check_and_conversion.sanity_checker import (
     sanity_check_and_convert_to_array,
     INPUTDTYPE,
@@ -42,7 +43,7 @@ test_abc_file = Path(__file__).parent.joinpath("test.abc.npy")
 
 class Test_Input_Sanity_Checker_Numpy(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_sanity_checker(self):
@@ -110,7 +111,7 @@ class Test_Input_Sanity_Checker_Numpy(unittest.TestCase):
 
 class Test_Input_Sanity_Checker_Sitk(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_sanity_checker(self):
@@ -210,7 +211,7 @@ class Test_Input_Sanity_Checker_Sitk(unittest.TestCase):
 
 class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_sanity_checker(self):
@@ -337,7 +338,7 @@ class Test_Input_Sanity_Checker_Nibabel(unittest.TestCase):
 @unittest.skipUnless(HAS_TORCH, "torch not available")
 class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_sanity_checker(self):
@@ -405,7 +406,7 @@ class Test_Input_Sanity_Checker_Torch(unittest.TestCase):
 
 class Test_Input_Sanity_Checker_Nrrd(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_sanity_checker(self):
@@ -523,7 +524,7 @@ class Test_Input_Sanity_Checker_Nrrd(unittest.TestCase):
 
 class Test_Input_Sanity_Checker_Misc(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_sanity_checker_unsupported_datatype(self):

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica import InputType, Panoptica_Aggregator, Panoptica_Statistic
 from panoptica.instance_approximator import ConnectedComponentsInstanceApproximator
 from panoptica.instance_matcher import NaiveThresholdMatching
@@ -42,7 +43,7 @@ def _two_instance_arrays() -> tuple[np.ndarray, np.ndarray]:
 
 class Test_TSVBackend_Direct(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.path = _TMP_DIR.joinpath("unittest_backend_direct.tsv")
         if self.path.exists():
             os.remove(self.path)
@@ -134,7 +135,7 @@ class Test_TSVBackend_Direct(unittest.TestCase):
 
 class Test_JSONLBackend_Direct(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.path = _TMP_DIR.joinpath("unittest_backend_direct.jsonl")
         if self.path.exists():
             os.remove(self.path)
@@ -462,7 +463,7 @@ class Test_JSONLBackend_Direct(unittest.TestCase):
 
 class Test_Roundtrip_TSV_JSONL(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.before_tsv = _TMP_DIR.joinpath("unittest_roundtrip_before.tsv")
         self.middle_jsonl = _TMP_DIR.joinpath("unittest_roundtrip_middle.jsonl")
         self.after_tsv = _TMP_DIR.joinpath("unittest_roundtrip_after.tsv")
@@ -562,7 +563,7 @@ class Test_Statistic_File_Suffix_Defaulting(unittest.TestCase):
     mirroring `Panoptica_Aggregator.__init__`."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.stem = _TMP_DIR.joinpath("unittest_suffix_default")
         self.candidates = [
             self.stem,
@@ -665,7 +666,7 @@ class Test_JSONL_Schema_Drift(unittest.TestCase):
     could easily slip past)."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.path = _TMP_DIR.joinpath("unittest_jsonl_drift.jsonl")
         if self.path.exists():
             os.remove(self.path)
@@ -755,7 +756,7 @@ class Test_AUTC_Backend_Roundtrip(unittest.TestCase):
     not covered by the non-AUTC tests above."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.paths = [
             _TMP_DIR.joinpath("unittest_autc_backend.jsonl"),
             _TMP_DIR.joinpath("unittest_autc_backend.tsv"),
@@ -818,7 +819,7 @@ class Test_Log_Times_Roundtrip(unittest.TestCase):
     again must not trip the schema-validation path on either backend."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.paths = [
             _TMP_DIR.joinpath("unittest_logtimes.jsonl"),
             _TMP_DIR.joinpath("unittest_logtimes.tsv"),
@@ -868,7 +869,7 @@ class Test_JSONL_Write_Full_Instance_Ordering(unittest.TestCase):
     declared index order."""
 
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         self.path = _TMP_DIR.joinpath("unittest_jsonl_order.jsonl")
         if self.path.exists():
             os.remove(self.path)

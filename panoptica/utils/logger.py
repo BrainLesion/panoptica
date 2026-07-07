@@ -33,3 +33,22 @@ if not logger.handlers:
     logger.addHandler(_handler)
     logger.setLevel(logging.INFO)
     logger.propagate = False
+
+
+def set_log_level(level: int | str) -> None:
+    """Set the verbosity of panoptica's output.
+
+    A convenience wrapper around ``logging.getLogger("panoptica").setLevel`` so callers
+    do not have to import :mod:`logging` or know the logger's name.
+
+    Args:
+        level: A standard logging level, given either as an int
+            (e.g. :data:`logging.WARNING`) or as a case-insensitive name
+            (``"DEBUG"``, ``"INFO"``, ``"WARNING"``, ``"ERROR"``, ``"CRITICAL"``).
+            ``set_log_level("WARNING")`` silences the routine progress/status messages
+            while keeping warnings and errors; ``set_log_level("DEBUG")`` is the most
+            verbose.
+    """
+    if isinstance(level, str):
+        level = level.upper()
+    logger.setLevel(level)
