@@ -2,7 +2,6 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
 from panoptica.utils.numpy_utils import (
@@ -10,25 +9,33 @@ from panoptica.utils.numpy_utils import (
     _count_unique_without_zeros,
     _get_smallest_fitting_uint,
 )
-from panoptica.utils.citation_reminder import citation_reminder
+from panoptica.utils.citation_reminder import (
+    citation_reminder,
+    disable_citation_reminder,
+)
 
 
 class Test_Citation_Reminder(unittest.TestCase):
-    def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "True"
-        return super().setUp()
-
     def test_citation_code(self):
         @citation_reminder
         def foo():
             return "bar"
 
-        foo()
+        self.assertEqual(foo(), "bar")
+
+    def test_disable_citation_reminder(self):
+        disable_citation_reminder()
+
+        @citation_reminder
+        def foo():
+            return "bar"
+
+        self.assertEqual(foo(), "bar")
 
 
 class Test_Numpy_Utils(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_np_unique(self):

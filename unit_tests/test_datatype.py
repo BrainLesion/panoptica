@@ -2,10 +2,10 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.metrics import (
     Metric,
     Evaluation_List_Metric,
@@ -22,7 +22,7 @@ from panoptica import InputType
 
 class Test_EdgeCaseHandler(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_edgecasehandler_simple(self):
@@ -51,7 +51,7 @@ class Test_EdgeCaseHandler(unittest.TestCase):
 
 class Test_Enums(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_metrics_enum(self):
@@ -120,7 +120,7 @@ class Test_Enums(unittest.TestCase):
 
 class Test_ProcessingPair(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_semanticpair(self):

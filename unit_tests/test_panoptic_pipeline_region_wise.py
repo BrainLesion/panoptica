@@ -2,10 +2,10 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 
 import numpy as np
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.panoptica_pipeline import (
     _panoptic_evaluate_region_wise,
     _panoptic_evaluate,
@@ -86,7 +86,7 @@ def test_scenario_4_extra_predictions():
 
 class Test_RegionMatching_Comprehensive(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def run_test_scenario(self, gt, pred, scenario_name):
