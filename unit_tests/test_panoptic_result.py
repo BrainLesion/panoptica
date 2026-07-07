@@ -2,11 +2,11 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import (
     MetricCouldNotBeComputedException,
@@ -17,7 +17,7 @@ from panoptica.utils.edge_case_handling import EdgeCaseHandler, EdgeCaseResult
 
 class Test_Panoptica_Results(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_simple_evaluation(self):

@@ -2,17 +2,17 @@
 # coverage run -m unittest
 # coverage report
 # coverage html
-import os
 import unittest
 import numpy as np
 
+from panoptica.utils.citation_reminder import disable_citation_reminder
 from panoptica.utils.segmentation_class import LabelGroup, SegmentationClassGroups
 from panoptica.utils.label_group import LabelMergeGroup, LabelPartGroup
 
 
 class Test_DefinitionOfSegmentationLabels(unittest.TestCase):
     def setUp(self) -> None:
-        os.environ["PANOPTICA_CITATION_REMINDER"] = "False"
+        disable_citation_reminder()
         return super().setUp()
 
     def test_labelgroup(self):
