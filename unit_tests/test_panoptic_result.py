@@ -233,6 +233,42 @@ class Test_Panoptica_Results(unittest.TestCase):
         self.assertEqual(rows[0]["voxel_count"], 111)
         self.assertEqual(rows[1]["voxel_count"], 222)
 
+    def test_to_dict_predicted_instances(self):
+        # 1 matched prediction + 1 unmatched (FP) prediction.
+        result = PanopticaResult(
+            prediction_arr=None,
+            reference_arr=None,
+            n_ref_instances=1,
+            n_pred_instances=2,
+            tp=1,
+            list_metrics={Metric.IOU: [0.8], Metric.DSC: [0.85]},
+            edge_case_handler=EdgeCaseHandler(),
+            instance_voxel_count_matched_pred=[100],
+            instance_volume_matched_pred=[1.0],
+            instance_voxel_count_unmatched_pred=[40],
+            instance_volume_unmatched_pred=[0.4],
+        )
+        result.calculate_all(print_errors=False)
+
+        d = result.to_dict(output_individual_instance_metrics=True)
+        self.assertIn("predicted_instances", d)
+        rows = d["predicted_instances"]
+        self.assertEqual(len(rows), 2)
+        # Matched prediction first, unmatched (FP) prediction after.
+        self.assertEqual(rows[0]["is_matched"], 1)
+        self.assertEqual(rows[1]["is_matched"], 0)
+        self.assertEqual(rows[0]["voxel_count"], 100)
+        self.assertEqual(rows[0]["volume"], 1.0)
+        self.assertEqual(rows[1]["voxel_count"], 40)
+        self.assertEqual(rows[1]["volume"], 0.4)
+        # Minimal scope: prediction rows carry volume/voxel_count only, no sq metrics.
+        self.assertNotIn("sq", rows[0])
+        # Not present in the default (master-only) output.
+        self.assertNotIn(
+            "predicted_instances",
+            result.to_dict(output_individual_instance_metrics=False),
+        )
+
     def test_row_keys_are_either_master_or_remappable(self):
         """Guard: every row-local key must round-trip to a master key
         (directly or via ROW_KEY_TO_MASTER_KEY), otherwise file backends

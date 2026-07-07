@@ -409,13 +409,17 @@ class Panoptica_Evaluator(SupportsConfig):
             result = res.to_dict(
                 output_individual_instance_metrics=output_individual_instance_metrics
             )
-            # For now reference_instances is the only nested dict.
-            # If we add other nested dicts in the future, we might generalize this
+            # reference_instances and predicted_instances are nested per-instance
+            # lists, not master metrics; pop them so they don't leak into the key set.
+            # Only reference rows contribute row-only keys (is_matched, voxel_count,
+            # volume); predicted rows carry the same keys, so dropping them loses nothing.
             rows = (
                 result.pop("reference_instances", [])
                 if output_individual_instance_metrics
                 else []
             )
+            if output_individual_instance_metrics:
+                result.pop("predicted_instances", [])
             # Master keys first, then row-only keys (translated to the master
             # schema via PanopticaResult.normalize_row_to_master_schema) so
             # row-only fields like `is_matched` still get a TSV column / JSONL

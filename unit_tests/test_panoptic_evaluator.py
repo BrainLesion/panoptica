@@ -453,6 +453,57 @@ class Test_Panoptica_Evaluator(unittest.TestCase):
         self.assertEqual(result.sq, 0.75)
         self.assertEqual(result.pq, 0.75)
 
+    def test_predicted_instance_volumes_reported(self):
+        # ref: one matched instance (A) + one false-negative instance (B).
+        # pred: one matched instance (A') + one false-positive instance (C).
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = np.zeros([50, 50], dtype=np.uint16)
+        a[5:15, 5:15] = 1  # A  (matched ref)
+        a[30:40, 30:40] = 1  # B  (FN ref, disconnected)
+        b[5:15, 5:15] = 1  # A' (matched pred, overlaps A)
+        b[5:15, 30:40] = 1  # C  (FP pred, disconnected, no ref)
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        result = evaluator.evaluate(b, a)["ungrouped"]
+        self.assertEqual((result.tp, result.fp, result.fn), (1, 1, 1))
+
+        d = result.to_dict(output_individual_instance_metrics=True)
+        pred_rows = d["predicted_instances"]
+        self.assertEqual(len(pred_rows), 2)
+        matched = [r for r in pred_rows if r["is_matched"] == 1]
+        unmatched = [r for r in pred_rows if r["is_matched"] == 0]
+        self.assertEqual(len(matched), 1)  # A'
+        self.assertEqual(len(unmatched), 1)  # C (false positive)
+        self.assertEqual(matched[0]["voxel_count"], 100)
+        self.assertEqual(matched[0]["volume"], 100.0)
+        self.assertEqual(unmatched[0]["voxel_count"], 100)
+
+    def test_predicted_instance_volumes_all_false_positive(self):
+        # Empty reference, two prediction instances -> both reported as unmatched (FP).
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = np.zeros([50, 50], dtype=np.uint16)
+        b[5:15, 5:15] = 1
+        b[30:40, 30:40] = 1
+
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(),
+        )
+        result = evaluator.evaluate(b, a)["ungrouped"]
+        self.assertEqual((result.tp, result.fp), (0, 2))
+
+        pred_rows = result.to_dict(output_individual_instance_metrics=True)[
+            "predicted_instances"
+        ]
+        self.assertEqual(len(pred_rows), 2)
+        self.assertTrue(all(r["is_matched"] == 0 for r in pred_rows))
+        self.assertEqual(sorted(r["voxel_count"] for r in pred_rows), [100, 100])
+
     def test_single_instance_mode_nooverlap(self):
         a = np.zeros([50, 50], dtype=np.uint16)
         b = a.copy().astype(a.dtype)
