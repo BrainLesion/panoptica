@@ -4,33 +4,20 @@ on:
   release:
     types: [created]
   workflow_dispatch:
-    
+
 jobs:
-   publish:
-    name: Publish to test PyPI
+  publish:
+    name: Publish to PyPI
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository 
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.x'
-      - name: Install dependencies
-        run: |
-          pip install build
-          pip install twine
-      - name: Add dynamic versioning
-        run: |
-          pip install poetry
-          poetry self add "poetry-dynamic-versioning[plugin]"
+          enable-cache: true
       - name: Build package
-        run: |
-          poetry build --format=sdist  # results in properly versioned sdist 
-          # python -m build
+        run: uv build
       - name: Upload to PyPI
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: | 
-          twine upload --verbose dist/*
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish
