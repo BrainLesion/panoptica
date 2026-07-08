@@ -19,6 +19,7 @@ from panoptica.metrics import (
 )
 from panoptica.utils.edge_case_handling import EdgeCaseHandler
 from panoptica.utils.label_group import LabelGroup, LabelPartGroup
+from panoptica.utils.phase_timer import PhaseTimer
 from panoptica.utils.processing_pair import IntermediateStepsData
 from panoptica.utils.serialization import (
     _AUTC_PREFIX,
@@ -49,6 +50,7 @@ class PanopticaResult:
         label_group: LabelGroup | None = None,
         intermediate_steps_data: IntermediateStepsData | None = None,
         computation_time: float | None = None,
+        phase_times: dict[str, float] | None = None,
         instance_voxel_count_matched_ref: list[int] | None = None,
         instance_volume_matched_ref: list[float] | None = None,
         instance_voxel_count_unmatched_ref: list[int] | None = None,
@@ -73,6 +75,7 @@ class PanopticaResult:
             global_metrics = []
         self._global_metrics: list[Metric] = global_metrics
         self.computation_time = computation_time
+        self.phase_times: dict[str, float] | None = phase_times
         self.intermediate_steps_data = intermediate_steps_data
         self.metadata: dict[str, Any] = kwargs
 
@@ -709,12 +712,17 @@ class PanopticaResult:
         self._evaluation_metrics[name_id] = eval_metric
         return default_value
 
-    def calculate_all(self, print_errors: bool = False):
+    def calculate_all(
+        self,
+        print_errors: bool = False,
+        phase_timer: PhaseTimer | None = None,
+    ):
         """
         Calculates all possible metrics that can be derived.
 
         Args:
             print_errors (bool, optional): If true, will print every metric that could not be computed and its reason. Defaults to False.
+            phase_timer (PhaseTimer | None, optional): If provided, each metric's evaluation duration is recorded under ``f"metric_{name}"`` in ``phase_timer.times``.
         """
         metric_errors: dict[str, Exception] = {}
 
@@ -722,7 +730,11 @@ class PanopticaResult:
             try:
                 # Access each metric to trigger its lazy computation; we only care
                 # about which ones raise, not their values.
-                getattr(self, k)
+                if phase_timer is not None:
+                    with phase_timer.time(f"metric_{k}"):
+                        getattr(self, k)
+                else:
+                    getattr(self, k)
             except Exception as e:
                 metric_errors[k] = e
 
