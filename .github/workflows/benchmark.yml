@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -30,22 +28,28 @@ jobs:
       - name: Benchmark HEAD
         run: python -m poetry run python benchmark/bench_eval.py --quick --json head.json
 
-      - name: Benchmark base
+      - name: Compare against committed baseline
         if: github.event_name == 'pull_request'
+        shell: bash
         run: |
-          git checkout ${{ github.event.pull_request.base.sha }} -- panoptica benchmark
-          python -m poetry run python benchmark/bench_eval.py --quick --json baseline.json
-          git checkout HEAD -- panoptica benchmark
-
-      - name: Compare and post to job summary
-        if: github.event_name == 'pull_request'
-        run: |
-          python -m poetry run python benchmark/compare.py baseline.json head.json --fail-on-regression-pct 50 | tee comparison.md
+          set -o pipefail
+          python -m poetry run python benchmark/compare.py \
+            benchmark/baseline.json head.json \
+            --fail-on-regression-pct 50 \
+            | tee comparison.md
+          compare_status=${PIPESTATUS[0]}
           {
             echo "# Benchmark comparison"
             echo ""
+            echo "Baseline is the committed \`benchmark/baseline.json\`. Refresh with:"
+            echo ""
+            echo '```'
+            echo 'python benchmark/bench_eval.py --quick --json benchmark/baseline.json'
+            echo '```'
+            echo ""
             cat comparison.md
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$compare_status"
 
       - name: Head-only summary (workflow_dispatch)
         if: github.event_name != 'pull_request'
@@ -65,6 +69,5 @@ jobs:
           name: benchmark-results
           path: |
             head.json
-            baseline.json
             comparison.md
           if-no-files-found: ignore

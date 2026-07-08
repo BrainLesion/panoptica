@@ -51,13 +51,31 @@ def _diff_measurements(
     return rows
 
 
+# Sub-millisecond measurements are pure noise on shared CI runners; individual
+# metric_* entries typically fall here. We surface them in the table but never
+# use them to gate a PR.
+GATE_MIN_BASELINE_MS = 1.0
+
+
+def _is_gated(key: str, baseline_ms: float) -> bool:
+    """Only workload-level measurements above the noise floor gate the PR."""
+    if baseline_ms < GATE_MIN_BASELINE_MS:
+        return False
+    return not key.startswith("metric_")
+
+
 def _emit_table(baseline: dict[str, Any], head: dict[str, Any]) -> tuple[str, float]:
-    """Return (markdown, worst_regression_pct)."""
+    """Return (markdown, worst_gated_regression_pct)."""
     lines: list[str] = []
     lines.append(
         f"Baseline commit: `{baseline.get('commit', '?')}` · "
         f"Head commit: `{head.get('commit', '?')}` · "
         f"Python: `{head.get('python', '?')}`"
+    )
+    lines.append("")
+    lines.append(
+        f"Regression gate only considers non-metric measurements with baseline "
+        f"≥ {GATE_MIN_BASELINE_MS:.0f} ms (others are shown for information)."
     )
     lines.append("")
 
@@ -80,12 +98,15 @@ def _emit_table(baseline: dict[str, Any], head: dict[str, Any]) -> tuple[str, fl
         )
         lines.append(f"### {name}")
         lines.append("")
-        lines.append("| Measurement | baseline ms | head ms | Δ ms | Δ % |")
-        lines.append("| --- | ---: | ---: | ---: | --- |")
+        lines.append("| Measurement | baseline ms | head ms | Δ ms | Δ % | gated |")
+        lines.append("| --- | ---: | ---: | ---: | --- | :---: |")
         for key, b, h, delta, pct in rows:
-            worst_pct = max(worst_pct, pct)
+            gated = _is_gated(key, b)
+            if gated:
+                worst_pct = max(worst_pct, pct)
+            gate_mark = "✓" if gated else ""
             lines.append(
-                f"| `{key}` | {b:.2f} | {h:.2f} | {delta:+.2f} | {_fmt_delta_pct(pct)} |"
+                f"| `{key}` | {b:.2f} | {h:.2f} | {delta:+.2f} | {_fmt_delta_pct(pct)} | {gate_mark} |"
             )
         lines.append("")
 
