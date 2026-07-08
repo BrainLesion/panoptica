@@ -183,12 +183,20 @@ class Test_Naive_Matcher_Variations(BaseMatcherTest):
 
         # increasing metric (IOU): a score equal to the threshold passes only non-strict
         self.assertTrue(Metric.IOU.score_beats_threshold(0.5, 0.5))
-        self.assertFalse(Metric.IOU.score_beats_threshold(0.5, 0.5, strict=True))
-        self.assertTrue(Metric.IOU.score_beats_threshold(0.6, 0.5, strict=True))
+        self.assertFalse(
+            Metric.IOU.score_beats_threshold(0.5, 0.5, strict_comparison=True)
+        )
+        self.assertTrue(
+            Metric.IOU.score_beats_threshold(0.6, 0.5, strict_comparison=True)
+        )
         # decreasing metric (ASSD): a distance equal to the threshold likewise
         self.assertTrue(Metric.ASSD.score_beats_threshold(0.5, 0.5))
-        self.assertFalse(Metric.ASSD.score_beats_threshold(0.5, 0.5, strict=True))
-        self.assertTrue(Metric.ASSD.score_beats_threshold(0.4, 0.5, strict=True))
+        self.assertFalse(
+            Metric.ASSD.score_beats_threshold(0.5, 0.5, strict_comparison=True)
+        )
+        self.assertTrue(
+            Metric.ASSD.score_beats_threshold(0.4, 0.5, strict_comparison=True)
+        )
 
     def test_strict_threshold_rejects_score_equal_to_threshold(self):
         """A pair whose IOU exactly equals the threshold matches with >= but not >."""

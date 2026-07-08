@@ -142,7 +142,7 @@ class _Metric:
         self,
         matching_score: float,
         matching_threshold: float,
-        strict: bool = False,
+        strict_comparison: bool = False,
     ) -> bool:
         """Determines if a matching score meets a specified threshold.
 
@@ -158,7 +158,7 @@ class _Metric:
             bool: True if the score meets the threshold, taking into account the
             metric's preferred direction.
         """
-        if strict:
+        if strict_comparison:
             return (self.increasing and matching_score > matching_threshold) or (
                 self.decreasing and matching_score < matching_threshold
             )
@@ -265,7 +265,7 @@ class Metric(_Enum_Compare):
         self,
         matching_score: float,
         matching_threshold: float,
-        strict: bool = False,
+        strict_comparison: bool = False,
     ) -> bool:
         """Calculates whether a score beats a specified threshold
 
@@ -279,7 +279,7 @@ class Metric(_Enum_Compare):
         Returns:
             bool: True if the matching_score beats the threshold, False otherwise.
         """
-        if strict:
+        if strict_comparison:
             return (self.increasing and matching_score > matching_threshold) or (
                 self.decreasing and matching_score < matching_threshold
             )

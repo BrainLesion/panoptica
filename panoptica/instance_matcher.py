@@ -343,7 +343,9 @@ class NaiveThresholdMatching(ThresholdBasedMatching):
                 continue
 
             if self._matching_metric.score_beats_threshold(
-                matching_score, matching_threshold, strict=self._strict_threshold
+                matching_score,
+                matching_threshold,
+                strict_comparison=self._strict_threshold,
             ):
                 # Match found, add entry to labelmap
                 labelmap.add_labelmap_entry(pred_label, ref_label)
@@ -428,7 +430,9 @@ class MaxBipartiteMatching(ThresholdBasedMatching):
         # Fill in known costs for overlapping instances
         for matching_score, (ref_label, pred_label) in mm_pairs:
             if not self._matching_metric.score_beats_threshold(
-                matching_score, matching_threshold, strict=self._strict_threshold
+                matching_score,
+                matching_threshold,
+                strict_comparison=self._strict_threshold,
             ):
                 continue
 
@@ -525,7 +529,9 @@ class MaximizeMergeMatching(ThresholdBasedMatching):
                     labelmap.add_labelmap_entry(pred_label, ref_label)
                     score_ref[ref_label] = new_score
             elif self._matching_metric.score_beats_threshold(
-                matching_score, matching_threshold, strict=self._strict_threshold
+                matching_score,
+                matching_threshold,
+                strict_comparison=self._strict_threshold,
             ):
                 # Match found, increment true positive count and collect IoU and Dice values
                 labelmap.add_labelmap_entry(pred_label, ref_label)
