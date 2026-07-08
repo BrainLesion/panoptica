@@ -9,13 +9,13 @@ First off, thanks for taking the time to contribute! 🎉
 ## Setup and requirements
 
 **Setup:**
-- We use [poetry](https://python-poetry.org/), make sure it is installed: `pip install poetry`
-- Install dependencies by running: `poetry install --with dev`
+- We use [uv](https://docs.astral.sh/uv/), make sure it is installed: see the [install guide](https://docs.astral.sh/uv/getting-started/installation/).
+- Install dependencies by running: `uv sync` (add `--extra cuda` for the GPU backend).
 
 **Requirements:**
-- Our project follows the [black code style](https://github.com/psf/black). Make sure your code is formatted accordingly.
-- Please add _meaningful_ docstring for your functions and annotate types
-- Please add _meaningful_ tests for your contribution in `/unit_tests` and make sure _all_ tests are passing by running `python -m pytest`
+- We use [ruff](https://docs.astral.sh/ruff/) for lint + formatting and [pyrefly](https://pyrefly.org/) for type-checking. Run `uv run ruff format`, `uv run ruff check`, and `uv run pyrefly check`.
+- Please add _meaningful_ docstrings for your functions and annotate types
+- Please add _meaningful_ tests for your contribution in `tests/` and make sure _all_ tests are passing by running `uv run pytest`
 
 
 ## Guidelines

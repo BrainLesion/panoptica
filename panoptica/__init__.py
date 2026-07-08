@@ -1,24 +1,29 @@
-from panoptica.instance_approximator import (
-    ConnectedComponentsInstanceApproximator,
-    CCABackend,
-)
-from panoptica.instance_matcher import NaiveThresholdMatching, MaxBipartiteMatching
-from panoptica.panoptica_statistics import (
-    Panoptica_Statistic,
-    FloatDistribution,
-    ValueSummary,
-)
-from panoptica.panoptica_aggregator import Panoptica_Aggregator
-from panoptica.panoptica_evaluator import Panoptica_Evaluator
-from panoptica.panoptica_result import PanopticaResult
-from panoptica.utils.processing_pair import (
+"""panoptica — batched, backend-swappable instance segmentation metrics."""
+
+from __future__ import annotations
+
+from panoptica import backends, core
+from panoptica.api import EvalResult, Evaluator
+from panoptica.core import (
+    Direction,
     InputType,
-    SemanticPair,
-    UnmatchedInstancePair,
-    MatchedInstancePair,
+    LabelGroup,
+    MetricMode,
+    MetricType,
+    SegmentationClassGroups,
 )
-from panoptica.metrics import Metric, MetricMode, MetricType
-from panoptica.utils.logger import set_log_level
-from panoptica.utils.citation_reminder import (
-    disable_citation_reminder,
-)
+from panoptica.metrics import Metric
+
+__all__ = [
+    "Evaluator",
+    "EvalResult",
+    "Metric",
+    "InputType",
+    "MetricType",
+    "MetricMode",
+    "Direction",
+    "LabelGroup",
+    "SegmentationClassGroups",
+    "core",
+    "backends",
+]

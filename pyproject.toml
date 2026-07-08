@@ -1,66 +1,40 @@
 [build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
-build-backend = "poetry_dynamic_versioning.backend"
-
-[tool.poetry-dynamic-versioning]
-enable = true
-
-[tool.poetry]
-exclude = ["examples", "benchmark"]
-version = "0.0.0"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "panoptica"
-dynamic = ["version"]
-description = "Panoptic Quality (PQ) computation for binary masks."
-authors = [
-    { name = "Hendrik Möller", email = "hendrik.moeller@tum.de" },
-    { name = "Florian Kofler", email = "florian.kofler@tum.de" },
-]
+version = "3.0.0.dev0"
+description = "Batched, backend-swappable (numpy or CuPy) instance segmentation metrics."
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
 readme = "README.md"
-requires-python = ">=3.10,<4.0"
-license = { file = "LICENSE" }
-keywords = ["panoptic", "quality", "segmentation", "medical imaging"]
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
 dependencies = [
     "numpy>=1.22,<2.3",
+    "scipy>=1.10,<2.0.0",
     "connected-components-3d>=3.12.3,<4.0.0",
-    "scipy>=1.7.0,<2.0.0",
-    "rich>=13.6.0,<14.0.0",
     "scikit-image>=0.22.0,<1.0.0",
-    "ruamel.yaml>=0.18.6,<1.0.0",
-    "plotly>=5.16.1,<6.0.0",
     "pandas>=2.1.0,<3.0.0",
+    "plotly>=5.16.1,<6.0.0",
+    "rich>=13.6.0,<14.0.0",
     "typer>=0.15.0,<1.0.0",
+    "ruamel.yaml>=0.18.6,<1.0.0",
     "tqdm>=4.62.3",
 ]
 
-[project.urls]
-repository = "https://github.com/BrainLesion/panoptica"
-homepage = "https://github.com/BrainLesion/panoptica"
-documentation = "https://panoptica.readthedocs.io/"
+[project.optional-dependencies]
+cuda = ["cupy>=13,<15"]        # cupy-cuda12x on this host (CuPy 14.0.1 / CUDA 12)
+nifti = ["nibabel>=5.1.0,<6.0.0", "pynrrd>=1.1.3,<2.0.0", "SimpleITK>=2.2.2,<3.0.0"]
 
 [dependency-groups]
-nifti = [
-    "nibabel>=5.1.0,<6.0.0",
-    "pynrrd>=1.1.3,<2.0.0",
-    "SimpleITK>=2.2.2,<3.0.0",
-]
-test = [
-    { include-group = "nifti" },
+dev = [
     "pytest>=8.1.1",
-    "joblib>=1.3.2,<2.0.0",
-    "coverage>=7.0.1",
-    "pytest-mock>=3.6.0,<4.0.0",
-    "future>=0.18.3, <1.0.0",
-]
-lint = [
+    "pytest-benchmark>=4.0",
+    "hypothesis>=6.100",
     "ruff>=0.11.0",
-    "mypy>=1.10.0",
+    "pyrefly",
+    "import-linter>=2.0",
+    "pre-commit>=3.5",
 ]
 docs = [
     "Sphinx>=7.0.0",
@@ -68,70 +42,44 @@ docs = [
     "furo>=2024.8.6",
     "myst-parser>=2.0.0",
 ]
-dev = [
-    { include-group = "test" },
-    { include-group = "docs" },
-    { include-group = "lint" },
-    "pre-commit>=2.20.0,<3.0.0",
-    "torch>=2.1.0,<3.0.0",
-]
 
-[tool.poetry.group.nifti]
-optional = true
+[project.scripts]
+panoptica = "panoptica.api.cli:app"
 
-[tool.poetry.group.test]
-optional = true
-
-[tool.poetry.group.docs]
-optional = true
-
-[tool.poetry.group.dev]
-optional = true
-
-[tool.poetry.group.lint]
-optional = true
-
-
-[project.optional-dependencies]
-gpu = ["torch>=2.1.0,<3.0.0"]
-
-[tool.poetry.scripts]
-panopticacli = "panoptica.cli:app"
-
+[tool.hatch.build.targets.wheel]
+packages = ["panoptica"]
 
 [tool.ruff]
 line-length = 88
 target-version = "py310"
-extend-exclude = ["docs", "examples", "benchmark"]
 
 [tool.ruff.lint]
-# E/W: pycodestyle, F: pyflakes, UP: pyupgrade, B: bugbear.
-# NOTE: import sorting (I) is intentionally NOT enabled. The package currently relies
-# on a set of order-sensitive circular imports (_functionals <-> utils <->
-# processing_pair <-> panoptica_result); reordering imports breaks `import panoptica`.
-# Re-enable "I" once those cycles are decoupled.
-select = ["E", "W", "F", "UP", "B"]
-ignore = [
-    "E501",  # line length is enforced by the formatter, not the linter
-    "B905",  # zip(..., strict=) is 3.10+ only; not worth churning every call site
-    "B008",  # calls in arg defaults are deliberate here (edge-case policy objects)
-    "B024",  # _ProcessingPair is an intentional ABC without abstract methods
-    "B028",  # explicit warnings.warn stacklevel is noise for this codebase
+# I (import sorting) is ON — the layered design forbids the old import cycles.
+select = ["E", "W", "F", "UP", "B", "I"]
+ignore = ["E501", "B905", "B028"]
+
+[tool.pyrefly]
+project-includes = ["panoptica"]
+# Optional/GPU/IO backends are imported lazily and have no type stubs; treat them
+# as Any when unresolved (the mypy `ignore_missing_imports` equivalent).
+ignore-missing-imports = [
+    "cupy", "cupy.*", "cupyx", "cupyx.*", "cucim", "cucim.*",
+    "cc3d", "skimage", "skimage.*", "scipy", "scipy.*",
+    "SimpleITK", "nibabel", "nibabel.*", "nrrd",
 ]
 
-[tool.ruff.lint.per-file-ignores]
-# __init__.py re-exports are deliberate public API, not unused imports.
-"__init__.py" = ["F401"]
-# Tests favor readability over import hygiene (shared fixtures, re-imports).
-"unit_tests/**" = ["F401", "F811", "E402", "F841"]
+[tool.importlinter]
+root_package = "panoptica"
 
-[tool.mypy]
-python_version = "3.10"
-# The package is clean under this configuration. It is pragmatic rather than strict:
-# missing third-party stubs are ignored, and full annotation coverage is not enforced
-# (tighten with e.g. disallow_untyped_defs incrementally). warn_unused_ignores is left
-# off on purpose so optional deps (torch/nibabel/SimpleITK) not installed in a given
-# environment don't turn their guarded `# type: ignore`s into spurious failures.
-ignore_missing_imports = true
-warn_redundant_casts = true
-exclude = ["docs/", "examples/", "benchmark/", "unit_tests/"]
+[[tool.importlinter.contracts]]
+name = "Layered architecture (deps point down only)"
+type = "layers"
+layers = [
+    "panoptica.api",
+    "panoptica.pipeline",
+    "panoptica.metrics",
+    "panoptica.kernels",
+    "panoptica.backends",
+    "panoptica.io",
+    "panoptica.core",
+]
