@@ -60,6 +60,13 @@ ignore = ["E501", "B905", "B028"]
 
 [tool.pyrefly]
 project-includes = ["panoptica"]
+# Optional/GPU/IO backends are imported lazily and have no type stubs; treat them
+# as Any when unresolved (the mypy `ignore_missing_imports` equivalent).
+ignore-missing-imports = [
+    "cupy", "cupy.*", "cupyx", "cupyx.*", "cucim", "cucim.*",
+    "cc3d", "skimage", "skimage.*", "scipy", "scipy.*",
+    "SimpleITK", "nibabel", "nibabel.*", "nrrd",
+]
 
 [tool.importlinter]
 root_package = "panoptica"

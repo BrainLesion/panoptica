@@ -31,6 +31,16 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check panoptica/
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Pyrefly
+        run: uv run pyrefly check
+
   test:
     runs-on: ${{ matrix.os }}
     strategy:
