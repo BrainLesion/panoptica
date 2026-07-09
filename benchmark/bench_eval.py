@@ -30,6 +30,7 @@ lever flipped from its default so a developer can see the per-toggle win.
 from __future__ import annotations
 
 import argparse
+import inspect
 import json
 import os
 import subprocess
@@ -85,6 +86,12 @@ from benchmark.data import (
 
 DEFAULT_REPEATS = 7
 DEFAULT_WARMUP = 1
+
+# We probe *both* the module presence and the evaluator signature, because a partial
+# swap (module present, evaluator kwarg absent) is a real state we've hit in CI.
+_EVAL_ACCEPTS_TOGGLES = (
+    "speed_toggles" in inspect.signature(Panoptica_Evaluator.__init__).parameters
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -144,7 +151,7 @@ def _build_evaluator(speed_toggles: Any = None) -> Panoptica_Evaluator:
         global_metrics=[Metric.DSC],
         verbose=False,
     )
-    if _PanopticaSpeedToggles is not None:
+    if _EVAL_ACCEPTS_TOGGLES and _PanopticaSpeedToggles is not None:
         kwargs["speed_toggles"] = speed_toggles
     return Panoptica_Evaluator(**kwargs)
 
@@ -257,7 +264,7 @@ def _git_commit_short() -> str:
 # --------------------------------------------------------------------------- #
 def _toggle_variants() -> dict[str, Any]:
     """Named variants for --toggle-comparison. Each flips a single lever."""
-    if _PanopticaSpeedToggles is None:
+    if _PanopticaSpeedToggles is None or not _EVAL_ACCEPTS_TOGGLES:
         return {}
     return {
         "no_crop": _PanopticaSpeedToggles(crop_at_start=False),

@@ -46,6 +46,10 @@ jobs:
           # We swap only the panoptica/ tree; benchmark/ stays from HEAD so JSON schema,
           # warmup, repeats, and CLI flags stay identical between baseline and head runs.
           cp -a panoptica /tmp/panoptica-head
+          # Nuke first, then repopulate from base — otherwise `git checkout base --`
+          # leaves behind files new in HEAD (e.g. panoptica/utils/speed_toggles.py)
+          # and the resulting mix crashes with TypeError on unknown kwargs.
+          rm -rf panoptica
           git checkout ${{ github.event.pull_request.base.sha }} -- panoptica
           python -m poetry run python benchmark/bench_eval.py --quick --json baseline.json
           rm -rf panoptica
