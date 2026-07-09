@@ -139,18 +139,29 @@ class _Metric:
         )
 
     def score_beats_threshold(
-        self, matching_score: float, matching_threshold: float
+        self,
+        matching_score: float,
+        matching_threshold: float,
+        strict_comparison: bool = False,
     ) -> bool:
         """Determines if a matching score meets a specified threshold.
 
         Args:
             matching_score (float): The score to evaluate.
             matching_threshold (float): The threshold value to compare against.
+            strict (bool): If True, compare strictly (``>`` for increasing metrics,
+                ``<`` for decreasing ones) so a score exactly equal to the threshold
+                does NOT pass. This makes ``matching_threshold=0`` mean "any real
+                overlap" instead of "everything". Defaults to False (``>=`` / ``<=``).
 
         Returns:
             bool: True if the score meets the threshold, taking into account the
             metric's preferred direction.
         """
+        if strict_comparison:
+            return (self.increasing and matching_score > matching_threshold) or (
+                self.decreasing and matching_score < matching_threshold
+            )
         return (self.increasing and matching_score >= matching_threshold) or (
             self.decreasing and matching_score <= matching_threshold
         )
@@ -251,17 +262,27 @@ class Metric(_Enum_Compare):
         )
 
     def score_beats_threshold(
-        self, matching_score: float, matching_threshold: float
+        self,
+        matching_score: float,
+        matching_threshold: float,
+        strict_comparison: bool = False,
     ) -> bool:
         """Calculates whether a score beats a specified threshold
 
         Args:
             matching_score (float): Metric score
             matching_threshold (float): Threshold to compare against
+            strict (bool): If True, compare strictly (``>`` for increasing metrics,
+                ``<`` for decreasing ones) so a score exactly equal to the threshold
+                does NOT pass. Defaults to False (``>=`` / ``<=``).
 
         Returns:
             bool: True if the matching_score beats the threshold, False otherwise.
         """
+        if strict_comparison:
+            return (self.increasing and matching_score > matching_threshold) or (
+                self.decreasing and matching_score < matching_threshold
+            )
         return (self.increasing and matching_score >= matching_threshold) or (
             self.decreasing and matching_score <= matching_threshold
         )
