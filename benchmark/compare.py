@@ -64,22 +64,48 @@ def _stats(raw: Any) -> dict[str, float]:
 
 
 class Row:
-    """One measurement's baseline+head stats and derived deltas."""
+    """One measurement's baseline+head stats and derived deltas.
+
+    ``b`` or ``h`` can be ``None`` when the key is present in only one document —
+    this happens during the transition period when main's ``panoptica`` predates
+    features exposed by HEAD (e.g. ``phase_times`` before this PR merges).
+    """
 
     __slots__ = ("key", "b", "h", "delta", "pct", "spread_b", "spread_h")
 
     def __init__(
-        self, key: str, baseline: dict[str, float], head: dict[str, float]
+        self,
+        key: str,
+        baseline: dict[str, float] | None,
+        head: dict[str, float] | None,
     ) -> None:
         self.key = key
         self.b = baseline
         self.h = head
-        b_med = baseline["median"]
-        h_med = head["median"]
-        self.delta = h_med - b_med
-        self.pct = (self.delta / b_med * 100.0) if b_med > 0 else 0.0
-        self.spread_b = max(baseline["p90"] - baseline["min"], 0.0)
-        self.spread_h = max(head["p90"] - head["min"], 0.0)
+        if baseline is None or head is None:
+            self.delta = 0.0
+            self.pct = 0.0
+            self.spread_b = 0.0
+            self.spread_h = 0.0
+        else:
+            b_med = baseline["median"]
+            h_med = head["median"]
+            self.delta = h_med - b_med
+            self.pct = (self.delta / b_med * 100.0) if b_med > 0 else 0.0
+            self.spread_b = max(baseline["p90"] - baseline["min"], 0.0)
+            self.spread_h = max(head["p90"] - head["min"], 0.0)
+
+    @property
+    def only_in_head(self) -> bool:
+        return self.b is None and self.h is not None
+
+    @property
+    def only_in_baseline(self) -> bool:
+        return self.h is None and self.b is not None
+
+    @property
+    def both_present(self) -> bool:
+        return self.b is not None and self.h is not None
 
 
 def _diff_measurements(
@@ -91,14 +117,17 @@ def _diff_measurements(
     for key in all_keys:
         b_raw = baseline.get(key)
         h_raw = head.get(key)
-        if b_raw is None or h_raw is None:
-            continue
-        rows.append(Row(key, _stats(b_raw), _stats(h_raw)))
+        b_stats = _stats(b_raw) if b_raw is not None else None
+        h_stats = _stats(h_raw) if h_raw is not None else None
+        rows.append(Row(key, b_stats, h_stats))
     return rows
 
 
 def _is_gated(row: Row) -> bool:
     """Only workload-level measurements above the noise floor gate the PR."""
+    if not row.both_present:
+        return False
+    assert row.b is not None
     if row.b["median"] < GATE_MIN_BASELINE_MS:
         return False
     return not row.key.startswith("metric_")
@@ -106,6 +135,9 @@ def _is_gated(row: Row) -> bool:
 
 def _is_regression(row: Row, threshold_pct: float) -> bool:
     """Real regression: worse than the threshold AND outside the baseline noise band."""
+    if not row.both_present:
+        return False
+    assert row.b is not None and row.h is not None
     b_med = row.b["median"]
     if b_med <= 0:
         return False
@@ -141,6 +173,7 @@ def _emit_header(
     gate_pass: bool,
     wins: int,
     regressions: int,
+    head_only_total: int,
 ) -> str:
     gate_badge = "✅ PASS" if gate_pass else "🔴 FAIL"
     repeats = head.get("repeats", "?")
@@ -169,6 +202,15 @@ def _emit_header(
         ),
         "",
     ]
+    if head_only_total > 0:
+        parts.append(
+            f"> ℹ️ **{head_only_total} measurement{'s' if head_only_total != 1 else ''} "
+            f"present only in head** — likely because main's `panoptica` predates the "
+            f"feature that exposes them (e.g. `phase_times`, per-metric timings). Their "
+            f"absolute values are shown in each case's full breakdown but they can't be "
+            f"compared until the feature lands in `main`."
+        )
+        parts.append("")
     return "\n".join(parts)
 
 
@@ -179,6 +221,7 @@ def _emit_gate_callout(
 ) -> str:
     if worst_row is None or offender_case is None:
         return ""
+    assert worst_row.b is not None and worst_row.h is not None
     return (
         f"> 🚨 **Regression gate FAILED** — `{worst_row.key}` in `{offender_case}` "
         f"regressed by `{_fmt_pct(worst_row.pct)}` (baseline median {worst_row.b['median']:.2f} ms, "
@@ -196,15 +239,32 @@ def _find_row(rows: list[Row], key: str) -> Row | None:
 
 def _emit_case_hero(case_name: str, rows: list[Row]) -> str:
     hero = _find_row(rows, "end_to_end")
-    if hero is None:
+    if hero is None or not hero.both_present:
         return f"### {case_name}\n"
+    assert hero.b is not None and hero.h is not None
     return (
         f"### {case_name} — `end_to_end` **{hero.b['median']:.1f} → {hero.h['median']:.1f} ms** "
         f"({_fmt_pct(hero.pct)})\n"
     )
 
 
+_MISSING = "—"
+
+
 def _fmt_row(row: Row) -> str:
+    if row.only_in_head:
+        assert row.h is not None
+        return (
+            f"| `{row.key}` | {_MISSING} | {_fmt_ms_with_spread(row.h)} "
+            f"| _new in head_ |"
+        )
+    if row.only_in_baseline:
+        assert row.b is not None
+        return (
+            f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_MISSING} "
+            f"| _absent in head_ |"
+        )
+    assert row.b is not None and row.h is not None
     return (
         f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_fmt_ms_with_spread(row.h)} "
         f"| {_fmt_pct(row.pct)}{_pct_marker(row.pct)} |"
@@ -212,6 +272,7 @@ def _fmt_row(row: Row) -> str:
 
 
 def _emit_key_table(rows: list[Row], max_rows: int = KEY_TABLE_MAX_ROWS) -> str:
+    # Key table only shows comparable rows — head-only ones belong in the breakdown.
     gated_rows = [r for r in rows if _is_gated(r)]
     gated_rows = [r for r in gated_rows if abs(r.delta) >= KEY_TABLE_MIN_DELTA_MS]
     gated_rows.sort(key=lambda r: abs(r.pct), reverse=True)
@@ -230,9 +291,25 @@ def _emit_key_table(rows: list[Row], max_rows: int = KEY_TABLE_MAX_ROWS) -> str:
 
 
 def _emit_full_breakdown(rows: list[Row]) -> str:
-    ordered = sorted(rows, key=lambda r: abs(r.pct), reverse=True)
+    # Compared rows first (biggest |Δ%| at top), then head-only, then baseline-only.
+    compared = sorted(
+        [r for r in rows if r.both_present], key=lambda r: abs(r.pct), reverse=True
+    )
+    head_only = sorted(
+        [r for r in rows if r.only_in_head],
+        key=lambda r: r.h["median"] if r.h else 0.0,
+        reverse=True,
+    )
+    baseline_only = sorted(
+        [r for r in rows if r.only_in_baseline],
+        key=lambda r: r.b["median"] if r.b else 0.0,
+        reverse=True,
+    )
+    ordered = compared + head_only + baseline_only
     lines = [
-        f"<details><summary>Full breakdown ({len(ordered)} measurements)</summary>",
+        f"<details><summary>Full breakdown ({len(ordered)} measurements — "
+        f"{len(compared)} compared, {len(head_only)} head-only, "
+        f"{len(baseline_only)} baseline-only)</summary>",
         "",
         "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
         "| --- | ---: | ---: | :--- |",
@@ -260,6 +337,7 @@ def _emit_report(
     per_case: list[tuple[str, list[Row]]] = []
     wins = 0
     regressions = 0
+    head_only_total = 0
     worst_row: Row | None = None
     worst_case: str | None = None
 
@@ -273,8 +351,11 @@ def _emit_report(
         )
         per_case.append((name, rows))
         for row in rows:
+            if row.only_in_head:
+                head_only_total += 1
             if not _is_gated(row):
                 continue
+            assert row.b is not None and row.h is not None
             # Only count wins/regressions when the two distributions are cleanly
             # separated — head's worst sample must beat baseline's best (win) or
             # head's best sample must be worse than baseline's worst (regression).
@@ -294,7 +375,9 @@ def _emit_report(
     gate_pass = fail_threshold is None or worst_row is None
 
     body: list[str] = []
-    body.append(_emit_header(baseline, head, gate_pass, wins, regressions))
+    body.append(
+        _emit_header(baseline, head, gate_pass, wins, regressions, head_only_total)
+    )
     if not gate_pass and fail_threshold is not None:
         body.append(_emit_gate_callout(worst_row, fail_threshold, worst_case))
 
