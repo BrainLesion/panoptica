@@ -4,11 +4,21 @@ Both inputs are produced by :mod:`benchmark.bench_eval` via ``--json``. Stdout i
 GitHub-flavoured markdown starting with the sticky marker ``<!-- panoptica-benchmark -->``
 so the workflow can find and update the same PR comment across pushes.
 
-When ``--fail-on-regression-pct`` is set, exits non-zero if any *gated* measurement's
-percent change exceeds that threshold. Gated measurements are workload-level entries
-(non-``metric_*``) with a baseline ``>= GATE_MIN_BASELINE_MS`` — sub-millisecond
-timings are pure noise on shared CI runners and are surfaced only inside the
-collapsible full breakdown.
+Each measurement is expected to be a dict ``{min, median, p90}`` (in milliseconds).
+Comparisons use the **median** as the primary point estimate and the
+``(p90 - min)`` spread as the noise band. When ``--fail-on-regression-pct`` is
+set, a measurement counts as a regression only when *both*:
+
+* head_median > baseline_median * (1 + threshold/100)
+* head_median > baseline_p90
+
+The second condition kills failures triggered by baseline noise — head must
+be clearly worse than the baseline's own observed spread. Only workload-level
+entries (non-``metric_*``) with a baseline median ``>= GATE_MIN_BASELINE_MS`` are
+gated; sub-millisecond timings are surfaced only inside the collapsible breakdown.
+
+Older baseline JSONs where each measurement is a scalar (float ms) still load —
+the scalar is treated as ``{min=median=p90=value}``.
 """
 
 from __future__ import annotations
@@ -36,29 +46,73 @@ def _cases_by_name(doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {c["name"]: c for c in doc.get("cases", [])}
 
 
+def _stats(raw: Any) -> dict[str, float]:
+    """Normalize a measurement value to ``{min, median, p90}``.
+
+    New-schema entries are dicts; legacy entries are bare floats and get treated
+    as a degenerate distribution with zero spread.
+    """
+    if isinstance(raw, dict):
+        # Newer JSON — all three should be present.
+        return {
+            "min": float(raw.get("min", raw.get("median", 0.0))),
+            "median": float(raw.get("median", raw.get("min", 0.0))),
+            "p90": float(raw.get("p90", raw.get("median", raw.get("min", 0.0)))),
+        }
+    val = float(raw)
+    return {"min": val, "median": val, "p90": val}
+
+
+class Row:
+    """One measurement's baseline+head stats and derived deltas."""
+
+    __slots__ = ("key", "b", "h", "delta", "pct", "spread_b", "spread_h")
+
+    def __init__(
+        self, key: str, baseline: dict[str, float], head: dict[str, float]
+    ) -> None:
+        self.key = key
+        self.b = baseline
+        self.h = head
+        b_med = baseline["median"]
+        h_med = head["median"]
+        self.delta = h_med - b_med
+        self.pct = (self.delta / b_med * 100.0) if b_med > 0 else 0.0
+        self.spread_b = max(baseline["p90"] - baseline["min"], 0.0)
+        self.spread_h = max(head["p90"] - head["min"], 0.0)
+
+
 def _diff_measurements(
-    baseline: dict[str, float],
-    head: dict[str, float],
-) -> list[tuple[str, float, float, float, float]]:
-    """Return rows of (measurement, baseline_ms, head_ms, delta_ms, delta_pct)."""
+    baseline: dict[str, Any],
+    head: dict[str, Any],
+) -> list[Row]:
     all_keys = sorted(set(baseline) | set(head))
-    rows: list[tuple[str, float, float, float, float]] = []
+    rows: list[Row] = []
     for key in all_keys:
-        b = baseline.get(key)
-        h = head.get(key)
-        if b is None or h is None:
+        b_raw = baseline.get(key)
+        h_raw = head.get(key)
+        if b_raw is None or h_raw is None:
             continue
-        delta = h - b
-        pct = (delta / b * 100.0) if b > 0 else 0.0
-        rows.append((key, b, h, delta, pct))
+        rows.append(Row(key, _stats(b_raw), _stats(h_raw)))
     return rows
 
 
-def _is_gated(key: str, baseline_ms: float) -> bool:
+def _is_gated(row: Row) -> bool:
     """Only workload-level measurements above the noise floor gate the PR."""
-    if baseline_ms < GATE_MIN_BASELINE_MS:
+    if row.b["median"] < GATE_MIN_BASELINE_MS:
         return False
-    return not key.startswith("metric_")
+    return not row.key.startswith("metric_")
+
+
+def _is_regression(row: Row, threshold_pct: float) -> bool:
+    """Real regression: worse than the threshold AND outside the baseline noise band."""
+    b_med = row.b["median"]
+    if b_med <= 0:
+        return False
+    return (
+        row.h["median"] > b_med * (1.0 + threshold_pct / 100.0)
+        and row.h["median"] > row.b["p90"]
+    )
 
 
 def _fmt_pct(pct: float) -> str:
@@ -76,6 +130,11 @@ def _pct_marker(pct: float) -> str:
     return ""
 
 
+def _fmt_ms_with_spread(stats: dict[str, float]) -> str:
+    spread = max(stats["p90"] - stats["min"], 0.0) / 2.0
+    return f"{stats['median']:.2f} ±{spread:.2f}"
+
+
 def _emit_header(
     baseline: dict[str, Any],
     head: dict[str, Any],
@@ -84,6 +143,8 @@ def _emit_header(
     regressions: int,
 ) -> str:
     gate_badge = "✅ PASS" if gate_pass else "🔴 FAIL"
+    repeats = head.get("repeats", "?")
+    warmup = head.get("warmup", "?")
     parts = [
         MARKER,
         "",
@@ -93,12 +154,18 @@ def _emit_header(
             f"**Gate:** {gate_badge} &nbsp;·&nbsp; "
             f"🟢 {wins} win{'s' if wins != 1 else ''} &nbsp;·&nbsp; "
             f"🔴 {regressions} regression{'s' if regressions != 1 else ''} &nbsp;·&nbsp; "
-            f"Python {head.get('python', '?')}"
+            f"Python {head.get('python', '?')} &nbsp;·&nbsp; "
+            f"repeats={repeats}, warmup={warmup}"
         ),
         "",
         (
-            "> Baseline is the committed `benchmark/baseline.json`. Refresh with"
-            " `python benchmark/bench_eval.py --quick --json benchmark/baseline.json`."
+            "> Baseline is measured on the same runner (main's `panoptica` + this PR's benchmark harness). "
+            "The committed `benchmark/baseline.json` is only a fallback for `workflow_dispatch` runs."
+        ),
+        "",
+        (
+            "> Values are `median ±(p90−min)/2`. A row counts as a regression only when "
+            "head's median exceeds both the threshold and the baseline's p90."
         ),
         "",
     ]
@@ -106,53 +173,54 @@ def _emit_header(
 
 
 def _emit_gate_callout(
-    worst_pct: float,
+    worst_row: Row | None,
     threshold: float,
     offender_case: str | None,
-    offender_key: str | None,
 ) -> str:
-    if offender_key is None or offender_case is None:
+    if worst_row is None or offender_case is None:
         return ""
     return (
-        f"> 🚨 **Regression gate FAILED** — worst gated regression "
-        f"`{_fmt_pct(worst_pct)}` exceeds threshold `{_fmt_pct(threshold)}` "
-        f"(`{offender_key}` in `{offender_case}`).\n\n"
+        f"> 🚨 **Regression gate FAILED** — `{worst_row.key}` in `{offender_case}` "
+        f"regressed by `{_fmt_pct(worst_row.pct)}` (baseline median {worst_row.b['median']:.2f} ms, "
+        f"p90 {worst_row.b['p90']:.2f}; head median {worst_row.h['median']:.2f} ms). "
+        f"Threshold: `{_fmt_pct(threshold)}`.\n\n"
     )
 
 
-def _find_row(rows: list[tuple], key: str) -> tuple | None:
+def _find_row(rows: list[Row], key: str) -> Row | None:
     for row in rows:
-        if row[0] == key:
+        if row.key == key:
             return row
     return None
 
 
-def _emit_case_hero(case_name: str, rows: list[tuple]) -> str:
+def _emit_case_hero(case_name: str, rows: list[Row]) -> str:
     hero = _find_row(rows, "end_to_end")
     if hero is None:
         return f"### {case_name}\n"
-    _, b, h, _, pct = hero
     return (
-        f"### {case_name} — `end_to_end` **{b:.1f} → {h:.1f} ms** ({_fmt_pct(pct)})\n"
+        f"### {case_name} — `end_to_end` **{hero.b['median']:.1f} → {hero.h['median']:.1f} ms** "
+        f"({_fmt_pct(hero.pct)})\n"
     )
 
 
-def _fmt_row(row: tuple[str, float, float, float, float]) -> str:
-    key, b, h, _, pct = row
-    return f"| `{key}` | {b:.2f} | {h:.2f} | {_fmt_pct(pct)}{_pct_marker(pct)} |"
+def _fmt_row(row: Row) -> str:
+    return (
+        f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_fmt_ms_with_spread(row.h)} "
+        f"| {_fmt_pct(row.pct)}{_pct_marker(row.pct)} |"
+    )
 
 
-def _emit_key_table(rows: list[tuple], max_rows: int = KEY_TABLE_MAX_ROWS) -> str:
-    gated_rows = [r for r in rows if _is_gated(r[0], r[1])]
-    # Drop rows whose absolute delta is below the noise floor even if the % is large.
-    gated_rows = [r for r in gated_rows if abs(r[3]) >= KEY_TABLE_MIN_DELTA_MS]
-    gated_rows.sort(key=lambda r: abs(r[4]), reverse=True)
+def _emit_key_table(rows: list[Row], max_rows: int = KEY_TABLE_MAX_ROWS) -> str:
+    gated_rows = [r for r in rows if _is_gated(r)]
+    gated_rows = [r for r in gated_rows if abs(r.delta) >= KEY_TABLE_MIN_DELTA_MS]
+    gated_rows.sort(key=lambda r: abs(r.pct), reverse=True)
     if not gated_rows:
         return "_No gated measurements moved meaningfully._\n\n"
 
     top = gated_rows[:max_rows]
     lines = [
-        "| Measurement | baseline ms | head ms | Δ % |",
+        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
         "| --- | ---: | ---: | :--- |",
     ]
     for row in top:
@@ -161,12 +229,12 @@ def _emit_key_table(rows: list[tuple], max_rows: int = KEY_TABLE_MAX_ROWS) -> st
     return "\n".join(lines)
 
 
-def _emit_full_breakdown(rows: list[tuple]) -> str:
-    ordered = sorted(rows, key=lambda r: abs(r[4]), reverse=True)
+def _emit_full_breakdown(rows: list[Row]) -> str:
+    ordered = sorted(rows, key=lambda r: abs(r.pct), reverse=True)
     lines = [
         f"<details><summary>Full breakdown ({len(ordered)} measurements)</summary>",
         "",
-        "| Measurement | baseline ms | head ms | Δ % |",
+        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
         "| --- | ---: | ---: | :--- |",
     ]
     for row in ordered:
@@ -181,20 +249,19 @@ def _emit_report(
     baseline: dict[str, Any],
     head: dict[str, Any],
     fail_threshold: float | None,
-) -> tuple[str, float]:
-    """Return (markdown, worst_gated_regression_pct)."""
+) -> tuple[str, bool, Row | None, str | None]:
+    """Return (markdown, gate_pass, worst_regression_row, offender_case)."""
     b_cases = _cases_by_name(baseline)
     h_cases = _cases_by_name(head)
     all_case_names = [c["name"] for c in head.get("cases", [])] + [
         n for n in b_cases if n not in {c["name"] for c in head.get("cases", [])}
     ]
 
-    per_case: list[tuple[str, list[tuple]]] = []
+    per_case: list[tuple[str, list[Row]]] = []
     wins = 0
     regressions = 0
-    worst_pct = 0.0
+    worst_row: Row | None = None
     worst_case: str | None = None
-    worst_key: str | None = None
 
     for name in all_case_names:
         if name not in b_cases or name not in h_cases:
@@ -205,26 +272,31 @@ def _emit_report(
             h_cases[name]["measurements_ms"],
         )
         per_case.append((name, rows))
-        for key, b, _h, _d, pct in rows:
-            if not _is_gated(key, b):
+        for row in rows:
+            if not _is_gated(row):
                 continue
-            if pct >= 10:
+            # Only count wins/regressions when the two distributions are cleanly
+            # separated — head's worst sample must beat baseline's best (win) or
+            # head's best sample must be worse than baseline's worst (regression).
+            # Anything softer just counts noise and disagrees with the gate.
+            if row.pct >= 10 and row.h["min"] > row.b["p90"]:
                 regressions += 1
-            elif pct <= -10:
+            elif row.pct <= -10 and row.h["p90"] < row.b["min"]:
                 wins += 1
-            if pct > worst_pct:
-                worst_pct = pct
-                worst_case = name
-                worst_key = key
+            # Track the worst *real* regression relative to the noise band, not just
+            # the largest %. A row with pct=+80% but inside baseline p90 isn't worse
+            # than one with pct=+55% that's clearly outside it.
+            if fail_threshold is not None and _is_regression(row, fail_threshold):
+                if worst_row is None or row.pct > worst_row.pct:
+                    worst_row = row
+                    worst_case = name
 
-    gate_pass = fail_threshold is None or worst_pct <= fail_threshold
+    gate_pass = fail_threshold is None or worst_row is None
 
     body: list[str] = []
     body.append(_emit_header(baseline, head, gate_pass, wins, regressions))
     if not gate_pass and fail_threshold is not None:
-        body.append(
-            _emit_gate_callout(worst_pct, fail_threshold, worst_case, worst_key)
-        )
+        body.append(_emit_gate_callout(worst_row, fail_threshold, worst_case))
 
     for name, rows in per_case:
         if not rows:
@@ -234,7 +306,7 @@ def _emit_report(
         body.append(_emit_key_table(rows))
         body.append(_emit_full_breakdown(rows))
 
-    return "\n".join(body).rstrip() + "\n", worst_pct
+    return "\n".join(body).rstrip() + "\n", gate_pass, worst_row, worst_case
 
 
 def main() -> None:
@@ -248,8 +320,8 @@ def main() -> None:
         type=float,
         default=None,
         help=(
-            "If any gated measurement regressed by more than this percentage, "
-            "exit non-zero. Default: don't fail regardless of size."
+            "Fail if any gated measurement's head median exceeds baseline median by "
+            "this percentage AND exceeds baseline p90. Default: never fail."
         ),
     )
     args = parser.parse_args()
@@ -257,17 +329,17 @@ def main() -> None:
     baseline = _load(args.baseline)
     head = _load(args.head)
 
-    markdown, worst_pct = _emit_report(baseline, head, args.fail_on_regression_pct)
+    markdown, gate_pass, worst_row, worst_case = _emit_report(
+        baseline, head, args.fail_on_regression_pct
+    )
     print(markdown)
 
-    if (
-        args.fail_on_regression_pct is not None
-        and worst_pct > args.fail_on_regression_pct
-    ):
+    if not gate_pass and worst_row is not None:
         print(
-            f"\n**Regression gate failed**: worst gated regression "
-            f"{_fmt_pct(worst_pct)} exceeds threshold "
-            f"{_fmt_pct(args.fail_on_regression_pct)}.",
+            f"\n**Regression gate failed**: `{worst_row.key}` in "
+            f"`{worst_case}` regressed by {_fmt_pct(worst_row.pct)} "
+            f"(baseline p90 {worst_row.b['p90']:.2f} ms, head median "
+            f"{worst_row.h['median']:.2f} ms).",
             file=sys.stderr,
         )
         sys.exit(1)

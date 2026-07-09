@@ -9,11 +9,17 @@ permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -32,14 +38,27 @@ jobs:
       - name: Benchmark HEAD
         run: python -m poetry run python benchmark/bench_eval.py --quick --json head.json
 
-      - name: Compare against committed baseline
+      - name: Benchmark baseline (main's panoptica, HEAD's benchmark harness)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          # Save HEAD's panoptica source so we can restore it before the compare step.
+          # We swap only the panoptica/ tree; benchmark/ stays from HEAD so JSON schema,
+          # warmup, repeats, and CLI flags stay identical between baseline and head runs.
+          cp -a panoptica /tmp/panoptica-head
+          git checkout ${{ github.event.pull_request.base.sha }} -- panoptica
+          python -m poetry run python benchmark/bench_eval.py --quick --json baseline.json
+          rm -rf panoptica
+          cp -a /tmp/panoptica-head panoptica
+
+      - name: Compare against on-runner baseline
         id: compare
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
           set +e
           python -m poetry run python benchmark/compare.py \
-            benchmark/baseline.json head.json \
+            baseline.json head.json \
             --fail-on-regression-pct 50 \
             > comparison.md
           compare_status=$?
@@ -93,9 +112,9 @@ jobs:
           {
             echo "# Benchmark (head only)"
             echo ""
-            echo '```json'
-            cat head.json
-            echo '```'
+            echo "Compared against the committed \`benchmark/baseline.json\` for reference:"
+            echo ""
+            python -m poetry run python benchmark/compare.py benchmark/baseline.json head.json || true
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload artifacts
@@ -105,5 +124,6 @@ jobs:
           name: benchmark-results
           path: |
             head.json
+            baseline.json
             comparison.md
           if-no-files-found: ignore
