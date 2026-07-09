@@ -500,6 +500,7 @@ def _phase_instance_approximation(
         if verbose:
             logger.info("-- Got SemanticPair, will approximate instances")
 
+        before = phase_timer.times.get("approximation", 0.0)
         with phase_timer.time("approximation"):
             processing_pair = instance_approximator.approximate_instances(
                 processing_pair,
@@ -508,7 +509,7 @@ def _phase_instance_approximation(
 
         if log_times:
             logger.info(
-                f"-- Approximation took {phase_timer.times['approximation']} seconds"
+                f"-- Approximation took {phase_timer.times['approximation'] - before} seconds"
             )
 
         # Update instance metadata after approximation
@@ -568,13 +569,16 @@ def _phase_instance_matching(
         if matching_threshold is not None:
             match_kwargs["matching_threshold"] = matching_threshold
 
+        before = phase_timer.times.get("matching", 0.0)
         with phase_timer.time("matching"):
             processing_pair = instance_matcher.match_instances(
                 processing_pair,
                 **match_kwargs,
             )
         if log_times:
-            logger.info(f"-- Matching took {phase_timer.times['matching']} seconds")
+            logger.info(
+                f"-- Matching took {phase_timer.times['matching'] - before} seconds"
+            )
     return processing_pair
 
 
@@ -613,6 +617,7 @@ def _phase_instance_evaluation(
     if isinstance(processing_pair, MatchedInstancePair):
         if verbose:
             logger.info("-- Got MatchedInstancePair, will evaluate instances")
+        before = phase_timer.times.get("instance_evaluation", 0.0)
         with phase_timer.time("instance_evaluation"):
             processing_pair = evaluate_matched_instance(
                 processing_pair,
@@ -626,7 +631,8 @@ def _phase_instance_evaluation(
             )
         if log_times:
             logger.info(
-                f"-- Instance Evaluation took {phase_timer.times['instance_evaluation']} seconds"
+                f"-- Instance Evaluation took "
+                f"{phase_timer.times['instance_evaluation'] - before} seconds"
             )
     return processing_pair
 
