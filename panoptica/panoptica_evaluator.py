@@ -13,6 +13,7 @@ from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
 from panoptica.utils.timing import measure_time
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.citation_reminder import citation_reminder
+from panoptica.utils.logger import logger
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
@@ -161,6 +162,7 @@ class Panoptica_Evaluator(SupportsConfig):
         save_group_times: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
+        skip_groups: list[str] | None = None,
     ) -> dict[str, PanopticaResult]:
         """Runs the panoptica evaluation pipeline on the given prediction and reference arrays.
 
@@ -172,6 +174,7 @@ class Panoptica_Evaluator(SupportsConfig):
             save_group_times (bool | None, optional): If None, will use the value set in the constructor. If True, will save the computation time of each sample and put that into the result object. Defaults to None.
             log_times (bool | None, optional): If None, will use the value set in the constructor. If True, will print the times for the different phases of the pipeline. Defaults to None.
             verbose (bool | None, optional): If None, will use the value set in the constructor. If True, will spit out more details than you want. Defaults to None.
+            skip_groups (list[str] | None, optional): Names of class groups to skip. Skipped groups are omitted from the returned dict and not evaluated, which saves time when only a subset of the configured groups is of interest. Unknown names are ignored with a warning. Defaults to None (evaluate every group).
 
         Returns:
             dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
@@ -180,8 +183,11 @@ class Panoptica_Evaluator(SupportsConfig):
             prediction_arr, reference_arr, voxelspacing
         )
 
+        skip = self._resolve_skip_groups(skip_groups)
         result_grouped: dict[str, PanopticaResult] = {}
         for group_name, label_group in self.__segmentation_class_groups.items():
+            if group_name in skip:
+                continue
             result_grouped[group_name] = self._evaluate_group(
                 group_name=group_name,
                 label_group=label_group,
@@ -226,6 +232,7 @@ class Panoptica_Evaluator(SupportsConfig):
         save_group_times: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
+        skip_groups: list[str] | None = None,
     ) -> dict[str, PanopticaAUTCResult]:
         """Runs the panoptica evaluation pipeline on the given prediction and reference arrays and computes the Area Under the Threshold Curve (AUTC) for a range of thresholds.
 
@@ -239,6 +246,7 @@ class Panoptica_Evaluator(SupportsConfig):
             save_group_times (bool | None, optional): If None, will use the value set in the constructor. If True, will save the computation time of each sample and put that into the result object. Defaults to None.
             log_times (bool | None, optional): If None, will use the value set in the constructor. If True, will print the times for the different phases of the pipeline. Defaults to None.
             verbose (bool | None, optional): If None, will use the value set in the constructor. If True, will spit out more details than you want. Defaults to None.
+            skip_groups (list[str] | None, optional): Names of class groups to skip. Skipped groups are omitted from the returned dict and not evaluated. Unknown names are ignored with a warning. Defaults to None (evaluate every group).
 
         Raises:
             TypeError: if instance matcher is not of type ThresholdBasedMatching
@@ -266,11 +274,14 @@ class Panoptica_Evaluator(SupportsConfig):
         )
 
         thresholds = self.generate_thresholds(threshold_step_size)
+        skip = self._resolve_skip_groups(skip_groups)
         result_grouped: dict[str, PanopticaAUTCResult] = {}
         save_group_times = (
             self.__save_group_times if save_group_times is None else save_group_times
         )
         for group_name, label_group in self.__segmentation_class_groups.items():
+            if group_name in skip:
+                continue
             if save_group_times:
                 start_time = perf_counter()
 
@@ -395,6 +406,23 @@ class Panoptica_Evaluator(SupportsConfig):
     @property
     def segmentation_class_groups_names(self) -> list[str]:
         return self.__segmentation_class_groups.keys()
+
+    def _resolve_skip_groups(self, skip_groups: list[str] | None) -> set[str]:
+        """Validate ``skip_groups`` and return it as a set of group names to skip.
+
+        Unknown names (e.g. typos) are dropped with a warning rather than raising, so a
+        stale skip list never silently turns into "skip everything" or an error.
+        """
+        if not skip_groups:
+            return set()
+        known = set(self.segmentation_class_groups_names)
+        unknown = sorted(set(skip_groups) - known)
+        if unknown:
+            logger.warning(
+                f"skip_groups contains unknown group name(s) {unknown}; "
+                f"known groups are {sorted(known)}. They will be ignored."
+            )
+        return set(skip_groups) & known
 
     @property
     def resulting_metric_keys(self) -> list[str]:
