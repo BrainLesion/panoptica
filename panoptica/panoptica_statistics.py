@@ -9,6 +9,7 @@ from panoptica.utils import (
     FileType,
 )
 from panoptica.utils.logger import logger
+from panoptica.utils.numpy_utils import recall_by_volume_bins
 import numpy as np
 import warnings
 from pathlib import Path
@@ -377,6 +378,109 @@ class Panoptica_Statistic:
         """
         self._assertgroup(groupname)
         return {m: self.get(groupname, m) for m in self.__metricnames}
+
+    def _resolve_single_group(self, group: str | None) -> str:
+        """Validate ``group``, or pick the only group when ``group`` is omitted."""
+        if group is not None:
+            self._assertgroup(group)
+            return group
+        groups = self.groupnames
+        if len(groups) == 1:
+            return groups[0]
+        raise ValueError(
+            f"Statistic has multiple groups {groups}; pass group=... explicitly."
+        )
+
+    def recall_by_volume(
+        self,
+        thresholds: list[float],
+        group: str | None = None,
+        volume_metric: str = "instance_volume_ref",
+    ) -> dict[str, float]:
+        """Instance detection recall stratified by reference-instance volume.
+
+        Splits reference instances into user-supplied volume bins and reports the
+        detection recall (fraction matched) within each — e.g. to check whether a model
+        detects small instances as well as large ones. Recall here is the standard
+        instance/lesion-wise detection recall (matched references over all references)
+        restricted to each volume bin.
+
+        Requires a results file written with ``output_individual_instance_metrics=True``
+        so the per-instance rows carrying ``volume_metric`` and ``is_matched`` exist.
+
+        Args:
+            thresholds: Volume bin edges given by the user (e.g. ``[160, 271, 451]``).
+                ``n`` thresholds define ``n + 1`` bins (``rec_q0`` .. ``rec_qn``). They
+                are applied as-is, never estimated from the evaluated data.
+            group: Class group to evaluate. May be omitted only when the statistic has a
+                single group.
+            volume_metric: Per-instance volume metric to bin on. Defaults to
+                ``"instance_volume_ref"`` (physical volume; equals the voxel count under
+                unit voxel spacing); pass ``"instance_voxel_count_ref"`` to bin on raw
+                voxel counts.
+
+        Returns:
+            dict[str, float]: ``{"rec_q0": ..., "rec_q1": ..., ...}``, one entry per bin
+            (``nan`` for an empty bin).
+
+        Raises:
+            ValueError: If ``group`` is omitted but the statistic has multiple groups,
+                or if no per-instance rows are present.
+            KeyError: If ``volume_metric`` or ``is_matched`` is not in the file.
+        """
+        group = self._resolve_single_group(group)
+        self._assertmetric(volume_metric)
+        self._assertmetric("is_matched")
+
+        if not self.instance_subjects:
+            raise ValueError(
+                "recall_by_volume needs per-instance rows; rerun the aggregation with "
+                "output_individual_instance_metrics=True."
+            )
+
+        volumes = self.get(group, volume_metric)
+        matched = self.get(group, "is_matched")
+        bin_volumes: list[float] = []
+        bin_matched: list[bool] = []
+        for sn, vol, mat in zip(self.subjectnames, volumes, matched):
+            if is_instance_row(sn) and vol is not None and mat is not None:
+                bin_volumes.append(float(vol))
+                bin_matched.append(bool(mat))
+        return recall_by_volume_bins(bin_volumes, bin_matched, thresholds)
+
+    def recall_by_volume_percentiles(
+        self,
+        percentiles: list[float],
+        group: str | None = None,
+        volume_metric: str = "instance_volume_ref",
+    ) -> dict[str, float]:
+        """Instance detection recall stratified by reference-instance percentile volumes.
+
+        Args:
+            percentiles (list[float]): _description_
+            group (str | None, optional): _description_. Defaults to None.
+            volume_metric (str, optional): _description_. Defaults to "instance_volume_ref".
+
+        Returns:
+            dict[str, float]: _description_
+        """
+        group = self._resolve_single_group(group)
+        self._assertmetric(volume_metric)
+        self._assertmetric("is_matched")
+
+        if not self.instance_subjects:
+            raise ValueError(
+                "recall_by_volume_percentiles needs per-instance rows; rerun the aggregation with "
+                "output_individual_instance_metrics=True."
+            )
+
+        volumes = self.get(group, volume_metric)
+        # Get the thresholds corresponding to the requested percentiles
+        valid_volumes = [v for v in volumes if v is not None]
+        thresholds = np.percentile(valid_volumes, percentiles).tolist()
+        return self.recall_by_volume(
+            thresholds=thresholds, group=group, volume_metric=volume_metric
+        )
 
     def to_dataframe(self) -> pd.DataFrame:
         """Converts the statistic to a pandas dataframe

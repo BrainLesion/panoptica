@@ -257,6 +257,35 @@ class Test_Panoptica_Results(unittest.TestCase):
         self.assertEqual(rows[0]["voxel_count"], 111)
         self.assertEqual(rows[1]["voxel_count"], 222)
 
+    def test_recall_by_volume(self):
+        # matched (TP) ref volumes 100, 500; unmatched (FN) ref volume 200.
+        result = PanopticaResult(
+            prediction_arr=None,
+            reference_arr=None,
+            n_ref_instances=3,
+            n_pred_instances=2,
+            tp=2,
+            list_metrics={Metric.IOU: [0.8, 0.9]},
+            edge_case_handler=EdgeCaseHandler(),
+            instance_volume_matched_ref=[100.0, 500.0],
+            instance_voxel_count_matched_ref=[100, 500],
+            instance_volume_unmatched_ref=[200.0],
+            instance_voxel_count_unmatched_ref=[200],
+        )
+        result.calculate_all(print_errors=False)
+
+        # thresholds [160, 271, 451] -> 4 bins (rec_q0..rec_q3).
+        rec = result.recall_by_volume([160, 271, 451])
+        self.assertEqual(rec["rec_q0"], 1.0)  # vol 100 (<160), matched
+        self.assertEqual(rec["rec_q1"], 0.0)  # vol 200 ([160,271)), missed
+        self.assertTrue(np.isnan(rec["rec_q2"]))  # [271,451): empty bin
+        self.assertEqual(rec["rec_q3"], 1.0)  # vol 500 (>=451), matched
+        # voxel_count binning gives the same here (unit voxel spacing)
+        rec_vox = result.recall_by_volume([160, 271, 451], volume="voxel_count")
+        self.assertEqual(rec_vox["rec_q0"], 1.0)
+        with self.assertRaises(ValueError):
+            result.recall_by_volume([100], volume="bogus")
+
     def test_row_keys_are_either_master_or_remappable(self):
         """Guard: every row-local key must round-trip to a master key
         (directly or via ROW_KEY_TO_MASTER_KEY), otherwise file backends
