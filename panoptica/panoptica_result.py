@@ -38,8 +38,7 @@ _trapezoid = getattr(np, "trapezoid", None) or np.trapz
 # (Metric, display name, supports_pq). Every metric gets ``sq_{suffix}`` and
 # ``sq_{suffix}_std``; only the unit-interval overlap metrics (IOU/DSC/clDSC) additionally
 # get ``pq_{suffix}`` and ``[0, 1]`` bounds on their sq/pq (the bounds drive AUTC metric
-# selection). The display name is the human label used in the metric's ``long_name`` and
-# the ORDER here is the registration order, so it must stay fixed to keep result-dict /
+# selection). The ORDER here is the registration order, so it must stay fixed to keep result-dict /
 # file-header column order stable.
 _INSTANCE_METRIC_SPECS: list[tuple[Metric, str, bool]] = [
     (Metric.IOU, "IoU", True),
@@ -106,8 +105,12 @@ class PanopticaResult:
                     "PanopticaResult: n_ref_labels and processing_pair_orig_shape are required when label_group is a LabelPartGroup"
                 )
             # Store the one-hot encoded arrays for both reference and prediction
-            one_hot_ref_array = _get_orig_onehotcc_structure(reference_arr, n_ref_labels, processing_pair_orig_shape)
-            one_hot_pred_array = _get_orig_onehotcc_structure(prediction_arr, n_ref_labels, processing_pair_orig_shape)
+            one_hot_ref_array = _get_orig_onehotcc_structure(
+                reference_arr, n_ref_labels, processing_pair_orig_shape
+            )
+            one_hot_pred_array = _get_orig_onehotcc_structure(
+                prediction_arr, n_ref_labels, processing_pair_orig_shape
+            )
 
             # Store the multi-channel data for later use in global metrics
             self._multi_channel_data: dict[str, Any] = {
@@ -205,10 +208,18 @@ class PanopticaResult:
 
         # region Reference Instances
         # Per-instance voxel count and physical volume of each matched (TP) reference instance.
-        self.instance_voxel_count_matched_ref_list: list[int] = list(instance_voxel_count_matched_ref or [])
-        self.instance_volume_matched_ref_list: list[float] = list(instance_volume_matched_ref or [])
-        if len(self.instance_voxel_count_matched_ref_list) != len(self.instance_volume_matched_ref_list):
-            raise ValueError("matched ref voxel-count and volume lists must have equal length")
+        self.instance_voxel_count_matched_ref_list: list[int] = list(
+            instance_voxel_count_matched_ref or []
+        )
+        self.instance_volume_matched_ref_list: list[float] = list(
+            instance_volume_matched_ref or []
+        )
+        if len(self.instance_voxel_count_matched_ref_list) != len(
+            self.instance_volume_matched_ref_list
+        ):
+            raise ValueError(
+                "matched ref voxel-count and volume lists must have equal length"
+            )
         self.instance_voxel_count_ref: float
         self._add_metric(
             "instance_voxel_count_ref",
@@ -216,7 +227,9 @@ class PanopticaResult:
             None,
             long_name="Average Matched Reference Instance Voxel Count",
             default_value=(
-                float(np.mean(self.instance_voxel_count_matched_ref_list)) if self.instance_voxel_count_matched_ref_list else float("nan")
+                float(np.mean(self.instance_voxel_count_matched_ref_list))
+                if self.instance_voxel_count_matched_ref_list
+                else float("nan")
             ),
             was_calculated=True,
         )
@@ -227,15 +240,25 @@ class PanopticaResult:
             None,
             long_name="Average Matched Reference Instance Physical Volume",
             default_value=(
-                float(np.mean(self.instance_volume_matched_ref_list)) if self.instance_volume_matched_ref_list else float("nan")
+                float(np.mean(self.instance_volume_matched_ref_list))
+                if self.instance_volume_matched_ref_list
+                else float("nan")
             ),
             was_calculated=True,
         )
         # Per-instance voxel count and physical volume of unmatched (FN) reference instances.
-        self.instance_voxel_count_unmatched_ref_list: list[int] = list(instance_voxel_count_unmatched_ref or [])
-        self.instance_volume_unmatched_ref_list: list[float] = list(instance_volume_unmatched_ref or [])
-        if len(self.instance_voxel_count_unmatched_ref_list) != len(self.instance_volume_unmatched_ref_list):
-            raise ValueError("unmatched ref voxel-count and volume lists must have equal length")
+        self.instance_voxel_count_unmatched_ref_list: list[int] = list(
+            instance_voxel_count_unmatched_ref or []
+        )
+        self.instance_volume_unmatched_ref_list: list[float] = list(
+            instance_volume_unmatched_ref or []
+        )
+        if len(self.instance_voxel_count_unmatched_ref_list) != len(
+            self.instance_volume_unmatched_ref_list
+        ):
+            raise ValueError(
+                "unmatched ref voxel-count and volume lists must have equal length"
+            )
         # endregion
 
         # region Global
@@ -294,7 +317,9 @@ class PanopticaResult:
                     n_pred_instances=self.n_pred_instances,
                     n_ref_instances=self.n_ref_instances,
                 )
-                self._list_metrics[m] = Evaluation_List_Metric(m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result)
+                self._list_metrics[m] = Evaluation_List_Metric(
+                    m, empty_list_std, list_metrics[m], is_edge_case, edge_case_result
+                )
             # even if not available, set the global vars
             default_value = None
             was_calculated = False
@@ -316,13 +341,17 @@ class PanopticaResult:
                     )
                     default_value = edge_case_result
                 else:
-                    default_value = self._calc_global_bin_metric(m, pred_binary, ref_binary, do_binarize=False)
+                    default_value = self._calc_global_bin_metric(
+                        m, pred_binary, ref_binary, do_binarize=False
+                    )
                 was_calculated = True
 
             self._add_metric(
                 f"global_bin_{m.name.lower()}",
                 MetricType.GLOBAL,
-                lambda x, m=m: MetricCouldNotBeComputedException(f"Global Metric {m} not set"),
+                lambda x, m=m: MetricCouldNotBeComputedException(
+                    f"Global Metric {m} not set"
+                ),
                 long_name="Global Binary " + m.value.long_name,
                 default_value=default_value,
                 was_calculated=was_calculated,
@@ -331,7 +360,9 @@ class PanopticaResult:
             self._add_metric(
                 f"region_avg_{m.name.lower()}",
                 MetricType.GLOBAL,
-                lambda x, m=m: MetricCouldNotBeComputedException(f"Region Average Metric {m} not set"),
+                lambda x, m=m: MetricCouldNotBeComputedException(
+                    f"Region Average Metric {m} not set"
+                ),
                 long_name="Region Average " + m.value.long_name,
                 default_value=None,
                 was_calculated=False,
@@ -350,7 +381,11 @@ class PanopticaResult:
 
     @property
     def autc_metrics(self) -> list[str]:
-        return [k for k, v in self._evaluation_metrics.items() if v.lower_bound == 0.0 and v.upper_bound == 1.0]
+        return [
+            k
+            for k, v in self._evaluation_metrics.items()
+            if v.lower_bound == 0.0 and v.upper_bound == 1.0
+        ]
 
     def _calc_global_bin_metric(
         self,
@@ -405,7 +440,9 @@ class PanopticaResult:
                 reference_empty = ref_channel.sum() == 0
 
                 if prediction_empty or reference_empty:
-                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, int(prediction_empty), int(reference_empty))
+                    is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                        metric, 0, int(prediction_empty), int(reference_empty)
+                    )
                     if is_edgecase:
                         channel_result = result
                     else:
@@ -433,7 +470,9 @@ class PanopticaResult:
                 return float(np.mean(channel_metrics))  # type: ignore[arg-type]
             else:
                 # Handle case where no valid metrics could be computed
-                is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, 1, 1)
+                is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                    metric, 0, 1, 1
+                )
                 return result
 
         # Original single-channel logic
@@ -449,7 +488,9 @@ class PanopticaResult:
         prediction_empty = pred_binary.sum() == 0
         reference_empty = ref_binary.sum() == 0
         if prediction_empty or reference_empty:
-            is_edgecase, result = self._edge_case_handler.handle_zero_tp(metric, 0, int(prediction_empty), int(reference_empty))
+            is_edgecase, result = self._edge_case_handler.handle_zero_tp(
+                metric, 0, int(prediction_empty), int(reference_empty)
+            )
             if is_edgecase:
                 return result
 
@@ -487,7 +528,9 @@ class PanopticaResult:
         # assert hasattr(self, name_id), f"added metric {name_id} but it is not a member variable of this class"
         if calc_func is None:
             if not was_calculated:
-                raise ValueError("Cannot add metric without a calc_func unless it is marked as already calculated (was_calculated=True).")
+                raise ValueError(
+                    "Cannot add metric without a calc_func unless it is marked as already calculated (was_calculated=True)."
+                )
         eval_metric = Evaluation_Metric(
             name_id,
             metric_type=metric_type,
@@ -631,7 +674,11 @@ class PanopticaResult:
           ``normalize_row_to_master_schema``.
         """
         # Base dictionary (Master row with averages and globals)
-        master_dict = {k: getattr(self, v.id) for k, v in self._evaluation_metrics.items() if (not v._error and v._was_calculated)}
+        master_dict = {
+            k: getattr(self, v.id)
+            for k, v in self._evaluation_metrics.items()
+            if (not v._error and v._was_calculated)
+        }
 
         if not output_individual_instance_metrics:
             return master_dict
@@ -655,7 +702,9 @@ class PanopticaResult:
             val_list = list_metric_obj.ALL
             for i in range(n_matched):
                 # val_list may be shorter than n_matched if this metric hit a partial calculation error
-                rows[i][metric_enum.get_result_key("sq")] = val_list[i] if i < len(val_list) else None
+                rows[i][metric_enum.get_result_key("sq")] = (
+                    val_list[i] if i < len(val_list) else None
+                )
 
         for key, val_list in (  # type: ignore[assignment]
             ("voxel_count", self.instance_voxel_count_matched_ref_list),
@@ -699,7 +748,9 @@ class PanopticaResult:
         if metric in self._list_metrics:
             return self._list_metrics[metric][mode]
         else:
-            raise MetricCouldNotBeComputedException(f"{metric} could not be found, have you set it in eval_metrics during evaluation?")
+            raise MetricCouldNotBeComputedException(
+                f"{metric} could not be found, have you set it in eval_metrics during evaluation?"
+            )
 
     def _calc_metric(self, metric_name: str, supress_error: bool = False):
         """
@@ -728,7 +779,9 @@ class PanopticaResult:
             self._evaluation_metrics[metric_name]._was_calculated = True
             return value
         else:
-            raise MetricCouldNotBeComputedException(f"could not find metric with name {metric_name}")
+            raise MetricCouldNotBeComputedException(
+                f"could not find metric with name {metric_name}"
+            )
 
     def __getattribute__(self, __name: str) -> Any:
         """
@@ -755,10 +808,15 @@ class PanopticaResult:
                 raise e
         if __name == "_evaluation_metrics":
             return attr
-        if object.__getattribute__(self, "_evaluation_metrics") is not None and __name in self._evaluation_metrics.keys():
+        if (
+            object.__getattribute__(self, "_evaluation_metrics") is not None
+            and __name in self._evaluation_metrics.keys()
+        ):
             if attr is None:
                 if self._evaluation_metrics[__name]._error:
-                    raise MetricCouldNotBeComputedException(f"Requested metric {__name} that could not be computed")
+                    raise MetricCouldNotBeComputedException(
+                        f"Requested metric {__name} that could not be computed"
+                    )
                 elif not self._evaluation_metrics[__name]._was_calculated:
                     value = self._calc_metric(__name)
                     setattr(self, __name, value)
@@ -809,7 +867,9 @@ class PanopticaAUTCResult:
             raise ValueError("threshold_results cannot be empty.")
 
         # Sort by threshold so trapezoid integration is always left-to-right.
-        self._threshold_results: dict[float, PanopticaResult] = dict(sorted(threshold_results.items()))
+        self._threshold_results: dict[float, PanopticaResult] = dict(
+            sorted(threshold_results.items())
+        )
 
     @property
     def thresholds(self) -> list[float]:
@@ -830,7 +890,9 @@ class PanopticaAUTCResult:
         for t, res in self._threshold_results.items():
             if np.isclose(t, threshold):
                 return res
-        raise ValueError(f"No result for threshold {threshold}. Available: {self.thresholds}")
+        raise ValueError(
+            f"No result for threshold {threshold}. Available: {self.thresholds}"
+        )
 
     def get_autc(self, metric_name: str) -> float:
         """Computes Area Under the Threshold Curve
@@ -842,12 +904,17 @@ class PanopticaAUTCResult:
             AttributeError: if *metric_name* is not a valid PanopticaResult field.
         """
         if len(self.thresholds) < 2:
-            raise ValueError("AUTC requires at least two thresholds; " f"only {len(self.thresholds)} stored.")
+            raise ValueError(
+                "AUTC requires at least two thresholds; "
+                f"only {len(self.thresholds)} stored."
+            )
 
         # Validate the metric name against the first result that has it calculated.
         first_res = next(iter(self._threshold_results.values()))
         if metric_name not in first_res._evaluation_metrics:
-            raise AttributeError(f"'{metric_name}' is not a recognised PanopticaResult metric.")
+            raise AttributeError(
+                f"'{metric_name}' is not a recognised PanopticaResult metric."
+            )
 
         y_values: list[float] = []
         for _threshold, result in self._threshold_results.items():
@@ -869,7 +936,9 @@ class PanopticaAUTCResult:
 
         return float(_trapezoid(y_arr, x=x_arr))
 
-    def to_dict(self, output_individual_instance_metrics: bool = False) -> dict[str, float]:
+    def to_dict(
+        self, output_individual_instance_metrics: bool = False
+    ) -> dict[str, float]:
         """Flat dictionary containing AUTC metrics AND individual threshold metrics.
 
         AUTC is only computed for continuous ratio metrics that have a bounded domain from 0 to 1.
@@ -913,15 +982,19 @@ class PanopticaAUTCResult:
                 return self.get_autc(metric_name)
             except AttributeError:
                 raise AttributeError(
-                    f"'{type(self).__name__}' has no attribute '{name}' " f"(metric '{metric_name}' not found in PanopticaResult)."
+                    f"'{type(self).__name__}' has no attribute '{name}' "
+                    f"(metric '{metric_name}' not found in PanopticaResult)."
                 ) from None
 
-        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+        raise AttributeError(
+            f"'{type(self).__name__}' object has no attribute '{name}'"
+        )
 
     def __str__(self) -> str:
         lines = [
             "=== PanopticaAUTCResult ===",
-            f"Thresholds : {self.thresholds[0]:.3f} → {self.thresholds[-1]:.3f}" f"  ({len(self.thresholds)} steps)",
+            f"Thresholds : {self.thresholds[0]:.3f} → {self.thresholds[-1]:.3f}"
+            f"  ({len(self.thresholds)} steps)",
             "",
             "--- AUTC scores ---",
         ]
@@ -929,7 +1002,11 @@ class PanopticaAUTCResult:
         first_res = next(iter(self._threshold_results.values()))
         for metric_id in sorted(first_res.autc_metrics):
             eval_metric = first_res._evaluation_metrics.get(metric_id)
-            if eval_metric is None or not eval_metric._was_calculated or eval_metric._error:
+            if (
+                eval_metric is None
+                or not eval_metric._was_calculated
+                or eval_metric._error
+            ):
                 continue
             try:
                 val = self.get_autc(metric_id)
