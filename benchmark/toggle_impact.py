@@ -46,9 +46,7 @@ from __future__ import annotations
 
 import argparse
 import csv
-import math
 import os
-import statistics
 import sys
 import time
 from dataclasses import replace
@@ -58,7 +56,6 @@ from tempfile import TemporaryDirectory
 from typing import Any, TextIO
 
 import numpy as np
-from scipy import stats  # type: ignore[import-untyped]
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -73,6 +70,7 @@ from benchmark.data import (
     SyntheticCase,
     benchmark_cases,
 )
+from benchmark.stats import summarize, welch_pvalue_from_samples
 
 DEFAULT_REPEATS = 50
 DEFAULT_WARMUP = 2
@@ -291,42 +289,6 @@ def _harvest_phase_times(
 
 
 # --------------------------------------------------------------------------- #
-# Statistics
-# --------------------------------------------------------------------------- #
-def _summary(samples_ms: list[float]) -> dict[str, float]:
-    """Full summary including mean, stddev, median, min, p90, n."""
-    n = len(samples_ms)
-    ordered = sorted(samples_ms)
-    mean = sum(samples_ms) / n
-    stddev = statistics.stdev(samples_ms) if n > 1 else 0.0
-    median = ordered[n // 2] if n % 2 else 0.5 * (ordered[n // 2 - 1] + ordered[n // 2])
-    p90_idx = min(int(0.9 * (n - 1) + 0.5), n - 1)
-    return {
-        "min": ordered[0],
-        "median": median,
-        "p90": ordered[p90_idx],
-        "mean": mean,
-        "stddev": stddev,
-        "n": float(n),
-    }
-
-
-def _welch_pvalue(default_samples: list[float], variant_samples: list[float]) -> float:
-    """Two-sided Welch's t-test p-value. Falls back to 1.0 if samples are degenerate."""
-    if len(default_samples) < 2 or len(variant_samples) < 2:
-        return 1.0
-    if (
-        statistics.stdev(default_samples) == 0
-        and statistics.stdev(variant_samples) == 0
-    ):
-        # Identical constants — no evidence of difference.
-        return 1.0
-    result = stats.ttest_ind(default_samples, variant_samples, equal_var=False)
-    p = float(result.pvalue)
-    return p if not math.isnan(p) else 1.0
-
-
-# --------------------------------------------------------------------------- #
 # Reporting
 # --------------------------------------------------------------------------- #
 def _fmt_pct(pct: float) -> str:
@@ -349,7 +311,7 @@ def _significance_marker(pct: float, p: float, alpha: float) -> str:
 
 def _print_sanity_check(default_block: dict[str, Any]) -> None:
     cold = default_block["cold_start_ms"]
-    warm = _summary(default_block["samples_ms"])["median"]
+    warm = summarize(default_block["samples_ms"])["median"]
     ratio = cold / warm if warm > 0 else float("nan")
     n = len(default_block["samples_ms"])
     print("  Sanity check (default toggles):")
@@ -374,14 +336,14 @@ def _print_case_report(
     _print_sanity_check(per_variant["default"])
 
     default_samples = per_variant["default"]["samples_ms"]
-    default_summary = _summary(default_samples)
+    default_summary = summarize(default_samples)
     default_median = default_summary["median"]
 
     # Sort non-default variants by |Δ%| for display.
     ordered = ["default"] + sorted(
         (k for k in per_variant if k != "default"),
         key=lambda k: (
-            abs(_summary(per_variant[k]["samples_ms"])["median"] - default_median)
+            abs(summarize(per_variant[k]["samples_ms"])["median"] - default_median)
             / max(default_median, 1e-9)
         ),
         reverse=True,
@@ -394,7 +356,7 @@ def _print_case_report(
     print("  " + "-" * 108)
     for name in ordered:
         block = per_variant[name]
-        summary = _summary(block["samples_ms"])
+        summary = summarize(block["samples_ms"])
         mean_txt = f"{summary['mean']:6.1f} ± {summary['stddev']:5.1f} ms"
         med_txt = f"{summary['median']:6.1f}"
 
@@ -419,7 +381,7 @@ def _print_case_report(
                 if default_headline > 0
                 else 0.0
             )
-            p = _welch_pvalue(default_samples, block["samples_ms"])
+            p = welch_pvalue_from_samples(default_samples, block["samples_ms"])
             marker = _significance_marker(pct, p, alpha)
             delta_txt = f"{_fmt_pct(pct)}{marker}"
             p_txt = f"{_fmt_pvalue(p):>10s}"
@@ -451,7 +413,7 @@ def _print_batch_throughput(per_variant: dict[str, dict[str, Any]]) -> None:
     n_reps = len(seq["samples_ms"])
     par_workers = par["workers"]
     par_amortized = par.get("amortized_per_iter_ms", par_batch / max(n_reps, 1))
-    par_per_worker_mean = _summary(par["samples_ms"])["mean"]
+    par_per_worker_mean = summarize(par["samples_ms"])["mean"]
 
     print(
         f"\n  Batch throughput (default toggles, {n_reps} iterations):\n"
@@ -514,18 +476,18 @@ def _print_ranking(
     per_variant_deltas: dict[str, list[tuple[float, float]]] = {}
     for _, per_variant in all_results:
         default_samples = per_variant["default"]["samples_ms"]
-        default_median = _summary(default_samples)["median"]
+        default_median = summarize(default_samples)["median"]
         for name, block in per_variant.items():
             if name == "default":
                 continue
-            summary = _summary(block["samples_ms"])
+            summary = summarize(block["samples_ms"])
             med = summary["median"]
             pct = (
                 (med - default_median) / default_median * 100
                 if default_median > 0
                 else 0.0
             )
-            p = _welch_pvalue(default_samples, block["samples_ms"])
+            p = welch_pvalue_from_samples(default_samples, block["samples_ms"])
             key = name
             if block.get("mode") == "parallel_aggregator":
                 key = f"parallel_aggregator (×{block['workers']})"
@@ -597,14 +559,14 @@ def _write_case_rows(
 ) -> None:
     """Write one row per variant for this case. Flushed by caller."""
     default_samples = per_variant["default"]["samples_ms"]
-    default_summary = _summary(default_samples)
+    default_summary = summarize(default_samples)
     default_median = default_summary["median"]
     default_mean = default_summary["mean"]
 
     shape_txt = "x".join(str(x) for x in case.shape)
 
     for name, block in per_variant.items():
-        summary = _summary(block["samples_ms"])
+        summary = summarize(block["samples_ms"])
         mode = block.get("mode", "sequential")
         workers = block.get("workers", 1)
         amortized = block.get("amortized_per_iter_ms")
@@ -628,7 +590,9 @@ def _write_case_rows(
                 if default_headline > 0
                 else 0.0
             )
-            p_value_val = _welch_pvalue(default_samples, block["samples_ms"])
+            p_value_val = welch_pvalue_from_samples(
+                default_samples, block["samples_ms"]
+            )
             delta_pct = round(delta_pct_val, 2)
             p_value = round(p_value_val, 6)
             significant = p_value_val < alpha
