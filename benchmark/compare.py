@@ -32,9 +32,21 @@ from typing import Any
 # metric_* entries typically fall here. We surface them in the full breakdown but
 # never use them to gate a PR.
 GATE_MIN_BASELINE_MS = 1.0
-KEY_TABLE_MAX_ROWS = 8
+KEY_TABLE_MAX_ROWS = 10
 KEY_TABLE_MIN_DELTA_MS = 0.05
 MARKER = "<!-- panoptica-benchmark -->"
+
+# Measurements that always land in the key table regardless of absolute size.
+# The gate (and its 1-ms noise floor) is unchanged; this just guarantees
+# visibility so `phase_preprocess` doesn't hide in the breakdown for small
+# cases while appearing in the main table for larger ones. Extend either set
+# to pin more rows.
+KEY_TABLE_ALWAYS_KEYS = frozenset({"end_to_end"})
+KEY_TABLE_ALWAYS_PREFIXES = ("phase_",)
+
+
+def _in_key_table_whitelist(key: str) -> bool:
+    return key in KEY_TABLE_ALWAYS_KEYS or key.startswith(KEY_TABLE_ALWAYS_PREFIXES)
 
 
 def _load(path: str) -> dict[str, Any]:
@@ -181,7 +193,7 @@ def _emit_header(
     parts = [
         MARKER,
         "",
-        f"## 📊 Benchmark {head.get('commit', '?')} vs `{baseline.get('commit', '?')}`",
+        f"## 📊 Benchmark vs `{head.get('commit', '?')}`",
         "",
         (
             f"**Gate:** {gate_badge} &nbsp;·&nbsp; "
@@ -197,8 +209,12 @@ def _emit_header(
         ),
         "",
         (
-            "> Values are `median ±(p90−min)/2`. A row counts as a regression only when "
-            "head's median exceeds both the threshold and the baseline's p90."
+            "> Values are `median ±(p90−min)/2`. The key table always lists "
+            "`end_to_end` and every `phase_*` present in both docs (regardless of "
+            "size), plus any other workload measurement whose baseline ≥ 1 ms, "
+            "sorted by |Δ%|. The PR-fail gate and the wins/regressions counters "
+            "only consider rows with baseline ≥ 1 ms outside the noise band — "
+            "sub-millisecond timings are too noisy on shared CI to gate on."
         ),
         "",
     ]
@@ -273,13 +289,38 @@ def _fmt_row(row: Row) -> str:
 
 def _emit_key_table(rows: list[Row], max_rows: int = KEY_TABLE_MAX_ROWS) -> str:
     # Key table only shows comparable rows — head-only ones belong in the breakdown.
-    gated_rows = [r for r in rows if _is_gated(r)]
-    gated_rows = [r for r in gated_rows if abs(r.delta) >= KEY_TABLE_MIN_DELTA_MS]
-    gated_rows.sort(key=lambda r: abs(r.pct), reverse=True)
-    if not gated_rows:
-        return "_No gated measurements moved meaningfully._\n\n"
+    #
+    # Two sources fill the table:
+    #   1. Whitelist rows (`end_to_end`, every `phase_*`): always present when
+    #      the row exists in both docs, regardless of absolute size. This is what
+    #      keeps `phase_preprocess` visible for 2D cases even though its baseline
+    #      is below the 1-ms gate floor.
+    #   2. Existing gated set (workload measurements above the noise floor)
+    #      that are NOT already in the whitelist, sorted by |Δ%|.
+    # Whitelist comes first so the max_rows cap trims the gated tail, never
+    # the guaranteed rows.
+    whitelist = sorted(
+        [r for r in rows if r.both_present and _in_key_table_whitelist(r.key)],
+        key=lambda r: abs(r.pct),
+        reverse=True,
+    )
+    whitelist_keys = {r.key for r in whitelist}
+    gated = sorted(
+        [
+            r
+            for r in rows
+            if _is_gated(r)
+            and abs(r.delta) >= KEY_TABLE_MIN_DELTA_MS
+            and r.key not in whitelist_keys
+        ],
+        key=lambda r: abs(r.pct),
+        reverse=True,
+    )
+    combined = whitelist + gated
+    if not combined:
+        return "_No key measurements to show._\n\n"
 
-    top = gated_rows[:max_rows]
+    top = combined[:max_rows]
     lines = [
         "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
         "| --- | ---: | ---: | :--- |",
