@@ -16,8 +16,8 @@ Each configuration times these things:
 * per-phase durations from :class:`~panoptica.utils.phase_timer.PhaseTimer`
   (``phase_*`` and ``metric_*`` measurements from the last evaluator run of each case).
 
-Each measurement is warmed up ``--warmup`` times (default 1, discarded) and then
-sampled ``--repeats`` times (default 7). We report ``{min, median, p90}`` per
+Each measurement is warmed up ``--warmup`` times and then
+sampled ``--repeats`` times. We report ``{min, median, p90}`` per
 measurement — the median is what :mod:`benchmark.compare` gates on and the
 ``(p90 - min)`` spread lets the gate ignore movement inside the baseline's own
 noise band.

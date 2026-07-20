@@ -159,7 +159,7 @@ def benchmark_cases(
     shapes2d: list[tuple[int, int]],
     shapes3d: list[tuple[int, int, int]],
     n_instances: list[int],
-    include_spine_example: bool = True,
+    include_spine_example: bool = False,
 ) -> tuple[SyntheticCase, ...]:
     """Generate a set of synthetic benchmark cases from shape and instance lists."""
     cases: list[SyntheticCase] = []

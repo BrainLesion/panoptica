@@ -181,7 +181,7 @@ def _emit_header(
     parts = [
         MARKER,
         "",
-        f"## 📊 Benchmark vs `{baseline.get('commit', '?')}`",
+        f"## 📊 Benchmark {head.get('commit', '?')} vs `{baseline.get('commit', '?')}`",
         "",
         (
             f"**Gate:** {gate_badge} &nbsp;·&nbsp; "
