@@ -245,6 +245,68 @@ class Test_Panoptica_Statistics(unittest.TestCase):
         self.assertEqual(list(d_asc.keys()), ["c", "a", "e"])
         self.assertEqual(list(d_asc.values()), [0.3, 0.5, 0.7])
 
+    def test_recall_by_volume(self):
+        # Master row + four instance rows (volumes 100/200/300/500, matched 1/0/1/0).
+        from panoptica.utils.serialization import format_instance_subject_name
+
+        rows = [format_instance_subject_name("s1", "g", k) for k in range(4)]
+        stat = Panoptica_Statistic(
+            subj_names=["s1"] + rows,
+            value_dict={
+                "g": {
+                    "instance_volume_ref": [None, 100.0, 200.0, 300.0, 500.0],
+                    "is_matched": [None, 1.0, 0.0, 1.0, 0.0],
+                }
+            },
+        )
+        rec = stat.recall_by_volume([160, 271, 451])
+        print(rec)
+        self.assertEqual(rec["rec_q0"], 1.0)  # vol 100 matched
+        self.assertEqual(rec["rec_q1"], 0.0)  # vol 200 missed
+        self.assertEqual(rec["rec_q2"], 1.0)  # vol 300 matched
+        self.assertEqual(rec["rec_q3"], 0.0)  # vol 500 missed
+        # single group -> the group argument is optional
+        self.assertEqual(stat.recall_by_volume([160, 271, 451], group="g"), rec)
+
+    def test_recall_by_volume_percentiles(self):
+        # Master row + four instance rows (volumes 100/200/300/500, matched 1/0/1/0).
+        from panoptica.utils.serialization import format_instance_subject_name
+
+        rows = [format_instance_subject_name("s1", "g", k) for k in range(4)]
+        stat = Panoptica_Statistic(
+            subj_names=["s1"] + rows,
+            value_dict={
+                "g": {
+                    "instance_volume_ref": [None, 100.0, 200.0, 300.0, 500.0],
+                    "is_matched": [None, 1.0, 0.0, 1.0, 0.0],
+                }
+            },
+        )
+        rec = stat.recall_by_volume_percentiles([20, 50, 80])
+        print(rec)
+        self.assertEqual(rec["rec_q0"], 1.0)  # vol 100 matched
+        self.assertEqual(rec["rec_q1"], 0.0)  # vol 200 missed
+        self.assertEqual(rec["rec_q2"], 1.0)  # vol 300 matched
+        self.assertEqual(rec["rec_q3"], 0.0)  # vol 500 missed
+        # single group -> the group argument is optional
+        self.assertEqual(
+            stat.recall_by_volume_percentiles([20, 50, 80], group="g"), rec
+        )
+
+    def test_recall_by_volume_requires_instance_rows(self):
+        # Master-only file (no per-instance rows) -> informative error.
+        stat = Panoptica_Statistic(
+            subj_names=["s1", "s2"],
+            value_dict={
+                "g": {
+                    "instance_volume_ref": [1.0, 2.0],
+                    "is_matched": [None, None],
+                }
+            },
+        )
+        with self.assertRaises(ValueError):
+            stat.recall_by_volume([160])
+
     def test_make_autc_plots_graceful_on_regular_stats(self):
         """
         Tests that make_autc_plots does not crash when provided with
