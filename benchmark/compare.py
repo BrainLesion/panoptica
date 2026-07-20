@@ -170,18 +170,24 @@ def _row_pvalue(row: Row) -> float | None:
 def _row_verdict(row: Row, alpha: float, min_pct: float = 10.0) -> str | None:
     """Statistical verdict for a row: ``"regression"``, ``"win"``, or ``None``.
 
-    Two conditions must both hold:
+    Three conditions must ALL hold:
 
-    1. ``|Δ %|`` exceeds ``min_pct`` — the change is practically visible.
-    2. The two distributions differ significantly. We use Welch's t-test on
+    1. The row is above the noise floor (``_is_gated`` — baseline ≥ 1 ms and
+       not a ``metric_*`` row). Sub-ms measurements have a noise band that's a
+       significant fraction of the value; running a t-test on them will happily
+       declare a 2-µs shift "significant" without that shift meaning anything
+       about the code. Adding more repeats makes this WORSE, not better.
+    2. ``|Δ %|`` exceeds ``min_pct`` — the change is practically visible.
+    3. The two distributions differ significantly. We use Welch's t-test on
        ``(mean, stddev, n)`` (via :func:`benchmark.stats.welch_pvalue_from_summary`)
        when the JSON has those fields; otherwise fall back to the legacy p90-band
        separation (``head.min > baseline.p90`` or symmetric).
 
     This one predicate powers the row marker, the win/regression badge, and the
-    PR-fail gate — so they can never disagree.
+    PR-fail gate — so they can never disagree, and none of them fires on sub-ms
+    noise.
     """
-    if not row.both_present:
+    if not _is_gated(row):
         return None
     assert row.b is not None and row.h is not None
     if row.pct >= min_pct:
