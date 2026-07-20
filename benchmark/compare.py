@@ -211,6 +211,15 @@ def _fmt_pct(pct: float) -> str:
     return f"−{abs(pct):.1f}%"
 
 
+def _fmt_pvalue(p: float | None) -> str:
+    """P-value cell for the tables. ``None`` (no summary stats) → em-dash."""
+    if p is None:
+        return "—"
+    if p < 0.001:
+        return "<0.001"
+    return f"{p:.3f}"
+
+
 def _pct_marker(row: Row, alpha: float) -> str:
     """Decorate a row with 🔴 / 🟢 when its verdict is significant at ``alpha``."""
     verdict = _row_verdict(row, alpha=alpha)
@@ -291,7 +300,7 @@ def _emit_gate_callout(
         return ""
     assert worst_row.b is not None and worst_row.h is not None
     p = _row_pvalue(worst_row)
-    p_txt = "n/a" if p is None else ("<0.001" if p < 0.001 else f"{p:.3f}")
+    p_txt = _fmt_pvalue(p)
     return (
         f"> 🚨 **Regression gate FAILED** — `{worst_row.key}` in `{offender_case}` "
         f"regressed by `{_fmt_pct(worst_row.pct)}` "
@@ -327,18 +336,19 @@ def _fmt_row(row: Row, alpha: float) -> str:
         assert row.h is not None
         return (
             f"| `{row.key}` | {_MISSING} | {_fmt_ms_with_spread(row.h)} "
-            f"| _new in head_ |"
+            f"| _new in head_ | {_MISSING} |"
         )
     if row.only_in_baseline:
         assert row.b is not None
         return (
             f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_MISSING} "
-            f"| _absent in head_ |"
+            f"| _absent in head_ | {_MISSING} |"
         )
     assert row.b is not None and row.h is not None
     return (
         f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_fmt_ms_with_spread(row.h)} "
-        f"| {_fmt_pct(row.pct)}{_pct_marker(row, alpha)} |"
+        f"| {_fmt_pct(row.pct)}{_pct_marker(row, alpha)} "
+        f"| {_fmt_pvalue(_row_pvalue(row))} |"
     )
 
 
@@ -379,8 +389,8 @@ def _emit_key_table(
 
     top = combined[:max_rows]
     lines = [
-        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
-        "| --- | ---: | ---: | :--- |",
+        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % | p |",
+        "| --- | ---: | ---: | :--- | ---: |",
     ]
     for row in top:
         lines.append(_fmt_row(row, alpha))
@@ -409,8 +419,8 @@ def _emit_full_breakdown(rows: list[Row], alpha: float) -> str:
         f"{len(compared)} compared, {len(head_only)} head-only, "
         f"{len(baseline_only)} baseline-only)</summary>",
         "",
-        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
-        "| --- | ---: | ---: | :--- |",
+        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % | p |",
+        "| --- | ---: | ---: | :--- | ---: |",
     ]
     for row in ordered:
         lines.append(_fmt_row(row, alpha))
@@ -532,7 +542,7 @@ def main() -> None:
     if not gate_pass and worst_row is not None:
         assert worst_row.b is not None and worst_row.h is not None
         p = _row_pvalue(worst_row)
-        p_txt = "n/a" if p is None else ("<0.001" if p < 0.001 else f"{p:.3f}")
+        p_txt = _fmt_pvalue(p)
         print(
             f"\n**Regression gate failed**: `{worst_row.key}` in "
             f"`{worst_case}` regressed by {_fmt_pct(worst_row.pct)} "
