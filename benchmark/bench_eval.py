@@ -83,15 +83,12 @@ from benchmark.data import (
     default_benchmark_cases,
 )
 
-
-DEFAULT_REPEATS = 7
-DEFAULT_WARMUP = 1
+DEFAULT_REPEATS = 15
+DEFAULT_WARMUP = 2
 
 # We probe *both* the module presence and the evaluator signature, because a partial
 # swap (module present, evaluator kwarg absent) is a real state we've hit in CI.
-_EVAL_ACCEPTS_TOGGLES = (
-    "speed_toggles" in inspect.signature(Panoptica_Evaluator.__init__).parameters
-)
+_EVAL_ACCEPTS_TOGGLES = "speed_toggles" in inspect.signature(Panoptica_Evaluator.__init__).parameters
 
 
 # --------------------------------------------------------------------------- #
@@ -131,9 +128,7 @@ def _summarize(samples_ms: list[float]) -> dict[str, float]:
     }
 
 
-def _largest_instance_masks(
-    ref: np.ndarray, pred: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+def _largest_instance_masks(ref: np.ndarray, pred: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     labels, counts = np.unique(ref[ref > 0], return_counts=True)
     label = int(labels[int(np.argmax(counts))])
     return ref == label, pred == label
@@ -144,9 +139,7 @@ def _build_evaluator(speed_toggles: Any = None) -> Panoptica_Evaluator:
     kwargs: dict[str, Any] = dict(
         expected_input=InputType.SEMANTIC,
         instance_approximator=ConnectedComponentsInstanceApproximator(),
-        instance_matcher=NaiveThresholdMatching(
-            matching_metric=Metric.IOU, matching_threshold=0.3
-        ),
+        instance_matcher=NaiveThresholdMatching(matching_metric=Metric.IOU, matching_threshold=0.3),
         instance_metrics=[Metric.DSC, Metric.IOU, Metric.ASSD, Metric.HD95, Metric.NSD],
         global_metrics=[Metric.DSC],
         verbose=False,
@@ -172,13 +165,9 @@ def _measure_case(
     evaluator = _build_evaluator(speed_toggles)
 
     measurements: dict[str, dict[str, float]] = {}
-    measurements["end_to_end"] = timeit(
-        lambda: evaluator.evaluate(pred_bin, ref_bin), repeats=repeats, warmup=warmup
-    )
+    measurements["end_to_end"] = timeit(lambda: evaluator.evaluate(pred_bin, ref_bin), repeats=repeats, warmup=warmup)
     measurements["matching_iou_all_pairs"] = timeit(
-        lambda: _calc_matching_metric_of_overlapping_labels(
-            pred, ref, ref_labels, Metric.IOU
-        ),
+        lambda: _calc_matching_metric_of_overlapping_labels(pred, ref, ref_labels, Metric.IOU),
         repeats=repeats,
         warmup=warmup,
     )
@@ -196,17 +185,11 @@ def _measure_case(
         _hd95_from_pair(sd_ref, sd_pred)
         _nsd_from_pair(sd_ref, sd_pred)
 
-    measurements["surface_unshared"] = timeit(
-        surface_unshared, repeats=repeats, warmup=warmup
-    )
-    measurements["surface_shared"] = timeit(
-        surface_shared, repeats=repeats, warmup=warmup
-    )
+    measurements["surface_unshared"] = timeit(surface_unshared, repeats=repeats, warmup=warmup)
+    measurements["surface_shared"] = timeit(surface_shared, repeats=repeats, warmup=warmup)
 
     n_ref = int(np.max(ref)) if ref.size else 0
-    measurements["voronoi_regions"] = timeit(
-        lambda: _get_voronoi_regions(ref, n_ref), repeats=repeats, warmup=warmup
-    )
+    measurements["voronoi_regions"] = timeit(lambda: _get_voronoi_regions(ref, n_ref), repeats=repeats, warmup=warmup)
 
     # Phase / metric timings: run the evaluator warmup + repeats times and aggregate
     # per-key samples so phase_* / metric_* also get {min, median, p90}. Skipped when
@@ -241,10 +224,7 @@ def _print_case(
     print(f"\n### {name}  shape={shape}  instances={n_instances}")
     for key, stats in ms.items():
         spread = stats["p90"] - stats["min"]
-        print(
-            f"{key:32s} median {stats['median']:8.1f} ms  "
-            f"(min {stats['min']:6.1f}, p90 {stats['p90']:6.1f}, spread {spread:5.1f})"
-        )
+        print(f"{key:32s} median {stats['median']:8.1f} ms  " f"(min {stats['min']:6.1f}, p90 {stats['p90']:6.1f}, spread {spread:5.1f})")
 
 
 def _git_commit_short() -> str:
@@ -294,23 +274,15 @@ def run_case(
     if toggle_comparison:
         variants = _toggle_variants()
         if not variants:
-            print(
-                "\n(--toggle-comparison skipped: PanopticaSpeedToggles not available "
-                "in this panoptica install)"
-            )
+            print("\n(--toggle-comparison skipped: PanopticaSpeedToggles not available " "in this panoptica install)")
         else:
             toggles_block: dict[str, dict[str, dict[str, float]]] = {}
             for variant_name, toggles in variants.items():
-                toggle_measurements = _measure_case(
-                    ref, pred, speed_toggles=toggles, repeats=repeats, warmup=warmup
-                )
+                toggle_measurements = _measure_case(ref, pred, speed_toggles=toggles, repeats=repeats, warmup=warmup)
                 toggles_block[variant_name] = toggle_measurements
                 print(f"\n--- {case.name} [{variant_name}]")
                 for key, stats in toggle_measurements.items():
-                    print(
-                        f"{key:32s} median {stats['median']:8.1f} ms  "
-                        f"(min {stats['min']:6.1f}, p90 {stats['p90']:6.1f})"
-                    )
+                    print(f"{key:32s} median {stats['median']:8.1f} ms  " f"(min {stats['min']:6.1f}, p90 {stats['p90']:6.1f})")
             entry["toggles"] = toggles_block
 
     return entry

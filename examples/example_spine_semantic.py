@@ -8,6 +8,7 @@ from panoptica import (
     Panoptica_Evaluator,
     InputType,
 )
+from panoptica.utils import PanopticaSpeedToggles
 
 directory = str(Path(__file__).absolute().parent)
 
@@ -21,28 +22,30 @@ evaluator = Panoptica_Evaluator(
     instance_matcher=NaiveThresholdMatching(),
     verbose=True,
     log_times=True,
+    save_group_times=True,
 )
 
 
 def main():
     with cProfile.Profile() as pr:
-        result = evaluator.evaluate(prediction_mask, reference_mask)["ungrouped"]
+        result = evaluator.evaluate(
+            prediction_mask,
+            reference_mask,
+        )["ungrouped"]
 
         # To print the results, just call print
-        print(result)
+        # print(result)
+        print()
+        print(result.computation_time)
 
         intermediate_steps_data = result.intermediate_steps_data
         assert intermediate_steps_data is not None
         # To get the different intermediate arrays, just use the second returned object
-        intermediate_steps_data.original_prediction_arr  # Input prediction array, untouched
+        print(intermediate_steps_data.original_prediction_arr.shape)  # Input prediction array, untouched
         intermediate_steps_data.original_reference_arr  # Input reference array, untouched
 
-        intermediate_steps_data.prediction_arr(
-            InputType.MATCHED_INSTANCE
-        )  # Prediction array after instances have been matched
-        intermediate_steps_data.reference_arr(
-            InputType.MATCHED_INSTANCE
-        )  # Reference array after instances have been matched
+        intermediate_steps_data.prediction_arr(InputType.MATCHED_INSTANCE)  # Prediction array after instances have been matched
+        intermediate_steps_data.reference_arr(InputType.MATCHED_INSTANCE)  # Reference array after instances have been matched
 
     pr.dump_stats(directory + "/semantic_example.log")
     return result, intermediate_steps_data
