@@ -14,8 +14,7 @@ wall-clock — what each individual ``evaluate()`` call took *inside a worker*,
 including lock waits, CPU contention, and BLAS thread oversubscription. The
 ``Δ vs default`` column instead uses the *amortized* per-iteration cost
 (``batch_wall_ms / repeats``), which is the honest "does the pool save me time
-end-to-end?" number. A "Note" block after the batch throughput section makes both
-numbers explicit.
+end-to-end?" number.
 
 **Default mode** is *one-at-a-time* (OAT): baseline is ``PanopticaSpeedToggles()`` and
 each variant flips a single lever. There is also an extra ``parallel_aggregator`` variant
@@ -38,11 +37,9 @@ Examples
 --------
 
     python benchmark/toggle_impact.py                       # OAT, default sizes
-    python benchmark/toggle_impact.py --quick               # smaller sizes
-    python benchmark/toggle_impact.py --quick --factorial   # all 2^N toggle combinations
-    python benchmark/toggle_impact.py --quick --case "2D quick" --repeats 21
-    python benchmark/toggle_impact.py --quick --alpha 0.01  # stricter significance
-    python benchmark/toggle_impact.py --quick --workers 8   # parallel_aggregator pool size
+    python benchmark/toggle_impact.py --factorial   # all 2^N toggle combinations
+    python benchmark/toggle_impact.py --alpha 0.01  # stricter significance
+    python benchmark/toggle_impact.py --workers 8   # parallel_aggregator pool size
 """
 
 from __future__ import annotations
