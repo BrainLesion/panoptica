@@ -10,7 +10,8 @@ from panoptica.instance_approximator import InstanceApproximator
 from panoptica.instance_matcher import InstanceMatchingAlgorithm, ThresholdBasedMatching
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult, PanopticaAUTCResult
-from panoptica.utils.timing import measure_time
+from panoptica.utils.phase_timer import PhaseTimer
+from panoptica.utils.speed_toggles import PanopticaSpeedToggles
 from panoptica.utils import EdgeCaseHandler
 from panoptica.utils.citation_reminder import citation_reminder
 from panoptica.utils.logger import logger
@@ -58,6 +59,7 @@ class Panoptica_Evaluator(SupportsConfig):
         save_group_times: bool = False,
         log_times: bool = False,
         verbose: bool = False,
+        speed_toggles: PanopticaSpeedToggles | None = None,
     ) -> None:
         """Creates a Panoptica_Evaluator, that saves some parameters to be used for all subsequent evaluations
 
@@ -116,6 +118,9 @@ class Panoptica_Evaluator(SupportsConfig):
         #
         self.__log_times = log_times
         self.__verbose = verbose
+        self.__speed_toggles = (
+            speed_toggles if speed_toggles is not None else PanopticaSpeedToggles()
+        )
         # Cache of resulting_metric_keys output keyed by output_individual_instance_metrics.
         self.__resulting_metric_keys_cache: dict[bool, list[str]] = {}
 
@@ -135,10 +140,10 @@ class Panoptica_Evaluator(SupportsConfig):
             "save_group_times": node.__save_group_times,
             "log_times": node.__log_times,
             "verbose": node.__verbose,
+            "speed_toggles": node.__speed_toggles,
         }
 
     @citation_reminder
-    @measure_time
     def evaluate(
         self,
         prediction_arr: Union[
@@ -179,9 +184,11 @@ class Panoptica_Evaluator(SupportsConfig):
         Returns:
             dict[str, PanopticaResult]: A dictionary with group names as keys and PanopticaResult objects as values, containing the evaluation results for each group.
         """
+        preprocess_start = perf_counter()
         processing_pair, metadata = self._preprocess_input(
             prediction_arr, reference_arr, voxelspacing
         )
+        preprocess_time = perf_counter() - preprocess_start
 
         skip = self._resolve_skip_groups(skip_groups)
         result_grouped: dict[str, PanopticaResult] = {}
@@ -201,12 +208,12 @@ class Panoptica_Evaluator(SupportsConfig):
                 ),
                 log_times=log_times,
                 verbose=verbose,
+                preprocess_time=preprocess_time,
                 **metadata,
             )
         return result_grouped
 
     @citation_reminder
-    @measure_time
     def evaluate_autc(
         self,
         prediction_arr: Union[
@@ -269,9 +276,11 @@ class Panoptica_Evaluator(SupportsConfig):
                 "decision_threshold must be set in the constructor when using fixed decision_threshold mode for evaluate_autc"
             )
 
+        preprocess_start = perf_counter()
         processing_pair, metadata = self._preprocess_input(
             prediction_arr, reference_arr, voxelspacing
         )
+        preprocess_time = perf_counter() - preprocess_start
 
         thresholds = self.generate_thresholds(threshold_step_size)
         skip = self._resolve_skip_groups(skip_groups)
@@ -321,6 +330,8 @@ class Panoptica_Evaluator(SupportsConfig):
                 elif decision_threshold_mode == "fixed":
                     decision_threshold = self.__decision_threshold
 
+                threshold_timer = PhaseTimer()
+                threshold_timer.record("preprocess", preprocess_time)
                 threshold_results[threshold] = _panoptic_evaluate(
                     input_pair=processing_pair_grouped,
                     edge_case_handler=self.__edge_case_handler,
@@ -336,6 +347,8 @@ class Panoptica_Evaluator(SupportsConfig):
                     verbose=self.__verbose if verbose is None else verbose,
                     verbose_calc=self.__verbose if verbose is None else verbose,
                     label_group=label_group,
+                    phase_timer=threshold_timer,
+                    speed_toggles=self.__speed_toggles,
                     **metadata,
                 )
 
@@ -510,6 +523,7 @@ class Panoptica_Evaluator(SupportsConfig):
         verbose: bool | None = None,
         log_times: bool | None = None,
         save_group_times: bool = False,
+        preprocess_time: float = 0.0,
         **kwargs,
     ) -> PanopticaResult:
         if not isinstance(label_group, LabelGroup):
@@ -518,6 +532,10 @@ class Panoptica_Evaluator(SupportsConfig):
             )
         if self.__save_group_times or save_group_times:
             start_time = perf_counter()
+
+        phase_timer = PhaseTimer()
+        if preprocess_time:
+            phase_timer.record("preprocess", preprocess_time)
 
         prediction_arr_grouped = label_group(processing_pair.prediction_arr)
         reference_arr_grouped = label_group(processing_pair.reference_arr)
@@ -548,6 +566,8 @@ class Panoptica_Evaluator(SupportsConfig):
                 verbose=self.__verbose if verbose is None else verbose,
                 verbose_calc=self.__verbose if verbose is None else verbose,
                 label_group=label_group,
+                phase_timer=phase_timer,
+                speed_toggles=self.__speed_toggles,
                 **kwargs,
             )
         else:
@@ -566,6 +586,8 @@ class Panoptica_Evaluator(SupportsConfig):
                 verbose=self.__verbose if verbose is None else verbose,
                 verbose_calc=self.__verbose if verbose is None else verbose,
                 label_group=label_group,
+                phase_timer=phase_timer,
+                speed_toggles=self.__speed_toggles,
                 **kwargs,
             )
         if self.__save_group_times or save_group_times:
