@@ -533,6 +533,90 @@ class Panoptica_Statistic:
 
         return FloatDistribution(filtered_values)
 
+    def get_global_summary(self, group: str | None = None) -> dict[str, float]:
+        """Aggregate metrics globally across samples (pool instances), not per sample.
+
+        ``get_summary(master_only=True)`` averages each sample's master metric, so every
+        sample counts equally no matter how many instances it holds. When many patches
+        come from one entity (e.g. microscopy slices of one brain), a patch with 5
+        instances then sways the average as much as a patch with 100. This method pools
+        across samples instead:
+
+        - sums ``tp`` / ``fp`` / ``fn`` over the sample (master) rows and derives a single
+          global recognition quality ``rq = tp / (tp + 0.5*fp + 0.5*fn)`` (plus ``prec``
+          and ``rec``) from those totals — the easy confusion-matrix part;
+        - averages each per-instance segmentation-quality metric (``sq``, ``sq_dsc``, ...)
+          over *every* instance across *all* samples, so each instance counts equally —
+          the part that is not trivially recoverable per sample;
+        - reports ``pq = sq * rq`` for each quality metric that has a panoptic-quality
+          counterpart.
+
+        Requires a results file written with ``output_individual_instance_metrics=True``
+        so per-instance ``sq`` rows exist.
+
+        Args:
+            group: Class group to aggregate. May be omitted only when the statistic has a
+                single group.
+
+        Returns:
+            dict[str, float]: Globally aggregated values keyed by metric name (e.g.
+            ``tp``, ``fp``, ``fn``, ``rq``, ``prec``, ``rec``, ``sq``, ``pq``,
+            ``sq_dsc``, ``pq_dsc`` ...).
+
+        Raises:
+            ValueError: If ``group`` is omitted but the statistic has multiple groups, or
+                if no per-instance rows are present.
+        """
+        if group is None:
+            if len(self.groupnames) == 1:
+                group = self.groupnames[0]
+            else:
+                raise ValueError(
+                    f"Statistic has multiple groups {self.groupnames}; pass group=..."
+                )
+        else:
+            self._assertgroup(group)
+
+        if not self.instance_subjects:
+            raise ValueError(
+                "get_global_summary needs per-instance rows; rerun the aggregation with "
+                "output_individual_instance_metrics=True."
+            )
+
+        summary: dict[str, float] = {}
+
+        # Global confusion matrix: sum the per-sample (master) counts.
+        rq: float | None = None
+        if all(m in self.metricnames for m in ("tp", "fp", "fn")):
+            tp = float(sum(self.master_values(self.get(group, "tp"))))
+            fp = float(sum(self.master_values(self.get(group, "fp"))))
+            fn = float(sum(self.master_values(self.get(group, "fn"))))
+            summary["tp"], summary["fp"], summary["fn"] = tp, fp, fn
+            rq_denom = tp + 0.5 * fp + 0.5 * fn
+            rq = tp / rq_denom if rq_denom > 0 else float("nan")
+            summary["rq"] = rq
+            summary["prec"] = tp / (tp + fp) if (tp + fp) > 0 else float("nan")
+            summary["rec"] = tp / (tp + fn) if (tp + fn) > 0 else float("nan")
+
+        # Global segmentation quality: pool every matched instance equally.
+        is_instance = [is_instance_row(sn) for sn in self.subjectnames]
+        for m in self.base_metric_names:
+            if m.endswith("_std") or not (m == "sq" or m.startswith("sq_")):
+                continue
+            values = self.get(group, m)
+            pooled = [
+                v for v, inst in zip(values, is_instance) if inst and v is not None
+            ]
+            if not pooled:
+                continue
+            sq_global = float(np.mean(pooled))
+            summary[m] = sq_global
+            pq_key = "pq" + m[2:]  # sq -> pq, sq_dsc -> pq_dsc
+            if rq is not None and pq_key in self.metricnames:
+                summary[pq_key] = sq_global * rq
+
+        return summary
+
     def get_summary_figure(
         self,
         metric: str,
