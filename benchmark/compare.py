@@ -166,10 +166,18 @@ def _fmt_pct(pct: float) -> str:
     return f"−{abs(pct):.1f}%"
 
 
-def _pct_marker(pct: float) -> str:
-    if pct >= 10:
+def _pct_marker(row: Row) -> str:
+    """Decorate a row with 🔴 / 🟢 only when its two distributions are
+    cleanly separated — matches the wins/regressions counter's criterion so
+    the badge and table always agree. Prevents 20-µs measurements from
+    lighting up just because +10 % of 20 µs is 2 µs of noise.
+    """
+    if not row.both_present:
+        return ""
+    assert row.b is not None and row.h is not None
+    if row.pct >= 10 and row.h["min"] > row.b["p90"]:
         return " 🔴"
-    if pct <= -10:
+    if row.pct <= -10 and row.h["p90"] < row.b["min"]:
         return " 🟢"
     return ""
 
@@ -212,9 +220,12 @@ def _emit_header(
             "> Values are `median ±(p90−min)/2`. The key table always lists "
             "`end_to_end` and every `phase_*` present in both docs (regardless of "
             "size), plus any other workload measurement whose baseline ≥ 1 ms, "
-            "sorted by |Δ%|. The PR-fail gate and the wins/regressions counters "
-            "only consider rows with baseline ≥ 1 ms outside the noise band — "
-            "sub-millisecond timings are too noisy on shared CI to gate on."
+            "sorted by |Δ%|. A row is decorated 🔴 / 🟢 only when the two runs' "
+            "distributions are cleanly separated — head's best worse than "
+            "baseline's p90 (or vice versa) — the same criterion the "
+            "win/regression counter uses. Small |Δ%| on sub-ms measurements is "
+            "almost always noise and stays unmarked. The PR-fail gate uses the "
+            "same baseline ≥ 1 ms floor to keep sub-ms noise out of the verdict."
         ),
         "",
     ]
@@ -283,7 +294,7 @@ def _fmt_row(row: Row) -> str:
     assert row.b is not None and row.h is not None
     return (
         f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_fmt_ms_with_spread(row.h)} "
-        f"| {_fmt_pct(row.pct)}{_pct_marker(row.pct)} |"
+        f"| {_fmt_pct(row.pct)}{_pct_marker(row)} |"
     )
 
 
