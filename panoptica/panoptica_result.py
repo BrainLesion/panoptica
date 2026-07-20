@@ -581,7 +581,7 @@ class PanopticaResult:
         volumes = [float(v) for v in matched_sizes] + [
             float(v) for v in unmatched_sizes
         ]
-        matched_flags = [1.0] * len(matched_sizes) + [0.0] * len(unmatched_sizes)
+        matched_flags = [True] * len(matched_sizes) + [False] * len(unmatched_sizes)
         return recall_by_volume_bins(volumes, matched_flags, thresholds)
 
     @property
