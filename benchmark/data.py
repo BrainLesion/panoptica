@@ -86,6 +86,29 @@ class SyntheticCase:
         return pred, ref
 
 
+class SpineExampleCase(SyntheticCase):
+    """A synthetic case that mimics the spine example in the examples directory."""
+
+    def __init__(self) -> None:
+        pass
+
+    def build(self) -> tuple[np.ndarray, np.ndarray]:
+        """Return ``(prediction, reference)`` as ``int32`` label arrays."""
+
+        from pathlib import Path
+
+        directory = str(Path(__file__).absolute().parent)
+        reference_mask = directory + "/spine_seg/semantic/ref.nii.gz"
+        prediction_mask = directory + "/spine_seg/semantic/pred.nii.gz"
+
+        import nibabel as nib
+
+        ref = reference_mask
+        pred = prediction_mask
+
+        return pred, ref
+
+
 class DataProvider(Protocol):
     """Yields ``(name, prediction, reference)`` triples for the benchmark harness.
 
@@ -130,3 +153,23 @@ def default_unit_test_cases() -> tuple[SyntheticCase, ...]:
         SyntheticCase("3D small", (32, 32, 32), 5),
         SyntheticCase("3D larger", (48, 48, 48), 15),
     )
+
+
+def benchmark_cases(
+    shapes2d: list[tuple[int, int]],
+    shapes3d: list[tuple[int, int, int]],
+    n_instances: list[int],
+    include_spine_example: bool = False,
+) -> tuple[SyntheticCase, ...]:
+    """Generate a set of synthetic benchmark cases from shape and instance lists."""
+    cases: list[SyntheticCase] = []
+    for shape in shapes2d:
+        for n in n_instances:
+            cases.append(SyntheticCase(f"2D {shape} {n}inst", shape, n))
+    for shape in shapes3d:
+        for n in n_instances:
+            cases.append(SyntheticCase(f"3D {shape} {n}inst", shape, n))
+
+    if include_spine_example:
+        cases.append(SpineExampleCase())
+    return tuple(cases)

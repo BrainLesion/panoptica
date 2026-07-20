@@ -25,16 +25,34 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from typing import Any
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from benchmark.stats import welch_pvalue_from_summary
 
 # Sub-millisecond measurements are pure noise on shared CI runners; individual
 # metric_* entries typically fall here. We surface them in the full breakdown but
 # never use them to gate a PR.
 GATE_MIN_BASELINE_MS = 1.0
-KEY_TABLE_MAX_ROWS = 8
+KEY_TABLE_MAX_ROWS = 10
 KEY_TABLE_MIN_DELTA_MS = 0.05
 MARKER = "<!-- panoptica-benchmark -->"
+DEFAULT_ALPHA = 0.05  # Welch's t-test significance threshold for markers + gate
+
+# Measurements that always land in the key table regardless of absolute size.
+# The gate (and its 1-ms noise floor) is unchanged; this just guarantees
+# visibility so `phase_preprocess` doesn't hide in the breakdown for small
+# cases while appearing in the main table for larger ones. Extend either set
+# to pin more rows.
+KEY_TABLE_ALWAYS_KEYS = frozenset({"end_to_end"})
+KEY_TABLE_ALWAYS_PREFIXES = ("phase_",)
+
+
+def _in_key_table_whitelist(key: str) -> bool:
+    return key in KEY_TABLE_ALWAYS_KEYS or key.startswith(KEY_TABLE_ALWAYS_PREFIXES)
 
 
 def _load(path: str) -> dict[str, Any]:
@@ -47,18 +65,25 @@ def _cases_by_name(doc: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _stats(raw: Any) -> dict[str, float]:
-    """Normalize a measurement value to ``{min, median, p90}``.
+    """Normalize a measurement value to a stats dict.
 
-    New-schema entries are dicts; legacy entries are bare floats and get treated
-    as a degenerate distribution with zero spread.
+    Fields always present: ``min``, ``median``, ``p90``.
+    Optionally present when the source JSON came from a bench_eval.py that
+    calls :func:`benchmark.stats.summarize` (``mean``, ``stddev``, ``n``) —
+    those enable Welch's t-test in :func:`_row_pvalue`. Legacy entries (bare
+    floats or dicts missing the newer fields) still load; the t-test path
+    then returns ``None`` and callers fall back to the p90-band heuristic.
     """
     if isinstance(raw, dict):
-        # Newer JSON — all three should be present.
-        return {
+        out = {
             "min": float(raw.get("min", raw.get("median", 0.0))),
             "median": float(raw.get("median", raw.get("min", 0.0))),
             "p90": float(raw.get("p90", raw.get("median", raw.get("min", 0.0)))),
         }
+        for k in ("mean", "stddev", "n"):
+            if k in raw:
+                out[k] = float(raw[k])
+        return out
     val = float(raw)
     return {"min": val, "median": val, "p90": val}
 
@@ -133,18 +158,56 @@ def _is_gated(row: Row) -> bool:
     return not row.key.startswith("metric_")
 
 
-def _is_regression(row: Row, threshold_pct: float) -> bool:
-    """Real regression: worse than the threshold AND outside the baseline noise band."""
+def _row_pvalue(row: Row) -> float | None:
+    """Welch's t-test on the row's summary stats. Returns ``None`` when the JSON
+    predates the ``mean``/``stddev``/``n`` fields."""
     if not row.both_present:
-        return False
+        return None
     assert row.b is not None and row.h is not None
-    b_med = row.b["median"]
-    if b_med <= 0:
-        return False
-    return (
-        row.h["median"] > b_med * (1.0 + threshold_pct / 100.0)
-        and row.h["median"] > row.b["p90"]
-    )
+    return welch_pvalue_from_summary(row.b, row.h)
+
+
+def _row_verdict(row: Row, alpha: float, min_pct: float = 10.0) -> str | None:
+    """Statistical verdict for a row: ``"regression"``, ``"win"``, or ``None``.
+
+    Three conditions must ALL hold:
+
+    1. The row is above the noise floor (``_is_gated`` — baseline ≥ 1 ms and
+       not a ``metric_*`` row). Sub-ms measurements have a noise band that's a
+       significant fraction of the value; running a t-test on them will happily
+       declare a 2-µs shift "significant" without that shift meaning anything
+       about the code. Adding more repeats makes this WORSE, not better.
+    2. ``|Δ %|`` exceeds ``min_pct`` — the change is practically visible.
+    3. The two distributions differ significantly. We use Welch's t-test on
+       ``(mean, stddev, n)`` (via :func:`benchmark.stats.welch_pvalue_from_summary`)
+       when the JSON has those fields; otherwise fall back to the legacy p90-band
+       separation (``head.min > baseline.p90`` or symmetric).
+
+    This one predicate powers the row marker, the win/regression badge, and the
+    PR-fail gate — so they can never disagree, and none of them fires on sub-ms
+    noise.
+    """
+    if not _is_gated(row):
+        return None
+    assert row.b is not None and row.h is not None
+    if row.pct >= min_pct:
+        p = _row_pvalue(row)
+        if p is not None:
+            return "regression" if p < alpha else None
+        return "regression" if row.h["min"] > row.b["p90"] else None
+    if row.pct <= -min_pct:
+        p = _row_pvalue(row)
+        if p is not None:
+            return "win" if p < alpha else None
+        return "win" if row.h["p90"] < row.b["min"] else None
+    return None
+
+
+def _is_regression(row: Row, threshold_pct: float, alpha: float) -> bool:
+    """Gate-side regression check: same predicate as the marker, but with the
+    caller-controlled |Δ%| threshold (typically the ``--fail-on-regression-pct``
+    value, default 50)."""
+    return _row_verdict(row, alpha=alpha, min_pct=threshold_pct) == "regression"
 
 
 def _fmt_pct(pct: float) -> str:
@@ -154,10 +217,21 @@ def _fmt_pct(pct: float) -> str:
     return f"−{abs(pct):.1f}%"
 
 
-def _pct_marker(pct: float) -> str:
-    if pct >= 10:
+def _fmt_pvalue(p: float | None) -> str:
+    """P-value cell for the tables. ``None`` (no summary stats) → em-dash."""
+    if p is None:
+        return "—"
+    if p < 0.001:
+        return "<0.001"
+    return f"{p:.3f}"
+
+
+def _pct_marker(row: Row, alpha: float) -> str:
+    """Decorate a row with 🔴 / 🟢 when its verdict is significant at ``alpha``."""
+    verdict = _row_verdict(row, alpha=alpha)
+    if verdict == "regression":
         return " 🔴"
-    if pct <= -10:
+    if verdict == "win":
         return " 🟢"
     return ""
 
@@ -174,6 +248,7 @@ def _emit_header(
     wins: int,
     regressions: int,
     head_only_total: int,
+    alpha: float,
 ) -> str:
     gate_badge = "✅ PASS" if gate_pass else "🔴 FAIL"
     repeats = head.get("repeats", "?")
@@ -181,14 +256,14 @@ def _emit_header(
     parts = [
         MARKER,
         "",
-        f"## 📊 Benchmark vs `{baseline.get('commit', '?')}`",
+        f"## 📊 Benchmark vs `{head.get('commit', '?')}`",
         "",
         (
             f"**Gate:** {gate_badge} &nbsp;·&nbsp; "
             f"🟢 {wins} win{'s' if wins != 1 else ''} &nbsp;·&nbsp; "
             f"🔴 {regressions} regression{'s' if regressions != 1 else ''} &nbsp;·&nbsp; "
             f"Python {head.get('python', '?')} &nbsp;·&nbsp; "
-            f"repeats={repeats}, warmup={warmup}"
+            f"repeats={repeats}, warmup={warmup} &nbsp;·&nbsp; α={alpha}"
         ),
         "",
         (
@@ -197,8 +272,16 @@ def _emit_header(
         ),
         "",
         (
-            "> Values are `median ±(p90−min)/2`. A row counts as a regression only when "
-            "head's median exceeds both the threshold and the baseline's p90."
+            f"> Values are `median ±(p90−min)/2`. The key table always lists "
+            f"`end_to_end` and every `phase_*` present in both docs (regardless of "
+            f"size), plus any other workload measurement whose baseline ≥ 1 ms, "
+            f"sorted by |Δ%|. A row is decorated 🔴 / 🟢 only when |Δ%| ≥ 10 % "
+            f"**and** Welch's t-test on the (mean, stddev, n) summary yields "
+            f"`p < {alpha}` — the same predicate powers the win/regression counter "
+            f"and the PR-fail gate, so badge and table always agree. When the JSON "
+            f"predates the mean/stddev/n fields, we fall back to the legacy "
+            f"p90-band separation. The PR-fail gate also requires baseline ≥ 1 ms "
+            f"to keep sub-ms noise out of the verdict."
         ),
         "",
     ]
@@ -222,10 +305,13 @@ def _emit_gate_callout(
     if worst_row is None or offender_case is None:
         return ""
     assert worst_row.b is not None and worst_row.h is not None
+    p = _row_pvalue(worst_row)
+    p_txt = _fmt_pvalue(p)
     return (
         f"> 🚨 **Regression gate FAILED** — `{worst_row.key}` in `{offender_case}` "
-        f"regressed by `{_fmt_pct(worst_row.pct)}` (baseline median {worst_row.b['median']:.2f} ms, "
-        f"p90 {worst_row.b['p90']:.2f}; head median {worst_row.h['median']:.2f} ms). "
+        f"regressed by `{_fmt_pct(worst_row.pct)}` "
+        f"(baseline median {worst_row.b['median']:.2f} ms, "
+        f"head median {worst_row.h['median']:.2f} ms, p={p_txt}). "
         f"Threshold: `{_fmt_pct(threshold)}`.\n\n"
     )
 
@@ -251,46 +337,74 @@ def _emit_case_hero(case_name: str, rows: list[Row]) -> str:
 _MISSING = "—"
 
 
-def _fmt_row(row: Row) -> str:
+def _fmt_row(row: Row, alpha: float) -> str:
     if row.only_in_head:
         assert row.h is not None
         return (
             f"| `{row.key}` | {_MISSING} | {_fmt_ms_with_spread(row.h)} "
-            f"| _new in head_ |"
+            f"| _new in head_ | {_MISSING} |"
         )
     if row.only_in_baseline:
         assert row.b is not None
         return (
             f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_MISSING} "
-            f"| _absent in head_ |"
+            f"| _absent in head_ | {_MISSING} |"
         )
     assert row.b is not None and row.h is not None
     return (
         f"| `{row.key}` | {_fmt_ms_with_spread(row.b)} | {_fmt_ms_with_spread(row.h)} "
-        f"| {_fmt_pct(row.pct)}{_pct_marker(row.pct)} |"
+        f"| {_fmt_pct(row.pct)}{_pct_marker(row, alpha)} "
+        f"| {_fmt_pvalue(_row_pvalue(row))} |"
     )
 
 
-def _emit_key_table(rows: list[Row], max_rows: int = KEY_TABLE_MAX_ROWS) -> str:
+def _emit_key_table(
+    rows: list[Row], alpha: float, max_rows: int = KEY_TABLE_MAX_ROWS
+) -> str:
     # Key table only shows comparable rows — head-only ones belong in the breakdown.
-    gated_rows = [r for r in rows if _is_gated(r)]
-    gated_rows = [r for r in gated_rows if abs(r.delta) >= KEY_TABLE_MIN_DELTA_MS]
-    gated_rows.sort(key=lambda r: abs(r.pct), reverse=True)
-    if not gated_rows:
-        return "_No gated measurements moved meaningfully._\n\n"
+    #
+    # Two sources fill the table:
+    #   1. Whitelist rows (`end_to_end`, every `phase_*`): always present when
+    #      the row exists in both docs, regardless of absolute size. This is what
+    #      keeps `phase_preprocess` visible for 2D cases even though its baseline
+    #      is below the 1-ms gate floor.
+    #   2. Existing gated set (workload measurements above the noise floor)
+    #      that are NOT already in the whitelist, sorted by |Δ%|.
+    # Whitelist comes first so the max_rows cap trims the gated tail, never
+    # the guaranteed rows.
+    whitelist = sorted(
+        [r for r in rows if r.both_present and _in_key_table_whitelist(r.key)],
+        key=lambda r: abs(r.pct),
+        reverse=True,
+    )
+    whitelist_keys = {r.key for r in whitelist}
+    gated = sorted(
+        [
+            r
+            for r in rows
+            if _is_gated(r)
+            and abs(r.delta) >= KEY_TABLE_MIN_DELTA_MS
+            and r.key not in whitelist_keys
+        ],
+        key=lambda r: abs(r.pct),
+        reverse=True,
+    )
+    combined = whitelist + gated
+    if not combined:
+        return "_No key measurements to show._\n\n"
 
-    top = gated_rows[:max_rows]
+    top = combined[:max_rows]
     lines = [
-        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
-        "| --- | ---: | ---: | :--- |",
+        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % | p |",
+        "| --- | ---: | ---: | :--- | ---: |",
     ]
     for row in top:
-        lines.append(_fmt_row(row))
+        lines.append(_fmt_row(row, alpha))
     lines.append("")
     return "\n".join(lines)
 
 
-def _emit_full_breakdown(rows: list[Row]) -> str:
+def _emit_full_breakdown(rows: list[Row], alpha: float) -> str:
     # Compared rows first (biggest |Δ%| at top), then head-only, then baseline-only.
     compared = sorted(
         [r for r in rows if r.both_present], key=lambda r: abs(r.pct), reverse=True
@@ -311,11 +425,11 @@ def _emit_full_breakdown(rows: list[Row]) -> str:
         f"{len(compared)} compared, {len(head_only)} head-only, "
         f"{len(baseline_only)} baseline-only)</summary>",
         "",
-        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % |",
-        "| --- | ---: | ---: | :--- |",
+        "| Measurement | baseline ms (median ±½·range) | head ms (median ±½·range) | Δ % | p |",
+        "| --- | ---: | ---: | :--- | ---: |",
     ]
     for row in ordered:
-        lines.append(_fmt_row(row))
+        lines.append(_fmt_row(row, alpha))
     lines.append("")
     lines.append("</details>")
     lines.append("")
@@ -326,6 +440,7 @@ def _emit_report(
     baseline: dict[str, Any],
     head: dict[str, Any],
     fail_threshold: float | None,
+    alpha: float,
 ) -> tuple[str, bool, Row | None, str | None]:
     """Return (markdown, gate_pass, worst_regression_row, offender_case)."""
     b_cases = _cases_by_name(baseline)
@@ -355,19 +470,17 @@ def _emit_report(
                 head_only_total += 1
             if not _is_gated(row):
                 continue
-            assert row.b is not None and row.h is not None
-            # Only count wins/regressions when the two distributions are cleanly
-            # separated — head's worst sample must beat baseline's best (win) or
-            # head's best sample must be worse than baseline's worst (regression).
-            # Anything softer just counts noise and disagrees with the gate.
-            if row.pct >= 10 and row.h["min"] > row.b["p90"]:
+            # Wins/regressions counter, PR-fail gate, and the row marker all
+            # come from the same _row_verdict predicate. If badge says
+            # "0 regressions", the tables can't contain a 🔴, by construction.
+            verdict = _row_verdict(row, alpha=alpha)
+            if verdict == "regression":
                 regressions += 1
-            elif row.pct <= -10 and row.h["p90"] < row.b["min"]:
+            elif verdict == "win":
                 wins += 1
-            # Track the worst *real* regression relative to the noise band, not just
-            # the largest %. A row with pct=+80% but inside baseline p90 isn't worse
-            # than one with pct=+55% that's clearly outside it.
-            if fail_threshold is not None and _is_regression(row, fail_threshold):
+            if fail_threshold is not None and _is_regression(
+                row, fail_threshold, alpha
+            ):
                 if worst_row is None or row.pct > worst_row.pct:
                     worst_row = row
                     worst_case = name
@@ -376,7 +489,9 @@ def _emit_report(
 
     body: list[str] = []
     body.append(
-        _emit_header(baseline, head, gate_pass, wins, regressions, head_only_total)
+        _emit_header(
+            baseline, head, gate_pass, wins, regressions, head_only_total, alpha
+        )
     )
     if not gate_pass and fail_threshold is not None:
         body.append(_emit_gate_callout(worst_row, fail_threshold, worst_case))
@@ -386,8 +501,8 @@ def _emit_report(
             body.append(f"### {name}\n\n_(present in only one document — skipping)_\n")
             continue
         body.append(_emit_case_hero(name, rows))
-        body.append(_emit_key_table(rows))
-        body.append(_emit_full_breakdown(rows))
+        body.append(_emit_key_table(rows, alpha))
+        body.append(_emit_full_breakdown(rows, alpha))
 
     return "\n".join(body).rstrip() + "\n", gate_pass, worst_row, worst_case
 
@@ -404,7 +519,20 @@ def main() -> None:
         default=None,
         help=(
             "Fail if any gated measurement's head median exceeds baseline median by "
-            "this percentage AND exceeds baseline p90. Default: never fail."
+            "this percentage AND the two distributions differ significantly "
+            "(Welch's t-test at --alpha). Default: never fail."
+        ),
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=DEFAULT_ALPHA,
+        help=(
+            f"Significance threshold for Welch's t-test on summary stats "
+            f"(default {DEFAULT_ALPHA}). Powers the row 🔴 / 🟢 marker, the "
+            f"win/regression badge, and --fail-on-regression-pct. Falls back "
+            f"to p90-band separation when a JSON predates the mean/stddev/n "
+            f"fields."
         ),
     )
     args = parser.parse_args()
@@ -413,16 +541,19 @@ def main() -> None:
     head = _load(args.head)
 
     markdown, gate_pass, worst_row, worst_case = _emit_report(
-        baseline, head, args.fail_on_regression_pct
+        baseline, head, args.fail_on_regression_pct, alpha=args.alpha
     )
     print(markdown)
 
     if not gate_pass and worst_row is not None:
+        assert worst_row.b is not None and worst_row.h is not None
+        p = _row_pvalue(worst_row)
+        p_txt = _fmt_pvalue(p)
         print(
             f"\n**Regression gate failed**: `{worst_row.key}` in "
             f"`{worst_case}` regressed by {_fmt_pct(worst_row.pct)} "
-            f"(baseline p90 {worst_row.b['p90']:.2f} ms, head median "
-            f"{worst_row.h['median']:.2f} ms).",
+            f"(baseline median {worst_row.b['median']:.2f} ms, "
+            f"head median {worst_row.h['median']:.2f} ms, p={p_txt}).",
             file=sys.stderr,
         )
         sys.exit(1)

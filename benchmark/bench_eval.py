@@ -16,8 +16,8 @@ Each configuration times these things:
 * per-phase durations from :class:`~panoptica.utils.phase_timer.PhaseTimer`
   (``phase_*`` and ``metric_*`` measurements from the last evaluator run of each case).
 
-Each measurement is warmed up ``--warmup`` times (default 1, discarded) and then
-sampled ``--repeats`` times (default 7). We report ``{min, median, p90}`` per
+Each measurement is warmed up ``--warmup`` times and then
+sampled ``--repeats`` times. We report ``{min, median, p90}`` per
 measurement — the median is what :mod:`benchmark.compare` gates on and the
 ``(p90 - min)`` spread lets the gate ignore movement inside the baseline's own
 noise band.
@@ -82,10 +82,10 @@ from benchmark.data import (
     SyntheticCase,
     default_benchmark_cases,
 )
+from benchmark.stats import summarize
 
-
-DEFAULT_REPEATS = 7
-DEFAULT_WARMUP = 1
+DEFAULT_REPEATS = 15
+DEFAULT_WARMUP = 2
 
 # We probe *both* the module presence and the evaluator signature, because a partial
 # swap (module present, evaluator kwarg absent) is a real state we've hit in CI.
@@ -102,12 +102,12 @@ def timeit(
     repeats: int = DEFAULT_REPEATS,
     warmup: int = DEFAULT_WARMUP,
 ) -> dict[str, float]:
-    """Time ``fn`` and return ``{min, median, p90}`` in milliseconds.
+    """Time ``fn`` and return the summary produced by :func:`benchmark.stats.summarize`.
 
     ``warmup`` iterations are discarded (they absorb import/first-touch/JIT costs),
-    then ``repeats`` timed iterations are recorded. Median is the primary stat
-    reported by :mod:`benchmark.compare`; ``p90 - min`` is used as a spread proxy
-    so the gate can distinguish real regressions from noise-band motion.
+    then ``repeats`` timed iterations are recorded. The returned dict includes
+    ``min``, ``median``, ``p90``, ``mean``, ``stddev``, and ``n`` — enough for
+    :mod:`benchmark.compare` to run Welch's t-test from summary stats.
     """
     for _ in range(warmup):
         fn()
@@ -116,19 +116,7 @@ def timeit(
         t0 = time.perf_counter()
         fn()
         samples.append((time.perf_counter() - t0) * 1e3)
-    return _summarize(samples)
-
-
-def _summarize(samples_ms: list[float]) -> dict[str, float]:
-    ordered = sorted(samples_ms)
-    n = len(ordered)
-    median = ordered[n // 2] if n % 2 else 0.5 * (ordered[n // 2 - 1] + ordered[n // 2])
-    p90_idx = min(int(0.9 * (n - 1) + 0.5), n - 1)
-    return {
-        "min": ordered[0],
-        "median": median,
-        "p90": ordered[p90_idx],
-    }
+    return summarize(samples)
 
 
 def _largest_instance_masks(
@@ -224,7 +212,7 @@ def _measure_case(
             phase_samples.setdefault(key, []).append(seconds * 1e3)
     for key, samples in phase_samples.items():
         if samples:
-            measurements[key] = _summarize(samples)
+            measurements[key] = summarize(samples)
 
     return measurements
 
