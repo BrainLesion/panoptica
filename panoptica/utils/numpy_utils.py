@@ -66,7 +66,7 @@ def _get_smallest_fitting_uint(max_value: int) -> type:
 
 def recall_by_volume_bins(
     volumes: list[float],
-    matched_flags: list[float],
+    matched_flags: list[bool],
     thresholds: list[float],
 ) -> dict[str, float]:
     """Instance detection recall stratified into user-supplied volume bins.

@@ -441,12 +441,46 @@ class Panoptica_Statistic:
         volumes = self.get(group, volume_metric)
         matched = self.get(group, "is_matched")
         bin_volumes: list[float] = []
-        bin_matched: list[float] = []
+        bin_matched: list[bool] = []
         for sn, vol, mat in zip(self.subjectnames, volumes, matched):
             if is_instance_row(sn) and vol is not None and mat is not None:
                 bin_volumes.append(float(vol))
-                bin_matched.append(float(mat))
+                bin_matched.append(bool(mat))
         return recall_by_volume_bins(bin_volumes, bin_matched, thresholds)
+
+    def recall_by_volume_percentiles(
+        self,
+        percentiles: list[float],
+        group: str | None = None,
+        volume_metric: str = "instance_volume_ref",
+    ) -> dict[str, float]:
+        """Instance detection recall stratified by reference-instance percentile volumes.
+
+        Args:
+            percentiles (list[float]): _description_
+            group (str | None, optional): _description_. Defaults to None.
+            volume_metric (str, optional): _description_. Defaults to "instance_volume_ref".
+
+        Returns:
+            dict[str, float]: _description_
+        """
+        group = self._resolve_single_group(group)
+        self._assertmetric(volume_metric)
+        self._assertmetric("is_matched")
+
+        if not self.instance_subjects:
+            raise ValueError(
+                "recall_by_volume_percentiles needs per-instance rows; rerun the aggregation with "
+                "output_individual_instance_metrics=True."
+            )
+
+        volumes = self.get(group, volume_metric)
+        # Get the thresholds corresponding to the requested percentiles
+        valid_volumes = [v for v in volumes if v is not None]
+        thresholds = np.percentile(valid_volumes, percentiles).tolist()
+        return self.recall_by_volume(
+            thresholds=thresholds, group=group, volume_metric=volume_metric
+        )
 
     def to_dataframe(self) -> pd.DataFrame:
         """Converts the statistic to a pandas dataframe
