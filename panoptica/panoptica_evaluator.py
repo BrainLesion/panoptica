@@ -57,6 +57,7 @@ class Panoptica_Evaluator(SupportsConfig):
         decision_threshold: float | None = None,
         per_region_evaluation: bool = False,
         save_group_times: bool = False,
+        log_intermediate_steps: bool = False,
         log_times: bool = False,
         verbose: bool = False,
         speed_toggles: PanopticaSpeedToggles | None = None,
@@ -80,7 +81,9 @@ class Panoptica_Evaluator(SupportsConfig):
             save_group_times(bool): If true, will save the computation time of each sample and put that into the result object.
             log_times (bool): If true, will print the times for the different phases of the pipeline.
             verbose (bool): If true, will spit out more details than you want.
+            log_intermediate_steps (bool): If true, will log the intermediate steps of the pipeline.
         """
+
         self.__expected_input = expected_input
         #
         self.__instance_approximator = instance_approximator
@@ -121,6 +124,7 @@ class Panoptica_Evaluator(SupportsConfig):
         self.__speed_toggles = (
             speed_toggles if speed_toggles is not None else PanopticaSpeedToggles()
         )
+        self.__log_intermediate_steps = log_intermediate_steps
         # Cache of resulting_metric_keys output keyed by output_individual_instance_metrics.
         self.__resulting_metric_keys_cache: dict[bool, list[str]] = {}
 
@@ -141,6 +145,7 @@ class Panoptica_Evaluator(SupportsConfig):
             "log_times": node.__log_times,
             "verbose": node.__verbose,
             "speed_toggles": node.__speed_toggles,
+            "log_intermediate_steps": node.__log_intermediate_steps,
         }
 
     @citation_reminder
@@ -165,6 +170,7 @@ class Panoptica_Evaluator(SupportsConfig):
         result_all: bool = True,
         voxelspacing: tuple[float, ...] | None = None,
         save_group_times: bool | None = None,
+        log_intermediate_steps: bool | None = None,
         log_times: bool | None = None,
         verbose: bool | None = None,
         skip_groups: list[str] | None = None,
@@ -205,6 +211,11 @@ class Panoptica_Evaluator(SupportsConfig):
                     self.__save_group_times
                     if save_group_times is None
                     else save_group_times
+                ),
+                log_intermediate_steps=(
+                    self.__log_intermediate_steps
+                    if log_intermediate_steps is None
+                    else log_intermediate_steps
                 ),
                 log_times=log_times,
                 verbose=verbose,
@@ -521,6 +532,7 @@ class Panoptica_Evaluator(SupportsConfig):
         matching_threshold: float | None = None,
         result_all: bool = True,
         verbose: bool | None = None,
+        log_intermediate_steps: bool = False,
         log_times: bool | None = None,
         save_group_times: bool = False,
         preprocess_time: float = 0.0,
@@ -544,6 +556,8 @@ class Panoptica_Evaluator(SupportsConfig):
         processing_pair_grouped = processing_pair.__class__(
             prediction_arr=prediction_arr_grouped, reference_arr=reference_arr_grouped
         )
+        del prediction_arr_grouped, reference_arr_grouped
+
         if single_instance_mode and not isinstance(
             processing_pair, MatchedInstancePair
         ):
@@ -562,6 +576,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 instance_metrics=self.__eval_metrics,
                 global_metrics=self.__global_metrics,
                 result_all=result_all,
+                log_intermediate_steps=log_intermediate_steps,
                 log_times=self.__log_times if log_times is None else log_times,
                 verbose=self.__verbose if verbose is None else verbose,
                 verbose_calc=self.__verbose if verbose is None else verbose,
@@ -582,6 +597,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 decision_threshold=decision_threshold,
                 matching_threshold=matching_threshold,
                 result_all=result_all,
+                log_intermediate_steps=log_intermediate_steps,
                 log_times=self.__log_times if log_times is None else log_times,
                 verbose=self.__verbose if verbose is None else verbose,
                 verbose_calc=self.__verbose if verbose is None else verbose,

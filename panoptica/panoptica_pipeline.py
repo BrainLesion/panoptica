@@ -46,6 +46,7 @@ def _panoptic_evaluate(
     decision_threshold: float | None = None,
     matching_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    log_intermediate_steps: bool = False,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
@@ -99,7 +100,9 @@ def _panoptic_evaluate(
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
     # Setup IntermediateStepsData
-    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
+    intermediate_steps_data: IntermediateStepsData | None = (
+        IntermediateStepsData(input_pair) if log_intermediate_steps else None
+    )
     if speed_toggles.crop_at_start:
         # Crops away unnecessary space of zeroes
         input_pair.crop_data()
@@ -221,6 +224,7 @@ def _panoptic_evaluate_region_wise(
     instance_metrics: list[Metric] | None = None,
     global_metrics: list[Metric] | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    log_intermediate_steps: bool = False,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
@@ -272,7 +276,9 @@ def _panoptic_evaluate_region_wise(
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
     # Setup IntermediateStepsData
-    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
+    intermediate_steps_data: IntermediateStepsData | None = (
+        IntermediateStepsData(input_pair) if log_intermediate_steps else None
+    )
     if speed_toggles.crop_at_start:
         # Crops away unnecessary space of zeroes
         input_pair.crop_data()
@@ -324,8 +330,10 @@ def _panoptic_evaluate_region_wise(
             for i in range(1, num_features + 1):
                 region_mask = region_map == i
 
-                intermediate_steps_data_r: IntermediateStepsData = (
+                intermediate_steps_data_r: IntermediateStepsData | None = (
                     IntermediateStepsData(input_pair)
+                    if log_intermediate_steps
+                    else None
                 )
 
                 # multiply region mask with both prediction and reference arr
@@ -522,7 +530,7 @@ def _phase_instance_approximation(
 
 def _phase_instance_matching(
     processing_pair: _ProcessingState,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: IntermediateStepsData | None,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
@@ -540,9 +548,10 @@ def _phase_instance_matching(
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.UNMATCHED_INSTANCE
-        )
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.UNMATCHED_INSTANCE
+            )
         with phase_timer.time("edge_case_handling"):
             processing_pair = _handle_zero_instances_cases(
                 processing_pair,
@@ -584,7 +593,7 @@ def _phase_instance_matching(
 
 def _phase_instance_evaluation(
     processing_pair: _ProcessingState,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: IntermediateStepsData | None,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
@@ -602,9 +611,10 @@ def _phase_instance_evaluation(
 
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.MATCHED_INSTANCE
-        )
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.MATCHED_INSTANCE
+            )
         with phase_timer.time("edge_case_handling"):
             processing_pair = _handle_zero_instances_cases(
                 processing_pair,

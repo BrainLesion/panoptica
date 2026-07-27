@@ -116,7 +116,7 @@ class InstanceMatchingAlgorithm(SupportsConfig, metaclass=ABCMeta):
             **kwargs,
         )
 
-        return map_instance_labels(unmatched_instance_pair.copy(), instance_labelmap)
+        return map_instance_labels(unmatched_instance_pair, instance_labelmap)
 
     def _calculate_matching_metric_pairs(
         self,

@@ -10,6 +10,8 @@ from dataclasses import dataclass, field
 from panoptica.metrics import Metric
 from panoptica.utils.numpy_utils import _get_smallest_fitting_uint
 
+import gc
+
 uint_type: type = np.unsignedinteger
 int_type: type = np.integer
 
@@ -53,6 +55,7 @@ class _ProcessingPair(ABC):
         self._crop: tuple[slice, ...] | None = None
         self._is_cropped: bool = False
         self._uncropped_shape: tuple[int, ...] = reference_arr.shape
+        gc.collect()
 
     def crop_data(self, verbose: bool = False):
         """Crops prediction and reference arrays to non-zero regions.
@@ -112,8 +115,8 @@ class _ProcessingPair(ABC):
             raise TypeError(
                 "set_dtype: tried to set dtype to something other than integers"
             )
-        self._prediction_arr = self._prediction_arr.astype(type)
-        self._reference_arr = self._reference_arr.astype(type)
+        self._prediction_arr = self._prediction_arr.astype(type, copy=False)
+        self._reference_arr = self._reference_arr.astype(type, copy=False)
 
     @property
     def prediction_arr(self):
