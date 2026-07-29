@@ -262,8 +262,7 @@ class Test_Panoptica_Results(unittest.TestCase):
         self.assertEqual(rows[1]["voxel_count"], 40)
         self.assertEqual(rows[1]["volume"], 0.4)
         # Minimal scope: prediction rows carry volume/voxel_count only, no sq metrics.
-        self.assertNotIn("sq", rows[0])
-        # Not present in the default (master-only) output.
+        self.assertFalse(any(k == "sq" or k.startswith("sq_") for k in rows[0].keys()))
         self.assertNotIn(
             "predicted_instances",
             result.to_dict(output_individual_instance_metrics=False),
