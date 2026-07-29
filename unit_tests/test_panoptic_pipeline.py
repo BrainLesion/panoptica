@@ -328,7 +328,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         pair = MatchedInstancePair(
             prediction_arr=prediction_arr,
             reference_arr=reference_arr,
-            matched_instances=[1],
+            matched_instance_labels=[1],
             missed_reference_labels=[],
             missed_prediction_labels=[],
         )
@@ -359,7 +359,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         pair = MatchedInstancePair(
             prediction_arr=prediction_arr,
             reference_arr=reference_arr,
-            matched_instances=[1],
+            matched_instance_labels=[1],
             missed_reference_labels=[],
             missed_prediction_labels=[],
         )

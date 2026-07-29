@@ -120,7 +120,7 @@ def evaluate_matched_instance(
         matched_instance_pair.reference_arr,
         matched_instance_pair.prediction_arr,
     )
-    ref_matched_labels = matched_instance_pair.matched_instances
+    ref_matched_labels = matched_instance_pair.matched_instance_labels
 
     if speed_toggles.precompute_instance_bboxes:
         # Precompute every label's bounding box once (a single pass over each array) so

@@ -324,7 +324,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
 
     missed_reference_labels: list[int]
     missed_prediction_labels: list[int]
-    matched_instances: list[int]
+    matched_instance_labels: list[int]
 
     def __init__(
         self,
@@ -332,7 +332,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
         reference_arr: np.ndarray,
         missed_reference_labels: list[int] | None = None,
         missed_prediction_labels: list[int] | None = None,
-        matched_instances: list[int] | None = None,
+        matched_instance_labels: list[int] | None = None,
         n_pred_instances: int | None = None,
         n_ref_instances: int | None = None,
     ) -> None:
@@ -355,9 +355,9 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             n_pred_instances,
             n_ref_instances,
         )
-        if matched_instances is None:
-            matched_instances = [i for i in self.pred_labels if i in self.ref_labels]
-        self.matched_instances = matched_instances
+        if matched_instance_labels is None:
+            matched_instance_labels = [i for i in self.pred_labels if i in self.ref_labels]
+        self.matched_instance_labels = matched_instance_labels
 
         if missed_reference_labels is None:
             missed_reference_labels = list(
@@ -373,7 +373,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
 
     @property
     def n_matched_instances(self):
-        return len(self.matched_instances)
+        return len(self.matched_instance_labels)
 
     def copy(self):
         """
@@ -386,7 +386,7 @@ class MatchedInstancePair(_ProcessingPairInstanced):
             n_ref_instances=self.n_ref_instances,
             missed_reference_labels=self.missed_reference_labels,
             missed_prediction_labels=self.missed_prediction_labels,
-            matched_instances=self.matched_instances,
+            matched_instance_labels=self.matched_instance_labels,
         )
 
 
