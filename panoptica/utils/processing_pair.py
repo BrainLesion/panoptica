@@ -409,9 +409,9 @@ class EvaluateInstancePair:
         instance_volume_matched_ref (list[float]): Physical volume of each matched (TP) reference instance, computed as voxel count times ``prod(voxelspacing)``.
         instance_voxel_count_unmatched_ref (list[int]): Raw voxel count of each unmatched (FN) reference instance.
         instance_volume_unmatched_ref (list[float]): Physical volume of each unmatched (FN) reference instance.
-        instance_voxel_count_matched_pred (list[int]): Raw voxel count of each matched prediction instance (one that shares a reference label).
-        instance_volume_matched_pred (list[float]): Physical volume of each matched prediction instance.
-        instance_voxel_count_unmatched_pred (list[int]): Raw voxel count of each unmatched (FP) prediction instance.
+        instance_voxel_count_matched_pred (list[int]): Raw voxel count of each matched (TP) prediction instance (an accepted match; it shares its reference label). Length equals ``tp``.
+        instance_volume_matched_pred (list[float]): Physical volume of each matched (TP) prediction instance.
+        instance_voxel_count_unmatched_pred (list[int]): Raw voxel count of each unmatched (FP) prediction instance — predictions demoted by the no-overlap guard or decision threshold, plus predictions never matched by the matcher. Length equals ``fp``.
         instance_volume_unmatched_pred (list[float]): Physical volume of each unmatched (FP) prediction instance.
     """
 
