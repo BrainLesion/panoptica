@@ -82,7 +82,7 @@ class _InstanceEvaluation:
     volume_ref: float = 0.0
 
 
-def evaluate_matched_instance(
+def evaluate_matched_instances(
     matched_instance_pair: MatchedInstancePair,
     eval_metrics: list[Metric] | None = None,
     decision_metric: Metric | None = Metric.IOU,

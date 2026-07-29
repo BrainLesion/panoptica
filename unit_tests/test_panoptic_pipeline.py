@@ -21,7 +21,7 @@ from panoptica.instance_matcher import (
 )
 from panoptica.metrics import Metric
 from panoptica.instance_evaluator import (
-    evaluate_matched_instance,
+    evaluate_matched_instances,
     _evaluate_instance,
 )
 from panoptica.utils.processing_pair import MatchedInstancePair
@@ -333,7 +333,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
             missed_prediction_labels=[],
         )
 
-        result = evaluate_matched_instance(
+        result = evaluate_matched_instances(
             pair,
             eval_metrics=[Metric.IOU],
             decision_metric=Metric.IOU,
@@ -364,7 +364,7 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
             missed_prediction_labels=[],
         )
 
-        result = evaluate_matched_instance(
+        result = evaluate_matched_instances(
             pair,
             eval_metrics=[Metric.IOU],
             decision_metric=None,

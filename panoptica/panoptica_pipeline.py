@@ -4,7 +4,7 @@ from panoptica.utils.logger import logger
 from typing import TYPE_CHECKING
 
 from panoptica.instance_approximator import InstanceApproximator
-from panoptica.instance_evaluator import evaluate_matched_instance
+from panoptica.instance_evaluator import evaluate_matched_instances
 from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult
@@ -619,7 +619,7 @@ def _phase_instance_evaluation(
             logger.info("-- Got MatchedInstancePair, will evaluate instances")
         before = phase_timer.times.get("instance_evaluation", 0.0)
         with phase_timer.time("instance_evaluation"):
-            processing_pair = evaluate_matched_instance(
+            processing_pair = evaluate_matched_instances(
                 processing_pair,
                 eval_metrics=instance_metrics,
                 decision_metric=decision_metric,
