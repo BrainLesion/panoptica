@@ -583,6 +583,7 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group=label_group,
                 phase_timer=phase_timer,
                 speed_toggles=self.__speed_toggles,
+                input_can_be_mutated=True,
                 **kwargs,
             )
         else:
@@ -604,8 +605,14 @@ class Panoptica_Evaluator(SupportsConfig):
                 label_group=label_group,
                 phase_timer=phase_timer,
                 speed_toggles=self.__speed_toggles,
+                input_can_be_mutated=True,
                 **kwargs,
             )
+        # Release the grouped pair now that the pipeline is done; without this the
+        # full-shape uint8 buffers (one prediction, one reference) would sit around
+        # until end-of-function even though the returned PanopticaResult does not
+        # hold references to them.
+        del processing_pair_grouped
         if self.__save_group_times or save_group_times:
             duration = perf_counter() - start_time
             result.computation_time = duration

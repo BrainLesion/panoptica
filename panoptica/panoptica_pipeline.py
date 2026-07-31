@@ -54,6 +54,7 @@ def _panoptic_evaluate(
     label_group=None,
     phase_timer: PhaseTimer | None = None,
     speed_toggles: PanopticaSpeedToggles | None = None,
+    input_can_be_mutated: bool = False,
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -73,6 +74,9 @@ def _panoptic_evaluate(
         verbose: Whether to print verbose information.
         verbose_calc: Whether to print calculation details.
         label_group: Group of labels to consider.
+        input_can_be_mutated: Caller promises ``input_pair`` will not be reused; skips the
+            defensive copy and lets downstream phases mutate it in place. Set from callers
+            (like ``_evaluate_group``) that build a fresh, unshared pair per call.
         **kwargs: Additional keyword arguments.
 
     Returns:
@@ -111,7 +115,18 @@ def _panoptic_evaluate(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair: _ProcessingState = input_pair.copy()
+    if input_can_be_mutated:
+        # Caller promised input_pair is disposable and will not be reused, so we skip
+        # the defensive copy. Downstream phases mutate the pair in place.
+        processing_pair: _ProcessingState = input_pair
+    else:
+        processing_pair = input_pair.copy()
+    # Release the caller's reference to the (possibly full-shape) input buffer as
+    # soon as we no longer need it. When intermediate steps are being logged, the
+    # IntermediateStepsData object still refers to the original pair, so we must
+    # keep it alive in that case.
+    if intermediate_steps_data is None:
+        del input_pair
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -232,6 +247,7 @@ def _panoptic_evaluate_region_wise(
     label_group=None,
     phase_timer: PhaseTimer | None = None,
     speed_toggles: PanopticaSpeedToggles | None = None,
+    input_can_be_mutated: bool = False,
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -249,6 +265,8 @@ def _panoptic_evaluate_region_wise(
         verbose: Whether to print verbose information.
         verbose_calc: Whether to print calculation details.
         label_group: Group of labels to consider.
+        input_can_be_mutated: Caller promises ``input_pair`` will not be reused; skips the
+            defensive copy and lets downstream phases mutate it in place.
         **kwargs: Additional keyword arguments.
 
     Returns:
@@ -287,7 +305,13 @@ def _panoptic_evaluate_region_wise(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair: _ProcessingState = input_pair.copy()
+    if input_can_be_mutated:
+        # Caller promised input_pair is disposable. It is still referenced later
+        # (for the combined_result), so we alias instead of copying — skipping only
+        # the redundant per-call allocation.
+        processing_pair: _ProcessingState = input_pair
+    else:
+        processing_pair = input_pair.copy()
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
