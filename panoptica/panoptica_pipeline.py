@@ -103,9 +103,12 @@ def _panoptic_evaluate(
     if "voxelspacing" not in kwargs:
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
-    # Setup IntermediateStepsData
+    # Setup IntermediateStepsData. Snapshot from a copy — later phases crop
+    # input_pair in place and (with input_can_be_mutated=True) mutate it further,
+    # so a bare reference would violate the "original arrays, untouched" contract
+    # exposed via intermediate_steps_data.original_prediction_arr/reference_arr.
     intermediate_steps_data: IntermediateStepsData | None = (
-        IntermediateStepsData(input_pair) if log_intermediate_steps else None
+        IntermediateStepsData(input_pair.copy()) if log_intermediate_steps else None
     )
     if speed_toggles.crop_at_start:
         # Crops away unnecessary space of zeroes
@@ -293,9 +296,12 @@ def _panoptic_evaluate_region_wise(
     if "voxelspacing" not in kwargs:
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
-    # Setup IntermediateStepsData
+    # Setup IntermediateStepsData. Snapshot from a copy — later phases crop
+    # input_pair in place and (with input_can_be_mutated=True) mutate it further,
+    # so a bare reference would violate the "original arrays, untouched" contract
+    # exposed via intermediate_steps_data.original_prediction_arr/reference_arr.
     intermediate_steps_data: IntermediateStepsData | None = (
-        IntermediateStepsData(input_pair) if log_intermediate_steps else None
+        IntermediateStepsData(input_pair.copy()) if log_intermediate_steps else None
     )
     if speed_toggles.crop_at_start:
         # Crops away unnecessary space of zeroes
@@ -354,16 +360,20 @@ def _panoptic_evaluate_region_wise(
             for i in range(1, num_features + 1):
                 region_mask = region_map == i
 
-                intermediate_steps_data_r: IntermediateStepsData | None = (
-                    IntermediateStepsData(input_pair)
-                    if log_intermediate_steps
-                    else None
-                )
-
                 # multiply region mask with both prediction and reference arr
                 processing_pair_r: _ProcessingState = UnmatchedInstancePair(
                     processing_pair.prediction_arr * region_mask,
                     processing_pair.reference_arr * region_mask,
+                )
+
+                # Snapshot the region-scope input (not the whole-volume input_pair)
+                # so the "original" arrays reflect what this region result was
+                # actually evaluated against, and no full-volume reference is
+                # pinned alive on every returned per-region PanopticaResult.
+                intermediate_steps_data_r: IntermediateStepsData | None = (
+                    IntermediateStepsData(processing_pair_r.copy())
+                    if log_intermediate_steps
+                    else None
                 )
 
                 # Second Phase: Instance Matching
