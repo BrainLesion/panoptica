@@ -361,7 +361,7 @@ def _panoptic_evaluate_region_wise(
                 region_mask = region_map == i
 
                 # multiply region mask with both prediction and reference arr
-                processing_pair_r: _ProcessingState = UnmatchedInstancePair(
+                region_pair = UnmatchedInstancePair(
                     processing_pair.prediction_arr * region_mask,
                     processing_pair.reference_arr * region_mask,
                 )
@@ -371,10 +371,12 @@ def _panoptic_evaluate_region_wise(
                 # actually evaluated against, and no full-volume reference is
                 # pinned alive on every returned per-region PanopticaResult.
                 intermediate_steps_data_r: IntermediateStepsData | None = (
-                    IntermediateStepsData(processing_pair_r.copy())
+                    IntermediateStepsData(region_pair.copy())
                     if log_intermediate_steps
                     else None
                 )
+
+                processing_pair_r: _ProcessingState = region_pair
 
                 # Second Phase: Instance Matching
                 processing_pair_r = _phase_instance_matching(
