@@ -12,12 +12,20 @@ Usage::
 
 How peak RSS is measured
 ------------------------
-Peak resident-set is polled from ``/proc/self/status`` (``VmRSS``) by a
-background sampler thread while each measurement runs. Between iterations
-we ``gc.collect()`` and re-record the baseline so each sample is a fresh
-"how much did this call grow the process?" number. On non-Linux hosts the
-fallback is ``resource.getrusage(RUSAGE_SELF).ru_maxrss`` before/after,
-which underestimates when a previous run allocated more.
+For each sample we ``os.fork()`` a child, take a fresh RSS baseline in the
+child, run the function once, and read the child's peak RSS via a background
+sampler thread on ``/proc/self/status`` (``VmRSS``) plus a final
+``resource.getrusage(RUSAGE_SELF).ru_maxrss`` check. The child prints
+``peak - baseline`` in MiB and exits. Because the child is a *fresh* address
+space each time (COW pages from the parent don't grow the delta), every
+sample is independent — Python's non-shrinking heap in the parent can't
+squash iteration 2..N to zero.
+
+On non-Linux hosts (no ``/proc``) the sampler falls back to periodic
+``getrusage`` reads, which is fine inside a short-lived child. Fork itself
+is POSIX-only; on Windows the benchmark falls back to in-process sampling
+in the parent (and inherits its bias — flagged in the JSON header via
+``isolation: "in-process"``).
 
 JSON schema
 -----------
@@ -163,8 +171,10 @@ class _PeakSampler:
         return self.peak
 
 
-def _peak_mib_of(fn: Callable[[], Any]) -> float:
-    """Peak RSS growth (MiB) during a single call to ``fn``."""
+def _peak_mib_in_process(fn: Callable[[], Any]) -> float:
+    """Peak RSS growth (MiB) measured *in this process*. Only meaningful for
+    the very first call after a fresh baseline — see :func:`_peak_mib_forked`
+    for the correct per-sample isolation."""
     sampler = _PeakSampler()
     sampler.start()
     try:
@@ -175,19 +185,93 @@ def _peak_mib_of(fn: Callable[[], Any]) -> float:
     return delta_bytes / (1024.0 * 1024.0)
 
 
+_CAN_FORK = hasattr(os, "fork")
+
+
+def _peak_mib_forked(fn: Callable[[], Any]) -> float:
+    """Peak RSS growth (MiB) for one call to ``fn``, measured inside a fork().
+
+    Each call gets a fresh child address space, so the "how much did this call
+    grow the process?" number is truthful even on the 5th repeat — Python's
+    non-shrinking heap can't hide new allocations. The child prints one
+    float (MiB) to a pipe and exits; the parent reads and reaps it.
+    """
+    if not _CAN_FORK:
+        return _peak_mib_in_process(fn)
+
+    r_fd, w_fd = os.pipe()
+    pid = os.fork()
+    if pid == 0:
+        # Child: measure and print, then _exit (skip parent's atexit handlers).
+        try:
+            os.close(r_fd)
+            gc.collect()
+            sampler = _PeakSampler()
+            sampler.start()
+            try:
+                fn()
+            finally:
+                peak = sampler.stop()
+            # Also consult ru_maxrss — cheap belt-and-braces for a peak the
+            # 5 ms sampler might have missed.
+            try:
+                import resource
+
+                rss_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                if sys.platform.startswith("linux"):
+                    rss_bytes *= 1024
+                if rss_bytes > peak:
+                    peak = rss_bytes
+            except Exception:
+                pass
+            delta_mib = max(peak - sampler.baseline, 0) / (1024.0 * 1024.0)
+            os.write(w_fd, f"{delta_mib}\n".encode())
+        except BaseException as exc:  # noqa: BLE001 — surface *anything* to parent
+            try:
+                os.write(w_fd, f"ERR {type(exc).__name__}: {exc}\n".encode())
+            except Exception:
+                pass
+        finally:
+            try:
+                os.close(w_fd)
+            except Exception:
+                pass
+            os._exit(0)
+
+    # Parent
+    os.close(w_fd)
+    chunks: list[bytes] = []
+    with os.fdopen(r_fd, "rb") as f:
+        while True:
+            b = f.read(4096)
+            if not b:
+                break
+            chunks.append(b)
+    _, status = os.waitpid(pid, 0)
+    raw = b"".join(chunks).decode().strip()
+    if not raw or raw.startswith("ERR "):
+        raise RuntimeError(
+            f"forked mem measurement failed (exit_status={status}, output={raw!r})"
+        )
+    return float(raw)
+
+
 def measure_peak(
     fn: Callable[[], Any],
     repeats: int = DEFAULT_REPEATS,
     warmup: int = DEFAULT_WARMUP,
 ) -> dict[str, float]:
-    """Return ``summarize`` stats over ``repeats`` peak-RSS-delta samples (MiB)."""
+    """Return ``summarize`` stats over ``repeats`` peak-RSS-delta samples (MiB).
+
+    Each sample runs in a fresh fork so per-call peaks aren't masked by
+    Python's non-shrinking heap. Warmup runs also fork — the parent stays
+    untouched between measurements, which keeps the CoW baseline small.
+    """
     for _ in range(warmup):
-        fn()
-        gc.collect()
+        _peak_mib_forked(fn)
     samples: list[float] = []
     for _ in range(repeats):
-        samples.append(_peak_mib_of(fn))
-        gc.collect()
+        samples.append(_peak_mib_forked(fn))
     return summarize(samples)
 
 
@@ -349,17 +433,20 @@ def main() -> None:
         "commit": _git_commit_short(),
         "repeats": args.repeats,
         "warmup": args.warmup,
-        "sampler": "proc-status" if _HAS_PROC else "getrusage-fallback",
+        "sampler": "proc-status" if _HAS_PROC else "getrusage",
+        "isolation": "fork" if _CAN_FORK else "in-process",
         "cases": [],
     }
-    if not _HAS_PROC:
+    if not _CAN_FORK:
         print(
-            "warning: /proc/self/status not readable; falling back to getrusage() "
-            "(peaks may be underreported when an earlier iteration allocated more).",
+            "warning: os.fork() unavailable; falling back to in-process sampling "
+            "(only the first iteration per measurement is a reliable peak — "
+            "subsequent iterations will be squashed to ~0 by Python's "
+            "non-shrinking heap).",
             file=sys.stderr,
         )
-    # Prime any lazy imports once before the first measurement so the very first
-    # end_to_end sample isn't inflated by module-import RSS.
+    # Prime any lazy imports once before the first measurement so the first
+    # fork()'s CoW baseline reflects a fully-warm parent.
     _ = _build_evaluator()
 
     for case in cases:
