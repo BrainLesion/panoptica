@@ -124,12 +124,15 @@ def _panoptic_evaluate(
         processing_pair: _ProcessingState = input_pair
     else:
         processing_pair = input_pair.copy()
-    # Release the caller's reference to the (possibly full-shape) input buffer as
-    # soon as we no longer need it. When intermediate steps are being logged, the
-    # IntermediateStepsData object still refers to the original pair, so we must
-    # keep it alive in that case.
-    if intermediate_steps_data is None:
-        del input_pair
+    # Drop the local input_pair binding. Under !input_can_be_mutated this releases
+    # the copy source; under input_can_be_mutated the frame still keeps the aliased
+    # SemanticPair reachable through processing_pair *until* the approximation phase
+    # returns a fresh pair — after that point, keeping the stale name bound has been
+    # measured to prevent the original full-shape uint8 buffer from being reclaimed
+    # for the rest of _panoptic_evaluate (peak +~20x on the 25-group vertebral case).
+    # IntermediateStepsData already holds an independent copy, so this del is safe
+    # regardless of log_intermediate_steps.
+    del input_pair
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
