@@ -46,6 +46,7 @@ def _panoptic_evaluate(
     decision_threshold: float | None = None,
     matching_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    log_intermediate_steps: bool = False,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
@@ -53,6 +54,7 @@ def _panoptic_evaluate(
     label_group=None,
     phase_timer: PhaseTimer | None = None,
     speed_toggles: PanopticaSpeedToggles | None = None,
+    input_can_be_mutated: bool = False,
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -72,6 +74,9 @@ def _panoptic_evaluate(
         verbose: Whether to print verbose information.
         verbose_calc: Whether to print calculation details.
         label_group: Group of labels to consider.
+        input_can_be_mutated: Caller promises ``input_pair`` will not be reused; skips the
+            defensive copy and lets downstream phases mutate it in place. Set from callers
+            (like ``_evaluate_group``) that build a fresh, unshared pair per call.
         **kwargs: Additional keyword arguments.
 
     Returns:
@@ -98,8 +103,13 @@ def _panoptic_evaluate(
     if "voxelspacing" not in kwargs:
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
-    # Setup IntermediateStepsData
-    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
+    # Setup IntermediateStepsData. Snapshot from a copy — later phases crop
+    # input_pair in place and (with input_can_be_mutated=True) mutate it further,
+    # so a bare reference would violate the "original arrays, untouched" contract
+    # exposed via intermediate_steps_data.original_prediction_arr/reference_arr.
+    intermediate_steps_data: IntermediateStepsData | None = (
+        IntermediateStepsData(input_pair.copy()) if log_intermediate_steps else None
+    )
     if speed_toggles.crop_at_start:
         # Crops away unnecessary space of zeroes
         input_pair.crop_data()
@@ -108,7 +118,21 @@ def _panoptic_evaluate(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair: _ProcessingState = input_pair.copy()
+    if input_can_be_mutated:
+        # Caller promised input_pair is disposable and will not be reused, so we skip
+        # the defensive copy. Downstream phases mutate the pair in place.
+        processing_pair: _ProcessingState = input_pair
+    else:
+        processing_pair = input_pair.copy()
+    # Drop the local input_pair binding. Under !input_can_be_mutated this releases
+    # the copy source; under input_can_be_mutated the frame still keeps the aliased
+    # SemanticPair reachable through processing_pair *until* the approximation phase
+    # returns a fresh pair — after that point, keeping the stale name bound has been
+    # measured to prevent the original full-shape uint8 buffer from being reclaimed
+    # for the rest of _panoptic_evaluate (peak +~20x on the 25-group vertebral case).
+    # IntermediateStepsData already holds an independent copy, so this del is safe
+    # regardless of log_intermediate_steps.
+    del input_pair
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -221,6 +245,7 @@ def _panoptic_evaluate_region_wise(
     instance_metrics: list[Metric] | None = None,
     global_metrics: list[Metric] | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    log_intermediate_steps: bool = False,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
@@ -228,6 +253,7 @@ def _panoptic_evaluate_region_wise(
     label_group=None,
     phase_timer: PhaseTimer | None = None,
     speed_toggles: PanopticaSpeedToggles | None = None,
+    input_can_be_mutated: bool = False,
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -245,6 +271,8 @@ def _panoptic_evaluate_region_wise(
         verbose: Whether to print verbose information.
         verbose_calc: Whether to print calculation details.
         label_group: Group of labels to consider.
+        input_can_be_mutated: Caller promises ``input_pair`` will not be reused; skips the
+            defensive copy and lets downstream phases mutate it in place.
         **kwargs: Additional keyword arguments.
 
     Returns:
@@ -271,8 +299,13 @@ def _panoptic_evaluate_region_wise(
     if "voxelspacing" not in kwargs:
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
-    # Setup IntermediateStepsData
-    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
+    # Setup IntermediateStepsData. Snapshot from a copy — later phases crop
+    # input_pair in place and (with input_can_be_mutated=True) mutate it further,
+    # so a bare reference would violate the "original arrays, untouched" contract
+    # exposed via intermediate_steps_data.original_prediction_arr/reference_arr.
+    intermediate_steps_data: IntermediateStepsData | None = (
+        IntermediateStepsData(input_pair.copy()) if log_intermediate_steps else None
+    )
     if speed_toggles.crop_at_start:
         # Crops away unnecessary space of zeroes
         input_pair.crop_data()
@@ -281,7 +314,13 @@ def _panoptic_evaluate_region_wise(
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair: _ProcessingState = input_pair.copy()
+    if input_can_be_mutated:
+        # Caller promised input_pair is disposable. It is still referenced later
+        # (for the combined_result), so we alias instead of copying — skipping only
+        # the redundant per-call allocation.
+        processing_pair: _ProcessingState = input_pair
+    else:
+        processing_pair = input_pair.copy()
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -324,15 +363,23 @@ def _panoptic_evaluate_region_wise(
             for i in range(1, num_features + 1):
                 region_mask = region_map == i
 
-                intermediate_steps_data_r: IntermediateStepsData = (
-                    IntermediateStepsData(input_pair)
-                )
-
                 # multiply region mask with both prediction and reference arr
-                processing_pair_r: _ProcessingState = UnmatchedInstancePair(
+                region_pair = UnmatchedInstancePair(
                     processing_pair.prediction_arr * region_mask,
                     processing_pair.reference_arr * region_mask,
                 )
+
+                # Snapshot the region-scope input (not the whole-volume input_pair)
+                # so the "original" arrays reflect what this region result was
+                # actually evaluated against, and no full-volume reference is
+                # pinned alive on every returned per-region PanopticaResult.
+                intermediate_steps_data_r: IntermediateStepsData | None = (
+                    IntermediateStepsData(region_pair.copy())
+                    if log_intermediate_steps
+                    else None
+                )
+
+                processing_pair_r: _ProcessingState = region_pair
 
                 # Second Phase: Instance Matching
                 processing_pair_r = _phase_instance_matching(
@@ -522,7 +569,7 @@ def _phase_instance_approximation(
 
 def _phase_instance_matching(
     processing_pair: _ProcessingState,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: IntermediateStepsData | None,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
@@ -540,9 +587,10 @@ def _phase_instance_matching(
 
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.UNMATCHED_INSTANCE
-        )
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.UNMATCHED_INSTANCE
+            )
         with phase_timer.time("edge_case_handling"):
             processing_pair = _handle_zero_instances_cases(
                 processing_pair,
@@ -584,7 +632,7 @@ def _phase_instance_matching(
 
 def _phase_instance_evaluation(
     processing_pair: _ProcessingState,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: IntermediateStepsData | None,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
@@ -602,9 +650,10 @@ def _phase_instance_evaluation(
 
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.MATCHED_INSTANCE
-        )
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.MATCHED_INSTANCE
+            )
         with phase_timer.time("edge_case_handling"):
             processing_pair = _handle_zero_instances_cases(
                 processing_pair,

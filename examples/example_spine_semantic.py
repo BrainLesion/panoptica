@@ -31,6 +31,7 @@ def main():
         result = evaluator.evaluate(
             prediction_mask,
             reference_mask,
+            log_intermediate_steps=True,
         )["ungrouped"]
 
         # To print the results, just call print

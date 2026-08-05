@@ -379,3 +379,76 @@ class Test_Panoptica_Instance_Evaluation(unittest.TestCase):
         self.assertEqual(
             result.instance_volume_unmatched_ref[0], float(ref_voxel_count)
         )
+
+
+class Test_IntermediateStepsOriginalSnapshot(unittest.TestCase):
+    """Contract: intermediate_steps_data.original_* arrays are the pristine
+    inputs — same shape, same content — regardless of internal crop/mutation.
+    """
+
+    def setUp(self) -> None:
+        disable_citation_reminder()
+        return super().setUp()
+
+    def _padded_pair(self):
+        # Content sits in a tight bbox at the volume centre; the surrounding
+        # zeros are what crop_at_start would strip.
+        shape = (8, 8, 8)
+        pred = np.zeros(shape, dtype=np.uint8)
+        ref = np.zeros(shape, dtype=np.uint8)
+        pred[3:6, 3:6, 3:6] = 1
+        ref[3:6, 3:6, 3:6] = 1
+        return pred, ref
+
+    def test_original_arrays_are_untouched_input(self):
+        from panoptica import Panoptica_Evaluator, InputType
+        from panoptica.utils.segmentation_class import SegmentationClassGroups
+        from panoptica.utils.label_group import LabelGroup
+
+        pred, ref = self._padded_pair()
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(
+                matching_metric=Metric.IOU, matching_threshold=0.1
+            ),
+            segmentation_class_groups=SegmentationClassGroups(
+                {"Lesion": LabelGroup(1)}
+            ),
+            log_intermediate_steps=True,
+        )
+        results = evaluator.evaluate(pred, ref, verbose=False)
+        isd = next(iter(results.values())).intermediate_steps_data
+        self.assertIsNotNone(isd)
+        # Shape must be the caller's shape, not the internal cropped shape.
+        self.assertEqual(isd.original_prediction_arr.shape, pred.shape)
+        self.assertEqual(isd.original_reference_arr.shape, ref.shape)
+        # And contents must match the caller's input, not a mutated version.
+        np.testing.assert_array_equal(isd.original_prediction_arr, pred)
+        np.testing.assert_array_equal(isd.original_reference_arr, ref)
+
+    def test_input_arrays_not_mutated_by_evaluate(self):
+        # The snapshot copy must not have aliased the caller's array — if it
+        # had, a later in-place mutation inside the pipeline would corrupt the
+        # caller's data. Compare against a private baseline.
+        from panoptica import Panoptica_Evaluator, InputType
+        from panoptica.utils.segmentation_class import SegmentationClassGroups
+        from panoptica.utils.label_group import LabelGroup
+
+        pred, ref = self._padded_pair()
+        pred_before = pred.copy()
+        ref_before = ref.copy()
+        evaluator = Panoptica_Evaluator(
+            expected_input=InputType.SEMANTIC,
+            instance_approximator=ConnectedComponentsInstanceApproximator(),
+            instance_matcher=NaiveThresholdMatching(
+                matching_metric=Metric.IOU, matching_threshold=0.1
+            ),
+            segmentation_class_groups=SegmentationClassGroups(
+                {"Lesion": LabelGroup(1)}
+            ),
+            log_intermediate_steps=True,
+        )
+        evaluator.evaluate(pred, ref, verbose=False)
+        np.testing.assert_array_equal(pred, pred_before)
+        np.testing.assert_array_equal(ref, ref_before)
