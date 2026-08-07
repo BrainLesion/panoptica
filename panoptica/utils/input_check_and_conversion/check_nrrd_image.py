@@ -1,14 +1,25 @@
+# Annotations are lazy so that nrrd type references never need the package at import
+# time (see the optional import below).
+from __future__ import annotations
+
 import numpy as np
 from panoptica.utils.logger import logger
 from importlib.util import find_spec
 from pathlib import Path
+from typing import TYPE_CHECKING
 from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
     _InputDataTypeChecker,
+    _MissingOptionalPackage,
 )
 
-# Optional sitk import
+# Optional nrrd import
 spec = find_spec("nrrd")
 if spec is not None:
+    import nrrd
+else:
+    nrrd = _MissingOptionalPackage("nrrd", install_name="pynrrd")  # type: ignore[assignment]
+
+if TYPE_CHECKING:
     import nrrd
 
 
