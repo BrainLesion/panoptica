@@ -12,7 +12,9 @@ from panoptica.metrics._surface_distances import (
     _reduce_surface_metric,
     _surface_distance_pair,
 )
+from panoptica.utils.parallel_processing import NonDaemonicPool
 from panoptica.utils.processing_pair import EvaluateInstancePair, MatchedInstancePair
+from panoptica.utils.speed_toggles import PanopticaSpeedToggles
 
 
 def _extended_voxelspacing(voxelspacing: tuple[float, ...], ndim: int):
@@ -88,6 +90,7 @@ def evaluate_matched_instance(
     voxelspacing: tuple[float, ...] | None = None,
     processing_pair_orig_shape: tuple[int, ...] | None = None,
     n_ref_labels: int | None = None,
+    speed_toggles: PanopticaSpeedToggles | None = None,
     **kwargs,
 ) -> EvaluateInstancePair:
     """
@@ -108,6 +111,8 @@ def evaluate_matched_instance(
             raise ValueError("decision metric not contained in eval_metrics")
         if decision_threshold is None:
             raise ValueError("decision metric set but no threshold")
+    if speed_toggles is None:
+        speed_toggles = PanopticaSpeedToggles()
     # Initialize variables for True Positives (tp)
     score_dict: dict[Metric, list[float]] = {m: [] for m in eval_metrics}
 
@@ -117,13 +122,24 @@ def evaluate_matched_instance(
     )
     ref_matched_labels = matched_instance_pair.matched_instances
 
-    # Precompute every label's bounding box once (a single pass over each array) so each
-    # instance is evaluated within its own crop instead of rescanning the full array.
-    ref_slices = find_objects(reference_arr)
-    pred_slices = find_objects(prediction_arr)
+    if speed_toggles.precompute_instance_bboxes:
+        # Precompute every label's bounding box once (a single pass over each array) so
+        # each instance is evaluated within its own crop instead of rescanning the full
+        # array.
+        ref_slices = find_objects(reference_arr)
+        pred_slices = find_objects(prediction_arr)
 
-    per_instance_results: list[_InstanceEvaluation] = [
-        _evaluate_instance(
+        def _instance_slice_for(ref_idx: int) -> tuple[slice, ...] | None:
+            return _union_instance_slice(
+                ref_slices, pred_slices, ref_idx, reference_arr.shape
+            )
+    else:
+
+        def _instance_slice_for(ref_idx: int) -> tuple[slice, ...] | None:
+            return None
+
+    instance_args = [
+        (
             reference_arr,
             prediction_arr,
             ref_idx,
@@ -131,12 +147,20 @@ def evaluate_matched_instance(
             voxelspacing,
             processing_pair_orig_shape,
             n_ref_labels,
-            instance_slice=_union_instance_slice(
-                ref_slices, pred_slices, ref_idx, reference_arr.shape
-            ),
+            _instance_slice_for(ref_idx),
         )
         for ref_idx in ref_matched_labels
     ]
+
+    if speed_toggles.parallel_instance_eval and len(instance_args) >= 2:
+        with NonDaemonicPool(
+            processes=speed_toggles.parallel_instance_eval_workers
+        ) as pool:
+            per_instance_results: list[_InstanceEvaluation] = pool.starmap(
+                _evaluate_instance, instance_args
+            )
+    else:
+        per_instance_results = [_evaluate_instance(*args) for args in instance_args]
 
     # TODO if instance matcher already gives matching metric, adapt here!
     tp = 0

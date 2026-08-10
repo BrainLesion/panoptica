@@ -1,13 +1,24 @@
+# Annotations are lazy so that nibabel type references never need the package at
+# import time (see the optional import below).
+from __future__ import annotations
+
 import numpy as np
 from importlib.util import find_spec
 from pathlib import Path
+from typing import TYPE_CHECKING
 from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
     _InputDataTypeChecker,
+    _MissingOptionalPackage,
 )
 
-# Optional sitk import
+# Optional nibabel import
 spec = find_spec("nibabel")
 if spec is not None:
+    import nibabel as nib
+else:
+    nib = _MissingOptionalPackage("nibabel")  # type: ignore[assignment]
+
+if TYPE_CHECKING:
     import nibabel as nib
 
 
@@ -71,7 +82,7 @@ class NibabelImageChecker(_InputDataTypeChecker):
         return True, ""
 
     def convert_to_numpy_array(self, image: nib.Nifti1Image) -> np.ndarray:
-        return np.asanyarray(image.dataobj, dtype=image.dataobj.dtype).copy()  # type: ignore[attr-defined]
+        return np.asanyarray(image.dataobj, dtype=image.dataobj.dtype)  # type: ignore[attr-defined]
 
     def extract_metadata_from_image(self, image: nib.Nifti1Image) -> dict:
         """

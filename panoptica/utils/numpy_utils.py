@@ -64,6 +64,47 @@ def _get_smallest_fitting_uint(max_value: int) -> type:
     return dtype
 
 
+def recall_by_volume_bins(
+    volumes: list[float],
+    matched_flags: list[bool],
+    thresholds: list[float],
+) -> dict[str, float]:
+    """Instance detection recall stratified into user-supplied volume bins.
+
+    ``thresholds`` are volume cut points (e.g. ``[160, 271, 451]`` voxels), given by
+    the user rather than estimated from the data. They define ``len(thresholds) + 1``
+    bins: ``rec_q0`` is ``volume < thresholds[0]``, ``rec_qi`` is
+    ``thresholds[i - 1] <= volume < thresholds[i]``, and the last bin is
+    ``volume >= thresholds[-1]``. The recall of a bin is the fraction of reference
+    instances falling in it that were matched (the mean of their 0/1 matched flags);
+    an empty bin yields ``nan``.
+
+    Args:
+        volumes: Per-reference-instance volumes (or voxel counts).
+        matched_flags: Per-reference-instance matched indicator (1.0 matched, 0.0 not),
+            aligned with ``volumes``.
+        thresholds: Volume bin edges.
+
+    Returns:
+        dict[str, float]: ``{"rec_q0": ..., "rec_q1": ..., ...}`` with one entry per bin.
+    """
+    if len(volumes) != len(matched_flags):
+        raise ValueError("volumes and matched_flags must have equal length")
+    edges = sorted(thresholds)
+    n_bins = len(edges) + 1
+    sums = [0.0] * n_bins
+    counts = [0] * n_bins
+    if volumes:
+        bin_indices = np.digitize(np.asarray(volumes, dtype=float), edges)
+        for b, flag in zip(bin_indices.tolist(), matched_flags):
+            sums[b] += float(flag)
+            counts[b] += 1
+    return {
+        f"rec_q{b}": (sums[b] / counts[b] if counts[b] > 0 else float("nan"))
+        for b in range(n_bins)
+    }
+
+
 def _get_bbox_nd(
     img: np.ndarray,
     px_dist: int | tuple[int, ...] = 0,

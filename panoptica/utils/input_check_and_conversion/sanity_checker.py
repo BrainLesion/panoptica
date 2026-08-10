@@ -191,4 +191,8 @@ def post_check(
     )
     dtype = _get_smallest_fitting_uint(max_value)
 
-    return prediction_array.astype(dtype), reference_array.astype(dtype)
+    # copy=False so a matching dtype (the common case: uint8 in, uint8 needed) is a
+    # no-op; every evaluate() call would otherwise duplicate both input arrays.
+    return prediction_array.astype(dtype, copy=False), reference_array.astype(
+        dtype, copy=False
+    )
