@@ -32,12 +32,19 @@ def _map_labels(
     """
     if len(label_map) == 0:
         return arr.copy()
-    k = np.array(list(label_map.keys()), dtype=arr.dtype)
-    v = np.array(list(label_map.values()), dtype=arr.dtype)
+    k = np.array(list(label_map.keys()))
+    v = np.array(list(label_map.values()))
 
-    max_value = max(arr.max(), max(k), max(v)) + 1
+    max_value = int(max(arr.max(), k.max(), v.max())) + 1
 
-    mapping_ar = np.arange(max_value, dtype=arr.dtype)
+    # The mapped-to labels can exceed what arr's dtype can hold (e.g. matching
+    # assigns instance ids >= 256 while arr is still uint8), so widen the dtype
+    # to fit them. A no-op whenever the values already fit in arr.dtype.
+    dtype = np.promote_types(arr.dtype, np.min_scalar_type(max_value))
+    k = k.astype(dtype)
+    v = v.astype(dtype)
+
+    mapping_ar = np.arange(max_value, dtype=dtype)
     mapping_ar[k] = v
     return mapping_ar[arr]
 
