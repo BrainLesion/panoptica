@@ -8,6 +8,16 @@ from panoptica.utils import (
     get_backend,
     FileType,
 )
+from panoptica.utils.latex_utils import (
+    escape_latex,
+    format_mean_std,
+    metric_arrow,
+    metric_direction,
+    prettify_group_name,
+    prettify_metric_name,
+    render_latex_table,
+    select_best_indices,
+)
 from panoptica.utils.logger import logger
 from panoptica.utils.numpy_utils import recall_by_volume_bins
 import numpy as np
@@ -683,6 +693,211 @@ class Panoptica_Statistic:
             manual_metric_range=manual_metric_range,
         )
 
+    def get_latex_table(
+        self,
+        metrics: list[str] | str | None = None,
+        groups: list[str] | str | None = None,
+        alternate_metricnames: list[str] | str | None = None,
+        alternate_groupnames: list[str] | str | None = None,
+        rows: Literal["groups", "metrics"] = "groups",
+        ndigits: int = 3,
+        show_std: bool = True,
+        bold_best: bool = True,
+        show_arrows: bool = True,
+        include_across_groups: bool = False,
+        master_only: bool = True,
+        basic: bool = False,
+        caption: str | None = None,
+        label: str | None = None,
+        output_file: str | Path | None = None,
+    ) -> str:
+        r"""Renders this statistic as a LaTeX table of ``mean +- std`` per group and metric.
+
+        By default the table has one row per group and one column per metric, uses
+        ``booktabs`` rules inside a ``tabularx``, marks the best value of every metric in
+        bold and appends an arrow to each metric telling whether higher or lower is
+        better. Everything can be switched off individually.
+
+        Args:
+            metrics (list[str] | str | None, optional): Metrics to show, in order.
+                Defaults to all non-thresholded metrics except the ``*_std`` columns
+                (their information is already carried by the ``+-`` term).
+            groups (list[str] | str | None, optional): Groups to show, in order.
+                Defaults to all groups.
+            alternate_metricnames (list[str] | str | None, optional): Display names
+                replacing the metric names. Must match the length of ``metrics``.
+            alternate_groupnames (list[str] | str | None, optional): Display names
+                replacing the group names. Must match the length of ``groups``.
+            rows (Literal["groups", "metrics"], optional): Whether groups or metrics go
+                down the side of the table. Defaults to ``"groups"``.
+            ndigits (int, optional): Digits after the decimal point. Defaults to 3.
+            show_std (bool, optional): Append the standard deviation to every cell.
+                Defaults to True.
+            bold_best (bool, optional): Bold the best value of each metric. Metrics
+                whose direction cannot be inferred are never bolded, ties are all
+                bolded. Defaults to True.
+            show_arrows (bool, optional): Append an up/down arrow to each metric label.
+                Defaults to True.
+            include_across_groups (bool, optional): Add an extra "Across groups" entry
+                averaging the per-group averages. It never takes part in the best-value
+                comparison. Defaults to False.
+            master_only (bool, optional): Ignore per-instance rows. Defaults to True.
+            basic (bool, optional): Emit a plain ``tabular`` with ``\hline`` instead of
+                ``tabularx`` with ``booktabs``. Defaults to False.
+            caption (str | None, optional): ``\caption`` text. Defaults to None.
+            label (str | None, optional): ``\label`` key. Defaults to None.
+            output_file (str | Path | None, optional): If given, the table is also
+                written to this path. Defaults to None.
+
+        Raises:
+            KeyError: If a requested group or metric does not exist.
+            ValueError: If an ``alternate_*names`` length does not match.
+
+        Returns:
+            str: The LaTeX snippet.
+        """
+        groups = _normalize_selection(groups, self.groupnames)
+        metrics = _normalize_selection(metrics, _default_table_metrics(self))
+        for g in groups:
+            self._assertgroup(g)
+        for m in metrics:
+            self._assertmetric(m)
+
+        group_labels = _resolve_labels(
+            groups, alternate_groupnames, prettify_group_name, "alternate_groupnames"
+        )
+        metric_labels = _resolve_labels(
+            metrics,
+            alternate_metricnames,
+            prettify_metric_name,
+            "alternate_metricnames",
+        )
+        if show_arrows:
+            metric_labels = [
+                _append_arrow(lbl, m) for lbl, m in zip(metric_labels, metrics)
+            ]
+
+        # group key -> metric -> distribution. The across-groups pseudo entry is kept
+        # apart so it can be excluded from the best-value comparison.
+        summaries = {
+            g: {m: self.get_summary(g, m, master_only=master_only) for m in metrics}
+            for g in groups
+        }
+        entry_keys = list(groups)
+        entry_labels = list(group_labels)
+        if include_across_groups:
+            across = self.get_summary_across_groups()
+            summaries[_ACROSS_GROUPS_KEY] = {m: across[m] for m in metrics}
+            entry_keys.append(_ACROSS_GROUPS_KEY)
+            entry_labels.append(_ACROSS_GROUPS_LABEL)
+
+        best_per_metric: dict[str, set[int]] = {}
+        for m in metrics:
+            if bold_best:
+                best_per_metric[m] = select_best_indices(
+                    [summaries[g][m].avg for g in groups], metric_direction(m)
+                )
+            else:
+                best_per_metric[m] = set()
+
+        def cell(group_idx: int, group_key: str, metric: str) -> str:
+            dist = summaries[group_key][metric]
+            return format_mean_std(
+                dist.avg,
+                dist.std,
+                ndigits=ndigits,
+                show_std=show_std,
+                bold=group_idx in best_per_metric[metric],
+            )
+
+        if rows == "groups":
+            column_headers = metric_labels
+            body = [
+                (
+                    entry_labels[gi],
+                    [cell(gi, gkey, m) for m in metrics],
+                )
+                for gi, gkey in enumerate(entry_keys)
+            ]
+        elif rows == "metrics":
+            column_headers = entry_labels
+            body = [
+                (
+                    metric_labels[mi],
+                    [cell(gi, gkey, m) for gi, gkey in enumerate(entry_keys)],
+                )
+                for mi, m in enumerate(metrics)
+            ]
+        else:
+            raise ValueError(f"rows must be 'groups' or 'metrics', got {rows!r}")
+
+        table = render_latex_table(
+            column_headers=column_headers,
+            rows=body,
+            caption=caption,
+            label=label,
+            use_booktabs=not basic,
+            use_tabularx=not basic,
+        )
+        _write_latex_output(table, output_file)
+        return table
+
+
+_ACROSS_GROUPS_KEY = "across_groups"
+_ACROSS_GROUPS_LABEL = "Across groups"
+
+
+def _normalize_selection(
+    selection: list[str] | str | None, default: list[str]
+) -> list[str]:
+    """Turns a ``None``/str/list selection argument into a list."""
+    if selection is None:
+        return list(default)
+    if isinstance(selection, str):
+        return [selection]
+    return list(selection)
+
+
+def _resolve_labels(
+    names: list[str],
+    alternate_names: list[str] | str | None,
+    prettifier,
+    argument_name: str,
+) -> list[str]:
+    """Returns the LaTeX label of each name, honouring user-supplied overrides."""
+    if alternate_names is None:
+        return [prettifier(n) for n in names]
+    if isinstance(alternate_names, str):
+        alternate_names = [alternate_names]
+    if len(alternate_names) != len(names):
+        raise ValueError(
+            f"{argument_name} has length {len(alternate_names)} but there are "
+            f"{len(names)} entries; they must match."
+        )
+    return [escape_latex(str(n)) for n in alternate_names]
+
+
+def _append_arrow(latex_label: str, metric: str) -> str:
+    """Appends the direction arrow of ``metric`` to an already escaped label."""
+    arrow = metric_arrow(metric)
+    return f"{latex_label} {arrow}" if arrow else latex_label
+
+
+def _default_table_metrics(statistic: "Panoptica_Statistic") -> list[str]:
+    """Metrics shown when the caller does not select any.
+
+    Thresholded columns are already excluded by ``base_metric_names``; the ``*_std``
+    columns are dropped on top of that because a cell already carries a ``+-`` term.
+    """
+    return [m for m in statistic.base_metric_names if not m.endswith("_std")]
+
+
+def _write_latex_output(table: str, output_file: str | Path | None) -> None:
+    """Writes the rendered table to ``output_file`` when one was requested."""
+    if output_file is None:
+        return
+    Path(output_file).write_text(table, encoding="utf-8")
+
 
 def make_autc_plots(
     statistics_dict: dict[str | int | float, Panoptica_Statistic],
@@ -881,6 +1096,178 @@ def make_curve_over_setups(
     if manual_metric_range is not None:
         fig.update_yaxes(range=[manual_metric_range[0], manual_metric_range[1]])
     return fig
+
+
+def make_latex_table_over_setups(
+    statistics_dict: dict[str | int | float, Panoptica_Statistic],
+    metrics: list[str] | str | None = None,
+    groups: list[str] | str | None = None,
+    alternate_metricnames: list[str] | str | None = None,
+    alternate_groupnames: list[str] | str | None = None,
+    rows: Literal["setups", "metrics"] = "setups",
+    ndigits: int = 3,
+    show_std: bool = True,
+    bold_best: bool = True,
+    show_arrows: bool = True,
+    master_only: bool = True,
+    basic: bool = False,
+    caption: str | None = None,
+    label: str | None = None,
+    output_file: str | Path | None = None,
+) -> str:
+    r"""Renders several statistics as one LaTeX table comparing the setups.
+
+    This is the table counterpart of :func:`make_curve_over_setups` and takes the same
+    naming dict. By default every setup gets a row and every metric a column; with more
+    than one group the columns are grouped under a spanning ``\multicolumn`` header per
+    group. The best setup per metric is marked in bold.
+
+    Args:
+        statistics_dict (dict[str | int | float, Panoptica_Statistic]): Setup name to
+            statistic. The insertion order defines the order in the table.
+        metrics (list[str] | str | None, optional): Metrics to show, in order. Defaults
+            to the non-thresholded, non-``*_std`` metrics present in every setup.
+        groups (list[str] | str | None, optional): Groups to show, in order. Defaults to
+            the groups of the first statistic.
+        alternate_metricnames (list[str] | str | None, optional): Display names
+            replacing the metric names. Must match the length of ``metrics``.
+        alternate_groupnames (list[str] | str | None, optional): Display names replacing
+            the group names. Must match the length of ``groups``.
+        rows (Literal["setups", "metrics"], optional): Whether setups or metrics go down
+            the side of the table. Defaults to ``"setups"``.
+        ndigits (int, optional): Digits after the decimal point. Defaults to 3.
+        show_std (bool, optional): Append the standard deviation to every cell.
+            Defaults to True.
+        bold_best (bool, optional): Bold the best setup for each group and metric.
+            Defaults to True.
+        show_arrows (bool, optional): Append an up/down arrow to each metric label.
+            Defaults to True.
+        master_only (bool, optional): Ignore per-instance rows. Defaults to True.
+        basic (bool, optional): Emit a plain ``tabular`` with ``\hline`` instead of
+            ``tabularx`` with ``booktabs``. Group and metric names are then flattened
+            into single header cells instead of using a spanning header row.
+            Defaults to False.
+        caption (str | None, optional): ``\caption`` text. Defaults to None.
+        label (str | None, optional): ``\label`` key. Defaults to None.
+        output_file (str | Path | None, optional): If given, the table is also written
+            to this path. Defaults to None.
+
+    Raises:
+        ValueError: If ``statistics_dict`` is empty, a requested metric or group is
+            missing from one of the setups, or an ``alternate_*names`` length does not
+            match.
+
+    Returns:
+        str: The LaTeX snippet.
+    """
+    if len(statistics_dict) == 0:
+        raise ValueError("statistics_dict is empty, nothing to tabulate")
+
+    setupnames = list(statistics_dict.keys())
+    stats = list(statistics_dict.values())
+    first_stat = stats[0]
+
+    groups = _normalize_selection(groups, first_stat.groupnames)
+    if metrics is None:
+        # Intersect over the setups so a metric missing somewhere never crashes the
+        # render; the order of the first statistic is kept.
+        shared = set.intersection(*[set(_default_table_metrics(s)) for s in stats])
+        metrics = [m for m in _default_table_metrics(first_stat) if m in shared]
+    else:
+        metrics = _normalize_selection(metrics, [])
+
+    for setupname, stat in statistics_dict.items():
+        for m in metrics:
+            if m not in stat.metricnames:
+                raise ValueError(f"metric {m} not in statistic obj {setupname}")
+        for g in groups:
+            if g not in stat.groupnames:
+                raise ValueError(f"group {g} not in statistic obj {setupname}")
+
+    group_labels = _resolve_labels(
+        groups, alternate_groupnames, prettify_group_name, "alternate_groupnames"
+    )
+    metric_labels = _resolve_labels(
+        metrics, alternate_metricnames, prettify_metric_name, "alternate_metricnames"
+    )
+    if show_arrows:
+        metric_labels = [
+            _append_arrow(lbl, m) for lbl, m in zip(metric_labels, metrics)
+        ]
+    setup_labels = [escape_latex(str(s)) for s in setupnames]
+
+    summaries = {
+        si: {
+            g: {m: stat.get_summary(g, m, master_only=master_only) for m in metrics}
+            for g in groups
+        }
+        for si, stat in enumerate(stats)
+    }
+
+    best_per_column: dict[tuple[str, str], set[int]] = {}
+    for g in groups:
+        for m in metrics:
+            best_per_column[(g, m)] = (
+                select_best_indices(
+                    [summaries[si][g][m].avg for si in range(len(stats))],
+                    metric_direction(m),
+                )
+                if bold_best
+                else set()
+            )
+
+    def cell(setup_idx: int, group: str, metric: str) -> str:
+        dist = summaries[setup_idx][group][metric]
+        return format_mean_std(
+            dist.avg,
+            dist.std,
+            ndigits=ndigits,
+            show_std=show_std,
+            bold=setup_idx in best_per_column[(group, metric)],
+        )
+
+    use_spanning_header = len(groups) > 1 and not basic
+    column_groups: list[tuple[str, int]] | None = None
+
+    if rows == "setups":
+        inner_labels = metric_labels
+        columns = [(g, m) for g in groups for m in metrics]
+        body = [
+            (setup_labels[si], [cell(si, g, m) for g, m in columns])
+            for si in range(len(stats))
+        ]
+    elif rows == "metrics":
+        inner_labels = setup_labels
+        columns = [(g, str(si)) for g in groups for si in range(len(stats))]
+        body = [
+            (
+                metric_labels[mi],
+                [cell(int(si), g, m) for g, si in columns],
+            )
+            for mi, m in enumerate(metrics)
+        ]
+    else:
+        raise ValueError(f"rows must be 'setups' or 'metrics', got {rows!r}")
+
+    if len(groups) == 1:
+        column_headers = list(inner_labels)
+    elif use_spanning_header:
+        column_headers = list(inner_labels) * len(groups)
+        column_groups = [(gl, len(inner_labels)) for gl in group_labels]
+    else:
+        column_headers = [f"{gl} / {il}" for gl in group_labels for il in inner_labels]
+
+    table = render_latex_table(
+        column_headers=column_headers,
+        rows=body,
+        column_groups=column_groups,
+        caption=caption,
+        label=label,
+        use_booktabs=not basic,
+        use_tabularx=not basic,
+    )
+    _write_latex_output(table, output_file)
+    return table
 
 
 def _flatten_extend(matrix):
