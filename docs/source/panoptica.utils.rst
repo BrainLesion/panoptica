@@ -60,6 +60,14 @@ panoptica.utils.label\_group module
    :undoc-members:
    :show-inheritance:
 
+panoptica.utils.latex\_utils module
+-----------------------------------
+
+.. automodule:: panoptica.utils.latex_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 panoptica.utils.numpy\_utils module
 -----------------------------------
 

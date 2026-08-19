@@ -48,3 +48,15 @@ from panoptica.utils.file_backend_jsonl import JSONLBackend
 from panoptica.utils.file_backend_tsv import TSVBackend
 from panoptica.utils.file_backend_registry import get_backend
 from panoptica.utils.speed_toggles import PanopticaSpeedToggles
+from panoptica.utils.latex_utils import (
+    escape_latex,
+    base_metric_name,
+    metric_direction,
+    metric_arrow,
+    prettify_metric_name,
+    prettify_group_name,
+    format_mean_std,
+    select_best_indices,
+    render_latex_table,
+    LATEX_TABLE_REQUIREMENTS,
+)

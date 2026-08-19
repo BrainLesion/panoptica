@@ -3,7 +3,10 @@ from panoptica import (
     Panoptica_Evaluator,
     Panoptica_Aggregator,
 )
-from panoptica.panoptica_statistics import make_curve_over_setups
+from panoptica.panoptica_statistics import (
+    make_curve_over_setups,
+    make_latex_table_over_setups,
+)
 from pathlib import Path
 from panoptica.utils import NonDaemonicPool
 from joblib import delayed, Parallel
@@ -88,6 +91,23 @@ def main(parallel_opt: Literal["pool", "joblib", "future", "none"] = "future"):
 
     out_figure = str(Path(__file__).parent.joinpath("example_multiple_statistics.png"))
     # fig2.savefig(out_figure)
+
+    # LaTeX tables: one for this single statistic, one comparing several setups.
+    print(
+        panoptic_statistic.get_latex_table(
+            metrics=["pq", "sq_dsc", "rq"],
+            caption="Spine example, per group.",
+            label="tab:spine_groups",
+        )
+    )
+    print(
+        make_latex_table_over_setups(
+            {"baseline": panoptic_statistic, "ours": panoptic_statistic},
+            metrics=["pq", "sq_dsc"],
+            caption="Spine example, per setup.",
+            label="tab:spine_setups",
+        )
+    )
 
 
 if __name__ == "__main__":
