@@ -1,0 +1,210 @@
+name: benchmark
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Configure poetry
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade poetry
+          python -m poetry config installer.max-workers 1
+
+      - name: Install dependencies
+        run: python -m poetry install --with test
+
+      - name: Benchmark HEAD (speed)
+        run: python -m poetry run python benchmark/bench_eval.py --quick --json head.json
+
+      - name: Benchmark HEAD (memory)
+        run: python -m poetry run python benchmark/bench_mem.py --quick --json head_mem.json
+
+      - name: Benchmark baseline (main's panoptica, HEAD's benchmark harness)
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          # Save HEAD's panoptica source so we can restore it before the compare step.
+          # We swap only the panoptica/ tree; benchmark/ stays from HEAD so JSON schema,
+          # warmup, repeats, and CLI flags stay identical between baseline and head runs.
+          # Both speed and memory baselines run inside this single swap window so we
+          # only pay for the checkout once.
+          cp -a panoptica /tmp/panoptica-head
+          # Nuke first, then repopulate from base — otherwise `git checkout base --`
+          # leaves behind files new in HEAD (e.g. panoptica/utils/speed_toggles.py)
+          # and the resulting mix crashes with TypeError on unknown kwargs.
+          rm -rf panoptica
+          git checkout ${{ github.event.pull_request.base.sha }} -- panoptica
+          python -m poetry run python benchmark/bench_eval.py --quick --json baseline.json
+          python -m poetry run python benchmark/bench_mem.py --quick --json baseline_mem.json
+          rm -rf panoptica
+          cp -a /tmp/panoptica-head panoptica
+
+      - name: Compare speed against on-runner baseline
+        id: compare
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set +e
+          python -m poetry run python benchmark/compare.py \
+            baseline.json head.json \
+            --fail-on-regression-pct 50 \
+            > comparison.md
+          compare_status=$?
+          echo "compare_status=$compare_status" >> "$GITHUB_OUTPUT"
+          {
+            echo "# Benchmark comparison (speed)"
+            echo ""
+            cat comparison.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Compare memory against on-runner baseline
+        id: compare_mem
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set +e
+          python -m poetry run python benchmark/compare_mem.py \
+            baseline_mem.json head_mem.json \
+            --fail-on-regression-pct 50 \
+            > comparison_mem.md
+          compare_status=$?
+          echo "compare_status=$compare_status" >> "$GITHUB_OUTPUT"
+          {
+            echo ""
+            echo "# Benchmark comparison (memory)"
+            echo ""
+            cat comparison_mem.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+
+      - name: Post/update PR speed comment
+        if: github.event_name == 'pull_request' && always()
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body;
+            try {
+              body = fs.readFileSync('comparison.md', 'utf8');
+            } catch (e) {
+              core.warning(`comparison.md missing (${e.message}); skipping PR comment.`);
+              return;
+            }
+            const marker = '<!-- panoptica-benchmark -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner, repo, issue_number,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number, body,
+              });
+            }
+
+      - name: Post/update PR memory comment
+        if: github.event_name == 'pull_request' && always()
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body;
+            try {
+              body = fs.readFileSync('comparison_mem.md', 'utf8');
+            } catch (e) {
+              core.warning(`comparison_mem.md missing (${e.message}); skipping PR comment.`);
+              return;
+            }
+            const marker = '<!-- panoptica-benchmark-mem -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner, repo, issue_number,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number, body,
+              });
+            }
+
+      - name: Fail on regression
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          # Comments already posted above — surface both gate results, then fail if
+          # either one regressed. Using `||` so we always report both statuses.
+          speed_status="${{ steps.compare.outputs.compare_status }}"
+          mem_status="${{ steps.compare_mem.outputs.compare_status }}"
+          echo "speed gate exit: $speed_status"
+          echo "memory gate exit: $mem_status"
+          if [ "$speed_status" != "0" ] || [ "$mem_status" != "0" ]; then
+            exit 1
+          fi
+
+      - name: Head-only summary (workflow_dispatch)
+        if: github.event_name != 'pull_request'
+        run: |
+          {
+            echo "# Benchmark (head only) — speed"
+            echo ""
+            echo "Compared against the committed \`benchmark/baseline.json\` for reference:"
+            echo ""
+            python -m poetry run python benchmark/compare.py benchmark/baseline.json head.json || true
+            echo ""
+            echo "# Benchmark (head only) — memory"
+            echo ""
+            echo "No committed memory baseline; showing the head-only peak-RSS numbers below."
+            echo ""
+            echo '```'
+            cat head_mem.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            head.json
+            baseline.json
+            comparison.md
+            head_mem.json
+            baseline_mem.json
+            comparison_mem.md
+          if-no-files-found: ignore

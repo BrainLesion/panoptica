@@ -1,13 +1,18 @@
+# Annotations are lazy so that torch type references never need the package at import
+# time (see the optional import below).
+from __future__ import annotations
+
 import numpy as np
 from panoptica.utils.logger import logger
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 from panoptica.utils.input_check_and_conversion.check_numpy_array import (
     _sanity_check_images,
 )
 from panoptica.utils.input_check_and_conversion.input_data_type_checker import (
     _InputDataTypeChecker,
+    _MissingOptionalPackage,
 )
 
 # Optional torch import
@@ -15,7 +20,7 @@ _spec = find_spec("torch")
 if _spec is not None:
     import torch
 else:
-    torch = None  # type: ignore[assignment]
+    torch = _MissingOptionalPackage("torch")  # type: ignore[assignment]
 
 if TYPE_CHECKING:
     import torch
@@ -31,9 +36,7 @@ class TorchImageChecker(_InputDataTypeChecker):
             required_package_names=["torch"],
         )
 
-    def load_image_from_path(
-        self, image_path: str | Path
-    ) -> Union["torch.Tensor", None]:
+    def load_image_from_path(self, image_path: str | Path) -> torch.Tensor | None:
         try:
             image = torch.load(
                 image_path,
@@ -47,8 +50,8 @@ class TorchImageChecker(_InputDataTypeChecker):
 
     def sanity_check_images(
         self,
-        prediction_image: "torch.Tensor",
-        reference_image: "torch.Tensor",
+        prediction_image: torch.Tensor,
+        reference_image: torch.Tensor,
         *args,
         **kwargs,
     ) -> tuple[bool, str]:
@@ -64,10 +67,10 @@ class TorchImageChecker(_InputDataTypeChecker):
             reference_image.numpy(),
         )
 
-    def convert_to_numpy_array(self, image: "torch.Tensor") -> np.ndarray:
+    def convert_to_numpy_array(self, image: torch.Tensor) -> np.ndarray:
         return image.numpy()
 
-    def extract_metadata_from_image(self, image: "torch.Tensor") -> dict:
+    def extract_metadata_from_image(self, image: torch.Tensor) -> dict:
         """
         Extracts metadata from a torch.Tensor image.
         Returns a dictionary.

@@ -47,3 +47,4 @@ from panoptica.utils.file_backend import (
 from panoptica.utils.file_backend_jsonl import JSONLBackend
 from panoptica.utils.file_backend_tsv import TSVBackend
 from panoptica.utils.file_backend_registry import get_backend
+from panoptica.utils.speed_toggles import PanopticaSpeedToggles

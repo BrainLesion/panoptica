@@ -1,6 +1,5 @@
 """The three-phase panoptic evaluation pipeline: approximation, matching, evaluation."""
 
-from time import perf_counter
 from panoptica.utils.logger import logger
 from typing import TYPE_CHECKING
 
@@ -10,6 +9,8 @@ from panoptica.instance_matcher import InstanceMatchingAlgorithm
 from panoptica.metrics import Metric
 from panoptica.panoptica_result import PanopticaResult
 from panoptica.utils import EdgeCaseHandler
+from panoptica.utils.phase_timer import PhaseTimer
+from panoptica.utils.speed_toggles import PanopticaSpeedToggles
 from panoptica.utils.processing_pair import (
     MatchedInstancePair,
     SemanticPair,
@@ -45,11 +46,15 @@ def _panoptic_evaluate(
     decision_threshold: float | None = None,
     matching_threshold: float | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    log_intermediate_steps: bool = False,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
     verbose_calc=False,
     label_group=None,
+    phase_timer: PhaseTimer | None = None,
+    speed_toggles: PanopticaSpeedToggles | None = None,
+    input_can_be_mutated: bool = False,
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -69,6 +74,9 @@ def _panoptic_evaluate(
         verbose: Whether to print verbose information.
         verbose_calc: Whether to print calculation details.
         label_group: Group of labels to consider.
+        input_can_be_mutated: Caller promises ``input_pair`` will not be reused; skips the
+            defensive copy and lets downstream phases mutate it in place. Set from callers
+            (like ``_evaluate_group``) that build a fresh, unshared pair per call.
         **kwargs: Additional keyword arguments.
 
     Returns:
@@ -87,20 +95,44 @@ def _panoptic_evaluate(
         logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
+    if phase_timer is None:
+        phase_timer = PhaseTimer()
+    if speed_toggles is None:
+        speed_toggles = PanopticaSpeedToggles()
 
     if "voxelspacing" not in kwargs:
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
-    # Setup IntermediateStepsData
-    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
-    # Crops away unnecessary space of zeroes
-    input_pair.crop_data()
+    # Setup IntermediateStepsData. Snapshot from a copy — later phases crop
+    # input_pair in place and (with input_can_be_mutated=True) mutate it further,
+    # so a bare reference would violate the "original arrays, untouched" contract
+    # exposed via intermediate_steps_data.original_prediction_arr/reference_arr.
+    intermediate_steps_data: IntermediateStepsData | None = (
+        IntermediateStepsData(input_pair.copy()) if log_intermediate_steps else None
+    )
+    if speed_toggles.crop_at_start:
+        # Crops away unnecessary space of zeroes
+        input_pair.crop_data()
 
     # Create initial metadata for parts handling
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair: _ProcessingState = input_pair.copy()
+    if input_can_be_mutated:
+        # Caller promised input_pair is disposable and will not be reused, so we skip
+        # the defensive copy. Downstream phases mutate the pair in place.
+        processing_pair: _ProcessingState = input_pair
+    else:
+        processing_pair = input_pair.copy()
+    # Drop the local input_pair binding. Under !input_can_be_mutated this releases
+    # the copy source; under input_can_be_mutated the frame still keeps the aliased
+    # SemanticPair reachable through processing_pair *until* the approximation phase
+    # returns a fresh pair — after that point, keeping the stale name bound has been
+    # measured to prevent the original full-shape uint8 buffer from being reclaimed
+    # for the rest of _panoptic_evaluate (peak +~20x on the 25-group vertebral case).
+    # IntermediateStepsData already holds an independent copy, so this del is safe
+    # regardless of log_intermediate_steps.
+    del input_pair
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -111,6 +143,7 @@ def _panoptic_evaluate(
         label_group=label_group,
         log_times=log_times,
         verbose=verbose,
+        phase_timer=phase_timer,
     )
 
     # Second Phase: Instance Matching
@@ -126,6 +159,7 @@ def _panoptic_evaluate(
         label_group=label_group,
         log_times=log_times,
         verbose=verbose,
+        phase_timer=phase_timer,
         **kwargs,
     )
 
@@ -141,6 +175,8 @@ def _panoptic_evaluate(
         decision_threshold=decision_threshold,
         log_times=log_times,
         verbose=verbose,
+        phase_timer=phase_timer,
+        speed_toggles=speed_toggles,
         **kwargs,
     )
 
@@ -192,7 +228,11 @@ def _panoptic_evaluate(
     if isinstance(processing_pair, PanopticaResult):
         processing_pair._global_metrics = global_metrics
         if result_all:
-            processing_pair.calculate_all(print_errors=verbose_calc)
+            with phase_timer.time("global_metrics"):
+                processing_pair.calculate_all(
+                    print_errors=verbose_calc, phase_timer=phase_timer
+                )
+        processing_pair.phase_times = dict(phase_timer.times)
         return processing_pair
 
     raise RuntimeError("End of panoptic pipeline reached without results")
@@ -205,11 +245,15 @@ def _panoptic_evaluate_region_wise(
     instance_metrics: list[Metric] | None = None,
     global_metrics: list[Metric] | None = None,
     edge_case_handler: EdgeCaseHandler | None = None,
+    log_intermediate_steps: bool = False,
     log_times: bool = False,
     result_all: bool = True,
     verbose=False,
     verbose_calc=False,
     label_group=None,
+    phase_timer: PhaseTimer | None = None,
+    speed_toggles: PanopticaSpeedToggles | None = None,
+    input_can_be_mutated: bool = False,
     **kwargs,
 ) -> PanopticaResult:
     """
@@ -227,6 +271,8 @@ def _panoptic_evaluate_region_wise(
         verbose: Whether to print verbose information.
         verbose_calc: Whether to print calculation details.
         label_group: Group of labels to consider.
+        input_can_be_mutated: Caller promises ``input_pair`` will not be reused; skips the
+            defensive copy and lets downstream phases mutate it in place.
         **kwargs: Additional keyword arguments.
 
     Returns:
@@ -245,20 +291,36 @@ def _panoptic_evaluate_region_wise(
         logger.info("Panoptic: Start Evaluation")
     if edge_case_handler is None:
         edge_case_handler = EdgeCaseHandler()
+    if phase_timer is None:
+        phase_timer = PhaseTimer()
+    if speed_toggles is None:
+        speed_toggles = PanopticaSpeedToggles()
 
     if "voxelspacing" not in kwargs:
         kwargs["voxelspacing"] = (1.0,) * input_pair.reference_arr.ndim
 
-    # Setup IntermediateStepsData
-    intermediate_steps_data: IntermediateStepsData = IntermediateStepsData(input_pair)
-    # Crops away unnecessary space of zeroes
-    input_pair.crop_data()
+    # Setup IntermediateStepsData. Snapshot from a copy — later phases crop
+    # input_pair in place and (with input_can_be_mutated=True) mutate it further,
+    # so a bare reference would violate the "original arrays, untouched" contract
+    # exposed via intermediate_steps_data.original_prediction_arr/reference_arr.
+    intermediate_steps_data: IntermediateStepsData | None = (
+        IntermediateStepsData(input_pair.copy()) if log_intermediate_steps else None
+    )
+    if speed_toggles.crop_at_start:
+        # Crops away unnecessary space of zeroes
+        input_pair.crop_data()
 
     # Create initial metadata for parts handling
     # Get metadata directly from the processing pair as a dictionary
     instance_metadata = input_pair.get_metadata()
 
-    processing_pair: _ProcessingState = input_pair.copy()
+    if input_can_be_mutated:
+        # Caller promised input_pair is disposable. It is still referenced later
+        # (for the combined_result), so we alias instead of copying — skipping only
+        # the redundant per-call allocation.
+        processing_pair: _ProcessingState = input_pair
+    else:
+        processing_pair = input_pair.copy()
 
     # First Phase: Instance Approximation
     processing_pair = _phase_instance_approximation(
@@ -269,24 +331,27 @@ def _panoptic_evaluate_region_wise(
         label_group=label_group,
         log_times=log_times,
         verbose=verbose,
+        phase_timer=phase_timer,
     )
 
     if not isinstance(processing_pair, UnmatchedInstancePair):
         raise TypeError(f"Expected UnmatchedInstancePair, got {type(processing_pair)}")
-    processing_pair = _handle_zero_instances_cases(
-        processing_pair,
-        eval_metrics=instance_metrics,
-        global_metrics=global_metrics,
-        edge_case_handler=edge_case_handler,
-        voxelspacing=kwargs.get("voxelspacing"),
-    )
+    with phase_timer.time("edge_case_handling"):
+        processing_pair = _handle_zero_instances_cases(
+            processing_pair,
+            eval_metrics=instance_metrics,
+            global_metrics=global_metrics,
+            edge_case_handler=edge_case_handler,
+            voxelspacing=kwargs.get("voxelspacing"),
+        )
 
     # proceed if pipeline only if no edge case handling necessary
     if not isinstance(processing_pair, PanopticaResult):
         # create regions and label to regions
-        region_map, num_features = _get_voronoi_regions(
-            processing_pair.reference_arr, processing_pair.n_ref_instances
-        )
+        with phase_timer.time("voronoi_regions"):
+            region_map, num_features = _get_voronoi_regions(
+                processing_pair.reference_arr, processing_pair.n_ref_instances
+            )
         if num_features <= 0:
             raise ValueError(
                 "Expected at least one region in the reference mask for region-wise evaluation"
@@ -294,105 +359,120 @@ def _panoptic_evaluate_region_wise(
 
         region2result_map: dict[int, PanopticaResult] = {}
 
-        for i in range(1, num_features + 1):
-            region_mask = region_map == i
+        with phase_timer.time("region_loop"):
+            for i in range(1, num_features + 1):
+                region_mask = region_map == i
 
-            intermediate_steps_data_r: IntermediateStepsData = IntermediateStepsData(
-                input_pair
-            )
-
-            # multiply region mask with both prediction and reference arr
-            processing_pair_r: _ProcessingState = UnmatchedInstancePair(
-                processing_pair.prediction_arr * region_mask,
-                processing_pair.reference_arr * region_mask,
-            )
-
-            # Second Phase: Instance Matching
-            processing_pair_r = _phase_instance_matching(
-                processing_pair_r,
-                intermediate_steps_data_r,
-                instance_metrics=instance_metrics,
-                instance_metadata=instance_metadata,
-                global_metrics=global_metrics,
-                edge_case_handler=edge_case_handler,
-                instance_matcher=instance_matcher,
-                label_group=label_group,
-                log_times=log_times,
-                verbose=verbose,
-                **kwargs,
-            )
-
-            # Third Phase: Instance Evaluation
-            processing_pair_r = _phase_instance_evaluation(
-                processing_pair_r,
-                intermediate_steps_data_r,
-                instance_metrics=instance_metrics,
-                instance_metadata=instance_metadata,
-                global_metrics=global_metrics,
-                edge_case_handler=edge_case_handler,
-                decision_metric=None,
-                decision_threshold=None,
-                log_times=log_times,
-                verbose=verbose,
-                **kwargs,
-            )
-
-            if isinstance(processing_pair_r, EvaluateInstancePair):
-                # Update instance counts from the processed pair if available
-                if instance_metadata["original_n_preds"] == 0:
-                    instance_metadata["original_n_preds"] = (
-                        processing_pair_r.n_pred_instances
-                    )
-                if instance_metadata["original_n_refs"] == 0:
-                    instance_metadata["original_n_refs"] = (
-                        processing_pair_r.n_ref_instances
-                    )
-
-                # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
-                # This happens when the effective number of prediction instances is less than original
-                has_many_to_one_mappings = (
-                    processing_pair_r.n_pred_instances
-                    < instance_metadata["original_n_preds"]
+                # multiply region mask with both prediction and reference arr
+                region_pair = UnmatchedInstancePair(
+                    processing_pair.prediction_arr * region_mask,
+                    processing_pair.reference_arr * region_mask,
                 )
 
-                # Use effective counts if many-to-one mappings were detected, otherwise use original counts
-                final_n_pred_instances = (
-                    processing_pair_r.n_pred_instances
-                    if has_many_to_one_mappings
-                    else instance_metadata["original_n_preds"]
-                )
-                final_n_ref_instances = (
-                    processing_pair_r.n_ref_instances
-                    if has_many_to_one_mappings
-                    else instance_metadata["original_n_refs"]
+                # Snapshot the region-scope input (not the whole-volume input_pair)
+                # so the "original" arrays reflect what this region result was
+                # actually evaluated against, and no full-volume reference is
+                # pinned alive on every returned per-region PanopticaResult.
+                intermediate_steps_data_r: IntermediateStepsData | None = (
+                    IntermediateStepsData(region_pair.copy())
+                    if log_intermediate_steps
+                    else None
                 )
 
-                processing_pair_r = PanopticaResult(
-                    reference_arr=processing_pair_r.reference_arr,
-                    prediction_arr=processing_pair_r.prediction_arr,
-                    processing_pair_orig_shape=instance_metadata["original_shape"],
-                    n_pred_instances=final_n_pred_instances,
-                    n_ref_instances=final_n_ref_instances,
-                    n_ref_labels=instance_metadata["n_ref_labels"],
-                    label_group=label_group,
-                    tp=processing_pair_r.tp,
-                    list_metrics=processing_pair_r.list_metrics,
-                    instance_voxel_count_matched_ref=processing_pair_r.instance_voxel_count_matched_ref,
-                    instance_volume_matched_ref=processing_pair_r.instance_volume_matched_ref,
-                    instance_voxel_count_unmatched_ref=processing_pair_r.instance_voxel_count_unmatched_ref,
-                    instance_volume_unmatched_ref=processing_pair_r.instance_volume_unmatched_ref,
+                processing_pair_r: _ProcessingState = region_pair
+
+                # Second Phase: Instance Matching
+                processing_pair_r = _phase_instance_matching(
+                    processing_pair_r,
+                    intermediate_steps_data_r,
+                    instance_metrics=instance_metrics,
+                    instance_metadata=instance_metadata,
                     global_metrics=global_metrics,
                     edge_case_handler=edge_case_handler,
-                    intermediate_steps_data=intermediate_steps_data_r,
+                    instance_matcher=instance_matcher,
+                    label_group=label_group,
+                    log_times=log_times,
+                    verbose=verbose,
+                    phase_timer=phase_timer,
                     **kwargs,
                 )
 
-            if isinstance(processing_pair_r, PanopticaResult):
-                processing_pair_r._global_metrics = global_metrics
-                if result_all:
-                    processing_pair_r.calculate_all(print_errors=False)
+                # Third Phase: Instance Evaluation
+                processing_pair_r = _phase_instance_evaluation(
+                    processing_pair_r,
+                    intermediate_steps_data_r,
+                    instance_metrics=instance_metrics,
+                    instance_metadata=instance_metadata,
+                    global_metrics=global_metrics,
+                    edge_case_handler=edge_case_handler,
+                    decision_metric=None,
+                    decision_threshold=None,
+                    log_times=log_times,
+                    verbose=verbose,
+                    phase_timer=phase_timer,
+                    speed_toggles=speed_toggles,
+                    **kwargs,
+                )
 
-                region2result_map[i] = processing_pair_r
+                if isinstance(processing_pair_r, EvaluateInstancePair):
+                    # Update instance counts from the processed pair if available
+                    if instance_metadata["original_n_preds"] == 0:
+                        instance_metadata["original_n_preds"] = (
+                            processing_pair_r.n_pred_instances
+                        )
+                    if instance_metadata["original_n_refs"] == 0:
+                        instance_metadata["original_n_refs"] = (
+                            processing_pair_r.n_ref_instances
+                        )
+
+                    # Detect if many-to-one mappings were used (like in MaximizeMergeMatching)
+                    # This happens when the effective number of prediction instances is less than original
+                    has_many_to_one_mappings = (
+                        processing_pair_r.n_pred_instances
+                        < instance_metadata["original_n_preds"]
+                    )
+
+                    # Use effective counts if many-to-one mappings were detected, otherwise use original counts
+                    final_n_pred_instances = (
+                        processing_pair_r.n_pred_instances
+                        if has_many_to_one_mappings
+                        else instance_metadata["original_n_preds"]
+                    )
+                    final_n_ref_instances = (
+                        processing_pair_r.n_ref_instances
+                        if has_many_to_one_mappings
+                        else instance_metadata["original_n_refs"]
+                    )
+
+                    processing_pair_r = PanopticaResult(
+                        reference_arr=processing_pair_r.reference_arr,
+                        prediction_arr=processing_pair_r.prediction_arr,
+                        processing_pair_orig_shape=instance_metadata["original_shape"],
+                        n_pred_instances=final_n_pred_instances,
+                        n_ref_instances=final_n_ref_instances,
+                        n_ref_labels=instance_metadata["n_ref_labels"],
+                        label_group=label_group,
+                        tp=processing_pair_r.tp,
+                        list_metrics=processing_pair_r.list_metrics,
+                        instance_voxel_count_matched_ref=processing_pair_r.instance_voxel_count_matched_ref,
+                        instance_volume_matched_ref=processing_pair_r.instance_volume_matched_ref,
+                        instance_voxel_count_unmatched_ref=processing_pair_r.instance_voxel_count_unmatched_ref,
+                        instance_volume_unmatched_ref=processing_pair_r.instance_volume_unmatched_ref,
+                        global_metrics=global_metrics,
+                        edge_case_handler=edge_case_handler,
+                        intermediate_steps_data=intermediate_steps_data_r,
+                        **kwargs,
+                    )
+
+                if isinstance(processing_pair_r, PanopticaResult):
+                    processing_pair_r._global_metrics = global_metrics
+                    if result_all:
+                        with phase_timer.time("global_metrics"):
+                            processing_pair_r.calculate_all(
+                                print_errors=False, phase_timer=phase_timer
+                            )
+
+                    region2result_map[i] = processing_pair_r
 
         if len(region2result_map) == num_features:
             # Combine results from all regions into a single PanopticaResult
@@ -439,6 +519,7 @@ def _panoptic_evaluate_region_wise(
         else:
             setattr(combined_result, rm_attr_name, 0.0)
 
+    combined_result.phase_times = dict(phase_timer.times)
     return combined_result
 
 
@@ -450,7 +531,11 @@ def _phase_instance_approximation(
     label_group=None,
     log_times=False,
     verbose=False,
+    phase_timer: PhaseTimer | None = None,
 ):
+    if phase_timer is None:
+        phase_timer = PhaseTimer()
+
     # First Phase: Instance Approximation
     if isinstance(processing_pair, SemanticPair):
         if intermediate_steps_data:
@@ -461,15 +546,18 @@ def _phase_instance_approximation(
             raise ValueError("Got SemanticPair but not InstanceApproximator")
         if verbose:
             logger.info("-- Got SemanticPair, will approximate instances")
-        start = perf_counter()
 
-        processing_pair = instance_approximator.approximate_instances(
-            processing_pair,
-            label_group=label_group,
-        )
+        before = phase_timer.times.get("approximation", 0.0)
+        with phase_timer.time("approximation"):
+            processing_pair = instance_approximator.approximate_instances(
+                processing_pair,
+                label_group=label_group,
+            )
 
         if log_times:
-            logger.info(f"-- Approximation took {perf_counter() - start} seconds")
+            logger.info(
+                f"-- Approximation took {phase_timer.times['approximation'] - before} seconds"
+            )
 
         # Update instance metadata after approximation
         if isinstance(processing_pair, (UnmatchedInstancePair, MatchedInstancePair)):
@@ -481,7 +569,7 @@ def _phase_instance_approximation(
 
 def _phase_instance_matching(
     processing_pair: _ProcessingState,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: IntermediateStepsData | None,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
@@ -491,20 +579,26 @@ def _phase_instance_matching(
     label_group=None,
     log_times=False,
     verbose=False,
+    phase_timer: PhaseTimer | None = None,
     **kwargs,
 ):
+    if phase_timer is None:
+        phase_timer = PhaseTimer()
+
     # Second Phase: Instance Matching
     if isinstance(processing_pair, UnmatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.UNMATCHED_INSTANCE
-        )
-        processing_pair = _handle_zero_instances_cases(
-            processing_pair,
-            eval_metrics=instance_metrics,
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-            voxelspacing=kwargs.get("voxelspacing"),
-        )
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.UNMATCHED_INSTANCE
+            )
+        with phase_timer.time("edge_case_handling"):
+            processing_pair = _handle_zero_instances_cases(
+                processing_pair,
+                eval_metrics=instance_metrics,
+                global_metrics=global_metrics,
+                edge_case_handler=edge_case_handler,
+                voxelspacing=kwargs.get("voxelspacing"),
+            )
 
     if isinstance(processing_pair, UnmatchedInstancePair):
         if verbose:
@@ -513,7 +607,6 @@ def _phase_instance_matching(
             raise ValueError(
                 "Got UnmatchedInstancePair but not InstanceMatchingAlgorithm"
             )
-        start = perf_counter()
 
         match_kwargs = {
             "label_group": label_group,
@@ -524,18 +617,22 @@ def _phase_instance_matching(
         if matching_threshold is not None:
             match_kwargs["matching_threshold"] = matching_threshold
 
-        processing_pair = instance_matcher.match_instances(
-            processing_pair,
-            **match_kwargs,
-        )
+        before = phase_timer.times.get("matching", 0.0)
+        with phase_timer.time("matching"):
+            processing_pair = instance_matcher.match_instances(
+                processing_pair,
+                **match_kwargs,
+            )
         if log_times:
-            logger.info(f"-- Matching took {perf_counter() - start} seconds")
+            logger.info(
+                f"-- Matching took {phase_timer.times['matching'] - before} seconds"
+            )
     return processing_pair
 
 
 def _phase_instance_evaluation(
     processing_pair: _ProcessingState,
-    intermediate_steps_data: IntermediateStepsData,
+    intermediate_steps_data: IntermediateStepsData | None,
     instance_metrics: list[Metric],
     instance_metadata: dict,
     global_metrics: list[Metric],
@@ -544,36 +641,48 @@ def _phase_instance_evaluation(
     decision_threshold: float | None,
     log_times=False,
     verbose=False,
+    phase_timer: PhaseTimer | None = None,
+    speed_toggles: PanopticaSpeedToggles | None = None,
     **kwargs,
 ):
+    if phase_timer is None:
+        phase_timer = PhaseTimer()
+
     # Third Phase: Instance Evaluation
     if isinstance(processing_pair, MatchedInstancePair):
-        intermediate_steps_data.add_intermediate_arr_data(
-            processing_pair.copy(), InputType.MATCHED_INSTANCE
-        )
-        processing_pair = _handle_zero_instances_cases(
-            processing_pair,
-            eval_metrics=instance_metrics,
-            global_metrics=global_metrics,
-            edge_case_handler=edge_case_handler,
-            voxelspacing=kwargs.get("voxelspacing"),
-        )
+        if intermediate_steps_data:
+            intermediate_steps_data.add_intermediate_arr_data(
+                processing_pair.copy(), InputType.MATCHED_INSTANCE
+            )
+        with phase_timer.time("edge_case_handling"):
+            processing_pair = _handle_zero_instances_cases(
+                processing_pair,
+                eval_metrics=instance_metrics,
+                global_metrics=global_metrics,
+                edge_case_handler=edge_case_handler,
+                voxelspacing=kwargs.get("voxelspacing"),
+            )
 
     if isinstance(processing_pair, MatchedInstancePair):
         if verbose:
             logger.info("-- Got MatchedInstancePair, will evaluate instances")
-        start = perf_counter()
-        processing_pair = evaluate_matched_instance(
-            processing_pair,
-            eval_metrics=instance_metrics,
-            decision_metric=decision_metric,
-            decision_threshold=decision_threshold,
-            processing_pair_orig_shape=instance_metadata["original_shape"],
-            n_ref_labels=instance_metadata["n_ref_labels"],
-            **kwargs,
-        )
+        before = phase_timer.times.get("instance_evaluation", 0.0)
+        with phase_timer.time("instance_evaluation"):
+            processing_pair = evaluate_matched_instance(
+                processing_pair,
+                eval_metrics=instance_metrics,
+                decision_metric=decision_metric,
+                decision_threshold=decision_threshold,
+                processing_pair_orig_shape=instance_metadata["original_shape"],
+                n_ref_labels=instance_metadata["n_ref_labels"],
+                speed_toggles=speed_toggles,
+                **kwargs,
+            )
         if log_times:
-            logger.info(f"-- Instance Evaluation took {perf_counter() - start} seconds")
+            logger.info(
+                f"-- Instance Evaluation took "
+                f"{phase_timer.times['instance_evaluation'] - before} seconds"
+            )
     return processing_pair
 
 

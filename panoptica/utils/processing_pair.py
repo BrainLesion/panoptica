@@ -112,8 +112,8 @@ class _ProcessingPair(ABC):
             raise TypeError(
                 "set_dtype: tried to set dtype to something other than integers"
             )
-        self._prediction_arr = self._prediction_arr.astype(type)
-        self._reference_arr = self._reference_arr.astype(type)
+        self._prediction_arr = self._prediction_arr.astype(type, copy=False)
+        self._reference_arr = self._reference_arr.astype(type, copy=False)
 
     @property
     def prediction_arr(self):
