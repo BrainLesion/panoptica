@@ -659,32 +659,81 @@ class Test_Panoptica_Aggregator_Init_Locking_And_Lazy_Load(unittest.TestCase):
             instance_matcher=NaiveThresholdMatching(),
         )
 
-    def test_prepare_for_append_called_under_filelock(self):
+    def _patch_recording_filelocks(self, order: list[str]):
+        """Patch the aggregator's FileLock with a factory that records, per lock
+        path, when each lock is entered/exited. Returns the patch context manager."""
         from unittest.mock import MagicMock, patch
+
+        def _factory(lock_path, *args, **kwargs):
+            name = Path(str(lock_path)).name
+            m = MagicMock()
+            m.__enter__.side_effect = lambda n=name: order.append(f"enter:{n}")
+            m.__exit__.side_effect = lambda *a, n=name, **kw: order.append(f"exit:{n}")
+            return m
+
+        return patch(
+            "panoptica.panoptica_aggregator.FileLock", side_effect=_factory
+        )
+
+    def test_prepare_for_append_called_under_filelock(self):
+        from unittest.mock import patch
 
         evaluator = self._make_evaluator()
 
-        # Wrap the real filelock with a MagicMock that records __enter__/__exit__
-        # so we can assert the lock was actively held across prepare_for_append.
+        # The output-file FileLock must be held across prepare_for_append (file init).
         order: list[str] = []
-
-        mock_lock = MagicMock()
-        mock_lock.__enter__.side_effect = lambda: order.append("lock_enter")
-        mock_lock.__exit__.side_effect = lambda *a, **kw: order.append("lock_exit")
+        out_lock = self.output_file.name + ".lock"
 
         def _record_prepare(*args, **kwargs):
             order.append("prepare_for_append")
             return []
 
-        with patch("panoptica.panoptica_aggregator.filelock", mock_lock):
+        with self._patch_recording_filelocks(order):
             with patch(
                 "panoptica.utils.file_backend_jsonl.JSONLBackend.prepare_for_append",
                 side_effect=_record_prepare,
             ):
                 Panoptica_Aggregator(evaluator, output_file=self.output_file)
 
-        # filelock entered, prepare_for_append ran, then filelock exited.
-        self.assertEqual(order[:3], ["lock_enter", "prepare_for_append", "lock_exit"])
+        # output FileLock entered, prepare_for_append ran, then it exited.
+        self.assertEqual(
+            order[:3], [f"enter:{out_lock}", "prepare_for_append", f"exit:{out_lock}"]
+        )
+
+    def test_append_subject_called_under_filelock(self):
+        from unittest.mock import patch
+
+        evaluator = self._make_evaluator()
+
+        # The output-file FileLock must also guard the per-subject append (write).
+        order: list[str] = []
+        out_lock = self.output_file.name + ".lock"
+
+        def _record_append(*args, **kwargs):
+            order.append("append_subject")
+
+        a = np.zeros([50, 50], dtype=np.uint16)
+        b = a.copy()
+        a[10:20, 10:20] = 1
+        b[10:20, 10:20] = 1
+
+        # Construct the aggregator inside the patch so its instance FileLocks are the
+        # recording mocks that evaluate() then reuses.
+        with self._patch_recording_filelocks(order):
+            with patch(
+                "panoptica.utils.file_backend_jsonl.JSONLBackend.append_subject",
+                side_effect=_record_append,
+            ):
+                aggregator = Panoptica_Aggregator(
+                    evaluator, output_file=self.output_file
+                )
+                aggregator.evaluate(b, a, subject_name="subj_write")
+
+        # append_subject ran wrapped by the output FileLock's enter/exit.
+        self.assertIn("append_subject", order)
+        i = order.index("append_subject")
+        self.assertEqual(order[i - 1], f"enter:{out_lock}")
+        self.assertEqual(order[i + 1], f"exit:{out_lock}")
 
     def test_continue_file_false_skips_existing_scan(self):
         # Seed a file with one subject so that — if collect_existing were
