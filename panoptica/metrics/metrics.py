@@ -227,7 +227,7 @@ class Metric(_Enum_Compare):
     NSD = _Metric(
         "NSD",
         "Normalized Surface Dice",
-        True,
+        False,
         True,
         _compute_instance_normalized_surface_dice,
     )
